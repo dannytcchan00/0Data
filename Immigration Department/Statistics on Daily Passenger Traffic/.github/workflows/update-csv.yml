@@ -1,0 +1,37 @@
+name: 每日自動更新出入境 CSV
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每日 HKT 10:00 自動執行
+  workflow_dispatch:     # 手動測試按鈕
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 檢查出資料夾
+      run: mkdir -p "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data"
+    
+    - name: 下載最新 CSV
+      run: |
+        curl -L -o "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv" \
+        "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv"
+    
+    - name: 檢查是否有更新
+      id: diff
+      run: |
+        if [ ! -f "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv.old" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        elif ! git diff --quiet "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv"; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: 備份舊檔案並提交更新
+      if: steps.diff.outputs.changed == 'true'
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
+        cp "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv" \
+           "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv.old"
+        git add "0Data/Immigration Department/Statistics on Daily Passenger Traffic/data/immigration.csv"
+        git commit -m "📊 自動更新出入境 CSV $(date +'%Y-%m-%d %H:%M')"
+        git push
