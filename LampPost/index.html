@@ -108,44 +108,61 @@
                     dynamicTyping: { Latitude: true, Longitude: true }
                 });
                 
-                // 香港座標過濾 + 欄位映射
+                console.log('CSV解析結果:', parsed.data.length, '筆資料');
+                
+                // 香港座標過濾 + 欄位映射（你的CSV格式）
                 lampData = parsed.data.filter(row => {
-                    const lat = row.Latitude || row.LATITUDE;
-                    const lng = row.Longitude || row.LONGITUDE;
+                    const lat = row.Latitude;
+                    const lng = row.Longitude;
                     return lat && lng && !isNaN(lat) && !isNaN(lng) &&
                            lat > 22.1 && lat < 22.6 && lng > 113.8 && lng < 114.5;
-                }).slice(0, 80000); // 性能最佳化
+                }).slice(0, 50000); // 性能最佳化
+                
+                console.log('過濾後資料:', lampData.length, '筆');
                 
                 statusEl.textContent = `🗺️ 建立 ${lampData.length.toLocaleString()} 個標記...`;
                 
+                // 清空舊標記
                 markerCache.clear();
                 allMarkers.clearLayers();
                 filteredMarkers.clearLayers();
                 
-                lampData.forEach(createMarker);
+                // 建立標記
+                let createdCount = 0;
+                lampData.forEach((row, index) => {
+                    if (createMarker(row)) createdCount++;
+                    if (index % 1000 === 0) {
+                        statusEl.textContent = `🗺️ 已建立 ${createdCount.toLocaleString()}/${lampData.length.toLocaleString()} 個標記...`;
+                    }
+                });
                 
                 updateStats();
                 statusEl.innerHTML = `✅ <strong>成功！</strong> 載入 ${lampData.length.toLocaleString()} 個街燈<br>資料來源：你的GitHub Pages[attached_file:1]`;
                 statusEl.className = 'success';
                 
-                map.fitBounds(filteredMarkers.getBounds(), { padding: [50, 50], maxZoom: 13 });
+                // 🔥 修復：檢查有無標記再fitBounds
+                if (filteredMarkers.getLayers().length > 0) {
+                    map.fitBounds(filteredMarkers.getBounds(), { padding: [50, 50], maxZoom: 13 });
+                } else {
+                    map.setZoom(11);
+                }
                 
             } catch (error) {
                 console.error('載入錯誤:', error);
                 statusEl.innerHTML = `❌ 載入失敗: ${error.message}<br>
-                🔗 CSV連結：<a href="https://dannytcchan00.github.io/0Data/LampPost/lamppost_en.csv" target="_blank">檢查連結</a>[attached_file:1]`;
+                🔗 <a href="https://dannytcchan00.github.io/0Data/LampPost/lamppost_en.csv" target="_blank">檢查CSV連結</a>[attached_file:1]`;
             }
         }
 
         function createMarker(row) {
-            const lat = row.Latitude || row.LATITUDE;
-            const lng = row.Longitude || row.LONGITUDE;
+            const lat = row.Latitude;
+            const lng = row.Longitude;
             const latlng = [parseFloat(lat), parseFloat(lng)];
             
-            if (isNaN(latlng[0]) || isNaN(latlng[1])) return;
+            if (isNaN(latlng[0]) || isNaN(latlng[1])) return false;
             
-            const lampNo = row['Lamp Post Number'] || row.LAMP_NO;
-            if (markerCache.has(lampNo)) return;
+            const lampNo = row['Lamp Post Number'];
+            if (!lampNo || markerCache.has(lampNo)) return false;
             
             const marker = L.circleMarker(latlng, {
                 radius: 3,
@@ -160,8 +177,8 @@
                     <div style="font-size: 1.8em; margin-bottom: 12px;">🪔</div>
                     <h3 style="margin: 0 0 15px 0; color: #2c3e50;">燈柱 ${lampNo}</h3>
                     <table style="width: 100%; font-size: 1em; line-height: 1.6;">
-                        <tr><td style="width: 80px; color: #666;">地區:</td><td><strong>${row.District || row.DISTRICT || 'N/A'}</strong></td></tr>
-                        <tr><td>位置:</td><td>${row.Location || row.LOCATION || 'N/A'}</td></tr>
+                        <tr><td style="width: 80px; color: #666;">地區:</td><td><strong>${row.District || 'N/A'}</strong></td></tr>
+                        <tr><td>位置:</td><td>${row.Location || 'N/A'}</td></tr>
                         <tr><td>座標:</td><td><strong>${latlng[0].toFixed(5)}, ${latlng[1].toFixed(5)}</strong></td></tr>
                     </table>
                 </div>
@@ -170,10 +187,11 @@
             markerCache.set(lampNo, marker);
             filteredMarkers.addLayer(marker);
             allMarkers.addLayer(marker);
+            return true;
         }
 
         function updateStats() {
-            const districts = [...new Set(lampData.map(d => (d.District || d.DISTRICT)).filter(Boolean))];
+            const districts = [...new Set(lampData.map(d => d.District).filter(Boolean))];
             document.getElementById('total-count').textContent = `${lampData.length.toLocaleString()}`;
             document.getElementById('district-count').textContent = `${districts.length} 區`;
             document.getElementById('update-time').textContent = new Date().toLocaleString('zh-HK');
@@ -191,24 +209,29 @@
             }
             
             const matches = lampData.filter(row => {
-                const lampNo = (row['Lamp Post Number'] || row.LAMP_NO || '').toString();
-                const district = (row.District || row.DISTRICT || '').toLowerCase();
-                const location = (row.Location || row.LOCATION || '').toLowerCase();
+                const lampNo = (row['Lamp Post Number'] || '').toString().toLowerCase();
+                const district = (row.District || '').toLowerCase();
+                const location = (row.Location || '').toLowerCase();
                 return lampNo.includes(query) || district.includes(query) || location.includes(query);
             });
             
             matches.slice(0, 5000).forEach(row => {
-                const lampNo = row['Lamp Post Number'] || row.LAMP_NO;
+                const lampNo = row['Lamp Post Number'];
                 const marker = markerCache.get(lampNo);
                 if (marker) filteredMarkers.addLayer(marker);
             });
             
             document.getElementById('status').textContent = `🔍 找到 ${matches.length.toLocaleString()} 個結果`;
+            
+            // 自動縮放搜尋結果
+            if (filteredMarkers.getLayers().length > 0) {
+                map.fitBounds(filteredMarkers.getBounds(), { padding: [50, 50], maxZoom: 16 });
+            }
         });
 
         L.control.scale({ metric: true, imperial: false }).addTo(map);
         
-        // 自動載入你的資料！
+        // 自動載入！
         loadData();
     </script>
 </body>
