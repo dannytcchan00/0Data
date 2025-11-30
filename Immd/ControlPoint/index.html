@@ -1,1 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港出入境人次</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+        h1 { text-align: center; color: #1a73e8; }
+        #summary { display: flex; justify-content: space-around; margin: 20px 0; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; flex: 1; margin: 0 10px; }
+        .stat-number { font-size: 2.5em; font-weight: bold; color: #1a73e8; }
+        select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin: 10px; }
+        canvas { max-height: 400px; margin: 20px 0; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; }
+        th { background: #1a73e8; color: white; text-align: left; }
+        tr:hover { background: #f0f8ff; }
+    </style>
+</head>
+<body>
+    <h1>🛬 香港每日出入境人次</h1>
+    <div id="summary">
+        <div class="stat-card"><div>最新日期</div><div id="latestDate" class="stat-number">-</div></div>
+        <div class="stat-card"><div>當日總人次</div><div id="latestTotal" class="stat-number">-</div></div>
+        <div class="stat-card"><div>7日平均</div><div id="avg7Days" class="stat-number">-</div></div>
+    </div>
+    
+    <div style="text-align: center;">
+        <select id="controlPointFilter">
+            <option value="">所有管制站</option>
+            <option value="Airport">機場</option>
+            <option value="Shenzhen Bay">深圳灣</option>
+            <option value="Hong Kong-Zhuhai-Macao Bridge">港珠澳大橋</option>
+        </select>
+    </div>
+    
+    <canvas id="trendChart"></canvas>
+    <table id="dataTable">
+        <thead><tr><th>日期</th><th>管制站</th><th>方向</th><th>香港居民</th><th>內地訪客</th><th>其他</th><th>總計</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let allData = [], chart = null;
+        
+        function parseCSV(csv) {
+            return csv.trim().split('\n').slice(1).map(line => {
+                const [date, controlPoint, direction, residents, mainland, others, total] = line.split(',');
+                return {
+                    date: date.trim(), controlPoint: controlPoint.trim(), direction: direction.trim(),
+                    residents: parseInt(residents)||0, mainland: parseInt(mainland)||0, 
+                    others: parseInt(others)||0, total: parseInt(total)||0
+                };
+            }).filter(row => row.total > 0);
+        }
+        
+        async function loadData() {
+            try {
+                const response = await fetch('./data/immigration.csv');
+                const csvText = await response.text();
+                allData = parseCSV(csvText);
+                render();
+            } catch (error) {
+                document.getElementById('latestDate').textContent = '載入中...';
+            }
+        }
+        
+        function render() {
+            const filter = document.getElementById('controlPointFilter').value;
+            const filteredData = filter ? allData.filter(d => d.controlPoint === filter) : allData;
+            
+            const latest = filteredData[filteredData.length - 1];
+            if (latest) {
+                document.getElementById('latestDate').textContent = latest.date;
+                document.getElementById('latestTotal').textContent = latest.total.toLocaleString();
+            }
+            const recent7 = filteredData.slice(-7).reduce((sum, d) => sum + d.total, 0) / 7;
+            document.getElementById('avg7Days').textContent = Math.round(recent7).toLocaleString();
+            
+            document.querySelector('#dataTable tbody').innerHTML = 
+                filteredData.slice(-20).reverse().map(row => 
+                    `<tr><td>${row.date}</td><td>${row.controlPoint}</td><td>${row.direction}</td>
+                     <td>${row.residents.toLocaleString()}</td><td>${row.mainland.toLocaleString()}</td>
+                     <td>${row.others.toLocaleString()}</td><td style="font-weight:bold">${row.total.toLocaleString()}</td></tr>`
+                ).join('');
+            
+            const dailyTotals = {}; 
+            filteredData.forEach(row => dailyTotals[row.date] = (dailyTotals[row.date] || 0) + row.total);
+            const labels = Object.keys(dailyTotals).slice(-30).reverse();
+            const data = labels.map(date => dailyTotals[date]);
+            
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line', 
+                 { 
+                    labels, 
+                    datasets: [{ 
+                        label: '每日總人次', 
+                        data, 
+                        borderColor: '#1a73e8', 
+                        backgroundColor: 'rgba(26,115,232,0.1)', 
+                        tension: 0.4, 
+                        fill: true 
+                    }] 
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+        
+        document.getElementById('controlPointFilter').addEventListener('change', render);
+        loadData();
+    </script>
+</body>
+</html>
 
