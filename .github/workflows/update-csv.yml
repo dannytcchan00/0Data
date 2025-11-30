@@ -1,4 +1,4 @@
-name: 每日自動更新出入境 CSV
+name: Create Immd CSV
 
 on:
   schedule:
@@ -12,23 +12,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: 建立資料夾並下載最新 CSV
+    - name: Create Immd CSV
       run: |
         mkdir -p "Immd/ControlPoint/data"
         curl -L -o "Immd/ControlPoint/data/immigration.csv" \
         "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv"
     
-    - name: 檢查檔案是否有變更
+    - name: Check Differenet
       id: diff
       run: |
         git diff --quiet "Immd/ControlPoint/data/immigration.csv" || echo "changed=true" >> $GITHUB_OUTPUT
     
-    - name: Commit 並推送更新
+    - name: Commit Update
       if: steps.diff.outputs.changed == 'true'
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add "0Data/Immd/ControlPoint/data/immigration.csv"
-        git commit -m "📊 自動更新出入境 CSV $(date +'%Y-%m-%d')"
+        git commit -m "📊 Create Immd CSV $(date +'%Y-%m-%d')"
         git push
 
