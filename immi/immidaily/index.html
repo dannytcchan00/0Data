@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Border Flow - Live CSV Sync</title>
+    <title>Hong Kong Border Flow - 三類人流</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -22,7 +22,7 @@
             border-radius: 20px; box-shadow: 0 25px 45px rgba(0,0,0,0.4);
         }
         
-        .top-panel { top: 25px; left: 25px; width: 380px; padding: 25px; z-index: 1000; }
+        .top-panel { top: 25px; left: 25px; width: 420px; padding: 25px; z-index: 1000; }
         .top-panel h2 { margin: 0 0 20px 0; color: #4fc3f7; font-size: 24px; font-weight: 700; }
         
         .status-bar { 
@@ -43,35 +43,39 @@
         }
         .stat-card:hover { transform: translateY(-3px); }
         .stat-number { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
-        .today { color: #10b981; } .avg7 { color: #f59e0b; } .selected { color: #8b5cf6; }
+        .today { color: #10b981; } .avg7 { color: #f59e0b; } .hk { color: #3b82f6; } .cn { color: #ef4444; } .other { color: #10b981; }
         .stat-label { font-size: 13px; color: #a1a1aa; }
         
-        .legend { bottom: 25px; right: 25px; padding: 20px; width: 220px; font-size: 14px; }
-        .legend-item { display: flex; align-items: center; margin: 14px 0; font-weight: 500; }
-        .legend-color { width: 18px; height: 18px; margin-right: 14px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .legend { bottom: 25px; right: 25px; padding: 20px; width: 240px; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; margin: 12px 0; font-weight: 500; }
+        .legend-color { width: 16px; height: 16px; margin-right: 12px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
         
-        .loading { color: #a1a1aa; font-style: italic; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
-        
-        /* Enhanced popup */
+        /* Enhanced popup for 3 categories */
         .leaflet-popup-content-wrapper { 
             background: rgba(15,15,25,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
-            backdrop-filter: blur(25px); max-width: 400px; margin: 10px;
+            backdrop-filter: blur(25px); max-width: 420px; margin: 10px; max-height: 500px; overflow-y: auto;
         }
-        .leaflet-popup-content { margin: 0; padding: 25px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .leaflet-popup-content { margin: 0; padding: 25px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.5; }
         .popup-title { color: #4fc3f7; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; }
-        .data-section { margin: 18px 0; padding: 20px; background: rgba(40,40,60,0.6); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
-        .data-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #e8e8e8; }
-        .data-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 18px; font-weight: 600; }
-        .arrivals { color: #10b981; } .departures { color: #f87171; }
-        .date-note { font-size: 13px; color: #a1a1aa; margin-top: 10px; }
+        .data-section { margin: 16px 0; padding: 18px; background: rgba(40,40,60,0.7); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); }
+        .data-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #e8e8e8; }
+        .category-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .category-row:last-child { border-bottom: none; }
+        .category-label { font-weight: 500; }
+        .hk-label { color: #3b82f6; } .cn-label { color: #ef4444; } .other-label { color: #10b981; }
+        .category-number { font-size: 18px; font-weight: 700; }
+        .hk-num { color: #3b82f6; } .cn-num { color: #ef4444; } .other-num { color: #10b981; }
+        .total-row { margin-top: 12px; padding-top: 12px; border-top: 2px solid rgba(79,195,247,0.3); }
+        .total-label { font-weight: 600; color: #4fc3f7; }
+        .total-number { font-size: 20px; color: #4fc3f7; }
+        .date-note { font-size: 13px; color: #a1a1aa; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
     <div id="map"></div>
     
     <div class="panel top-panel">
-        <h2>🛂 Live Border Flow</h2>
+        <h2>🛂 三類人流監測</h2>
         <div class="status-bar" id="statusBar">
             <span id="lastUpdate">Syncing CSV data...</span>
             <span id="recordCount">-</span>
@@ -80,20 +84,16 @@
         
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number today" id="totalTodayArrivals">-</div>
-                <div class="stat-label">Today Arrivals</div>
+                <div class="stat-number today hk" id="totalTodayHK">-</div>
+                <div class="stat-label">HK Residents Today</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number today" id="totalTodayDepartures">-</div>
-                <div class="stat-label">Today Departures</div>
+                <div class="stat-number today cn" id="totalTodayCN">-</div>
+                <div class="stat-label">Mainland Today</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number avg7" id="totalAvg7Arrivals">-</div>
-                <div class="stat-label">7-Day Avg Arrivals</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number avg7" id="totalAvg7Departures">-</div>
-                <div class="stat-label">7-Day Avg Departures</div>
+                <div class="stat-number today other" id="totalTodayOther">-</div>
+                <div class="stat-label">Others Today</div>
             </div>
         </div>
         <small style="color: #71717a; margin-top: 20px; display: block;">
@@ -103,9 +103,14 @@
     </div>
     
     <div class="panel legend">
-        <div class="legend-item"><div class="legend-color" style="background:#ff4444;"></div>Airport</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ffaa00;"></div>Land Borders</div>
-        <div class="legend-item"><div class="legend-color" style="background:#44ff44;"></div>Ferry Terminals</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4444;"></div>🛩️ Airport</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffaa00;"></div>🌉 Land Borders</div>
+        <div class="legend-item"><div class="legend-color" style="background:#44ff44;"></div>🚢 Ferry</div>
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px;">
+            <div style="color:#3b82f6;">🇭🇰 HK Residents</div>
+            <div style="color:#ef4444;">🇨🇳 Mainland</div>
+            <div style="color:#10b981;">🌍 Others</div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -141,60 +146,84 @@
         let allData = [], todayData = {}, avg7Data = {}, selectedData = {}, selectedDate = '';
         let markers = {}, lastSyncTime = null;
 
-        // Live CSV sync function
         async function syncCSV() {
             document.getElementById('statusBar').innerHTML = '<span class="loading">🔄 Syncing live data...</span>';
             
             Papa.parse(CSV_URL, {
                 download: true, header: true, skipEmptyLines: true,
                 complete: function(results) {
-                    allData = results.data.reverse(); // Latest first
+                    allData = results.data.reverse();
                     document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
                     document.getElementById('lastUpdate').textContent = `Last sync: ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong'})}`;
                     
                     processAllData();
                     if (selectedDate) loadSelectedDate(selectedDate);
-                },
-                error: function() {
-                    document.getElementById('statusBar').innerHTML = '<span style="color:#ef4444;">❌ CSV sync failed</span>';
                 }
             });
         }
 
         function processAllData() {
-            // Today: first record per control point (latest data)
+            // Today data by category
             const todayRecords = {};
             const seenPoints = new Set();
             allData.slice(0, 100).forEach(row => {
                 const point = row['Control Point'];
-                if (!point || !row['Total'] || row['Total'] === '0' || seenPoints.has(point)) return;
+                if (!point || seenPoints.has(point)) return;
                 seenPoints.add(point);
-                todayRecords[point] = {
-                    arrivals: row['Arrival / Departure'] === 'Arrival' ? parseInt(row['Total']) || 0 : 0,
-                    departures: row['Arrival / Departure'] === 'Departure' ? parseInt(row['Total']) || 0 : 0
+                
+                if (!todayRecords[point]) todayRecords[point] = {
+                    hk: {arrivals: 0, departures: 0},
+                    cn: {arrivals: 0, departures: 0},
+                    other: {arrivals: 0, departures: 0}
                 };
+                
+                const nums = {
+                    hk: parseInt(row['Hong Kong Residents']) || 0,
+                    cn: parseInt(row['Mainland Visitors']) || 0,
+                    other: parseInt(row['Other Visitors']) || 0
+                };
+                
+                const dir = row['Arrival / Departure'].toLowerCase();
+                Object.keys(nums).forEach(cat => {
+                    todayRecords[point][cat][dir + 's'] += nums[cat];
+                });
             });
             todayData = todayRecords;
 
-            // 7-day averages (approx 32 records per day × 7 = 224 records)
+            // 7-day averages by category
             const recentRecords = allData.slice(0, 224);
             const avgRecords = {};
             recentRecords.forEach(row => {
                 const point = row['Control Point'];
-                if (!point || !row['Total'] || row['Total'] === '0') return;
-                if (!avgRecords[point]) avgRecords[point] = { arrivals: 0, departures: 0, count: 0 };
-                const total = parseInt(row['Total']) || 0;
-                if (row['Arrival / Departure'] === 'Arrival') avgRecords[point].arrivals += total;
-                else avgRecords[point].departures += total;
-                avgRecords[point].count++;
+                if (!point) return;
+                if (!avgRecords[point]) avgRecords[point] = {
+                    hk: {arrivals: 0, departures: 0, count: 0},
+                    cn: {arrivals: 0, departures: 0, count: 0},
+                    other: {arrivals: 0, departures: 0, count: 0}
+                };
+                
+                const nums = {
+                    hk: parseInt(row['Hong Kong Residents']) || 0,
+                    cn: parseInt(row['Mainland Visitors']) || 0,
+                    other: parseInt(row['Other Visitors']) || 0
+                };
+                
+                const dir = row['Arrival / Departure'].toLowerCase();
+                Object.keys(nums).forEach(cat => {
+                    avgRecords[point][cat][dir + 's'] += nums[cat];
+                    avgRecords[point][cat].count++;
+                });
             });
             
             Object.keys(avgRecords).forEach(point => {
-                const data = avgRecords[point];
-                avg7Data[point] = {
-                    arrivals: Math.round(data.arrivals / data.count),
-                    departures: Math.round(data.departures / data.count)
-                };
+                ['hk', 'cn', 'other'].forEach(cat => {
+                    const data = avgRecords[point][cat];
+                    avg7Data[point] = avg7Data[point] || {};
+                    avg7Data[point][cat] = {
+                        arrivals: Math.round(data.arrivals / data.count),
+                        departures: Math.round(data.departures / data.count)
+                    };
+                });
             });
 
             updateTotalStats();
@@ -202,7 +231,6 @@
         }
 
         function initDatePicker() {
-            const uniqueDates = [...new Set(allData.map(row => row.Date))].sort().reverse();
             flatpickr("#datePicker", {
                 dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
                 maxDate: "today", 
@@ -216,14 +244,24 @@
         function loadSelectedDate(dateStr) {
             selectedData = {};
             allData.forEach(row => {
-                if (row.Date === dateStr) {
+                if (row.Date === dateStr && row['Control Point']) {
                     const point = row['Control Point'];
-                    if (point && row['Total'] && row['Total'] !== '0') {
-                        if (!selectedData[point]) selectedData[point] = { arrivals: 0, departures: 0 };
-                        const total = parseInt(row['Total']) || 0;
-                        if (row['Arrival / Departure'] === 'Arrival') selectedData[point].arrivals += total;
-                        else selectedData[point].departures += total;
-                    }
+                    if (!selectedData[point]) selectedData[point] = {
+                        hk: {arrivals: 0, departures: 0},
+                        cn: {arrivals: 0, departures: 0},
+                        other: {arrivals: 0, departures: 0}
+                    };
+                    
+                    const nums = {
+                        hk: parseInt(row['Hong Kong Residents']) || 0,
+                        cn: parseInt(row['Mainland Visitors']) || 0,
+                        other: parseInt(row['Other Visitors']) || 0
+                    };
+                    
+                    const dir = row['Arrival / Departure'].toLowerCase();
+                    Object.keys(nums).forEach(cat => {
+                        selectedData[point][cat][dir + 's'] += nums[cat];
+                    });
                 }
             });
             updateTotalStats();
@@ -231,24 +269,23 @@
         }
 
         function updateTotalStats() {
-            // Today totals
-            let tArr = 0, tDep = 0;
-            Object.values(todayData).forEach(d => { tArr += d.arrivals; tDep += d.departures; });
-            document.getElementById('totalTodayArrivals').textContent = tArr.toLocaleString();
-            document.getElementById('totalTodayDepartures').textContent = tDep.toLocaleString();
-
-            // 7-day avg totals
-            let aArr = 0, aDep = 0;
-            Object.values(avg7Data).forEach(d => { aArr += d.arrivals; aDep += d.departures; });
-            document.getElementById('totalAvg7Arrivals').textContent = aArr.toLocaleString();
-            document.getElementById('totalAvg7Departures').textContent = aDep.toLocaleString();
+            // Today totals by category
+            let todayHK = 0, todayCN = 0, todayOther = 0;
+            Object.values(todayData).forEach(d => {
+                todayHK += d.hk.arrivals + d.hk.departures;
+                todayCN += d.cn.arrivals + d.cn.departures;
+                todayOther += d.other.arrivals + d.other.departures;
+            });
+            document.getElementById('totalTodayHK').textContent = todayHK.toLocaleString();
+            document.getElementById('totalTodayCN').textContent = todayCN.toLocaleString();
+            document.getElementById('totalTodayOther').textContent = todayOther.toLocaleString();
         }
 
         function updateMarkers() {
             Object.entries(controlPoints).forEach(([name, info]) => {
-                const today = todayData[name] || {arrivals:0, departures:0};
-                const avg7 = avg7Data[name] || {arrivals:0, departures:0};
-                const selected = selectedData[name] || {arrivals:0, departures:0};
+                const today = todayData[name] || {hk:{arrivals:0,departures:0}, cn:{arrivals:0,departures:0}, other:{arrivals:0,departures:0}};
+                const avg7 = avg7Data[name] || today;
+                const selected = selectedData[name] || today;
 
                 const popupContent = `
                     <div>
@@ -256,42 +293,58 @@
                         
                         <div class="data-section">
                             <div class="data-title">📅 Today Latest</div>
-                            <div class="data-row">
-                                <span>Arrivals ➡️</span>
-                                <span class="arrivals">${today.arrivals.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label hk-label">🇭🇰 HK Residents</span>
+                                <span class="category-number hk-num">${today.hk.arrivals.toLocaleString()}↗ ${today.hk.departures.toLocaleString()}↘</span>
                             </div>
-                            <div class="data-row">
-                                <span>Departures ➡️</span>
-                                <span class="departures">${today.departures.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label cn-label">🇨🇳 Mainland</span>
+                                <span class="category-number cn-num">${today.cn.arrivals.toLocaleString()}↗ ${today.cn.departures.toLocaleString()}↘</span>
+                            </div>
+                            <div class="category-row">
+                                <span class="category-label other-label">🌍 Others</span>
+                                <span class="category-number other-num">${today.other.arrivals.toLocaleString()}↗ ${today.other.departures.toLocaleString()}↘</span>
+                            </div>
+                            <div class="category-row total-row">
+                                <span class="total-label">💎 Total</span>
+                                <span class="total-number">${(today.hk.arrivals + today.cn.arrivals + today.other.arrivals + today.hk.departures + today.cn.departures + today.other.departures).toLocaleString()}</span>
                             </div>
                         </div>
                         
                         <div class="data-section">
                             <div class="data-title">📊 7-Day Average</div>
-                            <div class="data-row">
-                                <span>Arrivals ➡️</span>
-                                <span class="arrivals">${avg7.arrivals.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label hk-label">🇭🇰 HK Residents</span>
+                                <span class="category-number hk-num">${avg7.hk.arrivals.toLocaleString()}↗ ${avg7.hk.departures.toLocaleString()}↘</span>
                             </div>
-                            <div class="data-row">
-                                <span>Departures ➡️</span>
-                                <span class="departures">${avg7.departures.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label cn-label">🇨🇳 Mainland</span>
+                                <span class="category-number cn-num">${avg7.cn.arrivals.toLocaleString()}↗ ${avg7.cn.departures.toLocaleString()}↘</span>
+                            </div>
+                            <div class="category-row">
+                                <span class="category-label other-label">🌍 Others</span>
+                                <span class="category-number other-num">${avg7.other.arrivals.toLocaleString()}↗ ${avg7.other.departures.toLocaleString()}↘</span>
                             </div>
                         </div>
                         
                         ${selectedDate ? `
                         <div class="data-section">
                             <div class="data-title">📅 ${selectedDate}</div>
-                            <div class="data-row">
-                                <span>Arrivals ➡️</span>
-                                <span class="arrivals">${selected.arrivals.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label hk-label">🇭🇰 HK Residents</span>
+                                <span class="category-number hk-num">${selected.hk.arrivals.toLocaleString()}↗ ${selected.hk.departures.toLocaleString()}↘</span>
                             </div>
-                            <div class="data-row">
-                                <span>Departures ➡️</span>
-                                <span class="departures">${selected.departures.toLocaleString()}</span>
+                            <div class="category-row">
+                                <span class="category-label cn-label">🇨🇳 Mainland</span>
+                                <span class="category-number cn-num">${selected.cn.arrivals.toLocaleString()}↗ ${selected.cn.departures.toLocaleString()}↘</span>
+                            </div>
+                            <div class="category-row">
+                                <span class="category-label other-label">🌍 Others</span>
+                                <span class="category-number other-num">${selected.other.arrivals.toLocaleString()}↗ ${selected.other.departures.toLocaleString()}↘</span>
                             </div>
                         </div>` : ''}
                         
-                        <div class="date-note">Use date picker for historical comparison</div>
+                        <div class="date-note">💡 Use date picker for historical comparison • Live CSV sync</div>
                     </div>
                 `;
 
@@ -299,25 +352,18 @@
                     markers[name].setPopupContent(popupContent);
                 } else {
                     markers[name] = L.circleMarker(info.coords, {
-                        radius: 12, fillColor: info.colour, color: '#ffffff', 
+                        radius: 14, fillColor: info.colour, color: '#ffffff', 
                         weight: 3, opacity: 1, fillOpacity: 0.85
                     }).addTo(map)
-                    .bindPopup(popupContent, { maxWidth: 400, className: 'custom-popup' })
-                    .bindTooltip(`<strong>${name}</strong><br>${today.arrivals+today.departures} today`, {
-                        direction: 'top', className: 'dark-tooltip'
-                    });
+                    .bindPopup(popupContent, { maxWidth: 420, className: 'custom-popup' });
                 }
             });
         }
 
-        // Initial sync and auto-refresh every 5 minutes
+        // Initial sync
         syncCSV();
-        setInterval(syncCSV, 5 * 60 * 1000); // 5 minutes
-        
-        // Initialize date picker after first sync
-        setTimeout(() => {
-            if (allData.length > 0) initDatePicker();
-        }, 2000);
+        setInterval(syncCSV, 5 * 60 * 1000);
+        setTimeout(() => initDatePicker(), 2000);
     </script>
 </body>
 </html>
