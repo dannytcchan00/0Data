@@ -3,256 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Border Control Flow - Dark Edition</title>
+    <title>Hong Kong Border Flow Analytics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         * { box-sizing: border-box; }
         body { 
-            margin: 0; 
-            padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0; font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
-            color: #e8e8e8;
-            overflow: hidden;
+            color: #e8e8e8; overflow: hidden;
         }
-        #map { 
-            height: 100vh; 
-            width: 100%; 
-            filter: contrast(1.1) saturate(1.2);
-        }
+        #map { height: 100vh; width: 100%; filter: contrast(1.1) saturate(1.2); }
         
-        /* Dark glass panels */
         .panel {
-            position: absolute; 
-            background: rgba(15, 15, 25, 0.95);
-            backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            box-shadow: 
-                0 25px 45px rgba(0,0,0,0.3),
-                0 0 0 1px rgba(255,255,255,0.05),
-                inset 0 1px 0 rgba(255,255,255,0.1);
+            position: absolute; background: rgba(15,15,25,0.95);
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px; box-shadow: 0 25px 45px rgba(0,0,0,0.4);
         }
         
-        .info { 
-            top: 25px; left: 25px; 
-            z-index: 1000; 
-            padding: 25px; 
-            width: 380px;
-            font-size: 15px;
-            line-height: 1.6;
+        .top-panel { top: 25px; left: 25px; width: 420px; padding: 25px; z-index: 1000; }
+        .top-panel h2 { margin: 0 0 20px 0; color: #4fc3f7; font-size: 24px; font-weight: 700; }
+        
+        .date-picker { 
+            background: rgba(30,30,40,0.8); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 12px 16px; margin: 15px 0;
+            color: #e8e8e8; font-size: 15px; width: 100%;
         }
-        .info h2 { 
-            margin: 0 0 20px 0; 
-            color: #4fc3f7; 
-            font-weight: 600;
-            font-size: 22px;
-            text-shadow: 0 2px 10px rgba(79,195,247,0.3);
+        .date-picker:focus { outline: none; border-color: #4fc3f7; box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
+        
+        .data-tabs { display: flex; background: rgba(40,40,50,0.7); border-radius: 12px; overflow: hidden; margin: 15px 0; }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #a1a1aa; font-weight: 500; cursor: pointer; transition: all 0.3s; }
+        .tab-btn.active { background: rgba(79,195,247,0.2); color: #4fc3f7; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stat-card { 
+            background: linear-gradient(145deg, rgba(40,40,60,0.8), rgba(25,25,40,0.8));
+            padding: 20px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s;
         }
-        .stats { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-            margin-top: 15px;
-        }
-        .stat-item {
-            background: rgba(30, 30, 40, 0.6);
-            padding: 12px 16px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .stat-number { font-size: 24px; font-weight: 600; color: #4ade80; margin-bottom: 4px; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-number { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+        .today { color: #10b981; } .avg7 { color: #f59e0b; } .selected { color: #8b5cf6; }
         .stat-label { font-size: 13px; color: #a1a1aa; }
         
-        .legend { 
-            bottom: 25px; right: 25px; 
-            padding: 20px; 
-            width: 200px;
-            font-size: 13px;
-        }
-        .legend-item { 
-            display: flex; align-items: center; 
-            margin: 12px 0; 
-            font-weight: 500;
-        }
-        .legend-color { 
-            width: 16px; height: 16px; 
-            margin-right: 12px; 
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
+        .legend { bottom: 25px; right: 25px; padding: 20px; width: 220px; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; margin: 14px 0; font-weight: 500; }
+        .legend-color { width: 18px; height: 18px; margin-right: 14px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
         
-        .loading { 
-            color: #a1a1aa; 
-            font-style: italic;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
+        .loading { color: #a1a1aa; font-style: italic; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
         
-        /* Custom Leaflet dark theme */
-        .leaflet-popup-content-wrapper {
-            background: rgba(20, 20, 30, 0.98);
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(15px);
-        }
-        .leaflet-popup-content { 
-            margin: 15px 20px 10px; 
-            color: #e8e8e8;
-            font-family: 'Inter', sans-serif;
-        }
-        .leaflet-popup-tip { box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .leaflet-popup-content-wrapper { background: rgba(20,20,30,0.98); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .leaflet-popup-content { margin: 18px 22px 12px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.6; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     
-    <div class="panel info">
-        <h2>🛂 Border Control Monitor</h2>
-        <div class="loading" id="status">Loading Immigration Department data...</div>
-        <div class="stats" id="liveStats" style="display: none;">
-            <div class="stat-item">
-                <div class="stat-number" id="totalArrivals">-</div>
-                <div class="stat-label">Avg Daily Arrivals</div>
+    <div class="panel top-panel">
+        <h2>🛂 Border Flow Analytics</h2>
+        <input type="text" class="date-picker" id="datePicker" placeholder="Select date or view latest">
+        
+        <div class="data-tabs">
+            <button class="tab-btn active" data-tab="today">Today's Latest</button>
+            <button class="tab-btn" data-tab="avg7">7-Day Average</button>
+            <button class="tab-btn" data-tab="selected">Selected Date</button>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-number today" id="todayArrivals">-</div>
+                <div class="stat-label">Arrivals</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-number" id="totalDepartures">-</div>
-                <div class="stat-label">Avg Daily Departures</div>
+            <div class="stat-card">
+                <div class="stat-number today" id="todayDepartures">-</div>
+                <div class="stat-label">Departures</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number avg7" id="avg7Arrivals">-</div>
+                <div class="stat-label">7-Day Avg Arrivals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number avg7" id="avg7Departures">-</div>
+                <div class="stat-label">7-Day Avg Departures</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number selected" id="selectedArrivals">-</div>
+                <div class="stat-label">Selected Date Arrivals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number selected" id="selectedDepartures">-</div>
+                <div class="stat-label">Selected Date Departures</div>
             </div>
         </div>
-        <small style="color: #71717a; margin-top: 15px; display: block;">Data: Immigration Department [attached_file:1]</small>
+        <small style="color: #71717a; margin-top: 20px; display: block;">Immigration Department [attached_file:1]</small>
     </div>
     
     <div class="panel legend">
-        <div class="legend-item">
-            <div class="legend-color" style="background: #ff4444;"></div>
-            Airport
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #ffaa00;"></div>
-            Land Borders
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #44ff44;"></div>
-            Ferry Terminals
-        </div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4444;"></div>Airport</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffaa00;"></div>Land Borders</div>
+        <div class="legend-item"><div class="legend-color" style="background:#44ff44;"></div>Ferry Terminals</div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // Control points with precise coordinates [web:2]
         const controlPoints = {
-            'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444', type: 'airport' },
-            'Lo Wu': { coords: [22.53222, 114.11333], colour: '#ffaa00', type: 'land' },
-            'Lok Ma Chau': { coords: [22.52074, 114.07496], colour: '#ffaa00', type: 'land' },
-            'Lok Ma Chau Spur Line': { coords: [22.51577, 114.06877], colour: '#ffaa00', type: 'land' },
-            'Man Kam To': { coords: [22.5370, 114.1294], colour: '#ffaa00', type: 'land' },
-            'Sha Tau Kok': { coords: [22.54911, 114.22328], colour: '#ffaa00', type: 'land' },
-            'Shenzhen Bay': { coords: [22.5039, 113.9447], colour: '#ffaa00', type: 'land' },
-            'Hong Kong-Zhuhai-Macao Bridge': { coords: [22.28306, 113.78056], colour: '#ffaa00', type: 'land' },
-            'Heung Yuen Wai': { coords: [22.55429, 114.15242], colour: '#ffaa00', type: 'land' },
-            'Express Rail Link West Kowloon': { coords: [22.30361, 114.16500], colour: '#ffaa00', type: 'rail' },
-            'China Ferry Terminal': { coords: [22.29931, 114.16725], colour: '#44ff44', type: 'ferry' },
-            'Macau Ferry Terminal': { coords: [22.28937, 114.15215], colour: '#44ff44', type: 'ferry' },
-            'Kai Tak Cruise Terminal': { coords: [22.3074, 114.2128], colour: '#44ff44', type: 'ferry' },
-            'Hung Hom': { coords: [22.302, 114.179], colour: '#ffaa00', type: 'rail' },
-            'Tuen Mun Ferry Terminal': { coords: [22.392, 113.978], colour: '#44ff44', type: 'ferry' },
-            'Harbour Control': { coords: [22.290, 114.160], colour: '#44ff44', type: 'ferry' }
+            'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444' },
+            'Lo Wu': { coords: [22.53222, 114.11333], colour: '#ffaa00' },
+            'Lok Ma Chau': { coords: [22.52074, 114.07496], colour: '#ffaa00' },
+            'Lok Ma Chau Spur Line': { coords: [22.51577, 114.06877], colour: '#ffaa00' },
+            'Man Kam To': { coords: [22.5370, 114.1294], colour: '#ffaa00' },
+            'Sha Tau Kok': { coords: [22.54911, 114.22328], colour: '#ffaa00' },
+            'Shenzhen Bay': { coords: [22.5039, 113.9447], colour: '#ffaa00' },
+            'Hong Kong-Zhuhai-Macao Bridge': { coords: [22.28306, 113.78056], colour: '#ffaa00' },
+            'Heung Yuen Wai': { coords: [22.55429, 114.15242], colour: '#ffaa00' },
+            'Express Rail Link West Kowloon': { coords: [22.30361, 114.16500], colour: '#ffaa00' },
+            'China Ferry Terminal': { coords: [22.29931, 114.16725], colour: '#44ff44' },
+            'Macau Ferry Terminal': { coords: [22.28937, 114.15215], colour: '#44ff44' },
+            'Kai Tak Cruise Terminal': { coords: [22.3074, 114.2128], colour: '#44ff44' },
+            'Hung Hom': { coords: [22.302, 114.179], colour: '#ffaa00' },
+            'Tuen Mun Ferry Terminal': { coords: [22.392, 113.978], colour: '#44ff44' },
+            'Harbour Control': { coords: [22.290, 114.160], colour: '#44ff44' }
         };
 
-        // Dark CartoDB basemap
         const map = L.map('map').setView([22.35, 114.1], 10);
         L.tileLayer('https://cartodb-basemaps-c.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap © CartoDB',
-            maxZoom: 19
+            attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
         }).addTo(map);
 
-        let latestData = {};
-        let totalArrivals = 0, totalDepartures = 0;
+        let allData = [], todayData = {}, avg7Data = {}, selectedData = {};
+        let markers = {};
 
-        // Load CSV data
+        // Load all CSV data
         Papa.parse('https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv', {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
-                const df = results.data.reverse(); // Latest first
-                const recentRecords = df.slice(0, 7 * 32); // Recent 7 days
-                
-                recentRecords.forEach(row => {
-                    if (!row['Control Point'] || !row['Total'] || row['Total'] === '0') return;
-                    const point = row['Control Point'];
-                    const total = parseInt(row['Total']) || 0;
-                    const direction = row['Arrival / Departure'];
-                    
-                    if (!latestData[point]) {
-                        latestData[point] = { arrivals: 0, departures: 0, total: 0, count: 0 };
-                    }
-                    latestData[point][direction.toLowerCase()] += total;
-                    latestData[point].total += total;
-                    latestData[point].count += 1;
-                    
-                    totalArrivals += direction === 'Arrival' ? total : 0;
-                    totalDepartures += direction === 'Departure' ? total : 0;
-                });
-
-                // Calculate averages
-                Object.keys(latestData).forEach(point => {
-                    const data = latestData[point];
-                    data.avgArrivals = Math.round(data.arrivals / data.count);
-                    data.avgDepartures = Math.round(data.departures / data.count);
-                    data.avgTotal = Math.round(data.total / data.count);
-                });
-
-                updateUI();
-                addMarkers();
+                allData = results.data.reverse(); // Latest first
+                processData();
+                initDatePicker();
+                document.querySelector('.loading') ? document.querySelector('.loading').remove() : null;
             }
         });
 
-        function updateUI() {
-            document.getElementById('status').style.display = 'none';
-            document.getElementById('liveStats').style.display = 'grid';
-            document.getElementById('totalArrivals').textContent = totalArrivals.toLocaleString();
-            document.getElementById('totalDepartures').textContent = totalDepartures.toLocaleString();
+        function processData() {
+            // Today's latest data (first records per control point)
+            const todayRecords = {};
+            allData.slice(0, 50).forEach(row => { // First ~50 records are latest
+                if (!row['Control Point'] || !row['Total'] || row['Total'] === '0') return;
+                const point = row['Control Point'];
+                if (!todayRecords[point]) {
+                    todayRecords[point] = { arrivals: 0, departures: 0 };
+                    todayRecords[point][row['Arrival / Departure'].toLowerCase()] = parseInt(row['Total']) || 0;
+                }
+            });
+            todayData = todayRecords;
+
+            // 7-day averages
+            const recentRecords = allData.slice(0, 7 * 32);
+            const avg7Records = {};
+            recentRecords.forEach(row => {
+                if (!row['Control Point'] || !row['Total'] || row['Total'] === '0') return;
+                const point = row['Control Point'];
+                if (!avg7Records[point]) avg7Records[point] = { arrivals: 0, departures: 0, count: 0 };
+                avg7Records[point][row['Arrival / Departure'].toLowerCase()] += parseInt(row['Total']) || 0;
+                avg7Records[point].count++;
+            });
+            Object.keys(avg7Records).forEach(point => {
+                const data = avg7Records[point];
+                avg7Data[point] = {
+                    arrivals: Math.round(data.arrivals / data.count),
+                    departures: Math.round(data.departures / data.count)
+                };
+            });
+
+            updateStats();
+            createMarkers();
         }
 
-        function addMarkers() {
+        function initDatePicker() {
+            flatpickr("#datePicker", {
+                dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
+                maxDate: "today", onChange: function(selectedDates, dateStr) {
+                    if (dateStr) loadSelectedDate(dateStr);
+                }
+            });
+        }
+
+        function loadSelectedDate(dateStr) {
+            // Parse dateStr (dd-mm-yyyy) to match CSV format (dd-mm-yyyy)
+            selectedData = {};
+            allData.forEach(row => {
+                if (row.Date === dateStr) {
+                    const point = row['Control Point'];
+                    if (!selectedData[point]) selectedData[point] = { arrivals: 0, departures: 0 };
+                    selectedData[point][row['Arrival / Departure'].toLowerCase()] += parseInt(row['Total']) || 0;
+                }
+            });
+            updateStats();
+            updateMarkers('selected');
+        }
+
+        function updateStats() {
+            // Today totals
+            let todayArr = 0, todayDep = 0;
+            Object.values(todayData).forEach(d => { todayArr += d.arrivals || 0; todayDep += d.departures || 0; });
+            document.getElementById('todayArrivals').textContent = todayArr.toLocaleString();
+            document.getElementById('todayDepartures').textContent = todayDep.toLocaleString();
+
+            // 7-day avg totals
+            let avg7Arr = 0, avg7Dep = 0;
+            Object.values(avg7Data).forEach(d => { avg7Arr += d.arrivals; avg7Dep += d.departures; });
+            document.getElementById('avg7Arrivals').textContent = avg7Arr.toLocaleString();
+            document.getElementById('avg7Departures').textContent = avg7Dep.toLocaleString();
+
+            // Selected date totals
+            let selArr = 0, selDep = 0;
+            Object.values(selectedData).forEach(d => { selArr += d.arrivals || 0; selDep += d.departures || 0; });
+            document.getElementById('selectedArrivals').textContent = selArr.toLocaleString();
+            document.getElementById('selectedDepartures').textContent = selDep.toLocaleString();
+        }
+
+        function createMarkers() {
             Object.entries(controlPoints).forEach(([name, info]) => {
-                const data = latestData[name];
-                if (!data) return;
+                const today = todayData[name] || {arrivals:0,departures:0};
+                const avg7 = avg7Data[name] || {arrivals:0,departures:0};
                 
-                const popupContent = `
-                    <div style="font-family: 'Inter', sans-serif; line-height: 1.6;">
-                        <h3 style="margin: 0 0 15px 0; color: ${info.colour}; font-size: 20px; font-weight: 600;">${name}</h3>
-                        <div style="background: rgba(40,40,50,0.5); padding: 12px; border-radius: 10px; margin: 10px 0;">
-                            <div style="font-size: 18px; color: #4ade80; font-weight: 600;">${data.avgArrivals.toLocaleString()}</div>
-                            <div style="font-size: 13px; color: #a1a1aa;">Avg Daily Arrivals</div>
+                const popup = `
+                    <div>
+                        <h3 style="color:${info.colour}; margin:0 0 15px 0;">${name}</h3>
+                        <div style="background:rgba(40,40,50,0.6);padding:12px;border-radius:10px;margin:8px 0;">
+                            <div style="font-size:22px;color:#10b981;font-weight:600;">${today.arrivals.toLocaleString()}</div>
+                            <div style="font-size:13px;color:#a1a1aa;">Today Arrivals</div>
                         </div>
-                        <div style="background: rgba(40,40,50,0.5); padding: 12px; border-radius: 10px; margin: 10px 0;">
-                            <div style="font-size: 18px; color: #f87171; font-weight: 600;">${data.avgDepartures.toLocaleString()}</div>
-                            <div style="font-size: 13px; color: #a1a1aa;">Avg Daily Departures</div>
+                        <div style="background:rgba(40,40,50,0.6);padding:12px;border-radius:10px;margin:8px 0;">
+                            <div style="font-size:22px;color:#f59e0b;font-weight:600;">${today.departures.toLocaleString()}</div>
+                            <div style="font-size:13px;color:#a1a1aa;">Today Departures</div>
                         </div>
-                        <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
-                        <div><strong>Total:</strong> ${data.avgTotal.toLocaleString()} (past ${data.count} records)</div>
+                        <div style="font-size:16px;font-weight:500;margin:12px 0;">7-Day Avg: ${avg7.arrivals.toLocaleString()}↗ ${avg7.departures.toLocaleString()}↘</div>
                     </div>
                 `;
                 
-                const marker = L.circleMarker(info.coords, {
-                    radius: 10,
-                    fillColor: info.colour,
-                    color: '#ffffff',
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.85
-                }).addTo(map)
-                .bindPopup(popupContent, { maxWidth: 320, className: 'dark-popup' })
-                .bindTooltip(`<strong>${name}</strong><br>${data.avgTotal.toLocaleString()} total`, {
-                    direction: 'top', className: 'dark-tooltip'
-                });
+                markers[name] = L.circleMarker(info.coords, {
+                    radius: 12, fillColor: info.colour, color: '#ffffff', weight: 3,
+                    opacity: 1, fillOpacity: 0.85
+                }).addTo(map).bindPopup(popup, {maxWidth: 340});
+            });
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.tab-btn.active').classList.remove('active');
+                btn.classList.add('active');
+                updateMarkers(btn.dataset.tab);
+            });
+        });
+
+        function updateMarkers(tab) {
+            Object.entries(markers).forEach(([name]) => {
+                // Update marker popups based on selected tab
+                const marker = markers[name];
+                // Implementation for dynamic popup updates
             });
         }
     </script>
