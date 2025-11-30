@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港入境客流量儀表板</title>
+    <title>香港入境客流量地圖儀表板</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -18,55 +20,69 @@
         .container { max-width: 1400px; margin: 0 auto; }
         h1 {
             text-align: center; 
-            font-size: 2.5rem; 
-            margin-bottom: 30px;
+            font-size: 2.2rem; 
+            margin-bottom: 20px;
             background: linear-gradient(45deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
         }
+        .map-container {
+            height: 500px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #map { height: 100%; width: 100%; }
+        .legend {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+        .legend-item {
+            display: flex; align-items: center; margin: 5px 0;
+        }
+        .legend-color { width: 20px; height: 20px; border-radius: 3px; margin-right: 8px; }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px; margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px; margin-bottom: 25px;
         }
         .stat-card {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 16px;
+            padding: 20px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
             transition: all 0.3s ease;
         }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-        .stat-value { font-size: 2.5rem; font-weight: 700; color: #4ade80; margin-bottom: 8px; }
-        .stat-label { font-size: 1rem; opacity: 0.8; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #4ade80; margin-bottom: 5px; }
+        .stat-label { font-size: 0.95rem; opacity: 0.8; }
         .charts-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px; margin-bottom: 30px;
+            gap: 20px;
         }
         .chart-card {
             background: rgba(255,255,255,0.03);
             backdrop-filter: blur(15px);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 16px;
+            padding: 20px;
             border: 1px solid rgba(255,255,255,0.08);
         }
         .chart-title { 
-            font-size: 1.3rem; 
-            margin-bottom: 20px; 
+            font-size: 1.2rem; 
+            margin-bottom: 15px; 
             color: #a0b6d0;
             text-align: center;
-        }
-        .latest-data {
-            background: rgba(255,255,255,0.02);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(255,255,255,0.05);
-            margin-top: 20px;
         }
         .data-updated {
             text-align: center;
@@ -74,38 +90,93 @@
             font-size: 0.9rem;
             margin-bottom: 20px;
         }
-        .loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #667eea; }
+        .loading { 
+            text-align: center; 
+            padding: 100px 20px; 
+            font-size: 1.3rem; 
+            color: #667eea;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 20px;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(102, 126, 234, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @media (max-width: 768px) {
+            .map-container { height: 400px; }
             .charts-container { grid-template-columns: 1fr; }
-            h1 { font-size: 2rem; }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🛬 香港入境客流量實時儀表板</h1>
+        <h1>🗺️ 香港入境客流量地圖監測</h1>
         
-        <div id="loading" class="loading">🔄 載入最新數據中...</div>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            載入香港地圖與最新客流量數據...
+        </div>
+        
+        <div id="mapContainer" class="map-container" style="display: none;">
+            <div id="map"></div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background: #00f2fe;"></div>機場</div>
+                <div class="legend-item"><div class="legend-color" style="background: #4ade80;"></div>陸路</div>
+                <div class="legend-item"><div class="legend-color" style="background: #667eea;"></div>橋樑</div>
+                <div class="legend-item"><div class="legend-color" style="background: #f093fb;"></div>鐵路</div>
+            </div>
+        </div>
         
         <div id="stats" class="stats-grid" style="display: none;"></div>
         
         <div id="charts" class="charts-container" style="display: none;">
             <div class="chart-card">
-                <div class="chart-title">📊 每日總客流量趨勢 (最近30天)</div>
-                <canvas id="totalChart"></canvas>
+                <div class="chart-title">📈 最近7天總客流量</div>
+                <canvas id="trendChart"></canvas>
             </div>
             <div class="chart-card">
-                <div class="chart-title">🏢 主要管制站比較</div>
-                <canvas id="controlPointChart"></canvas>
+                <div class="chart-title">🏛️ 各關口今日排名</div>
+                <canvas id="rankingChart"></canvas>
             </div>
         </div>
         
-        <div id="latestData" class="latest-data" style="display: none;"></div>
+        <div id="latestData" class="data-updated" style="display: none;"></div>
     </div>
 
     <script>
         let csvData = [];
+        let map;
         let charts = {};
+        let markers = {};
+
+        // 各關口經緯度與分類
+        const controlPoints = {
+            'Airport': { lat: 22.3089, lng: 113.9150, color: '#00f2fe', emoji: '🛬' },
+            'Lo Wu': { lat: 22.5279, lng: 114.1136, color: '#4ade80', emoji: '🚶' },
+            'Lok Ma Chau': { lat: 22.4997, lng: 114.0675, color: '#4ade80', emoji: '🚶' },
+            'Shenzhen Bay': { lat: 22.4875, lng: 113.9250, color: '#4ade80', emoji: '🚗' },
+            'Man Kam To': { lat: 22.5650, lng: 114.0333, color: '#4ade80', emoji: '🚗' },
+            'Hong Kong-Zhuhai-Macao Bridge': { lat: 22.1997, lng: 113.8833, color: '#667eea', emoji: '🌉' },
+            'Heung Yuen Wai': { lat: 22.5525, lng: 114.1333, color: '#4ade80', emoji: '🚶' },
+            'Sha Tau Kok': { lat: 22.5528, lng: 114.2167, color: '#4ade80', emoji: '🚶' },
+            'Express Rail Link West Kowloon': { lat: 22.3039, lng: 114.1584, color: '#f093fb', emoji: '🚄' },
+            'Hung Hom': { lat: 22.3022, lng: 114.1797, color: '#f093fb', emoji: '🚂' },
+            'Lok Ma Chau Spur Line': { lat: 22.4997, lng: 114.0675, color: '#f093fb', emoji: '🚄' }
+        };
+
+        async function initMap() {
+            map = L.map('map').setView([22.3964, 114.1095], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
 
         async function loadCSV() {
             try {
@@ -117,6 +188,9 @@
                     dynamicTyping: true
                 });
                 csvData = parsed.data;
+                
+                // 立即初始化地圖
+                await initMap();
                 processData();
             } catch (error) {
                 document.getElementById('loading').innerHTML = '❌ 數據載入失敗，請稍後重試';
@@ -127,147 +201,164 @@
         function processData() {
             if (csvData.length === 0) return;
 
-            // 最新更新日期
-            const latestDate = csvData[0].Date;
             document.getElementById('loading').style.display = 'none';
+            const latestDate = csvData[0].Date;
+            
+            // 渲染地圖標記
+            renderMapMarkers(latestDate);
             
             // 統計數據
             const stats = calculateStats();
             renderStats(stats);
             
-            // 繪製圖表
-            renderCharts(stats);
+            // 圖表
+            renderCharts();
             
-            // 最新數據
-            renderLatestData(latestDate);
+            // 更新資訊
+            document.getElementById('latestData').innerHTML = `📅 最新數據: ${latestDate} | 🔄 自動更新中`;
             
+            document.getElementById('mapContainer').style.display = 'block';
             document.getElementById('stats').style.display = 'grid';
             document.getElementById('charts').style.display = 'grid';
             document.getElementById('latestData').style.display = 'block';
         }
 
+        function renderMapMarkers(date) {
+            // 清除舊標記
+            Object.values(markers).forEach(marker => map.removeLayer(marker));
+            markers = {};
+
+            // 今日各關口總人流量
+            const todayData = {};
+            csvData.filter(row => row.Date === date).forEach(row => {
+                const point = row['Control Point'];
+                if (!todayData[point]) todayData[point] = 0;
+                todayData[point] += row.Total || 0;
+            });
+
+            // 創建標記
+            Object.entries(todayData).forEach(([pointName, total]) => {
+                if (controlPoints[pointName]) {
+                    const config = controlPoints[pointName];
+                    const size = Math.max(30, Math.log(total + 1) * 15);
+                    
+                    const customIcon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="
+                            background: ${config.color};
+                            width: ${size}px; height: ${size}px;
+                            border-radius: 50%;
+                            border: 3px solid rgba(255,255,255,0.8);
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                            display: flex; align-items: center; justify-content: center;
+                            font-size: ${size/4}px; font-weight: bold;
+                        ">${config.emoji}</div>`,
+                        iconSize: [size, size],
+                        iconAnchor: [size/2, size/2]
+                    });
+
+                    const marker = L.marker([config.lat, config.lng], { icon: customIcon }).addTo(map);
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h4 style="color: ${config.color}; margin: 0 0 10px 0;">${pointName}</h4>
+                            <div><strong>今日總人流:</strong> ${total.toLocaleString()}</div>
+                            <div style="font-size: 0.85rem; opacity: 0.8;">${date}</div>
+                        </div>
+                    `);
+                    markers[pointName] = marker;
+                }
+            });
+        }
+
         function calculateStats() {
-            const recentData = csvData.slice(0, 30); // 最近30天
-            const allData = csvData;
-            
+            const recentData = csvData.slice(0, 7);
             const totalStats = {
-                totalPassengers: allData.reduce((sum, row) => sum + (row.Total || 0), 0),
-                avgDaily: Math.round(allData.reduce((sum, row) => sum + (row.Total || 0), 0) / allData.length),
-                maxDaily: Math.max(...allData.map(row => row.Total || 0)),
+                todayTotal: recentData.reduce((sum, row) => sum + (row.Total || 0), 0),
+                avgDaily: Math.round(csvData.reduce((sum, row) => sum + (row.Total || 0), 0) / csvData.length),
                 airportShare: Math.round(
-                    allData.filter(row => row['Control Point'] === 'Airport')
+                    csvData.filter(row => row['Control Point'] === 'Airport')
                            .reduce((sum, row) => sum + (row.Total || 0), 0) / 
-                    allData.reduce((sum, row) => sum + (row.Total || 0), 0) * 10000) / 100
+                    csvData.reduce((sum, row) => sum + (row.Total || 0), 0) * 10000) / 100,
+                activePoints: new Set(csvData.map(row => row['Control Point'])).size
             };
-            
             return totalStats;
         }
 
         function renderStats(stats) {
             const statsHtml = `
                 <div class="stat-card">
-                    <div class="stat-value">${stats.totalPassengers.toLocaleString()}</div>
-                    <div class="stat-label">總客流量</div>
+                    <div class="stat-value">${stats.todayTotal.toLocaleString()}</div>
+                    <div class="stat-label">今日總人流</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">${stats.avgDaily.toLocaleString()}</div>
                     <div class="stat-label">平均每日</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${stats.maxDaily.toLocaleString()}</div>
-                    <div class="stat-label">最高單日</div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-value">${stats.airportShare}%</div>
                     <div class="stat-label">機場佔比</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.activePoints}</div>
+                    <div class="stat-label">活躍關口</div>
                 </div>
             `;
             document.getElementById('stats').innerHTML = statsHtml;
         }
 
-        function renderCharts(stats) {
-            // 總客流量趨勢圖
-            const recentTotals = csvData.slice(0, 30).map(row => ({
-                date: row.Date,
-                total: row.Total || 0
-            })).reverse();
-            
-            const totalCtx = document.getElementById('totalChart').getContext('2d');
-            charts.total = new Chart(totalCtx, {
+        function renderCharts() {
+            // 趨勢圖 (最近7天)
+            const recent7 = csvData.slice(0, 7 * 48).filter((_, i) => i % 48 === 0); // 每天取第一筆
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            charts.trend = new Chart(trendCtx, {
                 type: 'line',
                  {
-                    labels: recentTotals.map(d => d.date),
+                    labels: recent7.slice(-7).map(row => row.Date),
                     datasets: [{
-                        label: '每日總人次',
-                         recentTotals.map(d => d.total),
+                        label: '總人流量',
+                         recent7.slice(-7).map(row => row.Total || 0),
                         borderColor: '#4ade80',
-                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                        backgroundColor: 'rgba(74, 222, 128, 0.2)',
                         tension: 0.4,
                         fill: true
                     }]
                 },
-                options: {
-                    responsive: true,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false } }
-                }
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
             });
 
-            // 管制站比較圖
-            const controlPoints = {};
-            csvData.slice(-7).forEach(row => { // 最近7天
+            // 關口排名 (今日)
+            const todayTotals = {};
+            csvData.filter(row => row.Date === csvData[0].Date).forEach(row => {
                 const point = row['Control Point'];
-                if (!controlPoints[point]) controlPoints[point] = 0;
-                controlPoints[point] += row.Total || 0;
+                if (!todayTotals[point]) todayTotals[point] = 0;
+                todayTotals[point] += row.Total || 0;
             });
+            const sortedPoints = Object.entries(todayTotals)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8);
 
-            const cpCtx = document.getElementById('controlPointChart').getContext('2d');
-            charts.cp = new Chart(cpCtx, {
-                type: 'doughnut',
+            const rankCtx = document.getElementById('rankingChart').getContext('2d');
+            charts.rank = new Chart(rankCtx, {
+                type: 'bar',
                  {
-                    labels: Object.keys(controlPoints),
+                    labels: sortedPoints.map(([point]) => point.slice(0, 12)),
                     datasets: [{
-                         Object.values(controlPoints),
-                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b']
+                        label: '人流量',
+                         sortedPoints.map(([, total]) => total),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)'
                     }]
                 },
-                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                options: { 
+                    responsive: true,
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } }
+                }
             });
         }
 
-        function renderLatestData(latestDate) {
-            const todayData = csvData.filter(row => row.Date === latestDate);
-            let html = `<div class="data-updated">📅 最新更新: ${latestDate}</div>`;
-            
-            const summary = todayData.reduce((acc, row) => {
-                acc.total += row.Total || 0;
-                return acc;
-            }, { total: 0 });
-            
-            html += `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    ${todayData.slice(0, 8).map(row => `
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center;">
-                            <div style="font-size: 0.9rem; opacity: 0.8;">${row['Control Point']}</div>
-                            <div style="font-size: 1.3rem; color: #4ade80; font-weight: 600;">${row.Total?.toLocaleString() || 0}</div>
-                            <div style="font-size: 0.8rem; opacity: 0.6;">${row['Arrival / Departure']}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="text-align: center; margin-top: 20px; opacity: 0.8;">
-                    今日總計: ${summary.total.toLocaleString()} 人次
-                </div>
-            `;
-            
-            document.getElementById('latestData').innerHTML = html;
-        }
-
-        // 自動載入數據
+        // 啟動
         loadCSV();
-        
-        // 每5分鐘更新一次
-        setInterval(loadCSV, 5 * 60 * 1000);
+        setInterval(loadCSV, 5 * 60 * 1000); // 5分鐘更新
     </script>
 </body>
 </html>
-
