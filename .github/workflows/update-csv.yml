@@ -3,7 +3,7 @@ name: 每日自動更新出入境 CSV
 on:
   schedule:
     - cron: '0 2 * * *'    # 每日香港時間 10:00
-  workflow_dispatch:       # 可以手動按掣跑
+  workflow_dispatch:       # 允許手動執行
 
 jobs:
   update:
@@ -18,5 +18,22 @@ jobs:
           mkdir -p "0Data/Immd/ControlPoint/data"
           curl -L "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv" \
             -o "0Data/Immd/ControlPoint/data/immigration.csv"
+          ls -R
 
-      - name: 檢查檔
+      - name: 檢查檔案是否有變更
+        id: diff
+        run: |
+          if git diff --quiet "0Data/Immd/ControlPoint/data/immigration.csv"; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit 並推送更新
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add "0Data/Immd/ControlPoint/data/immigration.csv"
+          git commit -m "📊 自動更新出入境 CSV $(date +'%Y-%m-%d %H:%M')"
+          git push
