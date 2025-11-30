@@ -2,7 +2,7 @@ name: Auto Download Immigration CSV
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # 每日UTC時間1點執行 (可根據需求調整)
+    - cron: '0 1 * * *'  # 每日UTC時間1點執行 (香港時間早上9點)
   workflow_dispatch:  # 允許手動觸發
 
 jobs:
@@ -12,16 +12,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download CSV file
+      - name: Setup directories and download CSV
         run: |
           mkdir -p data/immi/immi_daily
-          chmod +x download_csv.sh
-          ./download_csv.sh
+          curl -L -o data/immi/immi_daily/data.csv \
+            "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv"
+          
+          # 驗證下載成功
+          if [ -f data/immi/immi_daily/data.csv ] && [ -s data/immi/immi_daily/data.csv ]; then
+            echo "✅ CSV downloaded successfully (size: $(wc -c < data/immi/immi_daily/data.csv) bytes)"
+          else
+            echo "❌ Download failed or empty file"
+            exit 1
+          fi
 
-      - name: Commit and push changes
+      - name: Commit and push if changed
         uses: EndBug/add-and-commit@v9
         with:
           add: 'data/immi/immi_daily/data.csv'
-          message: 'Auto update immigration daily passenger CSV'
-          author_name: 'github-actions'
-          author_email: 'github-actions@github.com'
+          message: '🤖 Auto update immigration daily passenger traffic CSV - {{ github.event.head_commit.message }}'
+          default_author: github_actions
