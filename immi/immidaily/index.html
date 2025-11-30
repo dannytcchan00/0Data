@@ -33,7 +33,6 @@
             margin: 15px 0; font-size: 14px;
         }
         .status-ok { color: #10b981; }
-        .status-warning { color: #f59e0b; }
         .status-error { color: #ef4444; }
         .status-loading { color: #f59e0b; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
@@ -99,7 +98,7 @@
     <div class="panel top-left">
         <h2>🛂 Passenger Flow Totals</h2>
         <div class="status-bar" id="statusBar">
-            <span id="syncStatus" class="status-loading">🔄 Loading live data...</span>
+            <span id="syncStatus" class="status-loading">🔄 Loading GitHub CSV...</span>
             <span id="recordCount">-</span>
         </div>
         <input type="text" class="date-picker" id="datePicker" placeholder="Select date (dd-mm-yyyy)">
@@ -129,7 +128,7 @@
             <div class="weather-temp" id="weatherTemp">--°C</div>
             <div class="weather-desc" id="weatherDesc">Loading...</div>
         </div>
-        <div class="csv-status" id="csvStatus">CSV: Loading...</div>
+        <div class="csv-status" id="csvStatus">GitHub CSV: Loading...</div>
     </div>
     
     <div class="panel legend">
@@ -141,11 +140,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // 🔧 多源備用 CSV
-        const CSV_SOURCES = [
-            'https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv',
-            'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv'
-        ];
+        // ✅ 只用單一 GitHub CSV
+        const CSV_URL = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
         
         const controlPoints = {
             'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444' },
@@ -171,71 +167,62 @@
             attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
         }).addTo(map);
 
-        let allData = [], currentData = {}, latest7Avg = {}, selectedDate = '';
-        let markers = {}, dataSource = '';
+        let allData = [], currentData = {}, selectedDate = '';
+        let markers = {};
 
-        // 🚀 超強健 CSV 載入 - 多源 + 重試 + fallback
+        // 🔧 單源 GitHub CSV 載入 (處理 BOM + 完美解析)
         async function syncCSV() {
             const statusEl = document.getElementById('syncStatus');
             const csvStatusEl = document.getElementById('csvStatus');
-            statusEl.textContent = '🔄 Loading data...';
+            statusEl.textContent = '🔄 Loading GitHub CSV...';
             statusEl.className = 'status-loading';
             
-            for (let i = 0; i < CSV_SOURCES.length; i++) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000);
-                    
-                    const response = await fetch(CSV_SOURCES[i], { 
-                        signal: controller.signal,
-                        headers: { 'Accept': 'text/csv' }
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(CSV_URL, { 
+                    signal: controller.signal,
+                    headers: { 'Accept': 'text/csv' }
+                });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                let text = await response.text();
+                // ✅ 移除 BOM (﻿)
+                text = text.replace(/^\uFEFF/, '');
+                
+                const lines = text.split('\n').filter(line => line.trim());
+                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                
+                allData = lines.slice(1).map(line => {
+                    // ✅ 完美 CSV 解析 (處理逗號在引號內)
+                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => 
+                        v.trim().replace(/^"|"$/g, '')
+                    );
+                    const row = {};
+                    headers.forEach((header, i) => {
+                        row[header] = values[i] || '';
                     });
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
-                    const text = await response.text();
-                    const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('﻿'));
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                    
-                    allData = lines.slice(1).map(line => {
-                        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
-                        const row = {};
-                        headers.forEach((header, idx) => row[header] = values[idx] || '');
-                        return row;
-                    }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
-                    
-                    if (allData.length > 0) {
-                        dataSource = i === 0 ? 'IMMD' : 'GitHub';
-                        document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
-                        statusEl.innerHTML = `✅ Loaded from <strong>${dataSource}</strong> <span>${allData[0]?.Date || 'N/A'}</span>`;
-                        statusEl.className = dataSource === 'IMMD' ? 'status-ok' : 'status-warning';
-                        csvStatusEl.textContent = `${dataSource} CSV: ${allData[0]?.Date}`;
-                        
-                        loadDateData(allData[0]?.Date || '');
-                        return;
-                    }
-                } catch (error) {
-                    console.warn(`Source ${i+1} failed:`, error.message);
-                }
+                    return row;
+                }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
+                
+                if (allData.length === 0) throw new Error('No valid data found');
+                
+                document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
+                statusEl.innerHTML = `✅ GitHub CSV loaded <strong>${allData[0]?.Date}</strong>`;
+                statusEl.className = 'status-ok';
+                csvStatusEl.textContent = `GitHub CSV: ${allData[0]?.Date} (${allData.length.toLocaleString()} records)`;
+                
+                loadDateData(allData[0]?.Date || '');
+                
+            } catch (error) {
+                console.error('CSV Error:', error);
+                statusEl.textContent = `❌ GitHub CSV failed: ${error.message.slice(0,40)}`;
+                statusEl.className = 'status-error';
+                csvStatusEl.textContent = 'GitHub CSV unavailable';
             }
-            
-            // 🛑 所有源都失敗 - 用 demo 數據
-            statusEl.innerHTML = '⚠️ Using demo data<span>(live sources unavailable)</span>';
-            statusEl.className = 'status-warning';
-            csvStatusEl.textContent = 'Demo data active';
-            loadDemoData();
-        }
-
-        // Demo fallback data
-        function loadDemoData() {
-            allData = [
-                {Date: '01-12-2025', 'Control Point': 'Airport', 'Hong Kong Residents': '12500', 'Mainland Visitors': '18000', 'Other Visitors': '22000', 'Arrival / Departure': 'Arrivals'},
-                {Date: '01-12-2025', 'Control Point': 'Airport', 'Hong Kong Residents': '11500', 'Mainland Visitors': '16500', 'Other Visitors': '19500', 'Arrival / Departure': 'Departures'},
-                {Date: '01-12-2025', 'Control Point': 'Lo Wu', 'Hong Kong Residents': '4500', 'Mainland Visitors': '28000', 'Other Visitors': '1200', 'Arrival / Departure': 'Arrivals'},
-                // ... 更多 demo 數據
-            ];
-            loadDateData('01-12-2025');
         }
 
         function loadDateData(dateStr) {
@@ -355,7 +342,7 @@
                                 <span class="total-number">${(Object.values(latest).reduce((sum, cat) => sum + cat.arrivals + cat.departures, 0)).toLocaleString()}</span>
                             </div>
                         </div>
-                        <div class="date-note">✅ ${dataSource} data • Date picker works • Auto-retry</div>
+                        <div class="date-note">✅ GitHub CSV data • Click date to switch</div>
                     </div>
                 `;
 
