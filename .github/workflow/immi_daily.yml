@@ -1,0 +1,17 @@
+name: Update Immigration CSV
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 每日香港時間上午9時執行
+  workflow_dispatch:  # 允許手動觸發
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv
+      run: chmod +x download-csv.sh && ./download-csv.sh
+    - name: data/immi/immi_daily/data.csv
+      uses: EndBug/add-and-commit@v4
+      with:
+        add: 'data.csv'
+        message: '自動更新移民旅客流量資料 {{ github.event.head_commit.message }}'
