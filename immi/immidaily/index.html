@@ -33,6 +33,7 @@
             margin: 15px 0; font-size: 14px;
         }
         .status-ok { color: #10b981; }
+        .status-warning { color: #f59e0b; }
         .status-error { color: #ef4444; }
         .status-loading { color: #f59e0b; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
@@ -140,7 +141,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        const CSV_URL = 'https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv';
+        // 🔧 多源備用 CSV
+        const CSV_SOURCES = [
+            'https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv',
+            'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv'
+        ];
         
         const controlPoints = {
             'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444' },
@@ -167,56 +172,72 @@
         }).addTo(map);
 
         let allData = [], currentData = {}, latest7Avg = {}, selectedDate = '';
-        let markers = {};
+        let markers = {}, dataSource = '';
 
+        // 🚀 超強健 CSV 載入 - 多源 + 重試 + fallback
         async function syncCSV() {
             const statusEl = document.getElementById('syncStatus');
             const csvStatusEl = document.getElementById('csvStatus');
-            statusEl.textContent = '🔄 Loading official IMMD data...';
+            statusEl.textContent = '🔄 Loading data...';
             statusEl.className = 'status-loading';
             
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
-                const response = await fetch(CSV_URL, { 
-                    signal: controller.signal,
-                    headers: { 'Accept': 'text/csv' }
-                });
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const text = await response.text();
-                const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('﻿'));
-                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                
-                allData = lines.slice(1).map(line => {
-                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
-                    const row = {};
-                    headers.forEach((header, i) => row[header] = values[i] || '');
-                    return row;
-                }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
-                
-                if (allData.length === 0) throw new Error('No valid data found');
-                
-                document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
-                statusEl.innerHTML = `✅ Loaded from IMMD <strong>${allData[0]?.Date || 'N/A'}</strong>`;
-                statusEl.className = 'status-ok';
-                csvStatusEl.textContent = `Official CSV: ${allData[0]?.Date}`;
-                
-                // 載入最新數據
-                loadDateData(allData[0]?.Date || '');
-                
-            } catch (error) {
-                console.error('CSV Error:', error);
-                statusEl.textContent = `❌ Failed: ${error.message.slice(0,50)}...`;
-                statusEl.className = 'status-error';
-                csvStatusEl.textContent = 'Official CSV unavailable';
+            for (let i = 0; i < CSV_SOURCES.length; i++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+                    
+                    const response = await fetch(CSV_SOURCES[i], { 
+                        signal: controller.signal,
+                        headers: { 'Accept': 'text/csv' }
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const text = await response.text();
+                    const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('﻿'));
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                    
+                    allData = lines.slice(1).map(line => {
+                        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
+                        const row = {};
+                        headers.forEach((header, idx) => row[header] = values[idx] || '');
+                        return row;
+                    }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
+                    
+                    if (allData.length > 0) {
+                        dataSource = i === 0 ? 'IMMD' : 'GitHub';
+                        document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
+                        statusEl.innerHTML = `✅ Loaded from <strong>${dataSource}</strong> <span>${allData[0]?.Date || 'N/A'}</span>`;
+                        statusEl.className = dataSource === 'IMMD' ? 'status-ok' : 'status-warning';
+                        csvStatusEl.textContent = `${dataSource} CSV: ${allData[0]?.Date}`;
+                        
+                        loadDateData(allData[0]?.Date || '');
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`Source ${i+1} failed:`, error.message);
+                }
             }
+            
+            // 🛑 所有源都失敗 - 用 demo 數據
+            statusEl.innerHTML = '⚠️ Using demo data<span>(live sources unavailable)</span>';
+            statusEl.className = 'status-warning';
+            csvStatusEl.textContent = 'Demo data active';
+            loadDemoData();
         }
 
-        // 🔧 新增：按日期載入數據功能
+        // Demo fallback data
+        function loadDemoData() {
+            allData = [
+                {Date: '01-12-2025', 'Control Point': 'Airport', 'Hong Kong Residents': '12500', 'Mainland Visitors': '18000', 'Other Visitors': '22000', 'Arrival / Departure': 'Arrivals'},
+                {Date: '01-12-2025', 'Control Point': 'Airport', 'Hong Kong Residents': '11500', 'Mainland Visitors': '16500', 'Other Visitors': '19500', 'Arrival / Departure': 'Departures'},
+                {Date: '01-12-2025', 'Control Point': 'Lo Wu', 'Hong Kong Residents': '4500', 'Mainland Visitors': '28000', 'Other Visitors': '1200', 'Arrival / Departure': 'Arrivals'},
+                // ... 更多 demo 數據
+            ];
+            loadDateData('01-12-2025');
+        }
+
         function loadDateData(dateStr) {
             selectedDate = dateStr;
             const dateDisplay = document.getElementById('selectedDateDisplay');
@@ -227,7 +248,6 @@
                 return;
             }
             
-            // 篩選當日所有數據
             const dateData = allData.filter(row => row.Date === dateStr);
             if (dateData.length === 0) {
                 dateDisplay.textContent = `📅 No data for ${dateStr}`;
@@ -238,7 +258,7 @@
             currentData = {};
             dateData.forEach(row => {
                 const point = row['Control Point'];
-                if (!point) return;
+                if (!point || !controlPoints[point]) return;
                 
                 if (!currentData[point]) {
                     currentData[point] = {
@@ -254,7 +274,7 @@
                     other: parseInt(row['Other Visitors']) || 0
                 };
                 
-                const dir = row['Arrival / Departure'].toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
+                const dir = row['Arrival / Departure']?.toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
                 Object.keys(nums).forEach(cat => {
                     currentData[point][cat][dir] += nums[cat];
                 });
@@ -272,7 +292,7 @@
             currentData = {};
             allData.slice(0, 100).forEach(row => {
                 const point = row['Control Point'];
-                if (!point || seenPoints.has(point)) return;
+                if (!point || !controlPoints[point] || seenPoints.has(point)) return;
                 seenPoints.add(point);
                 
                 currentData[point] = {
@@ -287,7 +307,7 @@
                     other: parseInt(row['Other Visitors']) || 0
                 };
                 
-                const dir = row['Arrival / Departure'].toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
+                const dir = row['Arrival / Departure']?.toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
                 Object.keys(nums).forEach(cat => {
                     currentData[point][cat][dir] += nums[cat];
                 });
@@ -312,7 +332,6 @@
         function updateMarkers() {
             Object.entries(controlPoints).forEach(([name, info]) => {
                 const latest = currentData[name] || {hk:{arrivals:0,departures:0}, cn:{arrivals:0,departures:0}, other:{arrivals:0,departures:0}};
-                const avg7 = latest7Avg[name] || latest;
 
                 const popupContent = `
                     <div>
@@ -336,23 +355,7 @@
                                 <span class="total-number">${(Object.values(latest).reduce((sum, cat) => sum + cat.arrivals + cat.departures, 0)).toLocaleString()}</span>
                             </div>
                         </div>
-                        ${!selectedDate ? `
-                        <div class="data-section">
-                            <div class="data-title avg">📊 7-Day Average</div>
-                            <div class="category-row">
-                                <span class="category-label hk-label">🇭🇰 HK Residents</span>
-                                <span class="category-number hk-num">${avg7.hk.arrivals.toLocaleString()}↗ ${avg7.hk.departures.toLocaleString()}↘</span>
-                            </div>
-                            <div class="category-row">
-                                <span class="category-label cn-label">🇨🇳 Mainland Visitors</span>
-                                <span class="category-number cn-num">${avg7.cn.arrivals.toLocaleString()}↗ ${avg7.cn.departures.toLocaleString()}↘</span>
-                            </div>
-                            <div class="category-row">
-                                <span class="category-label other-label">🌍 Other Visitors</span>
-                                <span class="category-number other-num">${avg7.other.arrivals.toLocaleString()}↗ ${avg7.other.departures.toLocaleString()}↘</span>
-                            </div>
-                        </div>` : ''}
-                        <div class="date-note">✅ Official IMMD data • Click date to switch • Live sync</div>
+                        <div class="date-note">✅ ${dataSource} data • Date picker works • Auto-retry</div>
                     </div>
                 `;
 
@@ -397,7 +400,7 @@
             return icons[desc] || '🌤️';
         }
 
-        // 🚀 初始化 + 日期選擇器
+        // 🚀 初始化
         window.addEventListener('load', async () => {
             updateHKTime();
             updateWeather();
@@ -407,8 +410,12 @@
                 dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
                 maxDate: "today", locale: "en",
                 onChange: function(selectedDates, dateStr, instance) {
-                    const formattedDate = selectedDates[0]?.toISOString().split('T')[0].split('-').reverse().join('-');
-                    loadDateData(formattedDate);
+                    if (selectedDates[0]) {
+                        const formattedDate = selectedDates[0].toISOString().split('T')[0].split('-').reverse().join('-');
+                        loadDateData(formattedDate);
+                    } else {
+                        loadDateData('');
+                    }
                 }
             });
         });
