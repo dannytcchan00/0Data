@@ -1,288 +1,88 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港入境客流量地圖</title>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #e0e6ed;
-            min-height: 100vh;
-        }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        h1 {
-            text-align: center; font-size: 2.2rem; margin-bottom: 20px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .map-container {
-            height: 500px; margin-bottom: 25px;
-            background: rgba(255,255,255,0.03); border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
-        }
-        #map { height: 100%; width: 100%; }
-        .status-bar {
-            background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
-            border-radius: 15px; padding: 15px; margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.1); text-align: center;
-        }
-        .status-success { color: #4ade80; }
-        .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px; margin-bottom: 25px;
-        }
-        .stat-card {
-            background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
-            border-radius: 16px; padding: 20px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease;
-        }
-        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
-        .stat-value { font-size: 2rem; font-weight: 700; color: #4ade80; margin-bottom: 5px; }
-        .stat-label { font-size: 0.95rem; opacity: 0.8; }
-        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .chart-card {
-            background: rgba(255,255,255,0.03); backdrop-filter: blur(15px);
-            border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.08);
-        }
-        .chart-title { font-size: 1.2rem; margin-bottom: 15px; color: #a0b6d0; text-align: center; }
-        .latest-points {
-            background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .point-item {
-            display: flex; justify-content: space-between; padding: 10px; margin: 5px 0;
-            background: rgba(255,255,255,0.03); border-radius: 8px;
-        }
-        @media (max-width: 768px) {
-            .map-container { height: 400px; }
-            .charts-container { grid-template-columns: 1fr; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>香港全境出入境情況地圖</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body, html {
+      height: 100%; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #121222; color: #eee;
+    }
+    #map {
+      height: 100vh; width: 100%;
+    }
+    .marker-circle {
+      border-radius: 50%;
+      border: 2px solid white;
+      color: white;
+      text-align:center;
+      line-height: 1.2;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🗺️ 香港入境客流量實時監測</h1>
-        
-        <div id="status" class="status-bar status-success">
-            ✅ 地圖與數據已成功載入
-        </div>
-        
-        <div class="map-container">
-            <div id="map"></div>
-        </div>
-        
-        <div id="stats" class="stats-grid"></div>
-        
-        <div class="charts-container">
-            <div class="chart-card">
-                <div class="chart-title">📈 最近7天趨勢</div>
-                <canvas id="trendChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">🏛️ 今日關口排名</div>
-                <canvas id="rankingChart"></canvas>
-            </div>
-        </div>
-        
-        <div id="latestPoints" class="latest-points">
-            <h3 style="margin-bottom: 15px; color: #4ade80;">📍 今日各關口人流量</h3>
-            <div id="pointsList"></div>
-        </div>
-    </div>
+  <div id="map"></div>
+  <script>
+    // 初始化地圖視窗定位於香港全境
+    const map = L.map("map").setView([22.33, 114.18], 11);
 
-    <script>
-        let map, markers = {}, charts = [];
-        
-        // 🚀 內嵌最新數據（從您提供的CSV提取最近7天）
-        const csvData = [
-            // 最新日期數據（從您的attached_file:1提取）
-            {Date: '30-11-2025', 'Control Point': 'Airport', Total: 1250},
-            {Date: '30-11-2025', 'Control Point': 'Shenzhen Bay', Total: 3456},
-            {Date: '30-11-2025', 'Control Point': 'Lo Wu', Total: 2890},
-            {Date: '30-11-2025', 'Control Point': 'Lok Ma Chau', Total: 2100},
-            {Date: '30-11-2025', 'Control Point': 'Hong Kong-Zhuhai-Macao Bridge', Total: 1567},
-            // ... 更多數據點（模擬最近7天）
-            {Date: '29-11-2025', 'Control Point': 'Airport', Total: 1180},
-            {Date: '29-11-2025', 'Control Point': 'Shenzhen Bay', Total: 3200},
-            {Date: '28-11-2025', 'Control Point': 'Airport', Total: 1320},
-            {Date: '28-11-2025', 'Control Point': 'Shenzhen Bay', Total: 3678},
-            // 總計超過100筆數據確保圖表正常
-        ];
-        
-        // 關口位置配置
-        const controlPoints = {
-            'Airport': { lat: 22.3089, lng: 113.9150, color: '#00f2fe', emoji: '🛬' },
-            'Lo Wu': { lat: 22.5279, lng: 114.1136, color: '#4ade80', emoji: '🚶' },
-            'Lok Ma Chau': { lat: 22.4997, lng: 114.0675, color: '#4ade80', emoji: '🚶' },
-            'Shenzhen Bay': { lat: 22.4875, lng: 113.9250, color: '#4ade80', emoji: '🚗' },
-            'Man Kam To': { lat: 22.5650, lng: 114.0333, color: '#4ade80', emoji: '🚗' },
-            'Hong Kong-Zhuhai-Macao Bridge': { lat: 22.1997, lng: 113.8833, color: '#667eea', emoji: '🌉' },
-            'Heung Yuen Wai': { lat: 22.5525, lng: 114.1333, color: '#4ade80', emoji: '🚶' },
-            'Sha Tau Kok': { lat: 22.5528, lng: 114.2167, color: '#4ade80', emoji: '🚶' },
-            'Express Rail Link West Kowloon': { lat: 22.3039, lng: 114.1584, color: '#f093fb', emoji: '🚄' },
-            'Hung Hom': { lat: 22.3022, lng: 114.1797, color: '#f093fb', emoji: '🚂' }
-        };
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
 
-        // 1. 立即初始化地圖
-        function initMap() {
-            map = L.map('map').setView([22.3964, 114.1095], 10);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-            processData();
-        }
+    // 當日各關口示範資料：位置經緯度及出入境人數
+    const points = [
+      {name: "香港國際機場", lat: 22.3089, lng: 113.9150, passengers: 1200},
+      {name: "羅湖口岸", lat: 22.5279, lng: 114.1136, passengers: 2300},
+      {name: "落馬洲口岸", lat: 22.4997, lng: 114.0675, passengers: 1800},
+      {name: "深圳灣口岸", lat: 22.4875, lng: 113.9250, passengers: 2500},
+      {name: "港珠澳大橋", lat: 22.1997, lng: 113.8833, passengers: 900},
+      {name: "文錦渡口岸", lat: 22.5525, lng: 114.1333, passengers: 600},
+      {name: "沙頭角口岸", lat: 22.5528, lng: 114.2167, passengers: 450},
+      {name: "紅磡渡輪碼頭", lat: 22.3037, lng: 114.1700, passengers: 350},
+      {name: "西九龍高鐵站", lat: 22.3050, lng: 114.1570, passengers: 500},
+      {name: "文錦渡鐵路口岸", lat: 22.5510, lng: 114.1350, passengers: 200},
+    ];
 
-        // 2. 處理數據
-        function processData() {
-            const latestDate = '30-11-2025'; // 固定最新日期
-            
-            // 更新地圖
-            updateMapMarkers(latestDate);
-            
-            // 統計
-            const stats = calculateStats();
-            renderStats(stats);
-            
-            // 圖表
-            renderCharts();
-            
-            // 最新關口列表
-            renderLatestPoints(latestDate);
-        }
+    // 根據人流大小調整半徑
+    function getRadius(passengers) {
+      if (passengers < 500) return 10;
+      if (passengers < 1000) return 15;
+      if (passengers < 2000) return 20;
+      if (passengers < 3000) return 25;
+      return 30;
+    }
 
-        function updateMapMarkers(date) {
-            Object.values(markers).forEach(marker => map.removeLayer(marker));
-            markers = {};
+    // 加入標記，並綁定彈出視窗顯示詳細資訊
+    points.forEach(({name, lat, lng, passengers}) => {
+      const radius = getRadius(passengers);
+      const markerHtml = `<div class="marker-circle" style="width: ${radius*2}px; height: ${radius*2}px; background: rgba(74, 222, 128, 0.7); border-color: rgba(74, 222, 128, 1);">${passengers}</div>`;
+      
+      const icon = L.divIcon({
+        className: 'custom-marker',
+        html: markerHtml,
+        iconSize: [radius*2, radius*2],
+        iconAnchor: [radius, radius],
+      });
 
-            const todayData = {};
-            csvData.filter(row => row.Date === date).forEach(row => {
-                const point = row['Control Point'];
-                todayData[point] = (todayData[point] || 0) + (row.Total || 0);
-            });
-
-            Object.entries(todayData).forEach(([pointName, total]) => {
-                if (controlPoints[pointName]) {
-                    const config = controlPoints[pointName];
-                    const size = Math.max(35, Math.min(70, Math.log(total + 1) * 15));
-                    
-                    const icon = L.divIcon({
-                        html: `<div style="
-                            background: ${config.color}; width: ${size}px; height: ${size}px;
-                            border-radius: 50%; border: 4px solid rgba(255,255,255,0.9);
-                            box-shadow: 0 6px 25px rgba(0,0,0,0.6);
-                            display: flex; align-items: center; justify-content: center;
-                            font-size: ${Math.max(14, size/3.5)}px; font-weight: bold; color: white;
-                        ">${config.emoji}</div>`,
-                        iconSize: [size, size], iconAnchor: [size/2, size/2]
-                    });
-
-                    const marker = L.marker([config.lat, config.lng], { icon }).addTo(map);
-                    marker.bindPopup(`
-                        <div style="min-width: 220px;">
-                            <h3 style="color: ${config.color}; margin: 0 0 12px 0;">${pointName}</h3>
-                            <div>📊 今日人流量: <strong style="font-size: 1.4em;">${total.toLocaleString()}</strong></div>
-                            <div style="font-size: 0.9em; opacity: 0.8; margin-top: 8px;">📅 ${date}</div>
-                        </div>
-                    `);
-                    markers[pointName] = marker;
-                }
-            });
-        }
-
-        function calculateStats() {
-            const todayTotal = csvData.filter(row => row.Date === '30-11-2025')
-                                    .reduce((sum, row) => sum + (row.Total || 0), 0);
-            return {
-                todayTotal,
-                avgDaily: Math.round(csvData.reduce((sum, row) => sum + row.Total, 0) / csvData.length),
-                totalRecords: csvData.length,
-                activePoints: Object.keys(controlPoints).length
-            };
-        }
-
-        function renderStats(stats) {
-            document.getElementById('stats').innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${stats.todayTotal.toLocaleString()}</div>
-                    <div class="stat-label">今日總人流</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${stats.avgDaily.toLocaleString()}</div>
-                    <div class="stat-label">平均每日</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${stats.totalRecords}</div>
-                    <div class="stat-label">數據記錄</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${stats.activePoints}</div>
-                    <div class="stat-label">監測關口</div>
-                </div>
-            `;
-        }
-
-        function renderCharts() {
-            // 趨勢圖
-            const dates = ['24-11', '25-11', '26-11', '27-11', '28-11', '29-11', '30-11'];
-            const totals = [8500, 9200, 10500, 9800, 11200, 10800, 11500];
-            
-            new Chart(document.getElementById('trendChart').getContext('2d'), {
-                type: 'line',
-                 {
-                    labels: dates,
-                    datasets: [{ 
-                        label: '總人流量', 
-                         totals,
-                        borderColor: '#4ade80', 
-                        backgroundColor: 'rgba(74,222,128,0.2)', 
-                        tension: 0.4, 
-                        fill: true 
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // 排名圖
-            new Chart(document.getElementById('rankingChart').getContext('2d'), {
-                type: 'doughnut',
-                 {
-                    labels: ['深圳灣', '羅湖', '落馬洲', '機場', '港珠澳大橋'],
-                    datasets: [{
-                         [3456, 2890, 2100, 1250, 1567],
-                        backgroundColor: ['#4ade80', '#667eea', '#f093fb', '#00f2fe', '#764ba2']
-                    }]
-                },
-                options: { responsive: true }
-            });
-        }
-
-        function renderLatestPoints(date) {
-            const todayData = {};
-            csvData.filter(row => row.Date === date).forEach(row => {
-                todayData[row['Control Point']] = (todayData[row['Control Point']] || 0) + row.Total;
-            });
-            
-            const sorted = Object.entries(todayData).sort(([,a], [,b]) => b - a);
-            document.getElementById('pointsList').innerHTML = sorted.map(([point, total]) => 
-                `<div class="point-item">
-                    <span>${point}</span>
-                    <span style="color: #4ade80; font-weight: 600;">${total.toLocaleString()}</span>
-                </div>`
-            ).join('');
-        }
-
-        // 🚀 立即啟動
-        window.addEventListener('load', initMap);
-    </script>
+      L.marker([lat, lng], {icon})
+        .addTo(map)
+        .bindPopup(`<b>${name}</b><br>當日出入境人數：${passengers.toLocaleString()}`)
+        ;
+    });
+  </script>
 </body>
 </html>
