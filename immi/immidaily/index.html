@@ -1,88 +1,108 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>香港全境出入境情況地圖</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    body, html {
-      height: 100%; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #121222; color: #eee;
-    }
-    #map {
-      height: 100vh; width: 100%;
-    }
-    .marker-circle {
-      border-radius: 50%;
-      border: 2px solid white;
-      color: white;
-      text-align:center;
-      line-height: 1.2;
-      font-weight: bold;
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港邊境關口人流地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; font-family: -apple-system, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .info { padding: 10px; background: rgba(255,255,255,0.9); position: absolute; top: 10px; left: 10px; z-index: 1000; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    </style>
 </head>
 <body>
-  <div id="map"></div>
-  <script>
-    // 初始化地圖視窗定位於香港全境
-    const map = L.map("map").setView([22.33, 114.18], 11);
+    <div id="map"></div>
+    <div class="info">載入中... 資料來源：入境事務處 [attached_file:1]</div>
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        // 香港邊境關口經緯度 [web:6]
+        const controlPoints = {
+            'Airport': [22.30889, 113.91444],
+            'Lo Wu': [22.53222, 114.11333],
+            'Lok Ma Chau': [22.52074, 114.07496],
+            'Lok Ma Chau Spur Line': [22.51577, 114.06877],
+            'Man Kam To': [22.5370, 114.1294],
+            'Sha Tau Kok': [22.54911, 114.22328],
+            'Shenzhen Bay': [22.5039, 113.9447],
+            'Hong Kong-Zhuhai-Macao Bridge': [22.28306, 113.78056],
+            'Heung Yuen Wai': [22.55429, 114.15242],
+            'Express Rail Link West Kowloon': [22.30361, 114.16500],
+            'China Ferry Terminal': [22.29931, 114.16725],
+            'Macau Ferry Terminal': [22.28937, 114.15215],
+            'Kai Tak Cruise Terminal': [22.3074, 114.2128],
+            'Hung Hom': [22.302, 114.179],  // 近似位置
+            'Tuen Mun Ferry Terminal': [22.392, 113.978],  // 近似位置
+            'Harbour Control': [22.290, 114.160]  // 近似位置
+        };
 
-    // 當日各關口示範資料：位置經緯度及出入境人數
-    const points = [
-      {name: "香港國際機場", lat: 22.3089, lng: 113.9150, passengers: 1200},
-      {name: "羅湖口岸", lat: 22.5279, lng: 114.1136, passengers: 2300},
-      {name: "落馬洲口岸", lat: 22.4997, lng: 114.0675, passengers: 1800},
-      {name: "深圳灣口岸", lat: 22.4875, lng: 113.9250, passengers: 2500},
-      {name: "港珠澳大橋", lat: 22.1997, lng: 113.8833, passengers: 900},
-      {name: "文錦渡口岸", lat: 22.5525, lng: 114.1333, passengers: 600},
-      {name: "沙頭角口岸", lat: 22.5528, lng: 114.2167, passengers: 450},
-      {name: "紅磡渡輪碼頭", lat: 22.3037, lng: 114.1700, passengers: 350},
-      {name: "西九龍高鐵站", lat: 22.3050, lng: 114.1570, passengers: 500},
-      {name: "文錦渡鐵路口岸", lat: 22.5510, lng: 114.1350, passengers: 200},
-    ];
+        const map = L.map('map').setView([22.35, 114.1], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-    // 根據人流大小調整半徑
-    function getRadius(passengers) {
-      if (passengers < 500) return 10;
-      if (passengers < 1000) return 15;
-      if (passengers < 2000) return 20;
-      if (passengers < 3000) return 25;
-      return 30;
-    }
+        let latestData = {};  // 儲存每個關口最近資料
 
-    // 加入標記，並綁定彈出視窗顯示詳細資訊
-    points.forEach(({name, lat, lng, passengers}) => {
-      const radius = getRadius(passengers);
-      const markerHtml = `<div class="marker-circle" style="width: ${radius*2}px; height: ${radius*2}px; background: rgba(74, 222, 128, 0.7); border-color: rgba(74, 222, 128, 1);">${passengers}</div>`;
-      
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: markerHtml,
-        iconSize: [radius*2, radius*2],
-        iconAnchor: [radius, radius],
-      });
+        // 載入 CSV 並計算最近 7 天平均
+        Papa.parse('https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv', {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                const df = results.data;
+                const recentDays = 7;
+                const pointStats = {};
 
-      L.marker([lat, lng], {icon})
-        .addTo(map)
-        .bindPopup(`<b>${name}</b><br>當日出入境人數：${passengers.toLocaleString()}`)
-        ;
-    });
-  </script>
+                // 按關口及方向分組
+                df.forEach(row => {
+                    if (!row['Control Point'] || !row['Total'] || row['Total'] === '') return;
+                    const point = row['Control Point'];
+                    const total = parseInt(row['Total']) || 0;
+                    if (!pointStats[point]) pointStats[point] = { arrivals: 0, departures: 0, count: 0 };
+                    pointStats[point].arrivals += row['Arrival / Departure'] === 'Arrival' ? total : 0;
+                    pointStats[point].departures += row['Arrival / Departure'] === 'Departure' ? total : 0;
+                    pointStats[point].count += 1;
+                });
+
+                // 只取最近 7 天平均（簡化：假設最後 N 筆為最近）
+                const recentRows = df.slice(-recentDays * 30);  // 粗略取最近
+                recentRows.forEach(row => {
+                    if (!row['Control Point'] || !row['Total'] || row['Total'] === '') return;
+                    const point = row['Control Point'];
+                    const total = parseInt(row['Total']) || 0;
+                    if (!latestData[point]) latestData[point] = { total: 0, count: 0, arrivals: 0, departures: 0 };
+                    latestData[point].total += total;
+                    latestData[point].count += 1;
+                    if (row['Arrival / Departure'] === 'Arrival') latestData[point].arrivals += total;
+                    else latestData[point].departures += total;
+                });
+
+                Object.keys(latestData).forEach(point => {
+                    const data = latestData[point];
+                    data.avgTotal = Math.round(data.total / data.count);
+                    data.avgArr = Math.round(data.arrivals / data.count);
+                    data.avgDep = Math.round(data.departures / data.count);
+                });
+
+                addMarkers();
+                document.querySelector('.info').innerHTML = `已載入 ${Object.keys(latestData).length} 個關口最近資料。[attached_file:1]`;
+            }
+        });
+
+        function addMarkers() {
+            Object.entries(controlPoints).forEach(([name, coords]) => {
+                const data = latestData[name];
+                const popupContent = data ? `
+                    <b>${name}</b><br>
+                    最近平均每日總人次: ${data.avgTotal}<br>
+                    平均入境: ${data.avgArr} | 平均出境: ${data.avgDep}<br>
+                    (最近 ${data.count} 日)
+                ` : '無最近資料';
+                L.marker(coords).addTo(map)
+                    .bindPopup(popupContent)
+                    .bindTooltip(name);
+            });
+        }
+    </script>
 </body>
 </html>
