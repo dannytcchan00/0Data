@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Border Flow Analytics</title>
+    <title>Hong Kong Border Flow - Live CSV Sync</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -25,12 +25,15 @@
         .top-panel { top: 25px; left: 25px; width: 380px; padding: 25px; z-index: 1000; }
         .top-panel h2 { margin: 0 0 20px 0; color: #4fc3f7; font-size: 24px; font-weight: 700; }
         
+        .status-bar { 
+            background: rgba(30,30,40,0.8); border-radius: 12px; padding: 12px; 
+            margin: 15px 0; font-size: 14px; color: #10b981;
+        }
         .date-picker { 
             background: rgba(30,30,40,0.8); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px; padding: 12px 16px; margin: 15px 0; color: #e8e8e8;
             font-size: 15px; width: 100%;
         }
-        .date-picker:focus { outline: none; border-color: #4fc3f7; box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
         
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
         .stat-card { 
@@ -50,14 +53,12 @@
         .loading { color: #a1a1aa; font-style: italic; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
         
-        /* Enhanced popup styling */
+        /* Enhanced popup */
         .leaflet-popup-content-wrapper { 
             background: rgba(15,15,25,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
-            backdrop-filter: blur(25px); max-width: 380px; margin: 10px;
+            backdrop-filter: blur(25px); max-width: 400px; margin: 10px;
         }
-        .leaflet-popup-content { 
-            margin: 0; padding: 25px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.6;
-        }
+        .leaflet-popup-content { margin: 0; padding: 25px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.6; }
         .popup-title { color: #4fc3f7; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; }
         .data-section { margin: 18px 0; padding: 20px; background: rgba(40,40,60,0.6); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
         .data-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #e8e8e8; }
@@ -70,17 +71,21 @@
     <div id="map"></div>
     
     <div class="panel top-panel">
-        <h2>🛂 Border Flow Monitor</h2>
-        <input type="text" class="date-picker" id="datePicker" placeholder="Select historical date">
+        <h2>🛂 Live Border Flow</h2>
+        <div class="status-bar" id="statusBar">
+            <span id="lastUpdate">Syncing CSV data...</span>
+            <span id="recordCount">-</span>
+        </div>
+        <input type="text" class="date-picker" id="datePicker" placeholder="Select historical date (dd-mm-yyyy)">
         
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-number today" id="totalTodayArrivals">-</div>
-                <div class="stat-label">Total Today Arrivals</div>
+                <div class="stat-label">Today Arrivals</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number today" id="totalTodayDepartures">-</div>
-                <div class="stat-label">Total Today Departures</div>
+                <div class="stat-label">Today Departures</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number avg7" id="totalAvg7Arrivals">-</div>
@@ -91,7 +96,10 @@
                 <div class="stat-label">7-Day Avg Departures</div>
             </div>
         </div>
-        <small style="color: #71717a; margin-top: 20px; display: block;">Immigration Department [attached_file:1]</small>
+        <small style="color: #71717a; margin-top: 20px; display: block;">
+            Live sync: <a href="https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv" 
+            style="color: #4fc3f7; text-decoration: none;" target="_blank">GitHub CSV</a> [attached_file:1]
+        </small>
     </div>
     
     <div class="panel legend">
@@ -104,6 +112,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        const CSV_URL = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
+        
         const controlPoints = {
             'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444' },
             'Lo Wu': { coords: [22.53222, 114.11333], colour: '#ffaa00' },
@@ -129,20 +139,30 @@
         }).addTo(map);
 
         let allData = [], todayData = {}, avg7Data = {}, selectedData = {}, selectedDate = '';
-        let markers = {};
+        let markers = {}, lastSyncTime = null;
 
-        // Load CSV data
-        Papa.parse('https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv', {
-            download: true, header: true, skipEmptyLines: true,
-            complete: function(results) {
-                allData = results.data.reverse(); // Latest first
-                processAllData();
-                initDatePicker();
-            }
-        });
+        // Live CSV sync function
+        async function syncCSV() {
+            document.getElementById('statusBar').innerHTML = '<span class="loading">🔄 Syncing live data...</span>';
+            
+            Papa.parse(CSV_URL, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: function(results) {
+                    allData = results.data.reverse(); // Latest first
+                    document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
+                    document.getElementById('lastUpdate').textContent = `Last sync: ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong'})}`;
+                    
+                    processAllData();
+                    if (selectedDate) loadSelectedDate(selectedDate);
+                },
+                error: function() {
+                    document.getElementById('statusBar').innerHTML = '<span style="color:#ef4444;">❌ CSV sync failed</span>';
+                }
+            });
+        }
 
         function processAllData() {
-            // Today's data - first record per control point
+            // Today: first record per control point (latest data)
             const todayRecords = {};
             const seenPoints = new Set();
             allData.slice(0, 100).forEach(row => {
@@ -150,22 +170,25 @@
                 if (!point || !row['Total'] || row['Total'] === '0' || seenPoints.has(point)) return;
                 seenPoints.add(point);
                 todayRecords[point] = {
-                    arrivals: row['Arrival / Departure'] === 'Arrival' ? parseInt(row['Total']) : 0,
-                    departures: row['Arrival / Departure'] === 'Departure' ? parseInt(row['Total']) : 0
+                    arrivals: row['Arrival / Departure'] === 'Arrival' ? parseInt(row['Total']) || 0 : 0,
+                    departures: row['Arrival / Departure'] === 'Departure' ? parseInt(row['Total']) || 0 : 0
                 };
             });
             todayData = todayRecords;
 
-            // 7-day averages
-            const recentRecords = allData.slice(0, 7 * 32);
+            // 7-day averages (approx 32 records per day × 7 = 224 records)
+            const recentRecords = allData.slice(0, 224);
             const avgRecords = {};
             recentRecords.forEach(row => {
                 const point = row['Control Point'];
                 if (!point || !row['Total'] || row['Total'] === '0') return;
                 if (!avgRecords[point]) avgRecords[point] = { arrivals: 0, departures: 0, count: 0 };
-                avgRecords[point][row['Arrival / Departure'].toLowerCase()] += parseInt(row['Total']);
+                const total = parseInt(row['Total']) || 0;
+                if (row['Arrival / Departure'] === 'Arrival') avgRecords[point].arrivals += total;
+                else avgRecords[point].departures += total;
                 avgRecords[point].count++;
             });
+            
             Object.keys(avgRecords).forEach(point => {
                 const data = avgRecords[point];
                 avg7Data[point] = {
@@ -175,14 +198,15 @@
             });
 
             updateTotalStats();
-            createMarkers();
+            updateMarkers();
         }
 
         function initDatePicker() {
-            const dates = [...new Set(allData.map(row => row.Date))].sort().reverse();
+            const uniqueDates = [...new Set(allData.map(row => row.Date))].sort().reverse();
             flatpickr("#datePicker", {
                 dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
-                maxDate: "today", onChange: function(selectedDates, dateStr) {
+                maxDate: "today", 
+                onChange: function(selectedDates, dateStr) {
                     selectedDate = dateStr;
                     loadSelectedDate(dateStr);
                 }
@@ -194,30 +218,33 @@
             allData.forEach(row => {
                 if (row.Date === dateStr) {
                     const point = row['Control Point'];
-                    if (!selectedData[point]) selectedData[point] = { arrivals: 0, departures: 0 };
-                    selectedData[point][row['Arrival / Departure'].toLowerCase()] += parseInt(row['Total']) || 0;
+                    if (point && row['Total'] && row['Total'] !== '0') {
+                        if (!selectedData[point]) selectedData[point] = { arrivals: 0, departures: 0 };
+                        const total = parseInt(row['Total']) || 0;
+                        if (row['Arrival / Departure'] === 'Arrival') selectedData[point].arrivals += total;
+                        else selectedData[point].departures += total;
+                    }
                 }
             });
             updateTotalStats();
+            updateMarkers();
         }
 
         function updateTotalStats() {
-            let totalTodayArr = 0, totalTodayDep = 0;
-            Object.values(todayData).forEach(d => {
-                totalTodayArr += d.arrivals; totalTodayDep += d.departures;
-            });
-            document.getElementById('totalTodayArrivals').textContent = totalTodayArr.toLocaleString();
-            document.getElementById('totalTodayDepartures').textContent = totalTodayDep.toLocaleString();
+            // Today totals
+            let tArr = 0, tDep = 0;
+            Object.values(todayData).forEach(d => { tArr += d.arrivals; tDep += d.departures; });
+            document.getElementById('totalTodayArrivals').textContent = tArr.toLocaleString();
+            document.getElementById('totalTodayDepartures').textContent = tDep.toLocaleString();
 
-            let totalAvg7Arr = 0, totalAvg7Dep = 0;
-            Object.values(avg7Data).forEach(d => {
-                totalAvg7Arr += d.arrivals; totalAvg7Dep += d.departures;
-            });
-            document.getElementById('totalAvg7Arrivals').textContent = totalAvg7Arr.toLocaleString();
-            document.getElementById('totalAvg7Departures').textContent = totalAvg7Dep.toLocaleString();
+            // 7-day avg totals
+            let aArr = 0, aDep = 0;
+            Object.values(avg7Data).forEach(d => { aArr += d.arrivals; aDep += d.departures; });
+            document.getElementById('totalAvg7Arrivals').textContent = aArr.toLocaleString();
+            document.getElementById('totalAvg7Departures').textContent = aDep.toLocaleString();
         }
 
-        function createMarkers() {
+        function updateMarkers() {
             Object.entries(controlPoints).forEach(([name, info]) => {
                 const today = todayData[name] || {arrivals:0, departures:0};
                 const avg7 = avg7Data[name] || {arrivals:0, departures:0};
@@ -230,11 +257,11 @@
                         <div class="data-section">
                             <div class="data-title">📅 Today Latest</div>
                             <div class="data-row">
-                                <span>Arrivals</span>
+                                <span>Arrivals ➡️</span>
                                 <span class="arrivals">${today.arrivals.toLocaleString()}</span>
                             </div>
                             <div class="data-row">
-                                <span>Departures</span>
+                                <span>Departures ➡️</span>
                                 <span class="departures">${today.departures.toLocaleString()}</span>
                             </div>
                         </div>
@@ -242,11 +269,11 @@
                         <div class="data-section">
                             <div class="data-title">📊 7-Day Average</div>
                             <div class="data-row">
-                                <span>Arrivals</span>
+                                <span>Arrivals ➡️</span>
                                 <span class="arrivals">${avg7.arrivals.toLocaleString()}</span>
                             </div>
                             <div class="data-row">
-                                <span>Departures</span>
+                                <span>Departures ➡️</span>
                                 <span class="departures">${avg7.departures.toLocaleString()}</span>
                             </div>
                         </div>
@@ -255,29 +282,42 @@
                         <div class="data-section">
                             <div class="data-title">📅 ${selectedDate}</div>
                             <div class="data-row">
-                                <span>Arrivals</span>
+                                <span>Arrivals ➡️</span>
                                 <span class="arrivals">${selected.arrivals.toLocaleString()}</span>
                             </div>
                             <div class="data-row">
-                                <span>Departures</span>
+                                <span>Departures ➡️</span>
                                 <span class="departures">${selected.departures.toLocaleString()}</span>
                             </div>
                         </div>` : ''}
                         
-                        <div class="date-note">Click date picker above for historical data</div>
+                        <div class="date-note">Use date picker for historical comparison</div>
                     </div>
                 `;
 
-                markers[name] = L.circleMarker(info.coords, {
-                    radius: 12, fillColor: info.colour, color: '#ffffff', 
-                    weight: 3, opacity: 1, fillOpacity: 0.85
-                }).addTo(map)
-                .bindPopup(popupContent, { maxWidth: 400, className: 'custom-popup' })
-                .bindTooltip(`<strong>${name}</strong><br>${today.arrivals+today.departures} today`, {
-                    direction: 'top', className: 'dark-tooltip'
-                });
+                if (markers[name]) {
+                    markers[name].setPopupContent(popupContent);
+                } else {
+                    markers[name] = L.circleMarker(info.coords, {
+                        radius: 12, fillColor: info.colour, color: '#ffffff', 
+                        weight: 3, opacity: 1, fillOpacity: 0.85
+                    }).addTo(map)
+                    .bindPopup(popupContent, { maxWidth: 400, className: 'custom-popup' })
+                    .bindTooltip(`<strong>${name}</strong><br>${today.arrivals+today.departures} today`, {
+                        direction: 'top', className: 'dark-tooltip'
+                    });
+                }
             });
         }
+
+        // Initial sync and auto-refresh every 5 minutes
+        syncCSV();
+        setInterval(syncCSV, 5 * 60 * 1000); // 5 minutes
+        
+        // Initialize date picker after first sync
+        setTimeout(() => {
+            if (allData.length > 0) initDatePicker();
+        }, 2000);
     </script>
 </body>
 </html>
