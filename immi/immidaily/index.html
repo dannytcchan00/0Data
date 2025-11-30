@@ -1,1 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港入境客流量儀表板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e6ed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            text-align: center; 
+            font-size: 2.5rem; 
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px; margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .stat-value { font-size: 2.5rem; font-weight: 700; color: #4ade80; margin-bottom: 8px; }
+        .stat-label { font-size: 1rem; opacity: 0.8; }
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px; margin-bottom: 30px;
+        }
+        .chart-card {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .chart-title { 
+            font-size: 1.3rem; 
+            margin-bottom: 20px; 
+            color: #a0b6d0;
+            text-align: center;
+        }
+        .latest-data {
+            background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-top: 20px;
+        }
+        .data-updated {
+            text-align: center;
+            opacity: 0.7;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #667eea; }
+        @media (max-width: 768px) {
+            .charts-container { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛬 香港入境客流量實時儀表板</h1>
+        
+        <div id="loading" class="loading">🔄 載入最新數據中...</div>
+        
+        <div id="stats" class="stats-grid" style="display: none;"></div>
+        
+        <div id="charts" class="charts-container" style="display: none;">
+            <div class="chart-card">
+                <div class="chart-title">📊 每日總客流量趨勢 (最近30天)</div>
+                <canvas id="totalChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">🏢 主要管制站比較</div>
+                <canvas id="controlPointChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="latestData" class="latest-data" style="display: none;"></div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let charts = {};
+
+        async function loadCSV() {
+            try {
+                const response = await fetch('https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv');
+                const csvText = await response.text();
+                const parsed = Papa.parse(csvText, { 
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: true
+                });
+                csvData = parsed.data;
+                processData();
+            } catch (error) {
+                document.getElementById('loading').innerHTML = '❌ 數據載入失敗，請稍後重試';
+                console.error('CSV load error:', error);
+            }
+        }
+
+        function processData() {
+            if (csvData.length === 0) return;
+
+            // 最新更新日期
+            const latestDate = csvData[0].Date;
+            document.getElementById('loading').style.display = 'none';
+            
+            // 統計數據
+            const stats = calculateStats();
+            renderStats(stats);
+            
+            // 繪製圖表
+            renderCharts(stats);
+            
+            // 最新數據
+            renderLatestData(latestDate);
+            
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('charts').style.display = 'grid';
+            document.getElementById('latestData').style.display = 'block';
+        }
+
+        function calculateStats() {
+            const recentData = csvData.slice(0, 30); // 最近30天
+            const allData = csvData;
+            
+            const totalStats = {
+                totalPassengers: allData.reduce((sum, row) => sum + (row.Total || 0), 0),
+                avgDaily: Math.round(allData.reduce((sum, row) => sum + (row.Total || 0), 0) / allData.length),
+                maxDaily: Math.max(...allData.map(row => row.Total || 0)),
+                airportShare: Math.round(
+                    allData.filter(row => row['Control Point'] === 'Airport')
+                           .reduce((sum, row) => sum + (row.Total || 0), 0) / 
+                    allData.reduce((sum, row) => sum + (row.Total || 0), 0) * 10000) / 100
+            };
+            
+            return totalStats;
+        }
+
+        function renderStats(stats) {
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalPassengers.toLocaleString()}</div>
+                    <div class="stat-label">總客流量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.avgDaily.toLocaleString()}</div>
+                    <div class="stat-label">平均每日</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.maxDaily.toLocaleString()}</div>
+                    <div class="stat-label">最高單日</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.airportShare}%</div>
+                    <div class="stat-label">機場佔比</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+
+        function renderCharts(stats) {
+            // 總客流量趨勢圖
+            const recentTotals = csvData.slice(0, 30).map(row => ({
+                date: row.Date,
+                total: row.Total || 0
+            })).reverse();
+            
+            const totalCtx = document.getElementById('totalChart').getContext('2d');
+            charts.total = new Chart(totalCtx, {
+                type: 'line',
+                 {
+                    labels: recentTotals.map(d => d.date),
+                    datasets: [{
+                        label: '每日總人次',
+                         recentTotals.map(d => d.total),
+                        borderColor: '#4ade80',
+                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // 管制站比較圖
+            const controlPoints = {};
+            csvData.slice(-7).forEach(row => { // 最近7天
+                const point = row['Control Point'];
+                if (!controlPoints[point]) controlPoints[point] = 0;
+                controlPoints[point] += row.Total || 0;
+            });
+
+            const cpCtx = document.getElementById('controlPointChart').getContext('2d');
+            charts.cp = new Chart(cpCtx, {
+                type: 'doughnut',
+                 {
+                    labels: Object.keys(controlPoints),
+                    datasets: [{
+                         Object.values(controlPoints),
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        function renderLatestData(latestDate) {
+            const todayData = csvData.filter(row => row.Date === latestDate);
+            let html = `<div class="data-updated">📅 最新更新: ${latestDate}</div>`;
+            
+            const summary = todayData.reduce((acc, row) => {
+                acc.total += row.Total || 0;
+                return acc;
+            }, { total: 0 });
+            
+            html += `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    ${todayData.slice(0, 8).map(row => `
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; opacity: 0.8;">${row['Control Point']}</div>
+                            <div style="font-size: 1.3rem; color: #4ade80; font-weight: 600;">${row.Total?.toLocaleString() || 0}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6;">${row['Arrival / Departure']}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="text-align: center; margin-top: 20px; opacity: 0.8;">
+                    今日總計: ${summary.total.toLocaleString()} 人次
+                </div>
+            `;
+            
+            document.getElementById('latestData').innerHTML = html;
+        }
+
+        // 自動載入數據
+        loadCSV();
+        
+        // 每5分鐘更新一次
+        setInterval(loadCSV, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
 
