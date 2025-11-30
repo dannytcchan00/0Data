@@ -2,21 +2,32 @@ name: 每日自動更新出入境 CSV
 
 on:
   schedule:
-    - cron: '0 2 * * *'    # 每日香港時間 10:00
-  workflow_dispatch:       # 可以手動按掣跑
+    - cron: '0 2 * * *'    # 每日香港時間 10:00 自動執行
+  workflow_dispatch:     # 手動測試按鈕
 
 jobs:
   update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: 建立資料夾並下載最新 CSV
-        run: |
-          mkdir -p "0Data/Immd/ControlPoint/data"
-          curl -L "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv" \
-            -o "0Data/Immd/ControlPoint/data/immigration.csv"
-
-      - name: 檢查檔
+    - uses: actions/checkout@v4
+    
+    - name: 建立資料夾並下載最新 CSV
+      run: |
+        mkdir -p "0Data/Immd/ControlPoint/data"
+        curl -L -o "0Data/Immd/ControlPoint/data/immigration.csv" \
+        "https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv"
+    
+    - name: 檢查檔案是否有變更
+      id: diff
+      run: |
+        git diff --quiet "0Data/Immd/ControlPoint/data/immigration.csv" || echo "changed=true" >> $GITHUB_OUTPUT
+    
+    - name: Commit 並推送更新
+      if: steps.diff.outputs.changed == 'true'
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add "0Data/Immd/ControlPoint/data/immigration.csv"
+        git commit -m "📊 自動更新出入境 CSV $(date +'%Y-%m-%d')"
+        git push
