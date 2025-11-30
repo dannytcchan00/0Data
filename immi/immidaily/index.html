@@ -40,7 +40,13 @@
         .date-picker { 
             background: rgba(30,30,40,0.8); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px; padding: 12px 16px; margin: 15px 0; color: #e8e8e8;
-            font-size: 15px; width: 100%;
+            font-size: 15px; width: 100%; cursor: pointer;
+        }
+        .date-picker:focus { border-color: #4fc3f7; box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
+        
+        .selected-date { 
+            background: rgba(16,185,129,0.3); border-color: #10b981; 
+            margin: 10px 0; padding: 12px; border-radius: 10px; font-weight: 500;
         }
         
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
@@ -73,7 +79,7 @@
         .popup-title { color: #4fc3f7; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; }
         .data-section { margin: 16px 0; padding: 18px; background: rgba(40,40,60,0.7); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); }
         .data-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #e8e8e8; }
-        .data-title.today { color: #10b981; } .data-title.avg { color: #f59e0b; }
+        .data-title.selected { color: #10b981; background: rgba(16,185,129,0.2); padding: 8px 12px; border-radius: 8px; display: inline-block; }
         .category-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .category-row:last-child { border-bottom: none; }
         .category-label { font-weight: 500; }
@@ -95,7 +101,8 @@
             <span id="syncStatus" class="status-loading">🔄 Loading live data...</span>
             <span id="recordCount">-</span>
         </div>
-        <input type="text" class="date-picker" id="datePicker" placeholder="Select historical date (dd-mm-yyyy)">
+        <input type="text" class="date-picker" id="datePicker" placeholder="Select date (dd-mm-yyyy)">
+        <div id="selectedDateDisplay" class="selected-date" style="display:none;">📅 Latest data</div>
         
         <div class="stats-grid">
             <div class="stat-card">
@@ -133,7 +140,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // ✅ 官方數據源 - 永遠有數據！
         const CSV_URL = 'https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv';
         
         const controlPoints = {
@@ -160,10 +166,9 @@
             attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
         }).addTo(map);
 
-        let allData = [], latestData = {}, latest7Avg = {}, selectedDate = '';
+        let allData = [], currentData = {}, latest7Avg = {}, selectedDate = '';
         let markers = {};
 
-        // 🚀 強化版 CSV 載入 - 官方源 + 完整錯誤處理
         async function syncCSV() {
             const statusEl = document.getElementById('syncStatus');
             const csvStatusEl = document.getElementById('csvStatus');
@@ -189,9 +194,7 @@
                 allData = lines.slice(1).map(line => {
                     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
                     const row = {};
-                    headers.forEach((header, i) => {
-                        row[header] = values[i] || '';
-                    });
+                    headers.forEach((header, i) => row[header] = values[i] || '');
                     return row;
                 }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
                 
@@ -202,7 +205,8 @@
                 statusEl.className = 'status-ok';
                 csvStatusEl.textContent = `Official CSV: ${allData[0]?.Date}`;
                 
-                processLatestData();
+                // 載入最新數據
+                loadDateData(allData[0]?.Date || '');
                 
             } catch (error) {
                 console.error('CSV Error:', error);
@@ -212,16 +216,66 @@
             }
         }
 
+        // 🔧 新增：按日期載入數據功能
+        function loadDateData(dateStr) {
+            selectedDate = dateStr;
+            const dateDisplay = document.getElementById('selectedDateDisplay');
+            
+            if (!dateStr) {
+                dateDisplay.style.display = 'none';
+                processLatestData();
+                return;
+            }
+            
+            // 篩選當日所有數據
+            const dateData = allData.filter(row => row.Date === dateStr);
+            if (dateData.length === 0) {
+                dateDisplay.textContent = `📅 No data for ${dateStr}`;
+                dateDisplay.style.display = 'block';
+                return;
+            }
+            
+            currentData = {};
+            dateData.forEach(row => {
+                const point = row['Control Point'];
+                if (!point) return;
+                
+                if (!currentData[point]) {
+                    currentData[point] = {
+                        hk: {arrivals: 0, departures: 0},
+                        cn: {arrivals: 0, departures: 0},
+                        other: {arrivals: 0, departures: 0}
+                    };
+                }
+                
+                const nums = {
+                    hk: parseInt(row['Hong Kong Residents']) || 0,
+                    cn: parseInt(row['Mainland Visitors']) || 0,
+                    other: parseInt(row['Other Visitors']) || 0
+                };
+                
+                const dir = row['Arrival / Departure'].toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
+                Object.keys(nums).forEach(cat => {
+                    currentData[point][cat][dir] += nums[cat];
+                });
+            });
+            
+            dateDisplay.textContent = `📅 ${dateStr} (${dateData.length} records)`;
+            dateDisplay.style.display = 'block';
+            
+            updateTotalStats();
+            updateMarkers();
+        }
+
         function processLatestData() {
-            // 最新數據 (每個口岸最新一筆)
             const seenPoints = new Set();
-            latestData = {};
+            currentData = {};
             allData.slice(0, 100).forEach(row => {
                 const point = row['Control Point'];
                 if (!point || seenPoints.has(point)) return;
                 seenPoints.add(point);
                 
-                latestData[point] = {
+                currentData[point] = {
                     hk: {arrivals: 0, departures: 0},
                     cn: {arrivals: 0, departures: 0},
                     other: {arrivals: 0, departures: 0}
@@ -235,54 +289,17 @@
                 
                 const dir = row['Arrival / Departure'].toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
                 Object.keys(nums).forEach(cat => {
-                    latestData[point][cat][dir] += nums[cat];
-                });
-            });
-
-            // 7日平均 (最近32筆 ≈7日)
-            const recentRecords = allData.slice(0, 224);
-            const avgRecords = {};
-            recentRecords.forEach(row => {
-                const point = row['Control Point'];
-                if (!point) return;
-                if (!avgRecords[point]) avgRecords[point] = {
-                    hk: {arrivals: 0, departures: 0, count: 0},
-                    cn: {arrivals: 0, departures: 0, count: 0},
-                    other: {arrivals: 0, departures: 0, count: 0}
-                };
-                
-                const nums = {
-                    hk: parseInt(row['Hong Kong Residents']) || 0,
-                    cn: parseInt(row['Mainland Visitors']) || 0,
-                    other: parseInt(row['Other Visitors']) || 0
-                };
-                
-                const dir = row['Arrival / Departure'].toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
-                Object.keys(nums).forEach(cat => {
-                    avgRecords[point][cat][dir] += nums[cat];
-                    avgRecords[point][cat].count++;
+                    currentData[point][cat][dir] += nums[cat];
                 });
             });
             
-            latest7Avg = {};
-            Object.keys(avgRecords).forEach(point => {
-                latest7Avg[point] = {};
-                ['hk', 'cn', 'other'].forEach(cat => {
-                    const data = avgRecords[point][cat];
-                    latest7Avg[point][cat] = {
-                        arrivals: Math.round(data.arrivals / Math.max(1, data.count)),
-                        departures: Math.round(data.departures / Math.max(1, data.count))
-                    };
-                });
-            });
-
             updateTotalStats();
             updateMarkers();
         }
 
         function updateTotalStats() {
             let totalHK = 0, totalCN = 0, totalOther = 0;
-            Object.values(latestData).forEach(d => {
+            Object.values(currentData).forEach(d => {
                 totalHK += d.hk.arrivals + d.hk.departures;
                 totalCN += d.cn.arrivals + d.cn.departures;
                 totalOther += d.other.arrivals + d.other.departures;
@@ -294,14 +311,14 @@
 
         function updateMarkers() {
             Object.entries(controlPoints).forEach(([name, info]) => {
-                const latest = latestData[name] || {hk:{arrivals:0,departures:0}, cn:{arrivals:0,departures:0}, other:{arrivals:0,departures:0}};
+                const latest = currentData[name] || {hk:{arrivals:0,departures:0}, cn:{arrivals:0,departures:0}, other:{arrivals:0,departures:0}};
                 const avg7 = latest7Avg[name] || latest;
 
                 const popupContent = `
                     <div>
                         <h3 class="popup-title" style="color:${info.colour};">${name}</h3>
                         <div class="data-section">
-                            <div class="data-title today">📅 Latest Data</div>
+                            <div class="data-title ${selectedDate ? 'selected' : 'today'}">${selectedDate ? `📅 ${selectedDate}` : '📅 Latest Data'}</div>
                             <div class="category-row">
                                 <span class="category-label hk-label">🇭🇰 HK Residents</span>
                                 <span class="category-number hk-num">${latest.hk.arrivals.toLocaleString()}↗ ${latest.hk.departures.toLocaleString()}↘</span>
@@ -319,6 +336,7 @@
                                 <span class="total-number">${(Object.values(latest).reduce((sum, cat) => sum + cat.arrivals + cat.departures, 0)).toLocaleString()}</span>
                             </div>
                         </div>
+                        ${!selectedDate ? `
                         <div class="data-section">
                             <div class="data-title avg">📊 7-Day Average</div>
                             <div class="category-row">
@@ -333,8 +351,8 @@
                                 <span class="category-label other-label">🌍 Other Visitors</span>
                                 <span class="category-number other-num">${avg7.other.arrivals.toLocaleString()}↗ ${avg7.other.departures.toLocaleString()}↘</span>
                             </div>
-                        </div>
-                        <div class="date-note">✅ Official IMMD data • British English • Live sync</div>
+                        </div>` : ''}
+                        <div class="date-note">✅ Official IMMD data • Click date to switch • Live sync</div>
                     </div>
                 `;
 
@@ -350,7 +368,6 @@
             });
         }
 
-        // HK Time + Weather
         function updateHKTime() {
             const now = new Date().toLocaleString('en-GB', { 
                 timeZone: 'Asia/Hong_Kong',
@@ -380,21 +397,25 @@
             return icons[desc] || '🌤️';
         }
 
-        // 🚀 頁面載入即顯示數據
+        // 🚀 初始化 + 日期選擇器
         window.addEventListener('load', async () => {
             updateHKTime();
             updateWeather();
             await syncCSV();
+            
+            flatpickr("#datePicker", {
+                dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
+                maxDate: "today", locale: "en",
+                onChange: function(selectedDates, dateStr, instance) {
+                    const formattedDate = selectedDates[0]?.toISOString().split('T')[0].split('-').reverse().join('-');
+                    loadDateData(formattedDate);
+                }
+            });
         });
 
         setInterval(updateHKTime, 1000);
         setInterval(updateWeather, 10 * 60 * 1000);
         setInterval(syncCSV, 5 * 60 * 1000);
-        
-        flatpickr("#datePicker", {
-            dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
-            maxDate: "today", locale: "en"
-        });
     </script>
 </body>
 </html>
