@@ -9,11 +9,12 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             background: linear-gradient(135deg, #0f0f23, #1a1a2e); 
-            color: #e0e0e0; min-height: 100vh; 
+            color: #e0e0e0; min-height: 100vh; padding-top: 2rem;
         }
         .header { 
             background: linear-gradient(135deg, #1e3c72, #2a5298); 
             padding: 1.5rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            margin: 0 2rem; border-radius: 0 0 24px 24px;
         }
         
         .hero-section { 
@@ -54,9 +55,8 @@
         .news-title { color: #ffffff; font-weight: 600; font-size: 1.1rem; line-height: 1.4; margin-bottom: 0.4rem; }
         .news-source { color: #4fc3f7; font-size: 0.95rem; font-weight: 500; }
         .news-time { color: #888; font-size: 0.85rem; margin-top: 0.2rem; }
-        .news-link { color: #4caf50 !important; text-decoration: underline; font-size: 0.85rem; }
         
-        /* 🔥 模態彈窗（取代新分頁） */
+        /* 模態彈窗 */
         .modal { 
             display: none; position: fixed; z-index: 2000; left: 0; top: 0; 
             width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); 
@@ -69,32 +69,22 @@
         .close { color: #aaa; float: right; font-size: 2rem; font-weight: bold; cursor: pointer; }
         .close:hover { color: #ffffff; }
         .modal-url { word-break: break-all; background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
-        
-        .status-bar { 
-            position: fixed; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); 
-            color: #4fc3f7; padding: 0.5rem 2rem; font-size: 0.9rem; z-index: 1000; 
-        }
+        .news-link { color: #4caf50 !important; text-decoration: underline; font-size: 0.85rem; }
         
         @media (max-width: 1100px) { 
             .hero-section { grid-template-columns: 1fr; gap: 1.5rem; } 
+            body { padding-top: 1rem; }
         }
     </style>
 </head>
 <body>
-    <!-- 🔥 頂部狀態條（取代浮動框） -->
-    <div class="status-bar">
-        Hong Kong Time: <span id="liveTime"></span> | 
-        Weather: <span id="weatherStatus">Loading...</span> | 
-        News: <span id="newsStatus">Loading...</span>
-    </div>
-
     <header class="header">
         <h1>🇭🇰 Hong Kong Live Dashboard</h1>
         <p>Real-time Observatory Weather + Hong Kong News</p>
     </header>
 
     <section class="hero-section">
-        <!-- 🔥 天氣（只顯示真實數據） -->
+        <!-- 天氣 -->
         <div class="weather-hero">
             <div class="hero-title">🌤️ HK Observatory</div>
             <div class="weather-temp" id="weatherTemp">--°C</div>
@@ -103,14 +93,14 @@
             <div id="weatherWarning"></div>
         </div>
         
-        <!-- 🔥 新聞（只顯示真實RSS數據） -->
+        <!-- 新聞 -->
         <div class="news-hero">
             <div class="hero-title">📰 Latest News <span id="newsCount"></span></div>
             <div id="heroNews">Loading live news feeds...</div>
         </div>
     </section>
 
-    <!-- 🔥 模態彈窗（點新聞開連結） -->
+    <!-- 模態彈窗 -->
     <div id="linkModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -121,15 +111,7 @@
     </div>
 
     <script>
-        // 🔥 實時香港時間（頂條）
-        function updateLiveTime() {
-            const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Hong_Kong' });
-            document.getElementById('liveTime').textContent = now;
-        }
-        setInterval(updateLiveTime, 1000);
-        updateLiveTime();
-
-        // 🔥 天文台官方RSS（純即時數據）
+        // 天文台官方RSS（純即時數據）
         async function updateWeather() {
             try {
                 const response = await fetch('https://rss.weather.gov.hk/rss/CurrentWeather.xml');
@@ -149,14 +131,13 @@
                     document.getElementById('weatherTemp').textContent = `${temp}°C`;
                     document.getElementById('weatherDesc').textContent = `${humidity}% RH`;
                     document.getElementById('weatherDetails').textContent = `HK Observatory • ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong'})}`;
-                    document.getElementById('weatherStatus').textContent = `Live HKO RSS (${temp}°C)`;
                 }
             } catch (e) {
-                document.getElementById('weatherStatus').textContent = 'HKO RSS unavailable';
+                // Silent fail - no fallback text
             }
         }
 
-        // 🔥 香港新聞RSS（純即時數據）
+        // 香港新聞RSS（純即時數據）
         async function updateNews() {
             try {
                 const response = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8');
@@ -190,32 +171,33 @@
                     }
                 });
                 
-                document.getElementById('heroNews').innerHTML = newsHtml || 'No live news available';
+                document.getElementById('heroNews').innerHTML = newsHtml || '';
                 document.getElementById('newsCount').textContent = `(${count})`;
-                document.getElementById('newsStatus').textContent = `Live RSS (${count} articles)`;
                 
             } catch (e) {
-                document.getElementById('newsStatus').textContent = 'RSS feeds unavailable';
+                // Silent fail - no fallback text
             }
         }
 
-        // 🔥 模態彈窗功能
+        // 模態彈窗功能
         function openLinkModal(url, title) {
             document.getElementById('modalUrl').innerHTML = 
-                `<strong>${title}</strong><br><a href="${url}" target="_blank" class="news-link">🔗 ${url}</a>`;
+                `<strong>${title}</strong><br><a href="${url}" target="_blank" class="news-link">🔗 Open Article</a>`;
             document.getElementById('linkModal').style.display = 'block';
         }
 
         // 關閉彈窗
-        document.querySelector('.close').onclick = function() {
-            document.getElementById('linkModal').style.display = 'none';
-        }
         window.onclick = function(event) {
             const modal = document.getElementById('linkModal');
             if (event.target == modal) modal.style.display = 'none';
         }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.close').onclick = function() {
+                document.getElementById('linkModal').style.display = 'none';
+            }
+        });
 
-        // 🔥 頁面載入後立即更新（無任何預設罐頭數據）
+        // 頁面載入後立即更新
         updateWeather();
         updateNews();
         setInterval(() => {
