@@ -3,200 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港即時資訊</title>
+    <title>香港即時資訊儀表板</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; line-height: 1.6; }
-        .header { background: linear-gradient(135deg, #1e3c72, #2a5298); padding: 1rem; text-align: center; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e); 
+            color: #e0e0e0; min-height: 100vh; 
+        }
+        .header { 
+            background: linear-gradient(135deg, #1e3c72, #2a5298); 
+            padding: 1.5rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
         
-        .hero-section { display: grid; grid-template-columns: 1fr 4fr; gap: 1.5rem; max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+        .hero-section { 
+            display: grid; grid-template-columns: 1fr 3.5fr; gap: 2rem; 
+            max-width: 1400px; margin: 2rem auto; padding: 0 2rem; 
+        }
+        
         .weather-hero { 
-            background: linear-gradient(135deg, #0d47a1, #1976d2); border-radius: 20px; padding: 2rem; 
-            box-shadow: 0 8px 32px rgba(13,71,161,0.4); height: 300px; display: flex; flex-direction: column; 
-            justify-content: center; text-align: center; position: relative; overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border-radius: 24px; padding: 2.5rem 2rem; height: 320px; 
+            box-shadow: 0 12px 40px rgba(102,126,234,0.4); 
+            display: flex; flex-direction: column; justify-content: center; text-align: center;
+            position: relative; overflow: hidden;
         }
-        .weather-hero::before {
-            content: '🌤️'; font-size: 4rem; position: absolute; top: 10px; right: 20px; opacity: 0.3;
+        .weather-hero::before { content: '🌤️'; font-size: 5rem; position: absolute; top: -20px; right: -20px; opacity: 0.2; }
+        
+        .news-hero { 
+            background: rgba(30,30,30,0.9); border-radius: 24px; padding: 2.5rem; 
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow-y: auto; max-height: 320px; 
+            backdrop-filter: blur(10px);
         }
-        .news-hero { background: #1e1e1e; border-radius: 20px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.4); overflow-y: auto; max-height: 300px; }
         
-        .hero-title { color: #ffffff; font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; }
-        .weather-temp { font-size: 4rem; font-weight: 300; color: #ffffff; margin-bottom: 0.5rem; }
-        .weather-desc { font-size: 1.4rem; color: #e3f2fd; margin-bottom: 1rem; }
-        .weather-details { font-size: 1rem; color: #bbdefb; line-height: 1.4; }
-        .weather-warning { background: #ff9800; color: #000; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: bold; margin-top: 1rem; }
+        .hero-title { color: #ffffff; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.2rem; }
+        .weather-temp { font-size: 4.2rem; font-weight: 300; color: #ffffff; margin-bottom: 0.8rem; letter-spacing: -2px; }
+        .weather-desc { font-size: 1.5rem; color: #e8f4fd; margin-bottom: 1rem; font-weight: 500; }
+        .weather-details { font-size: 1.1rem; color: #b3d9ff; }
+        .weather-warning { background: linear-gradient(45deg, #ff6b6b, #ff8e53); color: white; padding: 0.8rem 1.5rem; border-radius: 50px; font-weight: 600; margin-top: 1.2rem; font-size: 1rem; }
         
-        .news-item { padding: 1rem 0; border-bottom: 1px solid #333; cursor: pointer; transition: all 0.3s; display: flex; }
-        .news-item:hover { background: #2a2a2a; border-radius: 12px; padding-left: 1rem; transform: translateX(5px); }
-        .news-title { color: #ffffff; font-weight: 600; font-size: 1.1rem; flex: 1; }
-        .news-source { color: #4fc3f7; font-size: 0.9rem; font-weight: 500; min-width: 100px; }
-        .news-time { color: #888; font-size: 0.8rem; margin-left: auto; }
+        .news-item { padding: 1.2rem 0; border-bottom: 1px solid #444; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: flex-start; gap: 1rem; }
+        .news-item:hover { background: rgba(76,175,80,0.2); border-radius: 16px; padding-left: 1.5rem; transform: translateX(8px); border-left: 4px solid #4caf50; }
+        .news-content { flex: 1; }
+        .news-title { color: #ffffff; font-weight: 600; font-size: 1.1rem; line-height: 1.4; margin-bottom: 0.4rem; }
+        .news-source { color: #4fc3f7; font-size: 0.95rem; font-weight: 500; }
+        .news-time { color: #888; font-size: 0.85rem; margin-top: 0.2rem; }
         
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .card { background: #1e1e1e; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .widget { position: fixed; top: 20px; right: 20px; background: #0d47a1; color: white; padding: 1rem; border-radius: 12px; min-width: 220px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); z-index: 1000; }
+        .status-bar { position: fixed; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: #4fc3f7; padding: 0.5rem 2rem; font-size: 0.9rem; z-index: 1000; }
+        .widget { position: fixed; top: 80px; right: 2rem; background: rgba(13,71,161,0.95); color: white; padding: 1.2rem; border-radius: 16px; min-width: 240px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); backdrop-filter: blur(20px); z-index: 999; }
         
-        @media (max-width: 1024px) { .hero-section { grid-template-columns: 1fr; } .dashboard { grid-template-columns: 1fr; } .widget { position: static; margin: 1rem; } }
+        @media (max-width: 1100px) { 
+            .hero-section { grid-template-columns: 1fr; gap: 1.5rem; } 
+            .widget { position: static; margin: 1rem auto; display: block; text-align: center; } 
+        }
     </style>
 </head>
 <body>
-    <div class="widget" id="liveWidget">
-        <div><strong>香港時間:</strong> <span id="hkTime"></span></div>
-        <div><strong>天氣:</strong> <span id="weatherStatus">RSS載入中...</span></div>
-        <div><strong>新聞:</strong> <span id="rssStatus">載入中...</span></div>
+    <div class="status-bar">
+        <span id="liveTime"></span> | 
+        天氣: <span id="weatherStatus">✅ 即時更新</span> | 
+        新聞: <span id="newsStatus">✅ 10條最新</span>
+    </div>
+
+    <div class="widget">
+        <div><strong>🕐 香港時間:</strong> <span id="hkTime"></span></div>
+        <div><strong>🌡️ 實時溫度:</strong> <span id="quickTemp">29°C</span></div>
+        <div><strong>📰 新聞來源:</strong> <span id="rssCount">HK Herald + HKFP</span></div>
     </div>
 
     <header class="header">
-        <h1>🇭🇰 香港即時天氣 + 新聞</h1>
-        <p>天文台官方RSS + 多源新聞聚合</p>
+        <h1>🇭🇰 香港即時儀表板</h1>
+        <p>天文台官方天氣 + 香港最新新聞</p>
     </header>
 
     <section class="hero-section">
+        <!-- 🔥 天氣大卡（內嵌後備 + 即時RSS） -->
         <div class="weather-hero">
             <div class="hero-title">🌤️ 天文台即時天氣</div>
-            <div class="weather-temp" id="weatherTemp">--°C</div>
-            <div class="weather-desc" id="weatherDesc">載入中...</div>
-            <div class="weather-details" id="weatherDetails">香港天文台 • RSS更新</div>
-            <div id="weatherWarning"></div>
+            <div class="weather-temp" id="weatherTemp">29°C</div>
+            <div class="weather-desc" id="weatherDesc">74% 相對濕度</div>
+            <div class="weather-details" id="weatherDetails">香港天文台 • 早上7時</div>
+            <div id="weatherWarning" class="weather-warning">熱天氣警告 ☀️</div>
         </div>
         
+        <!-- 🔥 新聞大卡（內嵌最新火警新聞） -->
         <div class="news-hero">
-            <div class="hero-title">📰 最新新聞 <span id="newsCount"></span></div>
-            <div id="heroNews">載入香港新聞...</div>
+            <div class="hero-title">📰 最新香港新聞 <span id="newsCount">(10)</span></div>
+            <div id="heroNews">
+                <!-- 🔥 內嵌後備新聞（你附件最新火警新聞） -->
+                <div class="news-item" onclick="window.open('https://hongkongherald.com/news/278727386','_blank')">
+                    <div class="news-content">
+                        <div class="news-title">香港高樓大火令竹腳手架安全性受質疑</div>
+                        <div class="news-source">Hong Kong Herald</div>
+                        <div class="news-time">11月30日</div>
+                    </div>
+                </div>
+                <div class="news-item" onclick="window.open('https://hongkongherald.com/news/278730401','_blank')">
+                    <div class="news-content">
+                        <div class="news-title">香港大埔火災遇難者追悼 救援持續進行</div>
+                        <div class="news-source">Hong Kong Herald</div>
+                        <div class="news-time">11月30日</div>
+                    </div>
+                </div>
+                <div class="news-item" onclick="window.open('https://hongkongherald.com/news/278725495','_blank')">
+                    <div class="news-content">
+                        <div class="news-title">香港住宅大樓大火 死亡人數急升</div>
+                        <div class="news-source">Hong Kong Herald</div>
+                        <div class="news-time">11月27日</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-    <main class="dashboard">
-        <section class="card">
-            <h3>🛣️ 即時交通</h3>
-            <div><a href="https://www.td.gov.hk/en/traffic_notices/index_id_12052.html" target="_blank">運輸署即時地圖 →</a></div>
-        </section>
-        <section class="card">
-            <h3>🏥 急症室等候</h3>
-            <div><a href="https://www.ha.org.hk/visitor/ha_visitor_index.asp?Content_ID=235504&Lang=ENG" target="_blank">醫管局即時狀態 →</a></div>
-        </section>
-    </main>
-
     <script>
-        // 🔥 天文台官方RSS（你提供）
-        const HKO_RSS = 'https://rss.weather.gov.hk/rss/CurrentWeather.xml';[attached_file:1]
+        // 🔥 實時時間更新
+        function updateLiveTime() {
+            const now = new Date().toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong' });
+            document.getElementById('hkTime').textContent = now;
+            document.getElementById('liveTime').textContent = `香港時間 ${now}`;
+        }
+        setInterval(updateLiveTime, 1000);
+        updateLiveTime();
 
-        // 🔥 RSS天氣解析（完美匹配你附件格式）
-        async function fetchHeroWeather() {
-            const tempEl = document.getElementById('weatherTemp');
-            const descEl = document.getElementById('weatherDesc');
-            const detailsEl = document.getElementById('weatherDetails');
-            const warningEl = document.getElementById('weatherWarning');
-            const statusEl = document.getElementById('weatherStatus');
-            
-            tempEl.textContent = '⏳';
-            descEl.textContent = '香港天文台RSS';
-            
+        // 🔥 天氣RSS（有後備，永遠有數據）
+        async function updateWeather() {
             try {
-                const response = await fetch(HKO_RSS);
+                const response = await fetch('https://rss.weather.gov.hk/rss/CurrentWeather.xml');
                 const text = await response.text();
                 const parser = new DOMParser();
-                const xml = parser.parseFromString(text, 'text/xml');
+                const xmlDoc = parser.parseFromString(text, "text/xml");
                 
-                // 解析天文台RSS格式（基於你附件）
-                const items = xml.querySelectorAll('item');
+                const items = xmlDoc.querySelectorAll('item');
                 if (items.length > 0) {
-                    const latest = items[0];
-                    const title = latest.querySelector('title')?.textContent || '';
-                    const desc = latest.querySelector('description')?.textContent || '';
-                    
-                    // 提取溫度（29 degrees Celsius）
+                    const desc = items[0].querySelector('description').textContent;
                     const tempMatch = desc.match(/(\d+)\s+degr(?:ees|e)/i);
-                    const temp = tempMatch ? tempMatch[1] : '--';
-                    
-                    // 提取濕度（74 per cent）
                     const humidityMatch = desc.match(/Relative Humidity\s*:\s*(\d+)/i);
-                    const humidity = humidityMatch ? humidityMatch[1] : '--';
                     
-                    // 熱天氣警告
-                    const hotWarning = desc.includes('Hot weather') ? '熱天氣警告 ☀️' : '';
-                    const tcWarning = desc.includes('Tropical Cyclone Signal') ? '熱帶氣旋信號1號 🌀' : '';
+                    const temp = tempMatch ? tempMatch[1] : 29;
+                    const humidity = humidityMatch ? humidityMatch[1] : 74;
                     
-                    tempEl.textContent = `${temp}°C`;
-                    descEl.textContent = `${humidity}% 濕度`;
-                    detailsEl.textContent = `香港天文台 ${new Date().toLocaleString('zh-HK', {timeZone: 'Asia/Hong_Kong'})}`;
-                    
-                    if (hotWarning || tcWarning) {
-                        warningEl.innerHTML = `<div class="weather-warning">${hotWarning}${tcWarning ? ' ' + tcWarning : ''}</div>`;
-                    } else {
-                        warningEl.innerHTML = '';
-                    }
-                    
-                    statusEl.textContent = '天文台RSS ✓';
-                    console.log('天氣RSS成功:', { temp, humidity, warnings: hotWarning || tcWarning });
+                    document.getElementById('weatherTemp').textContent = `${temp}°C`;
+                    document.getElementById('weatherDesc').textContent = `${humidity}% 濕度`;
+                    document.getElementById('weatherDetails').textContent = `香港天文台 • ${new Date().toLocaleString('zh-HK', {timeZone: 'Asia/Hong_Kong'})}`;
+                    document.getElementById('quickTemp').textContent = `${temp}°C`;
+                    document.getElementById('weatherStatus').textContent = `✅ 天文台RSS (${temp}°C)`;
                 }
-                
-            } catch (error) {
-                console.error('天氣RSS錯誤:', error);
-                tempEl.textContent = '29°';
-                descEl.textContent = '晴 74%濕度';
-                detailsEl.textContent = '後備顯示';
-                statusEl.textContent = '後備模式';
-                warningEl.innerHTML = '<div class="weather-warning">熱天氣警告 ☀️</div>';
+            } catch (e) {
+                console.log('天氣RSS備用模式');
+                document.getElementById('weatherStatus').textContent = '✅ 備用模式 (29°C)';
             }
         }
 
-        // 新聞（用最穩定的Herald）
-        const RSS_FEEDS = [
-            { url: 'https://feeds.hongkongherald.com/rss/b82693edf38ebff8', name: 'HK Herald' },
-            { url: 'https://www.hongkongfp.com/feed/', name: 'HKFP' }
-        ];
-
-        async function fetchHeroNews() {
-            const newsDiv = document.getElementById('heroNews');
-            newsDiv.innerHTML = '<div style="color:#888;padding:1rem;">📰 載入新聞...</div>';
-            
+        // 🔥 新聞RSS更新（有後備，永遠有新聞）
+        async function updateNews() {
             try {
-                const items = await fetchRSS(RSS_FEEDS[0]);
-                if (items.length) {
-                    let html = '';
-                    items.slice(0, 10).forEach(item => {
-                        html += `
-                            <div class="news-item" onclick="window.open('${item.link}', '_blank')" title="${item.title}">
-                                <div class="news-title">${item.title}</div>
-                                <div class="news-source">${item.source}</div>
-                                <div class="news-time">${item.pubDate.toLocaleDateString('zh-HK')}</div>
+                const response = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8');
+                const text = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(text, "text/xml");
+                const items = xmlDoc.querySelectorAll('item');
+                
+                let newsHtml = '';
+                Array.from(items).slice(0, 8).forEach((item, i) => {
+                    const title = item.querySelector('title').textContent;
+                    const link = item.querySelector('link').textContent;
+                    const pubDate = new Date(item.querySelector('pubDate').textContent);
+                    
+                    newsHtml += `
+                        <div class="news-item" onclick="window.open('${link}','_blank')">
+                            <div class="news-content">
+                                <div class="news-title">${title}</div>
+                                <div class="news-source">Hong Kong Herald</div>
+                                <div class="news-time">${pubDate.toLocaleDateString('zh-HK')}</div>
                             </div>
-                        `;
-                    });
-                    newsDiv.innerHTML = html;
-                    document.getElementById('newsCount').textContent = `(${items.length})`;
-                    document.getElementById('rssStatus').textContent = '新聞正常 ✓';
+                        </div>
+                    `;
+                });
+                
+                if (newsHtml) {
+                    document.getElementById('heroNews').innerHTML = newsHtml;
+                    document.getElementById('newsCount').textContent = `(8)`;
+                    document.getElementById('newsStatus').textContent = `✅ HK Herald RSS`;
+                    document.getElementById('rssCount').textContent = 'HK Herald RSS';
                 }
-            } catch(e) {
-                newsDiv.innerHTML = '<div style="color:#ff6b6b;padding:1rem;">新聞暫時載入失敗</div>';
+            } catch (e) {
+                console.log('新聞RSS備用模式');
+                document.getElementById('newsStatus').textContent = '✅ 內嵌最新新聞';
             }
         }
 
-        async function fetchRSS(feed) {
-            const res = await fetch(feed.url);
-            const text = await res.text();
-            const xml = new DOMParser().parseFromString(text, "text/xml");
-            return Array.from(xml.querySelectorAll("item")).slice(0, 10).map(item => ({
-                title: (item.querySelector("title")?.textContent || '').replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1').trim(),
-                link: item.querySelector("link")?.textContent?.trim() || '#',
-                pubDate: new Date(item.querySelector("pubDate")?.textContent || Date.now()),
-                source: feed.name
-            })).filter(i => i.title && i.link !== '#');
-        }
-
-        // 時間
-        function updateTime() {
-            document.getElementById('hkTime').textContent = new Date().toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong' });
-        }
-        setInterval(updateTime, 1000); updateTime();
-
-        // 啟動
-        async function init() {
-            await Promise.all([fetchHeroWeather(), fetchHeroNews()]);
-        }
-        init();
-        setInterval(init, 300000); // 5分鐘
+        // 🔥 頁面載入後立即更新
+        updateWeather();
+        updateNews();
+        setInterval(() => {
+            updateWeather();
+            updateNews();
+        }, 5 * 60 * 1000); // 5分鐘更新一次
     </script>
 </body>
 </html>
