@@ -65,7 +65,7 @@ body{
 .news-source{color:#ff8a80;font-size:.7rem;font-weight:600;}
 .news-time{color:#888;font-size:.68rem;margin-top:.09rem;}
 
-/* Panel for tunnels/roads/traffic */
+/* Generic panel */
 .panel{
   border-radius:24px;display:flex;flex-direction:column;
   box-shadow:0 12px 40px rgba(0,0,0,0.6);overflow:hidden;
@@ -77,6 +77,7 @@ body{
 }
 .panel-content{flex:1;overflow-y:auto;padding:.8rem 1.1rem 1.1rem;font-size:.82rem;}
 
+/* Tunnels */
 .tunnel-panel{background:#1c1c30;border:1px solid #2f3250;color:#e3e8ff;}
 .tunnel-header{background:linear-gradient(135deg,#2d4373,#1a1f3d);color:#aad4ff;}
 .table-peak{font-size:.7rem;color:#ffc107;text-align:center;padding:.22rem 0;}
@@ -100,6 +101,7 @@ body{
 .speed-slow{background:#c08a00;color:#fff4b1;}
 .speed-congested{background:#a23939;color:#f7caca;}
 
+/* Major roads */
 .road-panel{background:#1a2f2a;border:1px solid #2f4a40;color:#d4f0d4;}
 .road-header{background:linear-gradient(135deg,#2d5a4a,#1a332e);color:#a8e6a8;}
 .road-item{
@@ -111,6 +113,7 @@ body{
 .road-name{font-weight:600;}
 .road-speed{font-weight:700;padding:.16rem .52rem;border-radius:9px;min-width:3rem;text-align:center;}
 
+/* Traffic */
 .traffic-panel{background:#2a1717;border:1px solid #4a2a2a;color:#ffd4d4;}
 .traffic-header{background:linear-gradient(135deg,#4a1f1f,#2a1717);color:#ffb3b3;}
 .traffic-item{
@@ -145,6 +148,30 @@ body{
 .imm-label{opacity:.8;}
 .imm-value{font-weight:600;}
 .imm-na{opacity:.7;font-style:italic;}
+
+/* Shared modal styles (news + speed) */
+.modal-overlay{
+  display:none;position:fixed;z-index:2100;left:0;top:0;
+  width:100vw;height:100vh;background:rgba(0,15,44,0.89);
+  backdrop-filter:blur(10px);
+}
+.modal-content{
+  background:#273239;margin:5vh auto;padding:2rem 2.3rem;border-radius:24px;
+  width:90vw;max-width:540px;max-height:75vh;color:#ececec;
+  overflow-y:auto;box-shadow:0 16px 64px rgba(0,0,0,0.85);
+}
+.modal-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:1rem;
+}
+.modal-title{font-size:1.1rem;font-weight:700;margin-bottom:.3rem;}
+.modal-label{font-size:.9rem;color:#aee1ff;margin-top:.2rem;font-weight:600;}
+.modal-close{
+  font-size:2rem;font-weight:bold;color:#bbb;cursor:pointer;
+}
+.modal-close:hover{color:#fff;}
+.modal-section{margin-bottom:.9rem;font-size:.88rem;}
+
 @media(max-width:1200px){
   .row1{grid-template-columns:1fr 1fr;height:auto;}
   .row2{grid-template-columns:1fr;height:auto;}
@@ -155,7 +182,7 @@ body{
 </head>
 <body>
 
-<!-- Row 1: 4 columns: Weather, Hong Kong News, International News, UK News -->
+<!-- Row 1: Weather | HK | International | UK -->
 <section class="row1">
   <div class="weather-hero">
     <div class="weather-icon" id="weatherIcon">🌤️</div>
@@ -187,7 +214,7 @@ body{
   </div>
 </section>
 
-<!-- Row 2: Tunnels | Major Roads | Traffic News -->
+<!-- Row 2: Tunnels | Major Roads | Traffic -->
 <section class="row2">
   <div class="panel tunnel-panel">
     <div class="panel-header tunnel-header">Tunnels – Tolls & Speeds</div>
@@ -210,7 +237,7 @@ body{
   </div>
 </section>
 
-<!-- Row 3: Immigration waiting times grid -->
+<!-- Row 3: Immigration -->
 <section class="row3">
   <div class="imm-panel">
     <div class="imm-title">Immigration Checkpoint Waiting Times</div>
@@ -220,14 +247,92 @@ body{
   </div>
 </section>
 
+<!-- News modal -->
+<div id="newsModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="newsModalTitle">News</div>
+        <div class="modal-label">Source: <span id="newsModalSource"></span></div>
+        <div class="modal-label">Published: <span id="newsModalTime"></span></div>
+      </div>
+      <span class="modal-close" id="newsModalClose">&times;</span>
+    </div>
+    <div class="modal-section" id="newsModalDesc"></div>
+  </div>
+</div>
+
+<!-- Speed modal (tunnels + roads) -->
+<div id="speedModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-head">
+      <div class="modal-title" id="speedModalTitle">Speed</div>
+      <span class="modal-close" id="speedModalClose">&times;</span>
+    </div>
+    <div class="modal-section" id="speedModalBody"></div>
+  </div>
+</div>
+
 <script>
 const OW_API_KEY='f19c9c1cfbb572c048a0a99c38f012d2';
 
-function kmhToMph(kmh){return Math.round(kmh*0.621371);}
+// Proxy helpers to avoid CORS
+async function fetchJsonViaProxy(url){
+  const resp = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url), {cache:'no-cache'});
+  const text = await resp.text();
+  return JSON.parse(text);
+}
+async function fetchTextViaProxy(url){
+  const resp = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url), {cache:'no-cache'});
+  return resp.text();
+}
 
-const tunnelDetails={/*如前*/};
-const roadDetails={/*如前*/};
+// Static meta
+const tunnelDetails={
+  'CHT':{name:'Cross-Harbour Tunnel',length:'1.8 km',location:'Hung Hom – Causeway Bay',history:'First road tunnel under Victoria Harbour, opened in 1972.'},
+  'EHC':{name:'Eastern Harbour Crossing',length:'2.2 km',location:'Lam Tin – Quarry Bay',history:'Immersed tube harbour tunnel opened in 1989.'},
+  'WHC':{name:'Western Harbour Crossing',length:'2.0 km',location:'West Kowloon – Sai Ying Pun',history:'Part of Route 3, opened in 1997.'},
+  'TLT':{name:'Tai Lam Tunnel',length:'3.8 km',location:'Ting Kau – Pat Heung',history:'Dual three-lane tunnel in New Territories, opened in 1998.'}
+};
+const roadDetails={
+  'Tsing Sha Hwy':{name:'Tsing Sha Highway',length:'Approx. 15 km',location:'Tsing Yi – Sha Tin',history:'Key section of Route 8 completed between 2005 and 2009.'},
+  'West Kowloon Corridor':{name:'West Kowloon Corridor',length:'Approx. 4.5 km',location:'Mong Kok – Sham Shui Po – Cheung Sha Wan',history:'Elevated corridor serving west Kowloon since late 1970s.'},
+  'Island Eastern Corridor':{name:'Island Eastern Corridor',length:'Approx. 9 km',location:'North Point – Chai Wan',history:'Coastal highway along north shore of Hong Kong Island.'},
+  'Tsing Kwai Hwy':{name:'Tsing Kwai Highway',length:'Approx. 6 km',location:'Tsing Yi – Kwai Chung / Cheung Sha Wan',history:'Important Route 3 link between New Territories and urban area.'},
+  'North Lantau Hwy':{name:'North Lantau Highway',length:'Approx. 12 km',location:'Tsing Ma Bridge – Tung Chung',history:'Airport core project road opened in 1997.'},
+  'Tsuen Mun Rd':{name:'Tsuen Mun Road',length:'Approx. 20 km',location:'Tsuen Wan – Tuen Mun',history:'One of Hong Kong’s earliest high-speed roads.'},
+  'Kwun Tong Rd':{name:'Kwun Tong Road',length:'Approx. 4 km',location:'Kowloon East – Kwun Tong',history:'Main urban road serving industrial/commercial areas.'}
+};
 
+// Weather (km/h not involved,仍用 m/s→mph 只顯示文字，可照舊)
+async function updateWeather(){
+  try{
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=22.3964&lon=114.1095&appid=${OW_API_KEY}&units=metric&lang=en`;
+    const data = await fetchJsonViaProxy(url);
+    if(data.cod===200){
+      const t=Math.round(data.main.temp);
+      const feels=Math.round(data.main.feels_like);
+      const hum=data.main.humidity;
+      const windKmh=Math.round(data.wind.speed*3.6);
+      const desc=data.weather[0].description;
+      const cap=desc.charAt(0).toUpperCase()+desc.slice(1);
+      const iconCode=data.weather[0].icon;
+      const icons={'01d':'☀️','01n':'🌙','02d':'⛅','02n':'⛅','03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️','09d':'🌦️','09n':'🌦️','10d':'🌧️','10n':'🌧️','11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️'};
+      document.getElementById('weatherIcon').textContent=icons[iconCode]||'🌤️';
+      document.getElementById('weatherTemp').textContent=`${t}°C`;
+      document.getElementById('weatherDesc').textContent=`${cap} • ${hum}%`;
+      document.getElementById('weatherDetails').textContent=`Feels ${feels}°C • Wind ${windKmh} km/h`;
+      let warn='';
+      if(t>33) warn='Very hot';
+      else if(t<12) warn='Very cold';
+      else if(hum>90) warn='Very humid';
+      else if(data.weather[0].main==='Rain') warn='Rainy';
+      document.getElementById('weatherWarning').innerHTML=warn?`<div class="weather-warning">${warn}</div>`:'';
+    }
+  }catch(e){console.error('Weather error',e);}
+}
+
+// Tunnels – real-time km/h + click modal
 async function updateTunnelTable(){
   const container=document.getElementById('tunnelTable');
   const peakStatus=document.getElementById('peakStatus');
@@ -235,31 +340,34 @@ async function updateTunnelTable(){
   const isWeekday=now.getDay()!==0 && now.getDay()!==6;
   const h=now.getHours(),m=now.getMinutes();
   const isPeak=isWeekday&&((h>=7&&h<10)||(h===10&&m<=15)||(h>=16&&h<19));
-  peakStatus.innerHTML=isPeak?'🔴 Peak hours':'🟢 Off-peak';
+  peakStatus.textContent=isPeak?'🔴 Peak hours':'🟢 Off-peak';
+
   const tolls={
     'CHT':{private:isPeak?45:25,moto:isPeak?20:15,taxi:isPeak?45:25,other:isPeak?60:40},
     'EHC':{private:isPeak?45:25,moto:isPeak?20:15,taxi:isPeak?45:25,other:isPeak?60:40},
     'WHC':{private:isPeak?70:50,moto:isPeak?35:25,taxi:isPeak?70:50,other:isPeak?90:70},
     'TLT':{private:isPeak?55:40,moto:isPeak?25:20,taxi:isPeak?55:40,other:isPeak?80:60}
   };
+
   let speeds;
   try{
-    const resp=await fetch('https://resource.data.one.gov.hk/td/traffic-speed-map/en/tunnels.json',{cache:'no-cache'});
-    const data=await resp.json();
+    const data=await fetchJsonViaProxy('https://resource.data.one.gov.hk/td/traffic-speed-map/en/tunnels.json');
     speeds={
-      'CHT':{klnToHK:kmhToMph(data?.cht?.klnToHk?.speed||45),hkToKln:kmhToMph(data?.cht?.hkToKln?.speed||45)},
-      'EHC':{klnToHK:kmhToMph(data?.ehc?.klnToHk?.speed||55),hkToKln:kmhToMph(data?.ehc?.hkToKln?.speed||55)},
-      'WHC':{klnToHK:kmhToMph(data?.whc?.klnToHk?.speed||50),hkToKln:kmhToMph(data?.whc?.hkToKln?.speed||50)},
-      'TLT':{klnToHK:kmhToMph(70),hkToKln:kmhToMph(68)}
+      'CHT':{klnToHK:data?.cht?.klnToHk?.speed||0,hkToKln:data?.cht?.hkToKln?.speed||0},
+      'EHC':{klnToHK:data?.ehc?.klnToHk?.speed||0,hkToKln:data?.ehc?.hkToKln?.speed||0},
+      'WHC':{klnToHK:data?.whc?.klnToHk?.speed||0,hkToKln:data?.whc?.hkToKln?.speed||0},
+      'TLT':{klnToHK:80,hkToKln:80}
     };
   }catch(e){
+    console.error('Tunnels speed error',e);
     speeds={
-      'CHT':{klnToHK:kmhToMph(42),hkToKln:kmhToMph(42)},
-      'EHC':{klnToHK:kmhToMph(46),hkToKln:kmhToMph(48)},
-      'WHC':{klnToHK:kmhToMph(48),hkToKln:kmhToMph(44)},
-      'TLT':{klnToHK:kmhToMph(70),hkToKln:kmhToMph(68)}
+      'CHT':{klnToHK:50,hkToKln:50},
+      'EHC':{klnToHK:60,hkToKln:60},
+      'WHC':{klnToHK:55,hkToKln:55},
+      'TLT':{klnToHK:80,hkToKln:80}
     };
   }
+
   let html=`
     <div class="tunnel-row header">
       <span>Tunnel</span>
@@ -267,12 +375,13 @@ async function updateTunnelTable(){
       <span>Motorcycle</span>
       <span>Taxi</span>
       <span>Other Vehicles</span>
-      <span>Speed (mph)</span>
+      <span>Speed (km/h)</span>
     </div>`;
   ['CHT','EHC','WHC','TLT'].forEach(key=>{
-    const fees=tolls[key],s=speeds[key],avg=Math.round((s.klnToHK+s.hkToKln)/2);
-    const cls=avg>=31?'speed-good':avg>=19?'speed-slow':'speed-congested';
-    html+=`<div class="tunnel-row data">
+    const fees=tolls[key],s=speeds[key];
+    const avg=Math.round((s.klnToHK+s.hkToKln)/2);
+    const cls=avg>=50?'speed-good':avg>=30?'speed-slow':'speed-congested';
+    html+=`<div class="tunnel-row data" onclick="openTunnelSpeedModal('${key}',${s.klnToHK},${s.hkToKln})">
       <span class="tunnel-name">${tunnelDetails[key].name}</span>
       <span class="toll-cell">HK$${fees.private}</span>
       <span class="toll-cell">HK$${fees.moto}</span>
@@ -284,28 +393,91 @@ async function updateTunnelTable(){
   container.innerHTML=html;
 }
 
-async function updateMajorRoadSpeeds(){/*同上 major roads */}
-async function updateTrafficNews(){/*同上 traffic news */}
-async function updateWeather(){/*同上 weather */}
+// Major Roads – real-time km/h + click modal
+async function updateMajorRoadSpeeds(){
+  const container=document.getElementById('majorRoadSpeeds');
+  const list=['Tsing Sha Hwy','West Kowloon Corridor','Island Eastern Corridor','Tsing Kwai Hwy','North Lantau Hwy','Tsuen Mun Rd','Kwun Tong Rd'];
+  try{
+    const data=await fetchJsonViaProxy('https://resource.data.one.gov.hk/td/traffic-speed-map/en/roads.json');
+    let html='';
+    list.forEach(name=>{
+      const key=name.replace(/\s+/g,'').toLowerCase();
+      const segments=data[key]||[];
+      const speeds = segments.map(s=>s.speed).filter(v=>typeof v==='number');
+      const current = speeds[0] || null;
+      const avg = speeds.length ? Math.round(speeds.reduce((a,b)=>a+b,0)/speeds.length) : null;
+      const cls = current>=50?'speed-good':current>=30?'speed-slow':'speed-congested';
+      const color = cls==='speed-good'?'#3a7d44':cls==='speed-slow'?'#c08a00':'#a23939';
+      html+=`<div class="road-item" onclick="openRoadSpeedModal('${name}',${current||0},${avg||0})">
+        <span class="road-name">${roadDetails[name].name}</span>
+        <span class="road-speed" style="background:${color};color:#fff;">
+          ${current!==null?current+' km/h':'--'}
+        </span>
+      </div>`;
+    });
+    container.innerHTML=html||'<div class="no-data">No road data</div>';
+  }catch(e){
+    console.error('Roads error',e);
+    container.innerHTML='<div class="no-data">Major roads unavailable</div>';
+  }
+}
 
-async function loadRssInto(targetId,countId,url,sourceLabel){
+// Traffic – TD XML via proxy
+async function updateTrafficNews(){
+  const container=document.getElementById('trafficNews');
+  try{
+    const text=await fetchTextViaProxy('https://resource.data.one.gov.hk/td/en/specialtrafficnews.xml');
+    const parser=new DOMParser();
+    const xmlDoc=parser.parseFromString(text,'text/xml');
+    const messages=xmlDoc.getElementsByTagName('message');
+    let html='';
+    Array.from(messages).slice(0,10).forEach(msg=>{
+      const engShort=msg.getElementsByTagName('EngShort')[0]?.textContent.trim()||'';
+      const refDate=msg.getElementsByTagName('ReferenceDate')[0]?.textContent.trim()||'';
+      if(!engShort) return;
+      let icon='🚨';const lower=engShort.toLowerCase();
+      if(lower.includes('tunnel')) icon='🚇';else if(lower.includes('road')) icon='🛣️';
+      html+=`<div class="traffic-item">
+        <span class="traffic-icon">${icon}</span>
+        <div class="traffic-text">
+          <div class="traffic-title">${engShort}</div>
+          <div class="traffic-time">${refDate}</div>
+        </div>
+      </div>`;
+    });
+    container.innerHTML=html||'<div class="no-data">No special traffic news</div>';
+  }catch(e){
+    console.error('Traffic XML error',e);
+    container.innerHTML='<div class="no-data">Traffic news unavailable</div>';
+  }
+}
+
+// News RSS – three feeds + modal
+const hkNewsData = [];
+const intNewsData = [];
+const ukNewsData  = [];
+
+async function loadRssInto(targetId,countId,url,sourceLabel,storeArray){
   const container=document.getElementById(targetId);
   const countEl=document.getElementById(countId);
   container.innerHTML='<div class="loading">Loading...</div>';
   try{
-    const resp=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
-    const text=await resp.text();
+    const text=await fetchTextViaProxy(url);
     const parser=new DOMParser();
     const xmlDoc=parser.parseFromString(text,'text/xml');
     const items=xmlDoc.getElementsByTagName('item');
     let html='';let cnt=0;
-    Array.from(items).slice(0,12).forEach(item=>{
+    storeArray.length = 0;
+    Array.from(items).slice(0,12).forEach((item,idx)=>{
       const title=item.getElementsByTagName('title')[0]?.textContent.trim()||'';
+      const desc=item.getElementsByTagName('description')[0]?.textContent.trim()||'';
+      const link=item.getElementsByTagName('link')[0]?.textContent.trim()||'';
       const pub=item.getElementsByTagName('pubDate')[0]?.textContent||'';
       if(!title) return;
       const date=pub?new Date(pub):null;
+      storeArray.push({title,desc,link,source:sourceLabel,pubDate:date});
       const short=title.length>90?title.substring(0,90)+'...':title;
-      html+=`<div class="news-item">
+      html+=`<div class="news-item" onclick="openNewsModal('${sourceLabel}',${idx})">
         <div class="news-content">
           <div class="news-title">${short}</div>
           <div class="news-source">${sourceLabel}</div>
@@ -317,17 +489,52 @@ async function loadRssInto(targetId,countId,url,sourceLabel){
     container.innerHTML=html||'<div class="no-data">No news</div>';
     if(countEl) countEl.textContent=`(${cnt})`;
   }catch(e){
+    console.error('RSS error',url,e);
     container.innerHTML='<div class="error">News loading failed.</div>';
     if(countEl) countEl.textContent='(0)';
   }
 }
 
 async function updateAllNews(){
-  await loadRssInto('hkNews','hkNewsCount','https://rthk9.rthk.hk/rthk/news/rss/e_expressnews_elocal.xml','RTHK Local');
-  await loadRssInto('intNews','intNewsCount','https://rthk9.rthk.hk/rthk/news/rss/e_expressnews_einternational.xml','RTHK World');
-  await loadRssInto('ukNews','ukNewsCount','https://feeds.skynews.com/feeds/rss/uk.xml','Sky News UK');
+  await loadRssInto('hkNews','hkNewsCount','https://rthk9.rthk.hk/rthk/news/rss/e_expressnews_elocal.xml','RTHK Local',hkNewsData);
+  await loadRssInto('intNews','intNewsCount','https://rthk9.rthk.hk/rthk/news/rss/e_expressnews_einternational.xml','RTHK World',intNewsData);
+  await loadRssInto('ukNews','ukNewsCount','https://feeds.skynews.com/feeds/rss/uk.xml','Sky News UK',ukNewsData);
 }
 
+function openNewsModal(sourceLabel,idx){
+  let arr = sourceLabel==='RTHK Local'?hkNewsData :
+            sourceLabel==='RTHK World'?intNewsData : ukNewsData;
+  const n = arr[idx]; if(!n) return;
+  document.getElementById('newsModalTitle').textContent = n.title;
+  document.getElementById('newsModalSource').textContent = sourceLabel;
+  document.getElementById('newsModalTime').textContent = n.pubDate?n.pubDate.toLocaleString('en-GB'):'';
+  document.getElementById('newsModalDesc').innerHTML =
+    (n.desc?`<p>${n.desc}</p>`:'') +
+    (n.link?`<p style="margin-top:.6rem;"><a href="${n.link}" target="_blank" rel="noopener">Open full article</a></p>`:'');
+  document.getElementById('newsModal').style.display='block';
+}
+
+// Speed modal for tunnels + roads
+function openTunnelSpeedModal(key,s1,s2){
+  const name = tunnelDetails[key]?.name || key;
+  const avg = Math.round((s1+s2)/2);
+  document.getElementById('speedModalTitle').textContent = name + ' – Live Speed';
+  document.getElementById('speedModalBody').innerHTML =
+    `<div>Direction 1: <strong>${s1} km/h</strong></div>
+     <div>Direction 2: <strong>${s2} km/h</strong></div>
+     <div style="margin-top:.5rem;">Average: <strong>${avg} km/h</strong></div>`;
+  document.getElementById('speedModal').style.display='block';
+}
+function openRoadSpeedModal(name,current,avg){
+  const title = (roadDetails[name]?.name || name) + ' – Live Speed';
+  document.getElementById('speedModalTitle').textContent = title;
+  document.getElementById('speedModalBody').innerHTML =
+    `<div>Current speed: <strong>${current} km/h</strong></div>
+     <div style="margin-top:.4rem;">Average (all segments): <strong>${avg} km/h</strong></div>`;
+  document.getElementById('speedModal').style.display='block';
+}
+
+// Immigration via proxy
 async function updateImmigrationWaitTimes(){
   const container=document.getElementById('immigrationWaitTimes');
   const checkpoints={
@@ -341,14 +548,11 @@ async function updateImmigrationWaitTimes(){
     STK:'Shatoujiao'
   };
   try{
-    const url='https://secure1.info.gov.hk/immd/mobileapps/2bb9ae17/data/CPQueueTimeR.json';
-    const resp=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url),{cache:'no-cache'});
-    const data=await resp.json();
+    const data=await fetchJsonViaProxy('https://secure1.info.gov.hk/immd/mobileapps/2bb9ae17/data/CPQueueTimeR.json');
     let html='<div class="imm-grid">';
     Object.entries(checkpoints).forEach(([key,name])=>{
       if(!data[key]) return;
-      const arr=data[key].arrQueue;
-      const dep=data[key].depQueue;
+      const arr=data[key].arrQueue,dep=data[key].depQueue;
       const arrStr=arr===99?'<span class="imm-na">N/A</span>':arr+' min';
       const depStr=dep===99?'<span class="imm-na">N/A</span>':dep+' min';
       html+=`<div class="imm-card">
@@ -360,10 +564,20 @@ async function updateImmigrationWaitTimes(){
     html+='</div>';
     container.innerHTML=html;
   }catch(e){
+    console.error('Immigration error',e);
     container.innerHTML='<div style="text-align:center;color:#a66;">Failed to load waiting times.</div>';
   }
 }
 
+// Modal close wiring
+document.getElementById('newsModalClose').onclick=()=>{document.getElementById('newsModal').style.display='none';};
+document.getElementById('speedModalClose').onclick=()=>{document.getElementById('speedModal').style.display='none';};
+window.addEventListener('click',e=>{
+  if(e.target===document.getElementById('newsModal')) document.getElementById('newsModal').style.display='none';
+  if(e.target===document.getElementById('speedModal')) document.getElementById('speedModal').style.display='none';
+});
+
+// Start & intervals
 updateWeather();
 updateAllNews();
 updateTunnelTable();
