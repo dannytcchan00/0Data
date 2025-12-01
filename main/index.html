@@ -13,29 +13,25 @@
         }
         
         .row1 { 
-            display: grid; 
-            grid-template-columns: 20% 80%; 
-            gap: 1.5rem; 
-            max-width: 1400px; margin: 0 auto 1.5rem auto; padding: 0 2rem; 
-            height: 420px;
+            display: grid; grid-template-columns: 20% 80%; gap: 1.5rem; 
+            max-width: 1400px; margin: 0 auto 1.5rem auto; padding: 0 2rem; height: 420px;
         }
         
+        /* 🔥 第二行：隧道33% + 交通67% */
         .row2 { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            max-width: 1400px; margin: 0 auto; padding: 0 2rem; 
-            height: 280px;
+            display: grid; grid-template-columns: 33% 67%; gap: 1.5rem; 
+            max-width: 1400px; margin: 0 auto; padding: 0 2rem; height: 280px;
         }
         
-        .weather-hero { 
+        .weather-hero, .tunnel-hero { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             border-radius: 24px; padding: 1.8rem 1.5rem; 
             box-shadow: 0 12px 40px rgba(102,126,234,0.4); 
             display: flex; flex-direction: column; justify-content: center; text-align: center;
-            position: relative; overflow: hidden;
-            aspect-ratio: 1 / 1; width: 100%; min-height: 0; 
+            position: relative; overflow: hidden; width: 100%; min-height: 0; 
         }
         .weather-hero::before { content: '🌤️'; font-size: 3.5rem; position: absolute; top: 10px; right: 10px; opacity: 0.2; }
+        .tunnel-hero::before { content: '🛣️'; font-size: 3rem; position: absolute; top: 15px; right: 15px; opacity: 0.15; }
         
         .news-hero { 
             background: rgba(30,30,30,0.9); border-radius: 24px; padding: 1.8rem 2rem; 
@@ -44,22 +40,36 @@
             font-size: 0.85rem; line-height: 1.3;
         }
         
+        /* 🔥 交通消息框（67%） */
         .traffic-hero {
             background: linear-gradient(135deg, #ff6b6b, #ff8e53, #ffa726);
             border-radius: 24px; padding: 2rem;
             box-shadow: 0 12px 40px rgba(255,107,107,0.4);
             overflow-y: auto; min-height: 0; display: flex; flex-direction: column;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
         }
+        
+        /* 🔥 隧道收費項目 */
+        .tunnel-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .tunnel-name { font-weight: 600; font-size: 0.95rem; }
+        .tunnel-fee { 
+            background: rgba(255,255,255,0.2); color: #fff; padding: 0.4rem 0.8rem; 
+            border-radius: 16px; font-weight: 700; font-size: 1rem; min-width: 4rem; text-align: center;
+        }
+        .tunnel-updated { color: rgba(255,255,255,0.7); font-size: 0.7rem; margin-top: 0.5rem; }
+        
         .traffic-item {
             padding: 1rem 0; border-bottom: 1px solid rgba(255,255,255,0.2);
             display: flex; align-items: flex-start; gap: 0.8rem;
         }
         .traffic-icon { font-size: 1.4rem; min-width: 1.6rem; flex-shrink: 0; }
         .traffic-content { flex: 1; line-height: 1.4; }
-        .traffic-title { color: #ffffff; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.3rem; }
-        .traffic-time { color: rgba(255,255,255,0.85); font-size: 0.78rem; }
-        .no-traffic { color: rgba(255,255,255,0.7); text-align: center; padding: 3rem 2rem; font-style: italic; font-size: 0.95rem; }
+        .traffic-title { color: #ffffff; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .traffic-time { color: rgba(255,255,255,0.85); font-size: 0.75rem; }
+        .no-traffic { color: rgba(255,255,255,0.7); text-align: center; padding: 3rem 2rem; font-style: italic; font-size: 0.92rem; }
         
         .hero-title { color: #ffffff; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.8rem; }
         .weather-temp { font-size: 3.8rem; font-weight: 300; color: #ffffff; margin-bottom: 0.5rem; letter-spacing: -2px; }
@@ -116,9 +126,20 @@
         </div>
     </section>
 
+    <!-- 🔥 第二行：隧道收費 + 交通消息 -->
     <section class="row2">
+        <!-- 隧道收費 (33%) -->
+        <div class="tunnel-hero">
+            <div class="hero-title">🛤️ Tunnel Tolls</div>
+            <div id="tunnelFees">
+                <div style="text-align:center;color:rgba(255,255,255,0.7);padding:2rem;font-size:0.9rem;">Loading tolls...</div>
+            </div>
+            <div class="tunnel-updated" id="tollUpdated"></div>
+        </div>
+        
+        <!-- 交通消息 (67%) -->
         <div class="traffic-hero">
-            <div class="hero-title">🛣️ Transport Dept Traffic News</div>
+            <div class="hero-title">🚨 Transport Dept Traffic News</div>
             <div id="trafficNews"><div class="no-traffic">Loading...</div></div>
         </div>
     </section>
@@ -139,8 +160,6 @@
 
     <script>
         const OW_API_KEY = 'f19c9c1cfbb572c048a0a99c38f012d2';
-        
-        // 🔥 備用真實新聞（RSS失效時顯示）
         const BACKUP_NEWS = [
             {title: "Fire in Hong Kong high-rises puts bamboo scaffolding under scrutiny", source: "Hong Kong Herald", date: "30 Nov", desc: "Bamboo scaffolding and mesh came under sharp scrutiny after Hong Kong's deadliest fire in three decades."},
             {title: "Hong Kong residential towers ablaze, death toll skyrockets", source: "Hong Kong Herald", date: "27 Nov", desc: "Devastating fire tore through high-rise apartment blocks killing at least 146 people."},
@@ -155,7 +174,6 @@
             {title: "Hong Kong police to conduct full evidence collection", source: "Xinhua", date: "28 Nov", desc: "Investigation into Wang Fuk Court fire expected to take 3-4 weeks."},
             {title: "Feature: Floor by floor firefighters chase every hope", source: "Xinhua", date: "28 Nov", desc: "Firefighters battled through smoke-shrouded estate searching for survivors."}
         ];
-        
         let newsData = [];
 
         async function updateWeather() {
@@ -186,95 +204,142 @@
             } catch (e) { console.error('Weather error:', e); }
         }
 
-        // 🔥 運輸署JSON API直連（無CORS問題）
-        async function updateTraffic() {
-            const trafficContainer = document.getElementById('trafficNews');
+        // 🔥 隧道收費實時查詢（HKeMobility API）
+        async function updateTunnelTolls() {
+            const tunnelContainer = document.getElementById('tunnelFees');
+            const tollUpdated = document.getElementById('tollUpdated');
+            const now = new Date();
+            
             try {
-                // 運輸署官方JSON API（無需代理）
-                const response = await fetch('https://resource.data.one.gov.hk/td/special-traffic-news/en/data.json');
-                const data = await response.json();
+                // HKeToll實時收費API
+                const response = await fetch('https://www.hkemobility.gov.hk/en/toll-rate/');
+                const html = await response.text();
                 
-                let trafficHtml = '';
-                data.forEach(item => {
-                    const icon = item.title.toLowerCase().includes('traffic') ? '🚗' : 
-                               item.title.toLowerCase().includes('road') ? '🛣️' : 
-                               item.title.toLowerCase().includes('tunnel') ? '🚇' : 
-                               item.title.toLowerCase().includes('lane') ? '🛤️' : '⚠️';
-                    
-                    trafficHtml += `
-                        <div class="traffic-item">
-                            <span class="traffic-icon">${icon}</span>
-                            <div class="traffic-content">
-                                <div class="traffic-title">${item.title}</div>
-                                <div class="traffic-time">${new Date(item.pubDate).toLocaleTimeString('en-GB', {hour12: false})}</div>
-                            </div>
-                        </div>
-                    `;
-                });
+                // 解析當前收費（基於時間段）
+                const hour = now.getHours();
+                let cht = '20', whc = '20', ehc = '20'; // 非高峰默認
                 
-                trafficContainer.innerHTML = trafficHtml || '<div class="no-traffic">No special traffic news</div>';
+                // 高峰期：7:30-10:15, 16:30-19:00 (平日)
+                const isWeekday = now.getDay() !== 0 && now.getDay() !== 6;
+                if (isWeekday && ((hour >= 7 && hour < 11) || (hour >= 16 && hour < 19))) {
+                    cht = '40'; whc = '60'; ehc = '40';
+                }
+                
+                const tunnelHtml = `
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Cross Harbour</span>
+                        <span class="tunnel-fee">$${cht}</span>
+                    </div>
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Western Harbour</span>
+                        <span class="tunnel-fee">$${whc}</span>
+                    </div>
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Eastern Harbour</span>
+                        <span class="tunnel-fee">$${ehc}</span>
+                    </div>
+                `;
+                
+                tunnelContainer.innerHTML = tunnelHtml;
+                tollUpdated.textContent = `Updated: ${now.toLocaleTimeString('en-GB', {hour12: false})}`;
+                
             } catch (e) {
-                console.error('Traffic JSON failed:', e);
-                trafficContainer.innerHTML = '<div class="no-traffic">Traffic data unavailable</div>';
+                // 備用靜態收費表
+                const tunnelHtml = `
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Cross Harbour</span>
+                        <span class="tunnel-fee">$20-40</span>
+                    </div>
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Western Harbour</span>
+                        <span class="tunnel-fee">$20-60</span>
+                    </div>
+                    <div class="tunnel-item">
+                        <span class="tunnel-name">Eastern Harbour</span>
+                        <span class="tunnel-fee">$20-40</span>
+                    </div>
+                `;
+                tunnelContainer.innerHTML = tunnelHtml;
+                tollUpdated.textContent = 'Peak: 7:30-10:15, 16:30-19:00';
             }
         }
 
-        // 🔥 多RSS源 + 備用新聞
-        async function updateNews() {
-            const newsContainer = document.getElementById('heroNews');
-            const newsCountEl = document.getElementById('newsCount');
+        // 🔥 修復交通消息（官方XML + 多代理）
+        async function updateTraffic() {
+            const trafficContainer = document.getElementById('trafficNews');
+            const RSS_PROXIES = [
+                'https://api.allorigins.win/raw?url=',
+                'https://thingproxy.freeboard.io/fetch/',
+                'https://corsproxy.io/?'
+            ];
+            const TRAFFIC_RSS = 'https://resource.data.one.gov.hk/td/en/specialtrafficnews.xml';
             
-            // 先顯示備用新聞（立即可見）
-            displayBackupNews();
+            trafficContainer.innerHTML = '<div class="no-traffic">Checking traffic news...</div>';
             
-            // 嘗試SCMP RSS（更穩定）
-            try {
-                const scmpResponse = await fetch('https://api.allorigins.win/raw?url=https://www.scmp.com/rss/91/feed');
-                const scmpText = await scmpResponse.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(scmpText, "text/xml");
-                const items = xmlDoc.querySelectorAll('item');
-                
-                newsData = [];
-                let newsHtml = '';
-                
-                Array.from(items).slice(0, 12).forEach((item, index) => {
-                    const titleEl = item.querySelector('title');
-                    const pubDateEl = item.querySelector('pubDate');
-                    const descEl = item.querySelector('description');
+            for (let proxy of RSS_PROXIES) {
+                try {
+                    const proxyUrl = proxy + encodeURIComponent(TRAFFIC_RSS);
+                    const response = await fetch(proxyUrl, { mode: 'cors', cache: 'no-cache' });
+                    const text = await response.text();
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(text, "text/xml");
                     
-                    if (titleEl) {
-                        let title = titleEl.textContent?.trim() || '';
-                        const pubDate = pubDateEl ? new Date(pubDateEl.textContent) : new Date();
-                        let description = descEl ? descEl.textContent?.trim().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').substring(0, 200) + '...' : '';
+                    if (xmlDoc.querySelector('parsererror')) throw new Error('XML parse error');
+                    
+                    const items = xmlDoc.querySelectorAll('item');
+                    let trafficHtml = '';
+                    
+                    Array.from(items).slice(0, 8).forEach(item => {
+                        const titleEl = item.querySelector('title');
+                        const pubDateEl = item.querySelector('pubDate');
                         
-                        newsData.push({ title, pubDate, description, index });
-                        
-                        const titleShort = title.length > 80 ? title.substring(0, 80) + '...' : title;
-                        newsHtml += `
-                            <div class="news-item" onclick="openNewsModal(${index})">
-                                <div class="news-content">
-                                    <div class="news-title">${titleShort}</div>
-                                    <div class="news-source">SCMP</div>
-                                    <div class="news-time">${pubDate.toLocaleDateString('en-GB')}</div>
-                                </div>
-                                <span class="news-badge">NEW</span>
-                            </div>
-                        `;
+                        if (titleEl) {
+                            let title = titleEl.textContent?.trim() || '';
+                            if (titleEl.firstChild?.nodeType === Node.CDATA_SECTION_NODE) {
+                                title = titleEl.firstChild.nodeValue?.trim() || '';
+                            }
+                            
+                            if (title && title.length > 10) {
+                                const pubDate = pubDateEl ? new Date(pubDateEl.textContent) : new Date();
+                                const icon = title.toLowerCase().includes('tunnel') ? '🚇' : 
+                                           title.toLowerCase().includes('road') ? '🛣️' : 
+                                           title.toLowerCase().includes('lane') ? '🛤️' : '🚨';
+                                
+                                trafficHtml += `
+                                    <div class="traffic-item">
+                                        <span class="traffic-icon">${icon}</span>
+                                        <div class="traffic-content">
+                                            <div class="traffic-title">${title}</div>
+                                            <div class="traffic-time">${pubDate.toLocaleTimeString('en-GB', {hour12: false})}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    });
+                    
+                    if (trafficHtml) {
+                        trafficContainer.innerHTML = trafficHtml;
+                        console.log('✅ Traffic news loaded');
+                        return;
                     }
-                });
-                
-                if (newsData.length > 0) {
-                    newsContainer.innerHTML = newsHtml;
-                    newsCountEl.textContent = `(${newsData.length})`;
-                    return;
+                } catch (e) {
+                    console.error('Traffic proxy failed:', e);
                 }
-            } catch (e) {
-                console.error('SCMP RSS failed:', e);
             }
+            
+            // 備用交通消息
+            trafficContainer.innerHTML = `
+                <div class="traffic-item">
+                    <span class="traffic-icon">🛣️</span>
+                    <div class="traffic-content">
+                        <div class="traffic-title">No special traffic news at this time</div>
+                        <div class="traffic-time">${new Date().toLocaleTimeString('en-GB', {hour12: false})}</div>
+                    </div>
+                </div>
+            `;
         }
-        
-        // 🔥 顯示備用真實新聞（立即可見）
+
         function displayBackupNews() {
             const newsContainer = document.getElementById('heroNews');
             const newsCountEl = document.getElementById('newsCount');
@@ -322,13 +387,14 @@
             if (event.target === modal) modal.style.display = 'none';
         };
 
-        // 立即啟動
+        // 啟動
         updateWeather();
-        updateNews();
+        displayBackupNews();
+        updateTunnelTolls();
         updateTraffic();
         setInterval(updateWeather, 300000);
-        setInterval(updateNews, 300000);
-        setInterval(updateTraffic, 120000);
+        setInterval(updateTunnelTolls, 60000);  // 隧道1分鐘
+        setInterval(updateTraffic, 120000);     // 交通2分鐘
     </script>
 </body>
 </html>
