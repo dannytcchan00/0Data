@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hong Kong Dashboard/title>
+  <title>Hong Kong Data Dashboard</title>
   <style>
+    /* 原有CSS保持不變 */
     :root {
       --bg-primary: #121212;
       --bg-secondary: #1e1e1e;
@@ -24,7 +25,6 @@
       display: flex;
       padding: 10px;
     }
-    /* 主菜单样式 */
     #menu-bar > ul {
       list-style: none;
       margin: 0;
@@ -47,7 +47,6 @@
     #menu-bar > ul > li > button.active {
       background-color: var(--hover-bg);
     }
-    /* 子菜单样式 */
     #menu-bar ul ul {
       display: none;
       position: absolute;
@@ -76,11 +75,9 @@
     #menu-bar ul ul li button:hover {
       background-color: #666;
     }
-    /* 显示子菜单 */
     #menu-bar ul li:hover > ul {
       display: block;
     }
-    /* 内容区 */
     #content-area {
       height: calc(100% - 50px);
     }
@@ -90,7 +87,6 @@
       border: none;
       background-color: var(--bg-primary);
     }
-    /* 右上角仪表板小工具样式 */
     #dashboard-widget {
       position: fixed;
       top: 10px;
@@ -110,12 +106,13 @@
 <body>
   <div id="menu-bar">
     <ul>
-      <li><button data-src="https://dannytcchan00.github.io/0Data/main/" class="active">Home</button></li>
+      <!-- Home按鈕現在載入您的main頁面 -->
+      <li><button data-src="https://dannytcchan00.github.io/0Data/main/" class="active">Dashboard</button></li>
       <li>
         <button>Transport</button>
         <ul>
-          <li><button data-src="https://dannytcchan00.github.io/0Data/transport/HighwaysDept/LampPost/">Lamp Post</button></li>
-          <li><button data-src="https://dannytcchan00.github.io/0Data/transport/immi/immidaily/">Control Points Traffic</button></li>
+          <li><button data-src="https://dannytcchan00.github.io/0Data/LampPost/">Lamp Post</button></li>
+          <li><button data-src="https://dannytcchan00.github.io/0Data/immi/immidaily/">Control Points Traffic</button></li>
         </ul>
       </li>
       <li><button data-src="Weather/Weather.html">天氣</button></li>
@@ -123,15 +120,37 @@
     </ul>
   </div>
 
+  <!-- 右上角香港時間+天氣小工具 -->
+  <div id="dashboard-widget">
+    <div id="hk-time">Loading HKT...</div>
+    <div id="weather-info">Loading weather...</div>
+    <div id="last-update"></div>
+  </div>
 
-    // 儀表板小工具更新函數
+  <!-- 預設載入您的main頁面 -->
+  <div id="content-area">
+    <iframe id="iframe-content" src="https://dannytcchan00.github.io/0Data/main/"></iframe>
+  </div>
+
+  <script>
+    // iframe切換邏輯
+    const buttons = document.querySelectorAll('#menu-bar button[data-src]');
+    const iframe = document.getElementById('iframe-content');
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        buttons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        iframe.src = button.getAttribute('data-src');
+      });
+    });
+
+    // 儀表板小工具更新（香港時間+天氣）
     async function updateDashboard() {
-      // 香港時間(英國英語時間格式)
       const now = new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong'});
       document.getElementById('hk-time').textContent = `HKT: ${now}`;
 
       try {
-        // 香港天文台實時天氣API (綜合報告)
         const response = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
         const weather = await response.json();
         if(weather.temperature && weather.temperature.data && weather.temperature.data.length > 0 &&
@@ -146,13 +165,12 @@
         document.getElementById('weather-info').textContent = 'Error fetching weather';
       }
 
-      // 更新時間戳（每次更新時間）
       const updateTime = new Date().toLocaleTimeString('en-GB', {timeZone: 'Asia/Hong_Kong'});
       document.getElementById('last-update').textContent = `Updated at: ${updateTime}`;
     }
 
-    setInterval(updateDashboard, 30000); // 每30秒更新一次
-    updateDashboard(); // 頁面初始化立即更新
+    setInterval(updateDashboard, 30000);
+    updateDashboard();
   </script>
 </body>
 </html>
