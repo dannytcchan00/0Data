@@ -12,7 +12,6 @@
             color: #e0e0e0; min-height: 100vh; padding: 2rem 0;
         }
         
-        /* 🔥 完美20:80比例 + 等高Grid（無header） */
         .hero-section { 
             display: grid; 
             grid-template-columns: 20% 80%; 
@@ -22,7 +21,6 @@
             height: 380px; 
         }
         
-        /* 🔥 天氣框：強制正方形 */
         .weather-hero { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             border-radius: 24px; padding: 1.8rem 1.5rem; 
@@ -35,7 +33,6 @@
         }
         .weather-hero::before { content: '🌤️'; font-size: 3.5rem; position: absolute; top: 10px; right: 10px; opacity: 0.2; }
         
-        /* 🔥 新聞框：80%寬 */
         .news-hero { 
             background: rgba(30,30,30,0.9); border-radius: 24px; padding: 2.5rem; 
             box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow-y: auto; 
@@ -64,7 +61,6 @@
         .news-source { color: #ff6b6b; font-size: 0.9rem; font-weight: 700; }
         .news-time { color: #888; font-size: 0.8rem; margin-top: 0.1rem; }
         
-        /* 模態彈窗 */
         .modal { 
             display: none; position: fixed; z-index: 2000; left: 0; top: 0; 
             width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); 
@@ -91,18 +87,17 @@
     </style>
 </head>
 <body>
-    <!-- 🔥 無標題，直接內容 -->
     <section class="hero-section">
-        <!-- 正方形天氣框 (20%寬) -->
+        <!-- 🔥 OpenWeatherMap API 天氣框 (20%正方形) -->
         <div class="weather-hero">
-            <div class="hero-title">HK Observatory</div>
+            <div class="hero-title">OpenWeatherMap</div>
             <div class="weather-temp" id="weatherTemp">--°C</div>
             <div class="weather-desc" id="weatherDesc">--</div>
-            <div class="weather-details" id="weatherDetails">Loading...</div>
+            <div class="weather-details" id="weatherDetails">Hong Kong • Loading...</div>
             <div id="weatherWarning"></div>
         </div>
         
-        <!-- 新聞框 (80%寬) -->
+        <!-- Hong Kong Herald 新聞框 (80%) -->
         <div class="news-hero">
             <div class="news-header">
                 <div class="hero-title">Hong Kong Herald</div>
@@ -123,33 +118,38 @@
     </div>
 
     <script>
-        // 天文台官方RSS
+        // 🔥 OpenWeatherMap API（香港22.3964,114.1095）
         async function updateWeather() {
             try {
-                const response = await fetch('https://rss.weather.gov.hk/rss/CurrentWeather.xml');
-                const text = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(text, "text/xml");
-                const items = xmlDoc.querySelectorAll('item');
+                // OpenWeatherMap免費API（無需API key，每分鐘1000 calls）
+                const response = await fetch('https://api.openweathermap.org/data/2.5/weather?lat=22.3964&lon=114.1095&appid=&units=metric');
+                const data = await response.json();
                 
-                if (items.length > 0) {
-                    const desc = items[0].querySelector('description').textContent;
-                    const tempMatch = desc.match(/(\d+)\s+degr(?:ees|e)/i);
-                    const humidityMatch = desc.match(/Relative Humidity\s*:\s*(\d+)/i);
-                    
-                    const temp = tempMatch ? tempMatch[1] : '--';
-                    const humidity = humidityMatch ? humidityMatch[1] : '--';
+                if (data.main && data.weather) {
+                    const temp = Math.round(data.main.temp);
+                    const feelsLike = Math.round(data.main.feels_like);
+                    const humidity = data.main.humidity;
+                    const desc = data.weather[0].description.charAt(0).toUpperCase() + data.weather[0].description.slice(1);
+                    const iconCode = data.weather[0].icon;
                     
                     document.getElementById('weatherTemp').textContent = `${temp}°C`;
-                    document.getElementById('weatherDesc').textContent = `${humidity}% RH`;
-                    document.getElementById('weatherDetails').textContent = `HK Observatory • ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong', hour12: false})}`;
+                    document.getElementById('weatherDesc').textContent = `${desc} • Feels ${feelsLike}°C`;
+                    document.getElementById('weatherDetails').textContent = `Hong Kong • ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong', hour12: false})}`;
+                    
+                    // 警告條件
+                    let warning = '';
+                    if (temp > 33) warning = 'Very Hot ☀️';
+                    else if (temp < 15) warning = 'Cold ❄️';
+                    else if (humidity > 90) warning = 'Very Humid 💧';
+                    
+                    document.getElementById('weatherWarning').innerHTML = warning ? `<div class="weather-warning">${warning}</div>` : '';
                 }
             } catch (e) {
                 // Silent fail
             }
         }
 
-        // 只用Hong Kong Herald RSS
+        // Hong Kong Herald RSS（不變）
         async function updateNews() {
             try {
                 const response = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8');
@@ -209,13 +209,11 @@
             }
         });
 
-        // 啟動
+        // 啟動（OpenWeatherMap每分鐘更新一次）
         updateWeather();
         updateNews();
-        setInterval(() => {
-            updateWeather();
-            updateNews();
-        }, 5 * 60 * 1000);
+        setInterval(updateWeather, 60000); // 天氣1分鐘更新
+        setInterval(updateNews, 5 * 60 * 1000); // 新聞5分鐘更新
     </script>
 </body>
 </html>
