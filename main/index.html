@@ -10,173 +10,191 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             background: #121212; color: #e0e0e0; line-height: 1.6; 
         }
-        .header { background: linear-gradient(135deg, #1e3c72, #2a5298); padding: 1rem; text-align: center; }
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .card { background: #1e1e1e; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: transform 0.3s; }
-        .card:hover { transform: translateY(-5px); }
-        .card h3 { color: #4fc3f7; margin-bottom: 1rem; font-size: 1.2rem; }
-        .status { font-size: 1.1rem; font-weight: bold; color: #4fc3f7; }
-        .news-item { padding: 0.8rem 0; border-bottom: 1px solid #333; cursor: pointer; transition: all 0.2s; }
-        .news-item:hover { background: #2a2a2a; border-radius: 6px; padding-left: 0.5rem; }
-        .news-title { color: #ffffff; font-weight: bold; font-size: 1rem; margin-bottom: 0.3rem; }
-        .news-source { color: #4fc3f7; font-size: 0.85rem; font-weight: 500; }
-        .news-time { color: #888; font-size: 0.8rem; }
-        .widget { position: fixed; top: 20px; right: 20px; background: #0d47a1; color: white; padding: 1rem; border-radius: 10px; min-width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000; }
-        .loading { color: #888; }
-        .error { color: #ff6b6b; }
-        @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } .widget { position: static; margin: 1rem; } }
+        .header { 
+            background: linear-gradient(135deg, #1e3c72, #2a5298); 
+            padding: 1rem; text-align: center; 
+        }
+        
+        /* 🔥 新版面：左20%天氣 + 右80%新聞 */
+        .hero-section {
+            display: grid; 
+            grid-template-columns: 1fr 4fr; /* 20% : 80% */
+            gap: 1.5rem; 
+            max-width: 1400px; margin: 2rem auto; padding: 0 1rem; 
+        }
+        
+        .weather-hero {
+            background: linear-gradient(135deg, #0d47a1, #1976d2); 
+            border-radius: 20px; padding: 2rem; 
+            box-shadow: 0 8px 32px rgba(13,71,161,0.4);
+            height: 280px; display: flex; flex-direction: column; justify-content: center;
+        }
+        
+        .news-hero {
+            background: #1e1e1e; border-radius: 20px; padding: 2rem; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4); overflow-y: auto; max-height: 280px;
+        }
+        
+        .hero-title { color: #ffffff; font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; }
+        .weather-temp { font-size: 3.5rem; font-weight: 300; color: #ffffff; margin-bottom: 0.5rem; }
+        .weather-desc { font-size: 1.3rem; color: #e3f2fd; margin-bottom: 1rem; }
+        .weather-details { font-size: 0.95rem; color: #bbdefb; }
+        
+        .news-item { 
+            padding: 1rem 0; border-bottom: 1px solid #333; cursor: pointer; 
+            transition: all 0.3s; display: flex; 
+        }
+        .news-item:hover { background: #2a2a2a; border-radius: 12px; padding-left: 1rem; transform: translateX(5px); }
+        .news-title { color: #ffffff; font-weight: 600; font-size: 1.1rem; flex: 1; }
+        .news-source { color: #4fc3f7; font-size: 0.9rem; font-weight: 500; min-width: 100px; }
+        .news-time { color: #888; font-size: 0.8rem; margin-left: auto; }
+        
+        /* 下面小卡 */
+        .dashboard { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 1.5rem; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; 
+        }
+        .card { background: #1e1e1e; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .card h3 { color: #4fc3f7; margin-bottom: 1rem; }
+        
+        .widget { 
+            position: fixed; top: 20px; right: 20px; background: #0d47a1; 
+            color: white; padding: 1rem; border-radius: 12px; min-width: 220px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5); z-index: 1000; 
+        }
+        @media (max-width: 1024px) { 
+            .hero-section { grid-template-columns: 1fr; } 
+            .dashboard { grid-template-columns: 1fr; } 
+            .widget { position: static; margin: 1rem; } 
+        }
     </style>
 </head>
 <body>
     <div class="widget" id="liveWidget">
-        <div>Hong Kong Time: <span id="hkTime"></span></div>
-        <div>News Sources: <span id="rssStatus">Loading...</span></div>
-        <div>Last Update: <span id="lastUpdate"></span></div>
+        <div><strong>Hong Kong Time:</strong> <span id="hkTime"></span></div>
+        <div><strong>News:</strong> <span id="rssStatus">Loading...</span></div>
+        <div><strong>Last Update:</strong> <span id="lastUpdate"></span></div>
     </div>
 
     <header class="header">
-        <h1>Hong Kong Live Dashboard</h1>
-        <p>Multi-RSS news, weather & live updates</p>
+        <h1>🇭🇰 Hong Kong Live Dashboard</h1>
+        <p>Instant weather + breaking news + live updates</p>
     </header>
 
+    <!-- 🔥 左上角大天氣 + 大新聞 -->
+    <section class="hero-section">
+        <div class="weather-hero">
+            <div class="hero-title">🌤️ Live Weather</div>
+            <div class="weather-temp" id="weatherTemp">--°C</div>
+            <div class="weather-desc" id="weatherDesc">Loading...</div>
+            <div class="weather-details" id="weatherDetails">King's Park Observatory</div>
+        </div>
+        
+        <div class="news-hero">
+            <div class="hero-title">📰 Breaking News <span class="status" id="newsCount"></span></div>
+            <div id="heroNews">Loading latest headlines...</div>
+        </div>
+    </section>
+
+    <!-- 下面小功能卡 -->
     <main class="dashboard">
         <section class="card">
-            <h3>📰 Latest News (RSS)</h3>
-            <div id="news">Loading reliable RSS feeds...</div>
+            <h3>🛣️ Live Traffic</h3>
+            <div id="traffic"><a href="https://www.td.gov.hk/en/traffic_notices/index_id_12052.html" target="_blank">Transport Dept Live Map</a></div>
         </section>
-
-        <section class="card">
-            <h3>🌤️ Current Weather</h3>
-            <div id="weather">Loading...</div>
-        </section>
-
-        <section class="card">
-            <h3>🛣️ Traffic</h3>
-            <div id="traffic">Loading...</div>
-        </section>
-
+        
         <section class="card">
             <h3>🏥 A&E Waiting</h3>
-            <div id="aewait">Loading...</div>
+            <div id="aewait"><a href="https://www.ha.org.hk/visitor/ha_visitor_index.asp?Content_ID=235504&Lang=ENG" target="_blank">Hospital Authority Live Status</a></div>
+        </section>
+        
+        <section class="card">
+            <h3>📊 Immigration</h3>
+            <div>Today / 7-day avg checkpoint data (coming soon)</div>
         </section>
     </main>
 
     <script>
-        // 🔥 修復版：3條100%穩定RSS（已測試無CORS）
+        // RSS feeds（穩定版）
         const RSS_FEEDS = [
-            { url: 'https://feeds.hongkongherald.com/rss/b82693edf38ebff8', name: 'Hong Kong Herald' },[attached_file:1]
-            { url: 'https://www.hongkongfp.com/feed/', name: 'HK Free Press' },
-            { url: 'https://rthk.hk/rthk/news/rss/c_expressnews_clocal.xml', name: 'RTHK Local' }[web:32]
+            { url: 'https://feeds.hongkongherald.com/rss/b82693edf38ebff8', name: 'HK Herald' },
+            { url: 'https://www.hongkongfp.com/feed/', name: 'HKFP' },
+            { url: 'https://rthk.hk/rthk/news/rss/c_expressnews_clocal.xml', name: 'RTHK' }
         ];
 
-        // 加強版RSS parser（處理所有邊緣情況）
-        async function fetchSingleRSS(feed) {
+        // 🔥 大天氣（超醒目）
+        async function fetchHeroWeather() {
             try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000); // 8秒timeout
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
+                const data = await res.json();
+                const temp = data.temperature.data[0]?.value || '--';
+                const desc = data.weatherDesc[0] || 'N/A';
+                const place = data.temperature.data[0]?.place || 'Hong Kong';
                 
-                const response = await fetch(feed.url, { signal: controller.signal });
-                clearTimeout(timeout);
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const text = await response.text();
-                const parser = new DOMParser();
-                const xml = parser.parseFromString(text, "text/xml");
-                
-                if (xml.querySelector('parsererror')) throw new Error('XML parse error');
-                
-                const items = Array.from(xml.querySelectorAll("item")).slice(0, 4).map(item => {
-                    // 加強CDATA處理
-                    const titleEl = item.querySelector("title");
-                    let title = 'No title';
-                    if (titleEl) {
-                        title = titleEl.textContent || titleEl.firstChild?.textContent || titleEl.innerHTML;
-                        title = title.replace(/<!\[CDATA\[(.*)\]\]>/, '$1').trim().substring(0, 80);
-                    }
-                    
-                    return {
-                        title: title.replace(/\s+/g, ' ').trim() || 'No title',
-                        link: item.querySelector("link")?.textContent?.trim() || '#',
-                        pubDate: new Date(item.querySelector("pubDate")?.textContent || Date.now()),
-                        source: feed.name
-                    };
-                }).filter(item => item.title !== 'No title' && item.link !== '#');
-                
-                return items;
-            } catch (e) {
-                console.warn(`RSS failed (${feed.name}):`, e.message);
-                return [];
+                document.getElementById('weatherTemp').textContent = `${temp}°C`;
+                document.getElementById('weatherDesc').textContent = desc;
+                document.getElementById('weatherDetails').textContent = `${place} • Updated now`;
+            } catch(e) {
+                document.getElementById('weatherTemp').textContent = '--°C';
+                document.getElementById('weatherDesc').textContent = 'Weather unavailable';
             }
         }
 
-        // 主新聞函數（fallback機制）
-        async function fetchNews() {
-            const newsDiv = document.getElementById('news');
+        // 🔥 大新聞（8成空間，顯示12條）
+        async function fetchHeroNews() {
+            const newsDiv = document.getElementById('heroNews');
             const statusSpan = document.getElementById('rssStatus');
-            newsDiv.innerHTML = '<div class="loading">📰 Fetching 3 RSS sources...</div>';
+            newsDiv.innerHTML = '<div style="color:#888;padding:2rem;">📰 Loading breaking news...</div>';
 
             try {
-                // 並行拉取，但有fallback
-                const results = await Promise.allSettled(RSS_FEEDS.map(feed => fetchSingleRSS(feed)));
+                const results = await Promise.allSettled(RSS_FEEDS.map(f => fetchRSS(f)));
                 let allItems = [];
                 
-                results.forEach((result, i) => {
-                    if (result.status === 'fulfilled' && result.value.length > 0) {
-                        allItems.push(...result.value);
+                results.forEach((r, i) => {
+                    if (r.status === 'fulfilled' && r.value.length) {
+                        allItems.push(...r.value);
                         statusSpan.textContent += `✓${RSS_FEEDS[i].name} `;
-                    } else {
-                        statusSpan.textContent += `✗${RSS_FEEDS[i].name} `;
                     }
                 });
 
-                if (allItems.length === 0) {
-                    // Final fallback: 顯示熱門香港新聞連結
-                    newsDiv.innerHTML = `
-                        <div class="status">🔗 Top Hong Kong News Sources</div>
-                        <div class="news-item" onclick="window.open('https://www.hongkongfp.com/feed/','_blank')">
-                            <div class="news-title">Hong Kong Free Press</div>
-                            <div class="news-source">Live RSS Feed</div>
-                        </div>
-                        <div class="news-item" onclick="window.open('https://feeds.hongkongherald.com/rss/b82693edf38ebff8','_blank')">
-                            <div class="news-title">Hong Kong Herald</div>
-                            <div class="news-source">Latest Headlines</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // 排序 + 去重 + 取前8條
                 allItems.sort((a, b) => b.pubDate - a.pubDate);
-                const uniqueItems = [];
-                const seen = new Set();
-                allItems.slice(0, 8).forEach(item => {
-                    if (!seen.has(item.link)) {
-                        seen.add(item.link);
-                        uniqueItems.push(item);
-                    }
-                });
+                const unique = allItems.slice(0, 12).filter((item, i, arr) => 
+                    arr.findIndex(t => t.link === item.link) === i
+                );
 
-                let html = `<div class="status">${uniqueItems.length} news from ${RSS_FEEDS.length} sources</div>`;
-                uniqueItems.forEach(item => {
+                let html = '';
+                unique.forEach(item => {
                     html += `
                         <div class="news-item" onclick="window.open('${item.link}', '_blank')">
                             <div class="news-title">${item.title}</div>
                             <div class="news-source">${item.source}</div>
-                            <div class="news-time">${item.pubDate.toLocaleString('zh-HK', {timeZone: 'Asia/Hong_Kong'})}</div>
+                            <div class="news-time">${item.pubDate.toLocaleDateString('zh-HK')}</div>
                         </div>
                     `;
                 });
-                newsDiv.innerHTML = html;
-                statusSpan.textContent = `${uniqueItems.length} news loaded ✓`;
                 
-            } catch (e) {
-                newsDiv.innerHTML = `<div class="error">Network error. Check console.</div>`;
-                statusSpan.textContent = 'Failed';
+                newsDiv.innerHTML = html || '<div style="color:#ff6b6b;">No news available</div>';
+                document.getElementById('newsCount').textContent = `(${unique.length})`;
+                statusSpan.textContent = `${unique.length} news ✓`;
+                
+            } catch(e) {
+                newsDiv.innerHTML = '<div style="color:#ff6b6b;">News loading failed</div>';
             }
         }
 
-        // 其他功能（保持不變）
+        async function fetchRSS(feed) {
+            const res = await fetch(feed.url);
+            const text = await res.text();
+            const xml = new DOMParser().parseFromString(text, "text/xml");
+            return Array.from(xml.querySelectorAll("item")).slice(0, 4).map(item => ({
+                title: (item.querySelector("title")?.textContent || '').replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1').trim(),
+                link: item.querySelector("link")?.textContent?.trim() || '#',
+                pubDate: new Date(item.querySelector("pubDate")?.textContent || Date.now()),
+                source: feed.name
+            })).filter(i => i.title && i.link !== '#');
+        }
+
+        // Widget時間
         function updateTime() {
             const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Hong_Kong' });
             document.getElementById('hkTime').textContent = now;
@@ -184,37 +202,12 @@
         }
         setInterval(updateTime, 1000); updateTime();
 
-        async function fetchWeather() {
-            try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
-                const data = await res.json();
-                const temp = data.temperature.data[0]?.value || '--';
-                document.getElementById('weather').innerHTML = `
-                    <div class="status">${temp}°C - ${data.weatherDesc[0]}</div>
-                    <div>King's Park, HK</div>
-                `;
-            } catch(e) {
-                document.getElementById('weather').innerHTML = '<div class="error">Weather unavailable</div>';
-            }
-        }
-
-        function fetchTraffic() {
-            document.getElementById('traffic').innerHTML = 
-                `<div class="status"><a href="https://www.td.gov.hk/en/traffic_notices/index_id_12052.html" target="_blank">Live Traffic Map</a></div>`;
-        }
-
-        function fetchAEWait() {
-            document.getElementById('aewait').innerHTML = 
-                `<div class="status"><a href="https://www.ha.org.hk/visitor/ha_visitor_index.asp?Content_ID=235504&Lang=ENG" target="_blank">Live A&E Status</a></div>`;
-        }
-
         // 啟動
-        async function loadAll() {
-            await Promise.all([fetchNews(), fetchWeather()]);
-            fetchTraffic(); fetchAEWait();
+        async function init() {
+            await Promise.all([fetchHeroWeather(), fetchHeroNews()]);
         }
-        loadAll();
-        setInterval(loadAll, 300000); // 5分鐘
+        init();
+        setInterval(init, 180000); // 3分鐘
     </script>
 </body>
 </html>
