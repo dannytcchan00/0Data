@@ -78,6 +78,7 @@
       min-width: 200px;
       z-index: 1000;
       border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     #menu-bar ul ul li button {
       display: block;
@@ -98,27 +99,13 @@
       display: block;
     }
     #content-area {
-      height: calc(100% - 100px); /* 調整高度以容納時間條+菜單條 */
+      height: calc(100% - 80px); /* 移除浮動框後調整高度 */
     }
     iframe {
       width: 100%;
       height: 100%;
       border: none;
       background-color: var(--bg-primary);
-    }
-    #dashboard-widget {
-      position: fixed;
-      top: 60px; /* 調整位置避開時間條 */
-      right: 10px;
-      background: var(--bg-secondary);
-      padding: 10px;
-      color: var(--text-primary);
-      border-radius: 5px;
-      font-size: 14px;
-      line-height: 1.4;
-      z-index: 1100;
-      min-width: 180px;
-      font-family: Arial, sans-serif;
     }
   </style>
 </head>
@@ -144,14 +131,10 @@
     </ul>
   </div>
 
-  <!-- 右上角天氣+更新小工具 -->
-  <div id="dashboard-widget">
-    <div id="weather-info">Loading weather...</div>
-    <div id="last-update"></div>
-  </div>
+  <!-- 移除右上角浮動資料框 -->
 
   <div id="content-area">
-    <iframe id="iframe-content" src="main/"></iframe>
+    <iframe id="iframe-content" src="main/" loading="lazy"></iframe>
   </div>
 
   <script>
@@ -166,9 +149,8 @@
       });
     });
 
-    // 更新頂部時間條和右上角小工具
-    function updateTimeAndDashboard() {
-      // 頂部時間條 - 實時香港時間 (英國格式)
+    // 只更新頂部時間條
+    function updateTime() {
       const now = new Date().toLocaleString('en-GB', { 
         timeZone: 'Asia/Hong_Kong',
         weekday: 'short',
@@ -180,39 +162,11 @@
         second: '2-digit'
       });
       document.getElementById('hk-current-time').textContent = now;
-
-      // 右上角天氣
-      updateWeather();
     }
 
-    // 天氣更新函數
-    async function updateWeather() {
-      try {
-        const response = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
-        const weather = await response.json();
-        if(weather.temperature && weather.temperature.data && weather.temperature.data.length > 0 &&
-           weather.humidity && weather.humidity.data && weather.humidity.data.length > 0) {
-          const temp = weather.temperature.data[0].value;
-          const humidity = weather.humidity.data[0].value;
-          document.getElementById('weather-info').textContent = `Temp: ${temp}°C, Humidity: ${humidity}%`;
-        } else {
-          document.getElementById('weather-info').textContent = 'Weather data unavailable';
-        }
-      } catch (e) {
-        document.getElementById('weather-info').textContent = 'Error fetching weather';
-      }
-
-      // 更新時間戳
-      const updateTime = new Date().toLocaleTimeString('en-GB', {timeZone: 'Asia/Hong_Kong'});
-      document.getElementById('last-update').textContent = `Updated: ${updateTime}`;
-    }
-
-    // 每秒更新時間，每30秒更新天氣
-    setInterval(updateTimeAndDashboard, 1000);
-    setInterval(updateWeather, 30000);
-    
-    // 頁面載入立即更新
-    updateTimeAndDashboard();
+    // 初始化並定時更新時間
+    updateTime();
+    setInterval(updateTime, 1000);
   </script>
 </body>
 </html>
