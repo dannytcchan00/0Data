@@ -25,6 +25,7 @@
             overflow-y: auto; max-height: 80vh;
         }
         .temp { font-size: 4rem; font-weight: 300; margin-bottom: 10px; }
+        .weather-icon { font-size: 3rem; margin: 10px 0; }
         .status { font-size: 0.9rem; opacity: 0.8; margin-top: 20px; }
         .news-item { 
             padding: 15px; margin-bottom: 12px; border-radius: 12px; 
@@ -53,8 +54,9 @@
     <div class="container">
         <div class="weather-card" id="weather">
             <div class="temp">--°C</div>
+            <div class="weather-icon" id="weather-icon">🌤️</div>
             <div id="weather-details">--</div>
-            <div class="status" id="weather-status">Loading HKO...</div>
+            <div class="status" id="weather-status">Loading OpenWeatherMap...</div>
         </div>
         <div class="news-card" id="news">
             <div style="font-size:1.2rem; margin-bottom:20px;">📰 Latest News</div>
@@ -73,27 +75,42 @@
     </div>
 
     <script>
-        // 天氣：香港天文台RSS（已驗證無CORS）
+        const API_KEY = 'f19c9c1cfbb572c048a0a99c38f012d2';
+        
+        // 天氣：OpenWeatherMap API (香港中心)
         async function updateWeather() {
             try {
-                const res = await fetch('https://rss.weather.gov.hk/rss/CurrentWeather.xml', {mode:'cors'});
-                const text = await res.text();
-                const parser = new DOMParser();
-                const xml = parser.parseFromString(text, 'text/xml');
-                const temp = xml.querySelector('temperature\\.data')?.textContent || '--';
-                const humidity = xml.querySelector('humidity\\.data')?.textContent || '--';
-                const place = xml.querySelector('place')?.textContent || 'Hong Kong';
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=22.3964&lon=114.1095&appid=${API_KEY}&units=metric&lang=en`);
+                const data = await res.json();
+                
+                const temp = Math.round(data.main.temp);
+                const feelsLike = Math.round(data.main.feels_like);
+                const humidity = data.main.humidity;
+                const desc = data.weather[0].description;
+                const iconCode = data.weather[0].icon;
                 const updateTime = new Date().toLocaleTimeString('en-GB', {timeZone: 'Asia/Hong_Kong'});
                 
+                // 天氣圖示映射
+                const iconMap = {
+                    '01d': '☀️', '01n': '🌙', '02d': '⛅', '02n': '☁️',
+                    '03d': '☁️', '03n': '☁️', '04d': '☁️', '04n': '☁️',
+                    '09d': '🌦️', '09n': '🌦️', '10d': '🌧️', '10n': '🌧️',
+                    '11d': '⛈️', '11n': '⛈️', '13d': '❄️', '13n': '❄️',
+                    '50d': '🌫️', '50n': '🌫️'
+                };
+                const icon = iconMap[iconCode] || '🌤️';
+                
                 document.querySelector('.temp').textContent = `${temp}°C`;
-                document.getElementById('weather-details').textContent = `${humidity}% RH • ${place}`;
-                document.getElementById('weather-status').textContent = `HKO ${updateTime}`;
+                document.getElementById('weather-icon').textContent = icon;
+                document.getElementById('weather-details').textContent = `${desc} • Feels like ${feelsLike}°C • ${humidity}% RH`;
+                document.getElementById('weather-status').textContent = `OpenWeatherMap ${updateTime}`;
             } catch(e) {
-                document.getElementById('weather-status').textContent = 'Weather unavailable';
+                document.getElementById('weather-status').textContent = 'Weather API unavailable';
+                console.error('Weather API error:', e);
             }
         }
 
-        // 新聞：Hong Kong Herald RSS（你指定單源）
+        // 新聞：Hong Kong Herald RSS（保持不變）
         async function updateNews() {
             try {
                 const res = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8', {mode:'cors'});
@@ -104,10 +121,10 @@
                 
                 let html = '';
                 items.forEach(item => {
-                    const title = item.querySelector('title').textContent.slice(0,85) + '...';
+                    const title = item.querySelector('title').textContent.slice(0,85) + (item.querySelector('title').textContent.length > 85 ? '...' : '');
                     const link = item.querySelector('link').textContent;
                     const source = 'Hong Kong Herald';
-                    html += `<div class="news-item" onclick="showModal('${title}', '${link}', '${source}')">
+                    html += `<div class="news-item" onclick="showModal('${title.replace(/'/g, "\\'")}', '${link}', '${source}')">
                         <div class="news-title">${title}</div>
                         <div class="news-source">${source}</div>
                     </div>`;
@@ -115,6 +132,7 @@
                 document.getElementById('news-list').innerHTML = html || 'No news available';
             } catch(e) {
                 document.getElementById('news-list').innerHTML = 'News feed unavailable';
+                console.error('News RSS error:', e);
             }
         }
 
@@ -129,9 +147,9 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // 啟動 + 自動更新
+        // 啟動 + 自動更新（每5分鐘）
         updateWeather(); updateNews();
-        setInterval(() => { updateWeather(); updateNews(); }, 5*60*1000); // 5分鐘
+        setInterval(() => { updateWeather(); updateNews(); }, 5*60*1000);
     </script>
 </body>
 </html>
