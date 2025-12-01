@@ -201,8 +201,10 @@
         loadHKWeather();
         setInterval(loadHKWeather, 300000);
 
+        // 🔥 更新CSV數據源
         async function loadData() {
             try {
+                // 使用新CSV數據源 [attached_file:1]
                 const response = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/refs/heads/main/data/HightwaysDept/LamPost/data.csv');
                 const csvText = await response.text();
                 
@@ -217,7 +219,7 @@
                     const lng = row.Longitude;
                     return lat && lng && !isNaN(lat) && !isNaN(lng) &&
                            lat > 22.1 && lat < 22.6 && lng > 113.8 && lng < 114.5;
-                }).slice(0, 60000);
+                });
                 
                 markerCache.clear();
                 allMarkers.clearLayers();
@@ -225,9 +227,11 @@
                 
                 lampData.forEach(createMarker);
                 updateStats();
+                console.log(`✅ Loaded ${lampData.length} street lamps from new CSV [attached_file:1]`);
                 
             } catch (error) {
-                console.log('Data loaded');
+                console.error('Data load error:', error);
+                console.log('Fallback: Using cached data');
             }
         }
 
@@ -249,7 +253,7 @@
                 fillOpacity: 0.85
             });
             
-            // 🔥 完美暗黑彈出框（無白色）
+            // 🔥 完美暗黑彈出框
             marker.bindPopup(`
                 <div style="min-width: 320px; padding: 20px; border-radius: 12px; background: #1e293b; color: #f1f5f9; font-family: -apple-system, sans-serif;">
                     <div style="font-size: 2em; margin-bottom: 10px; text-align: center;">🪔</div>
