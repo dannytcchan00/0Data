@@ -53,7 +53,7 @@
         }
         .news-content { flex: 1; }
         .news-title { color: #ffffff; font-weight: 600; font-size: 1.1rem; line-height: 1.4; margin-bottom: 0.4rem; }
-        .news-source { color: #4fc3f7; font-size: 0.95rem; font-weight: 500; }
+        .news-source { color: #ff6b6b; font-size: 0.95rem; font-weight: 700; }
         .news-time { color: #888; font-size: 0.85rem; margin-top: 0.2rem; }
         
         /* 模態彈窗 */
@@ -80,7 +80,7 @@
 <body>
     <header class="header">
         <h1>🇭🇰 Hong Kong Live Dashboard</h1>
-        <p>Real-time Observatory Weather + Hong Kong News</p>
+        <p>Hong Kong Observatory Weather + Hong Kong Herald News</p>
     </header>
 
     <section class="hero-section">
@@ -93,10 +93,10 @@
             <div id="weatherWarning"></div>
         </div>
         
-        <!-- 新聞 -->
+        <!-- 只用Hong Kong Herald RSS -->
         <div class="news-hero">
-            <div class="hero-title">📰 Latest News <span id="newsCount"></span></div>
-            <div id="heroNews">Loading live news feeds...</div>
+            <div class="hero-title">📰 Hong Kong Herald <span id="newsCount"></span></div>
+            <div id="heroNews">Loading Hong Kong Herald RSS...</div>
         </div>
     </section>
 
@@ -104,14 +104,14 @@
     <div id="linkModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3>Article Link</h3>
-            <p>Click below to open in new tab:</p>
+            <h3>Hong Kong Herald Article</h3>
+            <p>Click to open in new tab:</p>
             <div class="modal-url" id="modalUrl"></div>
         </div>
     </div>
 
     <script>
-        // 天文台官方RSS（純即時數據）
+        // 🔥 只用天文台官方RSS
         async function updateWeather() {
             try {
                 const response = await fetch('https://rss.weather.gov.hk/rss/CurrentWeather.xml');
@@ -133,14 +133,14 @@
                     document.getElementById('weatherDetails').textContent = `HK Observatory • ${new Date().toLocaleString('en-GB', {timeZone: 'Asia/Hong_Kong'})}`;
                 }
             } catch (e) {
-                // Silent fail - no fallback text
+                // Silent fail
             }
         }
 
-        // 香港新聞RSS（純即時數據）
+        // 🔥 只用Hong Kong Herald RSS（你指定）
         async function updateNews() {
             try {
-                const response = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8');
+                const response = await fetch('https://feeds.hongkongherald.com/rss/b82693edf38ebff8');[attached_file:1]
                 const text = await response.text();
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(text, "text/xml");
@@ -148,18 +148,19 @@
                 
                 let newsHtml = '';
                 let count = 0;
-                Array.from(items).slice(0, 10).forEach(item => {
+                
+                Array.from(items).slice(0, 12).forEach(item => {
                     const titleEl = item.querySelector('title');
                     const linkEl = item.querySelector('link');
                     const pubDateEl = item.querySelector('pubDate');
                     
-                    if (titleEl && linkEl) {
-                        const title = titleEl.textContent.trim();
+                    if (titleEl && linkEl && titleEl.textContent.trim()) {
+                        const title = titleEl.textContent.trim().substring(0, 85) + (titleEl.textContent.length > 85 ? '...' : '');
                         const link = linkEl.textContent.trim();
                         const pubDate = pubDateEl ? new Date(pubDateEl.textContent) : new Date();
                         
                         newsHtml += `
-                            <div class="news-item" onclick="openLinkModal('${link}', '${title.replace(/'/g, "\\'")}')">
+                            <div class="news-item" onclick="openLinkModal('${link}', '${title.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
                                 <div class="news-content">
                                     <div class="news-title">${title}</div>
                                     <div class="news-source">Hong Kong Herald</div>
@@ -175,14 +176,14 @@
                 document.getElementById('newsCount').textContent = `(${count})`;
                 
             } catch (e) {
-                // Silent fail - no fallback text
+                // Silent fail
             }
         }
 
-        // 模態彈窗功能
+        // 🔥 模態彈窗（Hong Kong Herald專用）
         function openLinkModal(url, title) {
             document.getElementById('modalUrl').innerHTML = 
-                `<strong>${title}</strong><br><a href="${url}" target="_blank" class="news-link">🔗 Open Article</a>`;
+                `<strong>${title}</strong><br><a href="${url}" target="_blank" class="news-link">🔗 Open Hong Kong Herald Article</a>`;
             document.getElementById('linkModal').style.display = 'block';
         }
 
@@ -197,13 +198,13 @@
             }
         });
 
-        // 頁面載入後立即更新
+        // 啟動
         updateWeather();
         updateNews();
         setInterval(() => {
             updateWeather();
             updateNews();
-        }, 5 * 60 * 1000); // 5 minutes
+        }, 5 * 60 * 1000); // 5分鐘
     </script>
 </body>
 </html>
