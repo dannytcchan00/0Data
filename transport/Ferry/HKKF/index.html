@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <title>HKKF 多航線渡輪班次 - 實時倒數 + 喜靈洲註解</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:#0a0a0a;color:#fff;min-height:100vh;overflow-x:hidden
+    }
+    .container{display:flex;height:100vh;max-width:1600px;margin:0 auto}
+    .sidebar{
+      width:320px;background:rgba(15,15,15,.95);backdrop-filter:blur(20px);
+      border-right:1px solid #333;padding:30px 20px;overflow-y:auto;
+      box-shadow:2px 0 20px rgba(0,0,0,.5)
+    }
+    .main{flex:1;padding:30px;display:flex;flex-direction:column;justify-content:center}
+    .header{
+      font-size:28px;font-weight:700;margin-bottom:25px;
+      background:linear-gradient(135deg,#00d4ff,#0099cc);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      text-align:center
+    }
+    .route-group{margin-bottom:20px}
+    .route-group h3{
+      font-size:14px;margin-bottom:12px;color:#aaa;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px
+    }
+    .route-btn{
+      width:100%;padding:14px 18px;border:1px solid rgba(255,255,255,.1);
+      border-radius:12px;background:rgba(255,255,255,.05);color:#fff;
+      cursor:pointer;font-size:15px;margin-bottom:10px;
+      transition:all .25s ease;backdrop-filter:blur(10px);position:relative;overflow:hidden
+    }
+    .route-btn::before{
+      content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+      transition:left .5s
+    }
+    .route-btn:hover::before{left:100%}
+    .route-btn.active{
+      background:linear-gradient(135deg,#00d4ff,#0099cc);border-color:#00d4ff;
+      box-shadow:0 8px 32px rgba(0,212,255,.3);transform:translateY(-2px)
+    }
+    .route-info{
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);
+      border-radius:16px;padding:25px;margin-bottom:30px;backdrop-filter:blur(20px)
+    }
+    .route-info div{margin-bottom:10px;font-size:15px;opacity:.9}
+    .fare-line{
+      font-size:14px;font-weight:600;background:rgba(0,212,255,.08);
+      padding:10px 14px;border-radius:10px;border:1px solid rgba(0,212,255,.3);
+      text-align:center;margin-top:6px
+    }
+    .fare-weekday{color:#00d4ff}
+    .fare-holiday{color:#ff6b6b}
+    .dual-panel{display:grid;grid-template-columns:1fr 1fr;gap:25px;height:100%}
+    .direction-panel{
+      background:rgba(20,20,20,.8);border-radius:20px;padding:24px 24px 18px;
+      border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px)
+    }
+    .direction.outbound{ border-image: linear-gradient(135deg, #00d4ff, #2ecc71) 1; }
+    .direction.inbound{ border-image: linear-gradient(135deg, #ff6b6b, #ff8e8e) 1; }
+    .direction-title{
+      font-size:20px;font-weight:700;margin-bottom:18px;text-align:center;
+      padding-bottom:10px;border-bottom:2px solid rgba(255,255,255,.1)
+    }
+    .outbound .direction-title{color:#00d4ff}
+    .inbound .direction-title{color:#ff6b6b}
+    .countdown{
+      font-size:38px;font-weight:800;text-align:center;margin:8px 0 4px;
+      min-height:52px;display:flex;align-items:center;justify-content:center;
+      font-variant-numeric:tabular-nums;letter-spacing:2px;font-family:monospace
+    }
+    .countdown-label{
+      text-align:center;font-size:12px;color:#aaa;margin-bottom:8px;
+      font-weight:500;letter-spacing:.5px
+    }
+    .outbound .countdown{color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,.5)}
+    .inbound .countdown{color:#ff6b6b;text-shadow:0 0 20px rgba(255,107,107,.5)}
+    .next-ferry{
+      background:rgba(255,255,255,.04);padding:14px;border-radius:16px;
+      text-align:center;margin:12px 0;border:1px solid rgba(255,255,255,.1)
+    }
+    .next-time{font-size:20px;font-weight:700;margin:4px 0}
+    .status{
+      padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;
+      display:inline-block
+    }
+    .status.on-time{
+      background:rgba(46,204,113,.18);color:#2ecc71;border:1px solid rgba(46,204,113,.3)
+    }
+    .status.tomorrow{
+      background:rgba(52,152,219,.18);color:#3498db;border:1px solid rgba(52,152,219,.3)
+    }
+    .timetable h3{
+      margin-bottom:10px;font-size:14px;color:#aaa;font-weight:500;
+      text-transform:uppercase;letter-spacing:1px
+    }
+    .timetable ul{list-style:none;max-height:260px;overflow-y:auto;padding:4px 0}
+    .timetable li{
+      padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);
+      font-size:15px;display:flex;justify-content:space-between;align-items:center;
+      flex-wrap:wrap;gap:4px
+    }
+    .time{font-weight:600;min-width:58px}
+    .optional{color:#f39c12}
+    .last{color:#e74c3c}
+    .saturday-only{color:#9b59b6}
+    .tomorrow{color:#3498db;opacity:.85}
+    .note{
+      font-size:12px;color:#88d4ff;margin-left:auto;font-weight:400;
+      background:rgba(136,212,255,0.1);padding:2px 6px;border-radius:4px;
+      border:1px solid rgba(136,212,255,0.3);white-space:nowrap
+    }
+    .loading{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;color:#666;font-size:20px
+    }
+    .legend{
+      position:fixed;right:20px;bottom:20px;background:rgba(15,15,15,.95);
+      border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px;
+      font-size:12px;max-width:260px;line-height:1.4;backdrop-filter:blur(20px);
+      box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:1000
+    }
+    .legend-title{
+      font-weight:600;margin-bottom:8px;color:#00d4ff;font-size:13px;
+      border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:5px
+    }
+    .legend-item{display:flex;align-items:center;margin-bottom:4px;opacity:.9}
+    .legend-icon{margin-right:6px;font-size:14px;min-width:20px;text-align:center}
+    @media (max-width:768px){
+      .container{flex-direction:column;height:auto}
+      .sidebar{width:100%;border-right:none;border-bottom:1px solid #333}
+      .dual-panel{grid-template-columns:1fr;gap:18px}
+      .countdown{font-size:32px;letter-spacing:1px}
+      .legend{right:10px;bottom:10px;max-width:220px;font-size:11px;padding:10px}
+      .timetable li{flex-direction:column;align-items:flex-start;gap:2px}
+      .note{margin-left:0;margin-top:2px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="header">🛥️ HKKF Ferry Live</div>
+      <div class="route-group">
+        <h3>📍 Live Routes</h3>
+        <button class="route-btn active" data-route="central-sokkwuwan" onclick="selectRoute('central-sokkwuwan')">
+          中環 ↔ 索罟灣
+        </button>
+        <button class="route-btn" data-route="central-yungshuewan" onclick="selectRoute('central-yungshuewan')">
+          中環 ↔ 榕樹灣
+        </button>
+        <button class="route-btn" data-route="central-pengchau" onclick="selectRoute('central-pengchau')">
+          中環 ↔ 坪洲
+        </button>
+      </div>
+    </div>
+
+    <div class="main" id="main-content">
+      <div class="loading">
+        <div style="font-size:24px;margin-bottom:10px;">🔄 載入中...</div>
+        <div>即將顯示渡輪班次</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">🛥️ 班次圖例說明</div>
+    <div class="legend-item"><span class="legend-icon">▶️</span>一般班次</div>
+    <div class="legend-item"><span class="legend-icon">⚡</span>加班／特別班次</div>
+    <div class="legend-item"><span class="legend-icon">📦</span>載貨班次（需預約）</div>
+    <div class="legend-item"><span class="legend-icon">🛎️</span>只限星期六</div>
+    <div class="legend-item"><span class="legend-icon">🛑</span>尾班船</div>
+    <div class="legend-item"><span class="legend-icon">🌅</span>明日第一班</div>
+  </div>
+
+  <script>
+    const FARE_TEXT = {
+      sokkwuwan: { weekday: '成人$27.5 / 小童長者$13.8', holiday: '成人$38.7 / 小童長者$19.4' },
+      yungshuewan: { weekday: '成人$28.0 / 小童長者$14.0', holiday: '成人$39.0 / 小童長者$19.5' },
+      pengchau: { weekday: '成人$21.0 / 小童長者$10.5', holiday: '成人$30.0 / 小童長者$15.0' }
+    };
+
+    // 🆕 中環↔坪洲專用的喜靈洲註解對照表（請根據實際班次修改）
+    const HEI_LING_CHAU_INFO_FOR_PENGCHAU = {
+      // 坪洲→中環方向：來自喜靈洲的班次（key=坪洲出發時間）
+      fromHei: {
+        '07:25': '07:10',  // 07:25由坪洲開出，其實07:10由喜靈洲開出
+        '13:00': '12:45',
+        '18:50': '18:35'
+      },
+      // 中環→坪洲方向：會繼續去喜靈洲的班次（key=中環出發時間）
+      toHei: {
+        '09:15': '09:25',  // 09:15由中環開出，到坪洲後09:25繼續去喜靈洲
+        '15:15': '15:25',
+        '19:30': '19:40'
+      }
+    };
+
+    let routesData = {};
+    let currentRoute = 'central-sokkwuwan';
+    const nextDepartureMinutes = { outbound: null, inbound: null };
+
+    async function loadFerryTimes(url, direction) {
+      const res = await fetch(url);
+      const text = await res.text();
+      const weekdayMatch = text.match(/Monday to Saturday.*?(\[.*?\])/s);
+      const holidayMatch = text.match(/Sunday and Public Holidays.*?(\[.*?\])/s);
+      if (!weekdayMatch || !holidayMatch) throw new Error(`${direction} CSV格式錯誤`);
+      const weekday = JSON.parse(weekdayMatch[1].replace(/'/g, '"'));
+      const holiday = JSON.parse(holidayMatch[1].replace(/'/g, '"'));
+      return { weekday, holiday };
+    }
+
+    function isHoliday() { return new Date().getDay() === 0; }
+
+    function normalizeTime(t) {
+      let s = t.replace(/^[*@#^{\}]+/, '');
+      const m = s.match(/(\d{2}:\d{2})/);
+      return m ? m[1] : '00:00';
+    }
+
+    function timeToMinutes(t) {
+      const s = normalizeTime(t);
+      const [h, m] = s.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function getNext10(nowMinutes, times) {
+      return times.filter(t => timeToMinutes(t) > nowMinutes).slice(0, 10);
+    }
+
+    async function loadAllRoutes() {
+      const [sokOut, sokIn, yungOut, yungIn, pengOut, pengIn] = await Promise.all([
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Sok_Kwu_Wan/data.csv', '中環→索罟灣'),
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Sok_Kwu_Wan_Central/data.csv', '索罟灣→中環'),
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Yung_Shue_Wan/data.csv', '中環→榕樹灣'),
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Yung_Shue_Wan_Central/data.csv', '榕樹灣→中環'),
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Peng_Chau/data.csv', '中環→坪洲'),
+        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Peng_Chau_Central/data.csv', '坪洲→中環')
+      ]);
+
+      routesData = {
+        'central-sokkwuwan': {
+          name: '中環 ↔ 索罟灣', 
+          outbound: { pier: '中環4號 → 索罟灣2號', times: sokOut },
+          inbound: { pier: '索罟灣2號 → 中環4號', times: sokIn }, 
+          duration: '30-40分鐘', 
+          fareKey: 'sokkwuwan'
+        },
+        'central-yungshuewan': {
+          name: '中環 ↔ 榕樹灣', 
+          outbound: { pier: '中環4號 → 榕樹灣碼頭', times: yungOut },
+          inbound: { pier: '榕樹灣碼頭 → 中環4號', times: yungIn }, 
+          duration: '40-50分鐘', 
+          fareKey: 'yungshuewan'
+        },
+        'central-pengchau': {
+          name: '中環 ↔ 坪洲（部分經喜靈洲）', 
+          outbound: { pier: '中環6號 → 坪洲碼頭', times: pengOut },
+          inbound: { pier: '坪洲碼頭 → 中環6號', times: pengIn }, 
+          duration: '35-45分鐘', 
+          fareKey: 'pengchau'
+        }
+      };
+
+      document.querySelector('.loading').innerHTML = '✅ 所有航線數據載入完成！';
+      setTimeout(() => selectRoute('central-sokkwuwan'), 500);
+    }
+
+    function selectRoute(routeId) {
+      currentRoute = routeId;
+      document.querySelectorAll('.route-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`[data-route="${routeId}"]`).classList.add('active');
+      loadRoute(routeId);
+    }
+
+    function loadRoute(routeId) {
+      const data = routesData[routeId];
+      const fareText = isHoliday() ? FARE_TEXT[data.fareKey].holiday : FARE_TEXT[data.fareKey].weekday;
+      document.getElementById('main-content').innerHTML = `
+        <div class="route-info">
+          <div><strong>${data.name}</strong></div>
+          <div>⏱️ ${data.duration}</div>
+          <div class="fare-line ${isHoliday() ? 'fare-holiday' : 'fare-weekday'}">${fareText}</div>
+        </div>
+        <div class="dual-panel">
+          <div class="direction-panel direction outbound">
+            <div class="direction-title">🚤 ${data.outbound.pier}</div>
+            <div class="countdown" id="outbound-countdown">--:--:--</div>
+            <div class="countdown-label">距離下一班</div>
+            <div class="next-ferry">
+              <div id="outbound-status" class="status on-time">準時</div>
+              <div class="next-time" id="outbound-next">--:--</div>
+            </div>
+            <div class="timetable">
+              <h3 id="outbound-title">平日｜未來10班</h3>
+              <ul id="outbound-list"></ul>
+            </div>
+          </div>
+          <div class="direction-panel direction inbound">
+            <div class="direction-title">🚤 ${data.inbound.pier}</div>
+            <div class="countdown" id="inbound-countdown">--:--:--</div>
+            <div class="countdown-label">距離下一班</div>
+            <div class="next-ferry">
+              <div id="inbound-status" class="status on-time">準時</div>
+              <div class="next-time" id="inbound-next">--:--</div>
+            </div>
+            <div class="timetable">
+              <h3 id="inbound-title">平日｜未來10班</h3>
+              <ul id="inbound-list"></ul>
+            </div>
+          </div>
+        </div>`;
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const data = routesData[currentRoute];
+      const isHol = isHoliday();
+
+      const fareLine = document.querySelector('.fare-line');
+      if (fareLine) {
+        const fareText = isHol ? FARE_TEXT[data.fareKey].holiday : FARE_TEXT[data.fareKey].weekday;
+        fareLine.textContent = fareText;
+        fareLine.className = `fare-line ${isHol ? 'fare-holiday' : 'fare-weekday'}`;
+      }
+
+      const outTimes = isHol ? data.outbound.times.holiday : data.outbound.times.weekday;
+      const outNext10 = getNext10(nowMin, outTimes);
+      updatePanel('outbound', outNext10, nowMin, outTimes, isHol, currentRoute);
+
+      const inTimes = isHol ? data.inbound.times.holiday : data.inbound.times.weekday;
+      const inNext10 = getNext10(nowMin, inTimes);
+      updatePanel('inbound', inNext10, nowMin, inTimes, isHol, currentRoute);
+    }
+
+    function updatePanel(prefix, nextTimes, nowMin, allTimes, isHol, routeId) {
+      const list = document.getElementById(`${prefix}-list`);
+      const title = document.getElementById(`${prefix}-title`);
+      const nextTimeEl = document.getElementById(`${prefix}-next`);
+      const status = document.getElementById(`${prefix}-status`);
+
+      if (!list || !title || !nextTimeEl || !status) return;
+
+      if (nextTimes.length > 0) {
+        title.textContent = (isHol ? '假日' : '平日') + '｜未來10班';
+        list.innerHTML = '';
+
+        nextTimes.forEach(time => {
+          const li = document.createElement('li');
+          let icon = '▶️', cls = '', note = '';
+
+          if (time.startsWith('^')) { icon = '🛑'; cls = 'last'; }
+          else if (time.startsWith('{')) { icon = '🛎️'; cls = 'saturday-only'; }
+          else if (time.startsWith('*')) { icon = '⚡'; cls = 'optional'; }
+          else if (time.startsWith('#')) { icon = '📦'; cls = 'optional'; }
+
+          const displayTime = normalizeTime(time);
+
+          // 🆕 中環↔坪洲專用：喜靈洲註解邏輯
+          if (routeId === 'central-pengchau' && HEI_LING_CHAU_INFO_FOR_PENGCHAU) {
+            if (prefix === 'outbound') {
+              // 中環→坪洲：檢查是否會繼續去喜靈洲
+              const toHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.toHei[displayTime];
+              if (toHei) {
+                note = `之後${toHei}坪洲→喜靈洲`;
+              }
+            } else if (prefix === 'inbound') {
+              // 坪洲→中環：檢查是否來自喜靈洲
+              const fromHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.fromHei[displayTime];
+              if (fromHei) {
+                note = `${fromHei}喜靈洲→坪洲`;
+              }
+            }
+          }
+
+          li.innerHTML = `
+            <span class="time ${cls}">${displayTime}</span>
+            <span>${icon}</span>
+            ${note ? `<span class="note">${note}</span>` : ''}
+          `;
+          list.appendChild(li);
+        });
+
+        const firstTimeStr = nextTimes[0];
+        nextDepartureMinutes[prefix] = timeToMinutes(firstTimeStr);
+        const firstClean = normalizeTime(firstTimeStr);
+        nextTimeEl.textContent = firstClean;
+        status.textContent = '準時';
+        status.className = 'status on-time';
+      } else {
+        nextDepartureMinutes[prefix] = null;
+        const tomorrowFirst = allTimes[0];
+        const tomorrowFirstClean = normalizeTime(tomorrowFirst);
+        title.textContent = (isHol ? '假日' : '平日') + '｜明日第一班';
+        list.innerHTML = `<li><span class="time tomorrow">${tomorrowFirstClean}</span><span>🌅</span></li>`;
+        nextTimeEl.textContent = tomorrowFirstClean;
+        status.textContent = '明日第一班';
+        status.className = 'status tomorrow';
+      }
+    }
+
+    // 實時倒數
+    setInterval(() => {
+      const now = new Date();
+      const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+      ['outbound', 'inbound'].forEach(prefix => {
+        const cd = document.getElementById(`${prefix}-countdown`);
+        if (!cd) return;
+
+        const departMin = nextDepartureMinutes[prefix];
+        if (departMin == null) {
+          cd.textContent = '--:--:--';
+          return;
+        }
+
+        const departSec = departMin * 60;
+        let diff = departSec - nowSec;
+
+        if (diff <= 0) {
+          cd.textContent = '00:00:00';
+          return;
+        }
+
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        cd.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      });
+    }, 1000);
+
+    loadAllRoutes();
+    setInterval(updateDisplay, 60000);
+  </script>
+</body>
+</html>
