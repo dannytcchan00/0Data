@@ -1,0 +1,33 @@
+name: Auto Download Monthly hotel occupancy rate CSV
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # 每日UTC 1點 (香港9點)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 關鍵：授予寫入權限
+
+jobs:
+  download_and_commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup directories and download CSV
+        run: |
+          mkdir -p data/travel/HotelRoomOccupancyRate/
+          curl -L -o data/travel/HotelRoomOccupancyRate/data.csv \
+            "https://www.tourism.gov.hk/datagovhk/hotelroomoccupancy/hotel_room_occupancy_rate_monthly_en.csv"
+          
+          echo "✅ CSV size: $(wc -c < data/travel/HotelRoomOccupancyRate/data.csv) bytes"
+
+      - name: Commit and push if changed
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'data/travel/HotelRoomOccupancyRate/data.csv'
+          message: '🤖 Auto Download Monthly hotel occupancy rate CSV ({{ github.run_number }})'
+          default_author: github_actions
