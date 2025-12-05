@@ -1,1 +1,33 @@
+name: Auto Download HKKF Central_Yung_Shue_Wan CSV
 
+on:
+  schedule:
+    - cron: '0 1 * * *'  # 每日UTC 1點 (香港9點)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 關鍵：授予寫入權限
+
+jobs:
+  download_and_commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup directories and download CSV
+        run: |
+          mkdir -p data/travel/HKKF/Central_Yung_Shue_Wan/
+          curl -L -o data/travel/HKKF/Central_Yung_Shue_Wan/data.csv \
+            "https://www.hkkfeta.com/opendata/time_table/2/outbound"
+          
+          echo "✅ CSV size: $(wc -c < data/travel/HKKF/Central_Yung_Shue_Wan/data.csv) bytes"
+
+      - name: Commit and push if changed
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'data/travel/HKKF/Central_Yung_Shue_Wan/data.csv'
+          message: '🤖 Auto Download HKKF Central_Yung_Shue_Wan CSV ({{ github.run_number }})'
+          default_author: github_actions
