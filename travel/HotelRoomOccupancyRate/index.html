@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hong Kong Hotel Occupancy - Tunnel Style</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Noto Sans TC',sans-serif;background:#0a0a0a;color:#e0e0e0;overflow:hidden;height:100vh;}
+        
+        /* 左手邊固定面板 (隧道設計100%) */
+        #sidebar{width:380px;height:100vh;background:linear-gradient(145deg,#1a1a2e,#16213e);position:fixed;left:0;top:0;z-index:1000;overflow-y:auto;padding:20px;box-shadow:5px 0 20px rgba(0,212,255,0.3);}
+        #sidebar h2{color:#00d4ff;font-size:18px;font-weight:600;margin-bottom:15px;text-align:center;border-bottom:2px solid #00d4ff;padding-bottom:10px;}
+        #sidebar h3{color:#fff;font-size:15px;margin:25px 0 12px 0;padding-bottom:8px;border-bottom:1px solid #333;}
+        #sidebar h3:first-of-type{margin-top:15px;}
+        
+        .period-item{padding:15px;margin-bottom:10px;background:linear-gradient(145deg,#2a2a3e,#1e1e2e);border-radius:12px;cursor:pointer;transition:all 0.3s ease;border-left:4px solid #666;}
+        .period-item:hover{transform:translateX(8px);box-shadow:0 8px 25px rgba(0,212,255,0.4);border-left-color:#00d4ff;}
+        .period-item.active{box-shadow:0 0 30px #00d4ff;border-left-width:6px;background:linear-gradient(145deg,#00d4ff20,#00d4ff10);border-left-color:#00d4ff;}
+        .period-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:5px;}
+        .period-range{font-size:14px;color:#888;}
+        
+        /* 自訂日期選擇器 (最上位置) */
+        .custom-date{padding:18px;background:linear-gradient(145deg,#2a2a3e,#1e1e2e);border-radius:12px;margin-bottom:5px;border-left:5px solid #00d4ff;box-shadow:0 4px 15px rgba(0,212,255,0.2);}
+        .date-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+        .date-group{display:flex;flex-direction:column;}
+        label{font-size:12px;color:#aaa;margin-bottom:5px;font-weight:500;}
+        select{background:rgba(255,255,255,0.08);border:2px solid #00d4ff;border-radius:6px;color:#fff;padding:8px 10px;font-size:13px;width:95px;font-weight:500;}
+        select:focus{outline:none;box-shadow:0 0 12px rgba(0,212,255,0.6);}
+        .calculate-btn{background:linear-gradient(145deg,#00d4ff,#0099cc);border:none;border-radius:8px;color:#000;font-weight:700;padding:10px 18px;font-size:14px;cursor:pointer;transition:all 0.3s;width:100%;margin-top:8px;box-shadow:0 4px 12px rgba(0,212,255,0.3);}
+        .calculate-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,212,255,0.5);}
+        
+        /* 右手邊全屏內容 */
+        #main-content{height:100vh;width:calc(100% - 380px);position:absolute;left:380px;top:0;overflow-y:auto;padding:30px;}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:40px;}
+        .stat-card{background:linear-gradient(145deg,#2a2a3e,#1e1e2e);border-radius:16px;padding:30px;text-align:center;border:2px solid #1a1a2e;transition:all 0.3s;}
+        .stat-card:hover{transform:translateY(-5px);box-shadow:0 15px 35px rgba(0,212,255,0.3);}
+        .stat-value{font-size:64px;font-weight:900;color:#00d4ff;line-height:1;margin-bottom:10px;text-shadow:0 0 25px rgba(0,212,255,0.7);}
+        .stat-label{font-size:16px;color:#888;font-weight:500;}
+        
+        #dataTable{background:linear-gradient(145deg,#2a2a3e,#1e1e2e);border-radius:16px;overflow:hidden;border:2px solid #1a1a2e;}
+        #dataTable h3{color:#00d4ff;font-size:20px;padding:20px 25px;border-bottom:2px solid #00d4ff;margin:0;}
+        table{width:100%;border-collapse:collapse;}
+        th{padding:15px 20px;text-align:left;font-weight:600;color:#00d4ff;background:rgba(0,212,255,0.1);border-bottom:2px solid #1a1a2e;}
+        td{padding:15px 20px;border-bottom:1px solid #1a1a2e;}
+        .month-cell{font-weight:600;color:#fff;font-size:16px;}
+        .rate-cell{font-size:24px;font-weight:900;color:#00d4ff;text-align:right;}
+        .change-cell{display:flex;align-items:center;}
+        .change-icon{width:20px;height:20px;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;}
+        .trend-up{background:#00ff00;animation:pulse-green 2s infinite;}
+        .trend-down{background:#ff4444;animation:pulse-red 2s infinite;}
+        
+        #updateTime{position:absolute;bottom:20px;right:20px;font-size:12px;color:#888;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;}
+        .loading{text-align:center;color:#00d4ff;font-size:18px;padding:100px;}
+        .no-data{color:#ff4444;text-align:center;font-size:16px;padding:60px;}
+        
+        @keyframes pulse-green{0%,100%{box-shadow:0 0 8px #00ff0040;}50%{box-shadow:0 0 16px #00ff0080;}}
+        @keyframes pulse-red{0%,100%{box-shadow:0 0 8px #ff444440;}50%{box-shadow:0 0 16px #ff444480;}}
+        
+        @media (max-width:768px){
+            #sidebar{width:100%;height:50vh;bottom:0;top:auto;left:0;z-index:1001;}
+            #main-content{width:100%;left:0;height:50vh;}
+            .date-row{gap:8px;}
+            select{width:85px;}
+            .stats-grid{grid-template-columns:1fr 1fr;}
+            .stat-value{font-size:48px;}
+        }
+    </style>
+</head>
+<body>
+    <!-- 左手邊選擇面板 (隧道左側固定面板) -->
+    <div id="sidebar">
+        <h2>📊 Hotel Occupancy</h2>
+        
+        <!-- 1️⃣ 最上: Custom Range -->
+        <h3>Custom Range</h3>
+        <div class="custom-date">
+            <div class="date-row">
+                <div class="date-group">
+                    <label>Start</label>
+                    <select id="startYear"><option>Loading...</option></select>
+                    <select id="startMonth"><option>Loading...</option></select>
+                </div>
+                <span style="font-size:20px;color:#00d4ff;">→</span>
+                <div class="date-group">
+                    <label>End</label>
+                    <select id="endYear"><option>Loading...</option></select>
+                    <select id="endMonth"><option>Loading...</option></select>
+                </div>
+            </div>
+            <button class="calculate-btn" onclick="calculateCustomRange()">Calculate</button>
+        </div>
+        
+        <!-- 2️⃣ 第2: Quick Periods (只Last 12 Months) -->
+        <h3>Quick Period</h3>
+        <div id="periodList">
+            <div class="period-item active" onclick="selectPeriod('last12')">
+                <div class="period-title">Last 12 Months</div>
+                <div class="period-range">Latest data</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右手邊全屏內容 -->
+    <div id="main-content">
+        <div class="loading">Select Last 12 Months or use Custom Range</div>
+        <div id="updateTime">Loading...</div>
+    </div>
+
+    <script>
+        let allData = [], filteredData = [], availableYears = [], availableMonths = [];
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        
+        // 只剩Last 12 Months預設
+        const periods = {
+            'last12': {name: 'Last 12 Months', start: -12, end: 0}
+        };
+        
+        // 載入CSV並生成真實下拉選單
+        async function fetchAllData() {
+            return new Promise((resolve) => {
+                Papa.parse('https://dannytcchan00.github.io/0Data/data/travel/HotelRoomOccupancyRate/data.csv', {
+                    download: true,
+                    header: true,
+                    complete: function(results) {
+                        const rawData = results.data.filter(row => row['Hotel_room_occupancy_rate(%)']);
+                        
+                        // 提取真實年月
+                        const yearSet = new Set(), monthSet = new Set();
+                        rawData.forEach(row => {
+                            const year = row['Year-Month'].slice(0,4);
+                            const month = row['Year-Month'].slice(4,6);
+                            yearSet.add(year);
+                            monthSet.add(month);
+                        });
+                        
+                        availableYears = Array.from(yearSet).sort();
+                        availableMonths = Array.from(monthSet).sort();
+                        
+                        // 填充下拉選單 (CSV真實數據)
+                        populateDropdown('startYear', availableYears, availableYears[availableYears.length-12] || '2024');
+                        populateDropdown('endYear', availableYears, availableYears[availableYears.length-1] || '2025');
+                        populateMonthDropdown('startMonth', availableMonths, '01');
+                        populateMonthDropdown('endMonth', availableMonths, availableMonths[availableMonths.length-1] || '09');
+                        
+                        allData = rawData.map(row => ({
+                            month: row['Year-Month'],
+                            rate: parseFloat(row['Hotel_room_occupancy_rate(%)'])
+                        })).sort((a,b) => a.month.localeCompare(b.month));
+                        
+                        resolve(allData);
+                    }
+                });
+            });
+        }
+        
+        function populateDropdown(id, options, defaultValue) {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+            options.forEach(option => {
+                const el = document.createElement('option');
+                el.value = option;
+                el.textContent = option;
+                if(option === defaultValue) el.selected = true;
+                select.appendChild(el);
+            });
+        }
+        
+        function populateMonthDropdown(id, months, defaultValue) {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+            months.forEach(month => {
+                const el = document.createElement('option');
+                el.value = month;
+                el.textContent = monthNames[parseInt(month)-1];
+                if(month === defaultValue) el.selected = true;
+                select.appendChild(el);
+            });
+        }
+        
+        // Last 12 Months
+        async function selectPeriod(periodKey) {
+            document.querySelectorAll('.period-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.period-item').classList.add('active');
+            
+            const period = periods[periodKey];
+            const recent = allData.slice(-Math.abs(period.start));
+            filteredData = recent.slice(0, period.end - period.start + 1);
+            const startYM = filteredData[0]?.month || '';
+            const endYM = filteredData[filteredData.length-1]?.month || '';
+            
+            displayResults(filteredData, `${period.name} (${startYM}-${endYM})`);
+        }
+        
+        // 自訂範圍計算
+        function calculateCustomRange() {
+            const startYM = document.getElementById('startYear').value + 
+                           document.getElementById('startMonth').value.padStart(2,'0');
+            const endYM = document.getElementById('endYear').value + 
+                         document.getElementById('endMonth').value.padStart(2,'0');
+            
+            filteredData = allData.filter(item => 
+                item.month >= startYM && item.month <= endYM
+            );
+            
+            const startMonth = filteredData[0]?.month || startYM;
+            const endMonth = filteredData[filteredData.length-1]?.month || endYM;
+            
+            displayResults(filteredData, `Custom: ${startMonth}-${endMonth}`);
+        }
+        
+        // 顯示結果 (右手邊全屏)
+        function displayResults(data, periodTitle) {
+            if(data.length === 0) {
+                document.querySelector('#main-content').innerHTML = 
+                    '<div class="no-data">No data available for selected range</div><div id="updateTime">Loading...</div>';
+                return;
+            }
+            
+            const rates = data.map(d => d.rate);
+            const avgRate = rates.reduce((a,b)=>a+b,0) / rates.length;
+            const maxRate = Math.max(...rates);
+            const minRate = Math.min(...rates);
+            
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${avgRate.toFixed(1)}%</div>
+                        <div class="stat-label">Average Occupancy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${maxRate.toFixed(1)}%</div>
+                        <div class="stat-label">Highest Month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${minRate.toFixed(1)}%</div>
+                        <div class="stat-label">Lowest Month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.length}</div>
+                        <div class="stat-label">Total Months</div>
+                    </div>
+                </div>
+                
+                <div id="dataTable">
+                    <h3>📈 Monthly Data: ${periodTitle}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th style="text-align:right;">Occupancy Rate</th>
+                                <th>Month-on-Month</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.forEach((item, idx) => {
+                const change = idx > 0 ? (item.rate - data[idx-1].rate).toFixed(1) : '—';
+                const changeClass = parseFloat(change) >= 0 || change === '—' ? 'trend-up' : 'trend-down';
+                const changeColor = parseFloat(change) >= 0 || change === '—' ? '#00ff00' : '#ff4444';
+                const changeIcon = change === '—' ? '●' : (parseFloat(change) >= 0 ? '↗' : '↘');
+                
+                const monthName = monthNames[parseInt(item.month.slice(4,6))-1];
+                
+                html += `
+                    <tr>
+                        <td class="month-cell">${item.month.slice(0,4)} ${monthName}</td>
+                        <td class="rate-cell">${item.rate.toFixed(1)}%</td>
+                        <td class="change-cell">
+                            <div class="change-icon ${changeClass}" style="background:${changeColor}">${changeIcon}</div>
+                            <span style="color:${changeColor}">${change === '—' ? 'Start' : (parseFloat(change) >= 0 ? `+${change}` : change)}%</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table></div>`;
+            document.querySelector('#main-content').innerHTML = html + 
+                `<div id="updateTime">Updated: ${new Date().toLocaleString('en-GB',{hour12:false})} | ${data.length} months | Your CSV data</div>`;
+        }
+        
+        // 初始化
+        async function init() {
+            await fetchAllData();
+            selectPeriod('last12'); // 自動選Last 12 Months
+        }
+        
+        init();
+    </script>
+</body>
+</html>
