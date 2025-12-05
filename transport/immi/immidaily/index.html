@@ -1,317 +1,591 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Border Flow - Live Data</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <style>
-        * { box-sizing: border-box; }
-        body { 
-            margin: 0; font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
-            color: #e8e8e8; overflow: hidden;
-        }
-        #map { height: 100vh; width: 100%; filter: contrast(1.1) saturate(1.2); }
-        
-        .panel {
-            position: absolute; background: rgba(15,15,25,0.95);
-            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px; box-shadow: 0 25px 45px rgba(0,0,0,0.4);
-        }
-        
-        .top-left { top: 25px; left: 25px; width: 500px; padding: 25px; z-index: 1000; }
-        .top-left h2 { margin: 0 0 18px 0; color: #4fc3f7; font-size: 24px; font-weight: 700; }
-        .status-bar { background: rgba(30,30,40,0.8); border-radius: 12px; padding: 12px; margin: 15px 0; font-size: 14px; }
-        .status-ok { color: #10b981; }
-        .status-error { color: #ef4444; }
-        .status-loading { color: #f59e0b; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
-        .date-picker { background: rgba(30,30,40,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; margin: 15px 0; color: #e8e8e8; font-size: 15px; width: 100%; cursor: pointer; }
-        .date-picker:focus { border-color: #4fc3f7; box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
-        .selected-date { background: rgba(16,185,129,0.3); border-color: #10b981; margin: 10px 0; padding: 12px; border-radius: 10px; font-weight: 500; }
-        
-        /* ✅ 口岸列表整齊化 */
-        .border-list { margin: 0; padding: 0; list-style: none; max-height: 60vh; overflow-y: auto; }
-        .border-list-item { 
-            display: flex; align-items: flex-start; padding: 14px 0; 
-            border-bottom: 1px solid rgba(255,255,255,0.04); 
-            gap: 12px; /* 口岸名與數據間距 */
-        }
-        .border-list-item:last-child { border-bottom: none; }
-        
-        /* ✅ 口岸名稱縮細 + 靠左 */
-        .border-name { 
-            flex: 0 0 160px; /* 固定寬度，長名稱自動換行 */
-            font-size: 14px; /* 縮細字型 */
-            font-weight: 600; 
-            color: #10b981; 
-            cursor: pointer; 
-            line-height: 1.3; 
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            transition: all 0.2s;
-            white-space: normal; /* 允許換行 */
-            height: 36px; /* 固定高度 */
-            display: flex; align-items: center;
-            text-decoration: none;
-        }
-        .border-name:hover { 
-            background: rgba(16,185,129,0.2); 
-            color: #4fc3f7; 
-            transform: translateX(4px);
-        }
-        
-        .arrdep-cnt { 
-            display: flex; gap: 8px; flex: 1; /* 佔滿剩餘空間 */
-            flex-wrap: wrap; 
-        }
-        .cnt-group { 
-            text-align: right; min-width: 70px; 
-            flex: 1; /* 平均分配空間 */
-        }
-        .cnt-label { 
-            font-size: 10px; color: #a1a1aa; display: block; 
-            line-height: 1.1; margin-bottom: 2px;
-        }
-        .cnt-number { 
-            font-size: 13px; font-weight: 700; 
-            line-height: 1.1; min-height: 18px;
-        }
-        .cnt-hk { color: #3b82f6; }
-        .cnt-cn { color: #ef4444; }
-        .cnt-other { color: #10b981; }
-        
-        .legend { bottom: 25px; right: 25px; padding: 20px; width: 240px; font-size: 14px; }
-        .legend-item { display: flex; align-items: center; margin: 12px 0; font-weight: 500; }
-        .legend-color { width: 16px; height: 16px; margin-right: 12px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-        
-        .leaflet-popup-content-wrapper { 
-            background: rgba(15,15,25,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
-            backdrop-filter: blur(25px); max-width: 420px; margin: 10px; max-height: 480px; overflow-y: auto;
-        }
-        .leaflet-popup-content { margin: 0; padding: 25px; color: #e8e8e8; font-family: 'Inter', sans-serif; line-height: 1.5; }
-        .popup-title { color: #4fc3f7; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; }
-        .data-section { margin: 16px 0; padding: 18px; background: rgba(40,40,60,0.7); border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); }
-        .data-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #e8e8e8; }
-        .data-title.selected { color: #10b981; background: rgba(16,185,129,0.2); padding: 8px 12px; border-radius: 8px; display: inline-block; }
-        .category-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .category-row:last-child { border-bottom: none; }
-        .category-label { font-weight: 500; }
-        .hk-label { color: #3b82f6; } .cn-label { color: #ef4444; } .other-label { color: #10b981; }
-        .category-number { font-size: 18px; font-weight: 700; }
-        .hk-num { color: #3b82f6; } .cn-num { color: #ef4444; } .other-num { color: #10b981; }
-        .total-row { margin-top: 12px; padding-top: 12px; border-top: 2px solid rgba(79,195,247,0.3); }
-        .total-label { font-weight: 600; color: #4fc3f7; }
-        .total-number { font-size: 20px; color: #4fc3f7; }
-        .date-note { font-size: 13px; color: #a1a1aa; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hong Kong Border Flow - Live Data</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: radial-gradient(circle at top, #1b2340 0%, #05070b 55%, #020308 100%);
+      color: #e5e7eb;
+      overflow: hidden;
+      height: 100vh;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+      filter: contrast(1.08) saturate(1.15);
+    }
+
+    /* left info panel */
+    .info-panel {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 380px;
+      background: rgba(8, 11, 24, 0.96);
+      backdrop-filter: blur(26px);
+      border-right: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 24px 22px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.65);
+    }
+    .panel-header {
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      margin-bottom: 18px;
+    }
+    .panel-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fbbf24;
+      text-shadow: 0 0 16px rgba(251, 191, 36, 0.5);
+    }
+    .status-bar {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.7));
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+    .status-ok      { color: #22c55e; }
+    .status-loading { color: #f97316; animation: pulse 1.4s infinite; }
+    @keyframes pulse {
+      0%,100% { opacity: 0.55; }
+      50%     { opacity: 1; }
+    }
+
+    .date-picker {
+      margin: 18px 0 10px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15,23,42,0.95);
+      color: #e5e7eb;
+      font-size: 14px;
+      padding: 11px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    .date-picker:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+    }
+    .selected-date {
+      display: none;
+      margin-bottom: 14px;
+      padding: 10px 11px;
+      border-radius: 9px;
+      background: rgba(22, 163, 74, 0.24);
+      border: 1px solid rgba(22, 163, 74, 0.8);
+      font-size: 13px;
+      font-weight: 500;
+      color: #bbf7d0;
+      text-align: centre;
+    }
+
+    .border-card {
+      background: rgba(15,23,42,0.97);
+      border-radius: 14px;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      padding: 14px 13px 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+    .border-card:hover {
+      transform: translateX(4px);
+      border-color: rgba(56, 189, 248, 0.85);
+      background: rgba(15,23,42, 0.9);
+      box-shadow: 0 10px 26px rgba(15,23,42,0.85);
+    }
+    .border-card.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.75);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.18), rgba(15,23,42,0.96));
+    }
+    .card-header {
+      display: flex;
+      align-items: centre;
+      gap: 9px;
+      margin-bottom: 8px;
+    }
+    .card-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(148, 163, 184, 0.7);
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-total {
+      font-size: 13px;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    .card-rows {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: centre;
+      padding: 3px 0;
+    }
+    .card-row-label {
+      display: flex;
+      align-items: centre;
+      gap: 4px;
+    }
+    .card-row-label span.flag {
+      font-size: 11px;
+    }
+    .card-row-label span.text {
+      font-weight: 500;
+    }
+    .card-row-value {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .card-row-value.hk { color: #60a5fa; }
+    .card-row-value.cn { color: #f97373; }
+    .card-row-value.ot { color: #4ade80; }
+
+    .legend {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      background: rgba(15,23,42,0.98);
+      border-radius: 13px;
+      padding: 11px 13px;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      font-size: 11px;
+      z-index: 900;
+    }
+    .legend-item {
+      display: flex;
+      align-items: centre;
+      margin: 3px 0;
+    }
+    .legend-colour {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-right: 6px;
+    }
+
+    /* popup sizing + typography */
+    .leaflet-popup-content-wrapper {
+      background: radial-gradient(circle at top, #020617 0%, #020617 40%, #020617 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.8);
+      max-width: 340px;
+    }
+    .leaflet-popup-content {
+      margin: 0;
+      padding: 14px 16px 13px;
+      font-family: "Inter", system-ui, sans-serif;
+    }
+
+    @media (max-width: 768px) {
+      .info-panel {
+        width: 100%;
+        height: 48vh;
+        inset: auto 0 0 0;
+        border-right: none;
+        border-top: 1px solid rgba(148,163,184,0.45);
+      }
+      #map {
+        height: 52vh;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="panel top-left">
-        <h2>🛂 Border Control Points Flow</h2>
-        <div class="status-bar" id="statusBar">
-            <span id="syncStatus" class="status-loading">🔄 Loading GitHub CSV...</span>
-            <span id="recordCount">-</span>
-        </div>
-        <input type="text" class="date-picker" id="datePicker" placeholder="Select date (dd-mm-yyyy)">
-        <div id="selectedDateDisplay" class="selected-date" style="display:none;">📅 Latest data</div>
-        <ul class="border-list" id="borderList"></ul>
+<div id="map"></div>
+
+<div class="info-panel">
+  <div class="panel-header">
+    <h1 class="panel-title">🛂 Border Flow</h1>
+    <div class="status-bar">
+      <span id="syncStatus" class="status-loading">Loading GitHub CSV…</span>
+      <span id="recordCount">–</span>
     </div>
-    <div class="panel legend">
-        <div class="legend-item"><div class="legend-color" style="background:#ff4444;"></div>🛩️ Airport</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ffaa00;"></div>🌉 Land</div>
-        <div class="legend-item"><div class="legend-color" style="background:#44ff44;"></div>🚢 Ferry</div>
-    </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script>
-        const CSV_URL = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
-        const controlPoints = {
-            'Airport': { coords: [22.30889, 113.91444], colour: '#ff4444' },
-            'Lo Wu': { coords: [22.53222, 114.11333], colour: '#ffaa00' },
-            'Lok Ma Chau': { coords: [22.52074, 114.07496], colour: '#ffaa00' },
-            'Lok Ma Chau Spur Line': { coords: [22.51577, 114.06877], colour: '#ffaa00' },
-            'Man Kam To': { coords: [22.5370, 114.1294], colour: '#ffaa00' },
-            'Sha Tau Kok': { coords: [22.54911, 114.22328], colour: '#ffaa00' },
-            'Shenzhen Bay': { coords: [22.5039, 113.9447], colour: '#ffaa00' },
-            'Hong Kong-Zhuhai-Macao Bridge': { coords: [22.28306, 113.78056], colour: '#ffaa00' },
-            'Heung Yuen Wai': { coords: [22.55429, 114.15242], colour: '#ffaa00' },
-            'Express Rail Link West Kowloon': { coords: [22.30361, 114.16500], colour: '#ffaa00' },
-            'China Ferry Terminal': { coords: [22.29931, 114.16725], colour: '#44ff44' },
-            'Macau Ferry Terminal': { coords: [22.28937, 114.15215], colour: '#44ff44' },
-            'Kai Tak Cruise Terminal': { coords: [22.3074, 114.2128], colour: '#44ff44' },
-            'Hung Hom': { coords: [22.302, 114.179], colour: '#ffaa00' },
-            'Tuen Mun Ferry Terminal': { coords: [22.392, 113.978], colour: '#44ff44' },
-            'Harbour Control': { coords: [22.290, 114.160], colour: '#44ff44' }
+  </div>
+
+  <input id="datePicker" class="date-picker"
+         type="text"
+         placeholder="Select date (dd-mm-yyyy)">
+  <div id="selectedDateDisplay" class="selected-date"></div>
+
+  <div id="borderCards"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-colour" style="background:#f97373;"></div> Airport
+  </div>
+  <div class="legend-item">
+    <div class="legend-colour" style="background:#facc15;"></div> Land
+  </div>
+  <div class="legend-item">
+    <div class="legend-colour" style="background:#4ade80;"></div> Sea
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+  const CSV_URL =
+    "https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv";
+
+  const controlPoints = {
+    "Airport":                        { coords: [22.30889, 113.91444], colour: "#f97373", icon: "🛩️" },
+    "Lo Wu":                          { coords: [22.53222, 114.11333], colour: "#facc15", icon: "🌉" },
+    "Lok Ma Chau":                    { coords: [22.52074, 114.07496], colour: "#facc15", icon: "🌉" },
+    "Lok Ma Chau Spur Line":          { coords: [22.51577, 114.06877], colour: "#facc15", icon: "🌉" },
+    "Man Kam To":                     { coords: [22.5370,  114.1294 ], colour: "#facc15", icon: "🌉" },
+    "Sha Tau Kok":                    { coords: [22.54911, 114.22328], colour: "#facc15", icon: "🌉" },
+    "Shenzhen Bay":                   { coords: [22.5039,  113.9447 ], colour: "#facc15", icon: "🌉" },
+    "Hong Kong-Zhuhai-Macao Bridge":  { coords: [22.28306, 113.78056], colour: "#facc15", icon: "🌉" },
+    "Heung Yuen Wai":                 { coords: [22.55429, 114.15242], colour: "#facc15", icon: "🌉" },
+    "Express Rail Link West Kowloon": { coords: [22.30361, 114.16500], colour: "#facc15", icon: "🚄" },
+    "China Ferry Terminal":           { coords: [22.29931, 114.16725], colour: "#4ade80", icon: "🚢" },
+    "Macau Ferry Terminal":           { coords: [22.28937, 114.15215], colour: "#4ade80", icon: "🚢" },
+    "Kai Tak Cruise Terminal":        { coords: [22.3074,  114.2128 ], colour: "#4ade80", icon: "🚢" },
+    "Hung Hom":                       { coords: [22.302,   114.179  ], colour: "#facc15", icon: "🚄" },
+    "Tuen Mun Ferry Terminal":        { coords: [22.392,   113.978  ], colour: "#4ade80", icon: "🚢" },
+    "Harbour Control":                { coords: [22.290,   114.160  ], colour: "#4ade80", icon: "🚢" }
+  };
+
+  const map = L.map("map", { zoomControl: true }).setView([22.35, 114.1], 10);
+  L.control.zoom({ position: "topright" }).addTo(map);
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    {
+      attribution: "© OpenStreetMap © CARTO",
+      maxZoom: 19
+    }
+  ).addTo(map);
+
+  let allData = [];
+  let currentData = {};
+  let markers = {};
+  let selectedDate = "";
+  let activePoint = null;
+
+  async function syncCSV() {
+    const status = document.getElementById("syncStatus");
+    status.textContent = "Loading GitHub CSV…";
+    status.className = "status-loading";
+
+    try {
+      const res = await fetch(CSV_URL, {
+        headers: { "Accept": "text/csv" }
+      });
+      if (!res.ok) throw new Error(res.status);
+      let text = await res.text();
+      text = text.replace(/^\uFEFF/, "");
+
+      const lines   = text.split("\n").filter(l => l.trim());
+      const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+
+      allData = lines.slice(1).map(line => {
+        const values = line
+          .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+          .map(v => v.trim().replace(/^"|"$/g, ""));
+        const row = {};
+        headers.forEach((h, i) => { row[h] = values[i] || ""; });
+        return row;
+      }).filter(r => r["Control Point"] && r.Date).reverse();
+
+      document.getElementById("recordCount").textContent =
+        `${allData.length.toLocaleString("en-GB")} records`;
+      status.innerHTML = `CSV loaded <strong>${allData[0]?.Date}</strong>`;
+      status.className = "status-ok";
+
+      loadDateData(allData[0]?.Date);
+    } catch (e) {
+      status.textContent = "CSV load failed";
+      status.className   = "status-loading";
+      console.error(e);
+    }
+  }
+
+  function loadDateData(dateStr) {
+    selectedDate = dateStr || "";
+    const dateEl = document.getElementById("selectedDateDisplay");
+
+    if (!dateStr) {
+      dateEl.style.display = "none";
+      currentData = {};
+      renderBorderCards();
+      return;
+    }
+
+    const rows = allData.filter(r => r.Date === dateStr);
+    if (!rows.length) {
+      dateEl.textContent = `No data for ${dateStr}`;
+      dateEl.style.display = "block";
+      currentData = {};
+      renderBorderCards();
+      return;
+    }
+
+    currentData = {};
+    for (const row of rows) {
+      const cp = row["Control Point"];
+      if (!controlPoints[cp]) continue;
+
+      if (!currentData[cp]) {
+        currentData[cp] = {
+          hk:    { arrivals: 0, departures: 0 },
+          cn:    { arrivals: 0, departures: 0 },
+          other: { arrivals: 0, departures: 0 }
         };
-        
-        const map = L.map('map', { zoomControl: true }).setView([22.35, 114.1], 10);
-        L.control.zoom({ position: 'topright' }).addTo(map);
-        L.tileLayer('https://cartodb-basemaps-c.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
-        }).addTo(map);
-        
-        let allData = [], currentData = {}, markers = {}, selectedDate = '';
+      }
+      const nums = {
+        hk:    parseInt(row["Hong Kong Residents"]) || 0,
+        cn:    parseInt(row["Mainland Visitors"])   || 0,
+        other: parseInt(row["Other Visitors"])      || 0
+      };
+      const dir = row["Arrival / Departure"]?.includes("Arrival")
+        ? "arrivals"
+        : "departures";
+      for (const k of ["hk","cn","other"]) {
+        currentData[cp][k][dir] += nums[k];
+      }
+    }
 
-        async function syncCSV() {
-            const statusEl = document.getElementById('syncStatus');
-            statusEl.textContent = '🔄 Loading GitHub CSV...';
-            statusEl.className = 'status-loading';
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                const response = await fetch(CSV_URL, { signal: controller.signal, headers: { 'Accept': 'text/csv' } });
-                clearTimeout(timeoutId);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                let text = await response.text();
-                text = text.replace(/^\uFEFF/, '');
-                const lines = text.split('\n').filter(line => line.trim());
-                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                allData = lines.slice(1).map(line => {
-                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
-                    const row = {};
-                    headers.forEach((header, i) => { row[header] = values[i] || ''; });
-                    return row;
-                }).filter(row => row['Control Point'] && row.Date && row.Date !== '').reverse();
-                if (allData.length === 0) throw new Error('No valid data found');
-                document.getElementById('recordCount').textContent = `${allData.length.toLocaleString()} records`;
-                statusEl.innerHTML = `✅ GitHub CSV loaded <strong>${allData[0]?.Date}</strong>`;
-                statusEl.className = 'status-ok';
-                loadDateData(allData[0]?.Date || '');
-            } catch (error) {
-                statusEl.textContent = `❌ GitHub CSV failed: ${error.message.slice(0,40)}`;
-                statusEl.className = 'status-error';
-            }
+    dateEl.textContent = dateStr;
+    dateEl.style.display = "block";
+    renderBorderCards();
+  }
+
+  function renderBorderCards() {
+    const wrap = document.getElementById("borderCards");
+    wrap.innerHTML = "";
+
+    Object.entries(controlPoints).forEach(([name, meta]) => {
+      const d = currentData[name] || {
+        hk: {arrivals:0,departures:0},
+        cn: {arrivals:0,departures:0},
+        other:{arrivals:0,departures:0}
+      };
+      const total =
+        d.hk.arrivals + d.hk.departures +
+        d.cn.arrivals + d.cn.departures +
+        d.other.arrivals + d.other.departures;
+
+      const card = document.createElement("div");
+      card.className = "border-card" + (activePoint === name ? " active" : "");
+      card.onclick = () => showPoint(name);
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-dot" style="background:${meta.colour};"></div>
+          <div class="card-title">${meta.icon} ${name}</div>
+          <div class="card-total">${total.toLocaleString("en-GB")}</div>
+        </div>
+        <div class="card-rows">
+          <div class="card-row">
+            <div class="card-row-label">
+              <span class="flag">🇭🇰</span>
+              <span class="text">HK Residents</span>
+            </div>
+            <div class="card-row-value hk">
+              ${(d.hk.arrivals + d.hk.departures).toLocaleString("en-GB")}
+            </div>
+          </div>
+          <div class="card-row">
+            <div class="card-row-label">
+              <span class="flag">🇨🇳</span>
+              <span class="text">China Visitors</span>
+            </div>
+            <div class="card-row-value cn">
+              ${(d.cn.arrivals + d.cn.departures).toLocaleString("en-GB")}
+            </div>
+          </div>
+          <div class="card-row">
+            <div class="card-row-label">
+              <span class="flag">🌍</span>
+              <span class="text">Other Visitors</span>
+            </div>
+            <div class="card-row-value ot">
+              ${(d.other.arrivals + d.other.departures).toLocaleString("en-GB")}
+            </div>
+          </div>
+        </div>
+      `;
+      wrap.appendChild(card);
+    });
+  }
+
+  function showPoint(name) {
+    // clear existing marker
+    Object.values(markers).forEach(m => map.removeLayer(m));
+    markers = {};
+
+    activePoint = name;
+    document
+      .querySelectorAll(".border-card")
+      .forEach(c => c.classList.remove("active"));
+    const cards = Array.from(document.querySelectorAll(".border-card"));
+    const match = cards.find(c =>
+      c.querySelector(".card-title")?.textContent.includes(name)
+    );
+    if (match) match.classList.add("active");
+
+    const meta = controlPoints[name];
+    if (!meta) return;
+
+    const d = currentData[name] || {
+      hk:{arrivals:0,departures:0},
+      cn:{arrivals:0,departures:0},
+      other:{arrivals:0,departures:0}
+    };
+    const total =
+      d.hk.arrivals + d.hk.departures +
+      d.cn.arrivals + d.cn.departures +
+      d.other.arrivals + d.other.departures;
+
+    markers[name] = L.circleMarker(meta.coords, {
+      radius: 14,
+      fillColor: meta.colour,
+      color: "#ffffff",
+      weight: 4,
+      opacity: 1,
+      fillOpacity: 0.9
+    }).addTo(map);
+
+    const popup = `
+      <div style="font-size:13px; line-height:1.35;">
+        <div style="display:flex; align-items:center; justify-content:center;
+                    gap:6px; margin-bottom:8px;">
+          <span style="font-size:18px;">${meta.icon}</span>
+          <span style="font-size:18px; font-weight:700; color:#fbbf24;">
+            ${name}
+          </span>
+        </div>
+
+        <div style="background:#14532d; border-radius:9px;
+                    padding:7px 10px; margin-bottom:10px;
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:12px; font-weight:600; color:#bbf7d0;">
+          <span style="margin-right:6px;">📅</span>
+          <span>${selectedDate || "Latest date"}</span>
+        </div>
+
+        <!-- 3 aligned rows -->
+        <div style="border-radius:10px; background:#020617;
+                    border:1px solid rgba(51,65,85,0.9); padding:8px 9px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;
+                      padding:3px 0;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span>🇭🇰</span>
+              <span style="color:#60a5fa; font-weight:600;">HK Residents</span>
+            </div>
+            <div style="font-variant-numeric:tabular-nums; white-space:nowrap;
+                        color:#60a5fa; font-weight:600;">
+              ${d.hk.arrivals.toLocaleString("en-GB")}↗
+              ${d.hk.departures.toLocaleString("en-GB")}↘
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;
+                      padding:3px 0;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span>🇨🇳</span>
+              <span style="color:#fb7185; font-weight:600;">China Visitors</span>
+            </div>
+            <div style="font-variant-numeric:tabular-nums; white-space:nowrap;
+                        color:#fb7185; font-weight:600;">
+              ${d.cn.arrivals.toLocaleString("en-GB")}↗
+              ${d.cn.departures.toLocaleString("en-GB")}↘
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;
+                      padding:3px 0;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span>🌍</span>
+              <span style="color:#4ade80; font-weight:600;">Other Visitors</span>
+            </div>
+            <div style="font-variant-numeric:tabular-nums; white-space:nowrap;
+                        color:#4ade80; font-weight:600;">
+              ${d.other.arrivals.toLocaleString("en-GB")}↗
+              ${d.other.departures.toLocaleString("en-GB")}↘
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; padding:9px 10px;
+                    border-radius:11px; background:#020617;
+                    border:1px solid rgba(56,189,248,0.7); text-align:center;">
+          <div style="font-size:12px; color:#38bdf8; font-weight:600;">
+            Total Flow
+          </div>
+          <div style="font-size:20px; font-weight:700; color:#38bdf8;
+                      font-variant-numeric:tabular-nums;">
+            ${total.toLocaleString("en-GB")}
+          </div>
+        </div>
+
+        <div style="margin-top:9px; padding-top:7px;
+                    border-top:1px solid rgba(51,65,85,0.9);
+                    font-size:11px; color:#9ca3af; text-align:center;">
+          ✔ GitHub CSV data •
+          ${new Date().toLocaleString("en-GB", { hour12: false })}
+        </div>
+      </div>
+    `;
+
+    markers[name].bindPopup(popup, { maxWidth: 340 }).openPopup();
+    map.setView(meta.coords, 13, { animate: true });
+  }
+
+  // init
+  (function init() {
+    syncCSV();
+    flatpickr("#datePicker", {
+      dateFormat: "d-m-Y",
+      altInput: false,
+      maxDate: "today",
+      onChange(selected) {
+        if (selected[0]) {
+          const d = selected[0];
+          const iso = d.toISOString().slice(0,10).split("-").reverse().join("-");
+          loadDateData(iso);
         }
-
-        function loadDateData(dateStr) {
-            selectedDate = dateStr;
-            const dateDisplay = document.getElementById('selectedDateDisplay');
-            if (!dateStr) {
-                dateDisplay.style.display = 'none';
-                processLatestData();
-                return;
-            }
-            const dateData = allData.filter(row => row.Date === dateStr);
-            if (dateData.length === 0) {
-                dateDisplay.textContent = `📅 No data for ${dateStr}`;
-                dateDisplay.style.display = 'block';
-                return;
-            }
-            currentData = {};
-            dateData.forEach(row => {
-                const point = row['Control Point'];
-                if (!point || !controlPoints[point]) return;
-                if (!currentData[point]) {
-                    currentData[point] = { hk: {arrivals: 0, departures: 0}, cn: {arrivals: 0, departures: 0}, other: {arrivals: 0, departures: 0} };
-                }
-                const nums = { hk: parseInt(row['Hong Kong Residents']) || 0, cn: parseInt(row['Mainland Visitors']) || 0, other: parseInt(row['Other Visitors']) || 0 };
-                const dir = row['Arrival / Departure']?.toLowerCase().includes('arrival') ? 'arrivals' : 'departures';
-                Object.keys(nums).forEach(cat => { currentData[point][cat][dir] += nums[cat]; });
-            });
-            dateDisplay.textContent = `📅 ${dateStr} (${dateData.length} records)`;
-            dateDisplay.style.display = 'block';
-            updateBorderList();
-        }
-
-        function processLatestData() {
-            updateBorderList();
-        }
-
-        function updateBorderList() {
-            const listEl = document.getElementById('borderList');
-            listEl.innerHTML = '';
-            Object.entries(controlPoints).forEach(([cp, cfg]) => {
-                const d = currentData[cp] || {hk:{arrivals:0,departures:0},cn:{arrivals:0,departures:0},other:{arrivals:0,departures:0}};
-                const li = document.createElement('li');
-                li.className = 'border-list-item';
-                
-                // ✅ 口岸名稱區域
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'border-name';
-                nameDiv.textContent = cp;
-                nameDiv.onclick = () => showSingleMarker(cp);
-                li.appendChild(nameDiv);
-
-                // ✅ 數據區域
-                const arrdep = document.createElement('div');
-                arrdep.className = 'arrdep-cnt';
-                ['hk','cn','other'].forEach(cat => {
-                    const grp = document.createElement('div');
-                    grp.className = 'cnt-group cnt-' + cat;
-                    const label = cat === 'hk' ? 'HK' : (cat === 'cn' ? 'China' : 'Other');
-                    grp.innerHTML = `
-                        <span class='cnt-label'>${label} Arr</span>
-                        <div class='cnt-number cnt-${cat}'>${d[cat].arrivals.toLocaleString()}</div>
-                        <span class='cnt-label'>Dep</span>
-                        <div class='cnt-number cnt-${cat}'>${d[cat].departures.toLocaleString()}</div>
-                    `;
-                    arrdep.appendChild(grp);
-                });
-                li.appendChild(arrdep);
-                listEl.appendChild(li);
-            });
-        }
-
-        function showSingleMarker(cp) {
-            Object.keys(markers).forEach(n => {
-                map.removeLayer(markers[n]);
-                delete markers[n];
-            });
-            const coords = controlPoints[cp].coords;
-            const color = controlPoints[cp].colour;
-            const d = currentData[cp] || {hk:{arrivals:0,departures:0},cn:{arrivals:0,departures:0},other:{arrivals:0,departures:0}};
-            const popupContent = `
-                <div>
-                    <h3 class="popup-title" style="color:${color};">${cp}</h3>
-                    <div class="data-section">
-                        <div class="data-title selected">${selectedDate ? `📅 ${selectedDate}` : '📅 Latest Data'}</div>
-                        <div class="category-row">
-                            <span class="category-label hk-label">🇭🇰 HK Residents</span>
-                            <span class="category-number hk-num">${d.hk.arrivals.toLocaleString()}↗ ${d.hk.departures.toLocaleString()}↘</span>
-                        </div>
-                        <div class="category-row">
-                            <span class="category-label cn-label">🇨🇳 China Visitors</span>
-                            <span class="category-number cn-num">${d.cn.arrivals.toLocaleString()}↗ ${d.cn.departures.toLocaleString()}↘</span>
-                        </div>
-                        <div class="category-row">
-                            <span class="category-label other-label">🌍 Other Visitors</span>
-                            <span class="category-number other-num">${d.other.arrivals.toLocaleString()}↗ ${d.other.departures.toLocaleString()}↘</span>
-                        </div>
-                        <div class="category-row total-row">
-                            <span class="total-label">💎 Total</span>
-                            <span class="total-number">${(d.hk.arrivals + d.hk.departures + d.cn.arrivals + d.cn.departures + d.other.arrivals + d.other.departures).toLocaleString()}</span>
-                        </div>
-                    </div>
-                    <div class="date-note">✅ GitHub CSV data</div>
-                </div>
-            `;
-            markers[cp] = L.circleMarker(coords, {
-                radius: 14, fillColor: color, color: '#ffffff', weight: 3, opacity: 1, fillOpacity: 0.85
-            }).addTo(map).bindPopup(popupContent, { maxWidth: 420, className: 'custom-popup' }).openPopup();
-            map.setView(coords, 13, {animate: true});
-        }
-
-        window.addEventListener('load', async () => {
-            await syncCSV();
-            flatpickr("#datePicker", {
-                dateFormat: "d-m-Y", altInput: true, altFormat: "d MMM YYYY",
-                maxDate: "today", locale: "en",
-                onChange: function(selectedDates, dateStr, instance) {
-                    if (selectedDates[0]) {
-                        const formattedDate = selectedDates[0].toISOString().split('T')[0].split('-').reverse().join('-');
-                        loadDateData(formattedDate);
-                    } else {
-                        loadDateData('');
-                    }
-                }
-            });
-        });
-        setInterval(syncCSV, 5 * 60 * 1000);
-    </script>
+      }
+    });
+    // auto-refresh every 5 mins
+    setInterval(syncCSV, 5 * 60 * 1000);
+  })();
+</script>
 </body>
 </html>
