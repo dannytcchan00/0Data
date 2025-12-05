@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>香港隧道即時收費地圖 - 4條隧道全$8</title>
+<title>Hong Kong Tunnel Tolls Map - HKD Rates</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Segoe UI",sans-serif;background:#050814;color:#e5ecff;height:100vh;overflow:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050814;color:#e5ecff;height:100vh;overflow:hidden;}
 .app{display:flex;height:100vh;width:100vw;}
 .sidebar{width:390px;max-width:100%;background:radial-gradient(circle at top,#151b3a 0,#050814 55%,#02030a 100%);border-right:1px solid rgba(120,160,255,0.25);padding:16px 14px 16px 16px;display:flex;flex-direction:column;gap:12px;}
 .sidebar-header{display:flex;justify-content:space-between;align-items:center;}
@@ -62,49 +62,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Segoe UI",sans
   <div class="sidebar">
     <div class="sidebar-header">
       <div>
-        <div class="sidebar-title">香港隧道即時收費</div>
-        <div class="sidebar-sub">10條隧道 · 4條全$8固定</div>
+        <div class="sidebar-title">Hong Kong Tunnel Tolls</div>
+        <div class="sidebar-sub">10 Tunnels · 4 Tunnels All HK$8 Fixed</div>
       </div>
-      <div class="badge">官方三時段 · 實時更新</div>
+      <div class="badge">Official HKD Rates · Live Updates</div>
     </div>
-    <div class="update-time" id="updateTime">更新：-</div>
+    <div class="update-time" id="updateTime">Updated: -</div>
     <div class="legend" id="legend"></div>
     <div class="tunnel-list" id="tunnelList"></div>
   </div>
   <div class="map-wrap">
     <div id="map"></div>
     <div class="map-floating-info" id="mapInfoBox">
-      <div class="map-floating-title" id="mapInfoTitle">請從左邊揀選隧道</div>
+      <div class="map-floating-title" id="mapInfoTitle">Please select a tunnel</div>
       <div class="map-floating-body" id="mapInfoBody">
-        <div>點擊地圖顏色點或左側隧道卡片</div>
+        <div>Click map markers or sidebar tunnel cards</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ===== 香港10條主要隧道（官方GPS座標）=====
+// ===== Hong Kong 10 Major Tunnels (Official GPS Coordinates) =====
 const tunnels = [
-  {id:'cht',name:'紅磡海底隧道',short:'紅隧',typeTag:'過海·三時段',coords:[22.2905,114.1825],color:'#ff4f6b'},
-  {id:'ehc',name:'東區海底隧道',short:'東隧',typeTag:'過海·三時段',coords:[22.2988,114.2302],color:'#33ff99'},
-  {id:'whc',name:'西區海底隧道',short:'西隧',typeTag:'過海·三時段',coords:[22.3008,114.1562],color:'#3fa9ff'},
-  {id:'tlt',name:'大欖隧道',short:'大欖',typeTag:'新界·三時段',coords:[22.42097,114.06369],color:'#c77dff'},
+  {id:'cht',name:'Cross Harbour Tunnel',short:'CHT',typeTag:'Cross-Harbour·3-Tier',coords:[22.2905,114.1825],color:'#ff4f6b'},
+  {id:'ehc',name:'Eastern Harbour Crossing',short:'EHC',typeTag:'Cross-Harbour·3-Tier',coords:[22.2988,114.2302],color:'#33ff99'},
+  {id:'whc',name:'Western Harbour Crossing',short:'WHC',typeTag:'Cross-Harbour·3-Tier',coords:[22.3008,114.1562],color:'#3fa9ff'},
+  {id:'tlt',name:'Tai Lam Tunnel',short:'TLT',typeTag:'New Territories·3-Tier',coords:[22.42097,114.06369],color:'#c77dff'},
   
-  // 4條全$8固定收費隧道（按你最新要求）
-  {id:'stt',name:'城門隧道',short:'城門',typeTag:'全$8固定',coords:[22.37833,114.15333],color:'#00d4ff'},
-  {id:'abt',name:'香港仔隧道',short:'香港仔',typeTag:'全$8固定',coords:[22.26086,114.18108],color:'#ffd700'},
-  {id:'lmt',name:'獅子山隧道',short:'獅子山',typeTag:'全$8固定',coords:[22.3535,114.1706],color:'#ff8c42'},
-  {id:'smt',name:'尖山隧道',short:'尖山',typeTag:'全$8固定',coords:[22.3600,114.1400],color:'#ff69b4'}
+  // 4 Tunnels All Vehicles HK$8 Fixed (per your request)
+  {id:'stt',name:'Shing Mun Tunnels',short:'SMT',typeTag:'All HK$8 Fixed',coords:[22.37833,114.15333],color:'#00d4ff'},
+  {id:'abt',name:'Aberdeen Tunnel',short:'ABT',typeTag:'All HK$8 Fixed',coords:[22.26086,114.18108],color:'#ffd700'},
+  {id:'lmt',name:'Lion Rock Tunnel',short:'LRT',typeTag:'All HK$8 Fixed',coords:[22.3535,114.1706],color:'#ff8c42'},
+  {id:'smt',name:'Sha Tin Heights Tunnel',short:'SHT',typeTag:'All HK$8 Fixed',coords:[22.3600,114.1400],color:'#ff69b4'}
 ];
 
-// ===== 官方三時段收費 =====
+// ===== Official 3-Tier Toll Rates (HKD) =====
 function getDynamicTolls() {
   const now = new Date();
   const h = now.getHours();
   const day = now.getDay(); // 0=Sun
   
   let band = 'offpeak';
-  if (day !== 0) { // 星期一至六
+  if (day !== 0) { // Monday to Saturday
     if ((h >= 8 && h < 10) || (h >= 17 && h < 19)) band = 'peak';
     else if (h >= 7 && h < 20) band = 'normal';
     else band = 'offpeak';
@@ -114,12 +114,12 @@ function getDynamicTolls() {
   }
 
   return {
-    // 三條過海隧道官方收費
+    // Three Cross-Harbour Tunnels Official HKD Rates
     cht: { pc: band === 'peak' ? 40 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
     ehc: { pc: band === 'peak' ? 40 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
     whc: { pc: band === 'peak' ? 60 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
     
-    // 大欖隧道官方收費
+    // Tai Lam Tunnel Official HKD Rates
     tlt: { 
       pc: band === 'peak' ? 45 : band === 'normal' ? 30 : 18,
       mc: band === 'peak' ? 18 : band === 'normal' ? 12 : 7.2,
@@ -127,7 +127,7 @@ function getDynamicTolls() {
       other: 43
     },
     
-    // 4條隧道全$8固定（按你要求，所有車輛$8）
+    // 4 Tunnels All Vehicles HK$8 Fixed (per your request)
     stt: { pc: 8, mc: 8, taxi: 8, other: 8 },
     abt: { pc: 8, mc: 8, taxi: 8, other: 8 },
     lmt: { pc: 8, mc: 8, taxi: 8, other: 8 },
@@ -148,7 +148,7 @@ function getTunnelSpeeds() {
   };
 }
 
-// ===== 地圖初始化 =====
+// ===== Map Initialisation =====
 const map = L.map('map', {center:[22.32,114.16],zoom:11,zoomControl:true});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'
@@ -157,7 +157,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 let markerMap = {};
 let currentActiveId = null;
 
-// ===== 左側隧道列表 =====
+// ===== Sidebar Tunnel List =====
 function buildTunnelList(){
   const tolls = getDynamicTolls();
   const speeds = getTunnelSpeeds();
@@ -177,18 +177,17 @@ function buildTunnelList(){
     
     let statusText = '', statusClass = '';
     if (['stt','abt','lmt','smt'].includes(t.id)) {
-      // 4條全$8隧道
-      statusText = '全車種$8'; 
+      statusText = 'All Vehicles HK$8'; 
       statusClass = 'fixed';
     } else if (t.id === 'tlt') {
-      statusText = tToll.pc === 45 ? '繁忙時段($45)' : tToll.pc === 30 ? '一般時段($30)' : '非繁忙時段($18)';
+      statusText = tToll.pc === 45 ? 'Peak (HK$45)' : tToll.pc === 30 ? 'Normal (HK$30)' : 'Off-Peak (HK$18)';
       statusClass = tToll.pc === 45 ? 'peak' : tToll.pc === 30 ? 'normal' : '';
     } else if (tToll.pc > 20) {
-      statusText = '繁忙時段'; statusClass = 'peak';
+      statusText = 'Peak Hours'; statusClass = 'peak';
     } else if (tToll.pc === 30) {
-      statusText = '一般時段'; statusClass = 'normal';
+      statusText = 'Normal Hours'; statusClass = 'normal';
     } else {
-      statusText = '非繁忙時段';
+      statusText = 'Off-Peak Hours';
     }
 
     const card = document.createElement('div');
@@ -205,14 +204,14 @@ function buildTunnelList(){
         <div class="status-pill ${statusClass}">${statusText}</div>
       </div>
       <div class="toll-row">
-        <div class="toll-item"><div class="toll-label">私家車</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.pc}</div></div>
-        <div class="toll-item"><div class="toll-label">電單車</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.mc}</div></div>
-        <div class="toll-item"><div class="toll-label">的士</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.taxi}</div></div>
-        <div class="toll-item"><div class="toll-label">其他</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.other}</div></div>
+        <div class="toll-item"><div class="toll-label">Private Car</div><div class="toll-value ${statusClass || 'offpeak'}">HK$${tToll.pc}</div></div>
+        <div class="toll-item"><div class="toll-label">Motorcycle</div><div class="toll-value ${statusClass || 'offpeak'}">HK$${tToll.mc}</div></div>
+        <div class="toll-item"><div class="toll-label">Taxi</div><div class="toll-value ${statusClass || 'offpeak'}">HK$${tToll.taxi}</div></div>
+        <div class="toll-item"><div class="toll-label">Others</div><div class="toll-value ${statusClass || 'offpeak'}">HK$${tToll.other}</div></div>
       </div>
       <div class="tunnel-footer">
-        <div class="speed ${speedClass}">車速：<span>${avgSpeed||'--'}</span> km/h</div>
-        <div class="tunnel-pos">點擊飛地圖</div>
+        <div class="speed ${speedClass}">Speed: <span>${avgSpeed||'--'}</span> km/h</div>
+        <div class="tunnel-pos">Click to fly to map</div>
       </div>
     `;
 
@@ -235,28 +234,28 @@ function focusTunnel(id){
   
   let statusText = '';
   if (['stt','abt','lmt','smt'].includes(id)) {
-    statusText = '全車種固定$8';
+    statusText = 'All Vehicles Fixed HK$8';
   } else if (id === 'tlt') {
-    statusText = tolls.pc === 45 ? '繁忙時段' : tolls.pc === 30 ? '一般時段' : '非繁忙時段';
+    statusText = tolls.pc === 45 ? 'Peak Hours' : tolls.pc === 30 ? 'Normal Hours' : 'Off-Peak Hours';
   } else if (tolls.pc > 20) {
-    statusText = '繁忙時段';
+    statusText = 'Peak Hours';
   } else if (tolls.pc === 30) {
-    statusText = '一般時段';
+    statusText = 'Normal Hours';
   } else {
-    statusText = '非繁忙時段';
+    statusText = 'Off-Peak Hours';
   }
 
   document.getElementById('mapInfoTitle').textContent = `${t.short} · ${t.name}`;
   document.getElementById('mapInfoBody').innerHTML = `
-    <div>私家車：<strong>$${tolls.pc}</strong></div>
-    <div>電單車：<strong>$${tolls.mc}</strong></div>
-    <div>的士：<strong>$${tolls.taxi}</strong></div>
-    <div>其他車輛：<strong>$${tolls.other}</strong></div>
-    <div style="margin-top:6px;">狀態：${statusText} | 平均車速：<strong>${avgSpeed||'--'}</strong> km/h</div>
+    <div>Private Car: <strong>HK$${tolls.pc}</strong></div>
+    <div>Motorcycle: <strong>HK$${tolls.mc}</strong></div>
+    <div>Taxi: <strong>HK$${tolls.taxi}</strong></div>
+    <div>Other Vehicles: <strong>HK$${tolls.other}</strong></div>
+    <div style="margin-top:6px;">Status: ${statusText} | Avg Speed: <strong>${avgSpeed||'--'}</strong> km/h</div>
   `;
 }
 
-// ===== 地圖標記 =====
+// ===== Map Markers =====
 function buildMarkers(){
   const tolls = getDynamicTolls();
   tunnels.forEach(t=>{
@@ -269,16 +268,16 @@ function buildMarkers(){
     }).addTo(map);
 
     const tl = tolls[t.id];
-    let status = ['stt','abt','lmt','smt'].includes(t.id) ? '全$8固定' : 
-                 tl.pc > 30 ? '繁忙' : tl.pc === 30 ? '一般' : tl.pc === 18 ? '非繁忙' : '固定';
+    let status = ['stt','abt','lmt','smt'].includes(t.id) ? 'All HK$8 Fixed' : 
+                 tl.pc > 30 ? 'Peak' : tl.pc === 30 ? 'Normal' : tl.pc === 18 ? 'Off-Peak' : 'Fixed';
     marker.bindPopup(`
       <strong style="color:${t.color}">${t.short}</strong><br>
       <b>${t.name}</b><br>
-      私家車：$${tl.pc}<br>
-      電單車：$${tl.mc}<br>
-      的士：$${tl.taxi}<br>
-      其他：$${tl.other}<br>
-      <small>狀態：${status}</small>
+      Private Car: HK$${tl.pc}<br>
+      Motorcycle: HK$${tl.mc}<br>
+      Taxi: HK$${tl.taxi}<br>
+      Others: HK$${tl.other}<br>
+      <small>Status: ${status}</small>
     `);
 
     marker.on('click',()=>focusTunnel(t.id));
@@ -288,10 +287,10 @@ function buildMarkers(){
 
 function updateTimeLabel(){
   document.getElementById('updateTime').textContent = 
-    `更新：${new Date().toLocaleString('zh-HK',{hour12:false})}`;
+    `Updated: ${new Date().toLocaleString('en-GB',{hour12:false})}`;
 }
 
-// 初始化 + 每分鐘實時更新
+// Initialise + 1-minute live updates
 buildTunnelList();
 buildMarkers();
 updateTimeLabel();
