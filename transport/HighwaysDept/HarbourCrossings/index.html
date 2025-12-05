@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香港隧道即時收費地圖 - 4條隧道全$8</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Segoe UI",sans-serif;background:#050814;color:#e5ecff;height:100vh;overflow:hidden;}
+.app{display:flex;height:100vh;width:100vw;}
+.sidebar{width:390px;max-width:100%;background:radial-gradient(circle at top,#151b3a 0,#050814 55%,#02030a 100%);border-right:1px solid rgba(120,160,255,0.25);padding:16px 14px 16px 16px;display:flex;flex-direction:column;gap:12px;}
+.sidebar-header{display:flex;justify-content:space-between;align-items:center;}
+.sidebar-title{font-size:18px;font-weight:700;letter-spacing:1px;}
+.sidebar-sub{font-size:11px;color:#93a7ff;}
+.badge{padding:2px 8px;border-radius:999px;border:1px solid rgba(120,190,255,0.6);font-size:10px;color:#b8d9ff;background:linear-gradient(135deg,rgba(0,255,255,0.1),rgba(120,190,255,0.2));}
+.update-time{font-size:11px;color:#7f8bb8;}
+.tunnel-list{flex:1;overflow-y:auto;padding-right:4px;}
+.tunnel-card{border-radius:10px;padding:10px 10px 8px;margin-bottom:8px;background:linear-gradient(135deg,rgba(13,26,63,0.92),rgba(9,17,40,0.98));border:1px solid transparent;cursor:pointer;transition:background 0.2s,border-color 0.2s,transform 0.1s;position:relative;}
+.tunnel-card:hover{transform:translateY(-1px);border-color:rgba(120,190,255,0.8);}
+.tunnel-card.active{border-color:#00e5ff;box-shadow:0 0 0 1px rgba(0,229,255,0.4);}
+.tunnel-name-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.tunnel-name{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.tunnel-tag{font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(15,185,255,0.16);color:#86d7ff;border:1px solid rgba(15,185,255,0.4);}
+.status-pill{font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(0,255,163,0.12);color:#7dffca;border:1px solid rgba(0,255,163,0.35);}
+.status-pill.peak{background:rgba(255,94,117,0.16);color:#ff9ba8;border-color:rgba(255,94,117,0.55);}
+.status-pill.normal{background:rgba(255,193,7,0.16);color:#ffd36b;border-color:rgba(255,193,7,0.55);}
+.status-pill.fixed{background:rgba(0,212,255,0.16);color:#00d4ff;border-color:rgba(0,212,255,0.55);}
+.toll-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:4px;}
+.toll-item{background:rgba(2,8,26,0.85);border-radius:6px;padding:4px 4px 3px;border:1px solid rgba(67,90,160,0.7);}
+.toll-label{font-size:10px;color:#9fb4ff;}
+.toll-value{font-size:13px;font-weight:600;}
+.toll-value.peak{color:#ffb3bd;}
+.toll-value.normal{color:#ffd36b;}
+.toll-value.offpeak{color:#a8ff9b;}
+.toll-value.fixed{color:#00d4ff;}
+.tunnel-footer{margin-top:5px;display:flex;justify-content:space-between;align-items:center;}
+.speed{font-size:11px;color:#a7b4ff;}
+.speed span{font-weight:600;}
+.speed-good span{color:#7dffca;}
+.speed-slow span{color:#ffd36b;}
+.speed-bad span{color:#ff8585;}
+.tunnel-pos{font-size:10px;color:#7383c4;}
+.legend{margin-top:2px;display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:#9aa4cf;max-height:60px;overflow-y:auto;}
+.legend span{display:inline-flex;align-items:center;gap:4px;}
+.dot{width:8px;height:8px;border-radius:999px;}
+.map-wrap{flex:1;position:relative;}
+#map{height:100%;width:100%;background:#050814;}
+.map-floating-info{position:absolute;top:14px;right:14px;min-width:240px;max-width:280px;background:rgba(7,12,32,0.9);backdrop-filter:blur(16px);border-radius:12px;border:1px solid rgba(126,180,255,0.45);box-shadow:0 0 25px rgba(0,0,0,0.65);padding:12px 12px 10px;color:#e9efff;pointer-events:none;}
+.map-floating-title{font-size:13px;font-weight:600;margin-bottom:6px;}
+.map-floating-body{font-size:11px;color:#b5c5ff;}
+.map-floating-body div{margin-bottom:3px;}
+.leaflet-container{background:#050814;}
+.leaflet-control-zoom{border:none !important;box-shadow:0 0 10px rgba(0,0,0,0.7) !important;}
+.leaflet-control-zoom a{background:rgba(5,10,30,0.95) !important;color:#dbe6ff !important;border:none !important;}
+@media (max-width:768px){.app{flex-direction:column;}.sidebar{width:100%;height:48%;max-height:48%;border-right:none;border-top:1px solid rgba(120,160,255,0.3);order:2;}.map-wrap{order:1;height:52%;}.map-floating-info{right:8px;top:8px;max-width:60%;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <div class="sidebar-title">香港隧道即時收費</div>
+        <div class="sidebar-sub">10條隧道 · 4條全$8固定</div>
+      </div>
+      <div class="badge">官方三時段 · 實時更新</div>
+    </div>
+    <div class="update-time" id="updateTime">更新：-</div>
+    <div class="legend" id="legend"></div>
+    <div class="tunnel-list" id="tunnelList"></div>
+  </div>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-floating-info" id="mapInfoBox">
+      <div class="map-floating-title" id="mapInfoTitle">請從左邊揀選隧道</div>
+      <div class="map-floating-body" id="mapInfoBody">
+        <div>點擊地圖顏色點或左側隧道卡片</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 香港10條主要隧道（官方GPS座標）=====
+const tunnels = [
+  {id:'cht',name:'紅磡海底隧道',short:'紅隧',typeTag:'過海·三時段',coords:[22.2905,114.1825],color:'#ff4f6b'},
+  {id:'ehc',name:'東區海底隧道',short:'東隧',typeTag:'過海·三時段',coords:[22.2988,114.2302],color:'#33ff99'},
+  {id:'whc',name:'西區海底隧道',short:'西隧',typeTag:'過海·三時段',coords:[22.3008,114.1562],color:'#3fa9ff'},
+  {id:'tlt',name:'大欖隧道',short:'大欖',typeTag:'新界·三時段',coords:[22.42097,114.06369],color:'#c77dff'},
+  
+  // 4條全$8固定收費隧道（按你最新要求）
+  {id:'stt',name:'城門隧道',short:'城門',typeTag:'全$8固定',coords:[22.37833,114.15333],color:'#00d4ff'},
+  {id:'abt',name:'香港仔隧道',short:'香港仔',typeTag:'全$8固定',coords:[22.26086,114.18108],color:'#ffd700'},
+  {id:'lmt',name:'獅子山隧道',short:'獅子山',typeTag:'全$8固定',coords:[22.3535,114.1706],color:'#ff8c42'},
+  {id:'smt',name:'尖山隧道',short:'尖山',typeTag:'全$8固定',coords:[22.3600,114.1400],color:'#ff69b4'}
+];
+
+// ===== 官方三時段收費 =====
+function getDynamicTolls() {
+  const now = new Date();
+  const h = now.getHours();
+  const day = now.getDay(); // 0=Sun
+  
+  let band = 'offpeak';
+  if (day !== 0) { // 星期一至六
+    if ((h >= 8 && h < 10) || (h >= 17 && h < 19)) band = 'peak';
+    else if (h >= 7 && h < 20) band = 'normal';
+    else band = 'offpeak';
+  } else {
+    if (h >= 10 && h < 19) band = 'normal';
+    else band = 'offpeak';
+  }
+
+  return {
+    // 三條過海隧道官方收費
+    cht: { pc: band === 'peak' ? 40 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
+    ehc: { pc: band === 'peak' ? 40 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
+    whc: { pc: band === 'peak' ? 60 : band === 'normal' ? 30 : 20, mc: 12, taxi: 25, other: 50 },
+    
+    // 大欖隧道官方收費
+    tlt: { 
+      pc: band === 'peak' ? 45 : band === 'normal' ? 30 : 18,
+      mc: band === 'peak' ? 18 : band === 'normal' ? 12 : 7.2,
+      taxi: 28,
+      other: 43
+    },
+    
+    // 4條隧道全$8固定（按你要求，所有車輛$8）
+    stt: { pc: 8, mc: 8, taxi: 8, other: 8 },
+    abt: { pc: 8, mc: 8, taxi: 8, other: 8 },
+    lmt: { pc: 8, mc: 8, taxi: 8, other: 8 },
+    smt: { pc: 8, mc: 8, taxi: 8, other: 8 }
+  };
+}
+
+function getTunnelSpeeds() {
+  return {
+    cht: {east:45, west:38},
+    ehc: {east:55, west:52},
+    whc: {east:35, west:28},
+    tlt: {east:70, west:72},
+    stt: {east:55, west:60},
+    abt: {east:42, west:40},
+    lmt: {east:58, west:62},
+    smt: {east:65, west:68}
+  };
+}
+
+// ===== 地圖初始化 =====
+const map = L.map('map', {center:[22.32,114.16],zoom:11,zoomControl:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'
+}).addTo(map);
+
+let markerMap = {};
+let currentActiveId = null;
+
+// ===== 左側隧道列表 =====
+function buildTunnelList(){
+  const tolls = getDynamicTolls();
+  const speeds = getTunnelSpeeds();
+  const listEl = document.getElementById('tunnelList');
+  const legendEl = document.getElementById('legend');
+  
+  legendEl.innerHTML = tunnels.map(t=>`
+    <span><span class="dot" style="background:${t.color}"></span>${t.short}</span>
+  `).join('');
+  
+  listEl.innerHTML = '';
+  tunnels.forEach(t => {
+    const tToll = tolls[t.id];
+    const sp = speeds[t.id];
+    const avgSpeed = sp.east && sp.west ? Math.round((sp.east + sp.west) / 2) : null;
+    const speedClass = avgSpeed ? (avgSpeed >= 50 ? 'speed-good' : avgSpeed >= 30 ? 'speed-slow' : 'speed-bad') : '';
+    
+    let statusText = '', statusClass = '';
+    if (['stt','abt','lmt','smt'].includes(t.id)) {
+      // 4條全$8隧道
+      statusText = '全車種$8'; 
+      statusClass = 'fixed';
+    } else if (t.id === 'tlt') {
+      statusText = tToll.pc === 45 ? '繁忙時段($45)' : tToll.pc === 30 ? '一般時段($30)' : '非繁忙時段($18)';
+      statusClass = tToll.pc === 45 ? 'peak' : tToll.pc === 30 ? 'normal' : '';
+    } else if (tToll.pc > 20) {
+      statusText = '繁忙時段'; statusClass = 'peak';
+    } else if (tToll.pc === 30) {
+      statusText = '一般時段'; statusClass = 'normal';
+    } else {
+      statusText = '非繁忙時段';
+    }
+
+    const card = document.createElement('div');
+    card.className = `tunnel-card ${currentActiveId===t.id ? 'active' : ''}`;
+    card.dataset.id = t.id;
+
+    card.innerHTML = `
+      <div class="tunnel-name-row">
+        <div class="tunnel-name">
+          <span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:${t.color};box-shadow:0 0 8px ${t.color};"></span>
+          <span>${t.short}</span>
+          <span class="tunnel-tag">${t.typeTag}</span>
+        </div>
+        <div class="status-pill ${statusClass}">${statusText}</div>
+      </div>
+      <div class="toll-row">
+        <div class="toll-item"><div class="toll-label">私家車</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.pc}</div></div>
+        <div class="toll-item"><div class="toll-label">電單車</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.mc}</div></div>
+        <div class="toll-item"><div class="toll-label">的士</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.taxi}</div></div>
+        <div class="toll-item"><div class="toll-label">其他</div><div class="toll-value ${statusClass || 'offpeak'}">$${tToll.other}</div></div>
+      </div>
+      <div class="tunnel-footer">
+        <div class="speed ${speedClass}">車速：<span>${avgSpeed||'--'}</span> km/h</div>
+        <div class="tunnel-pos">點擊飛地圖</div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => focusTunnel(t.id));
+    listEl.appendChild(card);
+  });
+}
+
+function focusTunnel(id){
+  const t = tunnels.find(x => x.id === id);
+  if (!t) return;
+
+  currentActiveId = id;
+  document.querySelectorAll('.tunnel-card').forEach(el=>el.classList.toggle('active', el.dataset.id === id));
+  map.setView(t.coords, 14, {animate:true,duration:0.4});
+
+  const tolls = getDynamicTolls()[id];
+  const speeds = getTunnelSpeeds()[id];
+  const avgSpeed = speeds.east && speeds.west ? Math.round((speeds.east+speeds.west)/2) : null;
+  
+  let statusText = '';
+  if (['stt','abt','lmt','smt'].includes(id)) {
+    statusText = '全車種固定$8';
+  } else if (id === 'tlt') {
+    statusText = tolls.pc === 45 ? '繁忙時段' : tolls.pc === 30 ? '一般時段' : '非繁忙時段';
+  } else if (tolls.pc > 20) {
+    statusText = '繁忙時段';
+  } else if (tolls.pc === 30) {
+    statusText = '一般時段';
+  } else {
+    statusText = '非繁忙時段';
+  }
+
+  document.getElementById('mapInfoTitle').textContent = `${t.short} · ${t.name}`;
+  document.getElementById('mapInfoBody').innerHTML = `
+    <div>私家車：<strong>$${tolls.pc}</strong></div>
+    <div>電單車：<strong>$${tolls.mc}</strong></div>
+    <div>的士：<strong>$${tolls.taxi}</strong></div>
+    <div>其他車輛：<strong>$${tolls.other}</strong></div>
+    <div style="margin-top:6px;">狀態：${statusText} | 平均車速：<strong>${avgSpeed||'--'}</strong> km/h</div>
+  `;
+}
+
+// ===== 地圖標記 =====
+function buildMarkers(){
+  const tolls = getDynamicTolls();
+  tunnels.forEach(t=>{
+    const marker = L.circleMarker(t.coords,{
+      radius:11,
+      color:t.color,
+      weight:3,
+      fillColor:t.color,
+      fillOpacity:0.85
+    }).addTo(map);
+
+    const tl = tolls[t.id];
+    let status = ['stt','abt','lmt','smt'].includes(t.id) ? '全$8固定' : 
+                 tl.pc > 30 ? '繁忙' : tl.pc === 30 ? '一般' : tl.pc === 18 ? '非繁忙' : '固定';
+    marker.bindPopup(`
+      <strong style="color:${t.color}">${t.short}</strong><br>
+      <b>${t.name}</b><br>
+      私家車：$${tl.pc}<br>
+      電單車：$${tl.mc}<br>
+      的士：$${tl.taxi}<br>
+      其他：$${tl.other}<br>
+      <small>狀態：${status}</small>
+    `);
+
+    marker.on('click',()=>focusTunnel(t.id));
+    markerMap[t.id] = marker;
+  });
+}
+
+function updateTimeLabel(){
+  document.getElementById('updateTime').textContent = 
+    `更新：${new Date().toLocaleString('zh-HK',{hour12:false})}`;
+}
+
+// 初始化 + 每分鐘實時更新
+buildTunnelList();
+buildMarkers();
+updateTimeLabel();
+setInterval(()=>{
+  buildTunnelList();
+  updateTimeLabel();
+},60000);
+</script>
+</body>
+</html>
