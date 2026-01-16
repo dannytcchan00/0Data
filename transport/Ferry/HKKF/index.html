@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8">
-  <title>HKKF 多航線渡輪班次 - 實時倒數 + 喜靈洲註解</title>
+  <title>Ferry Live – HKKF & Sun Ferry Routes (Countdown & Timetables)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -48,14 +48,7 @@
       background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);
       border-radius:16px;padding:25px;margin-bottom:30px;backdrop-filter:blur(20px)
     }
-    .route-info div{margin-bottom:10px;font-size:15px;opacity:.9}
-    .fare-line{
-      font-size:14px;font-weight:600;background:rgba(0,212,255,.08);
-      padding:10px 14px;border-radius:10px;border:1px solid rgba(0,212,255,.3);
-      text-align:center;margin-top:6px
-    }
-    .fare-weekday{color:#00d4ff}
-    .fare-holiday{color:#ff6b6b}
+    .route-info div{margin-bottom:6px;font-size:15px;opacity:.9}
     .dual-panel{display:grid;grid-template-columns:1fr 1fr;gap:25px;height:100%}
     .direction-panel{
       background:rgba(20,20,20,.8);border-radius:20px;padding:24px 24px 18px;
@@ -145,64 +138,54 @@
 <body>
   <div class="container">
     <div class="sidebar">
-      <div class="header">🛥️ HKKF Ferry Live</div>
+      <div class="header">🛥️ Ferry Live</div>
       <div class="route-group">
-        <h3>📍 Live Routes</h3>
+        <h3>📍 Routes</h3>
         <button class="route-btn active" data-route="central-sokkwuwan" onclick="selectRoute('central-sokkwuwan')">
-          中環 ↔ 索罟灣
+          Central ↔ Sok Kwu Wan
         </button>
         <button class="route-btn" data-route="central-yungshuewan" onclick="selectRoute('central-yungshuewan')">
-          中環 ↔ 榕樹灣
+          Central ↔ Yung Shue Wan
         </button>
         <button class="route-btn" data-route="central-pengchau" onclick="selectRoute('central-pengchau')">
-          中環 ↔ 坪洲
+          Central ↔ Peng Chau
+        </button>
+        <button class="route-btn" data-route="central-cheungchau" onclick="selectRoute('central-cheungchau')">
+          Central ↔ Cheung Chau (Sun Ferry)
+        </button>
+        <button class="route-btn" data-route="central-muiwo" onclick="selectRoute('central-muiwo')">
+          Central ↔ Mui Wo (Sun Ferry)
         </button>
       </div>
     </div>
 
     <div class="main" id="main-content">
       <div class="loading">
-        <div style="font-size:24px;margin-bottom:10px;">🔄 載入中...</div>
-        <div>即將顯示渡輪班次</div>
+        <div style="font-size:24px;margin-bottom:10px;">🔄 Loading…</div>
+        <div>Ferry departures will appear shortly</div>
       </div>
     </div>
   </div>
 
   <div class="legend">
-    <div class="legend-title">🛥️ 班次圖例說明</div>
-    <div class="legend-item"><span class="legend-icon">▶️</span>一般班次</div>
-    <div class="legend-item"><span class="legend-icon">⚡</span>加班／特別班次</div>
-    <div class="legend-item"><span class="legend-icon">📦</span>載貨班次（需預約）</div>
-    <div class="legend-item"><span class="legend-icon">🛎️</span>只限星期六</div>
-    <div class="legend-item"><span class="legend-icon">🛑</span>尾班船</div>
-    <div class="legend-item"><span class="legend-icon">🌅</span>明日第一班</div>
+    <div class="legend-title">🛥️ Legend</div>
+    <div class="legend-item"><span class="legend-icon">▶️</span>Regular sailing</div>
+    <div class="legend-item"><span class="legend-icon">📦</span>Cargo service (booking may be required)</div>
+    <div class="legend-item"><span class="legend-icon">🛎️</span>Saturdays only</div>
+    <div class="legend-item"><span class="legend-icon">🛑</span>Last sailing</div>
+    <div class="legend-item"><span class="legend-icon">🌅</span>First sailing of next day</div>
   </div>
 
   <script>
-    const FARE_TEXT = {
-      sokkwuwan: { weekday: '成人$27.5 / 小童長者$13.8', holiday: '成人$38.7 / 小童長者$19.4' },
-      yungshuewan: { weekday: '成人$28.0 / 小童長者$14.0', holiday: '成人$39.0 / 小童長者$19.5' },
-      pengchau: { weekday: '成人$21.0 / 小童長者$10.5', holiday: '成人$30.0 / 小童長者$15.0' }
-    };
-
-    // 🆕 中環↔坪洲專用的喜靈洲註解對照表（請根據實際班次修改）
+    // Hei Ling Chau info for Peng Chau route
     const HEI_LING_CHAU_INFO_FOR_PENGCHAU = {
-      // 坪洲→中環方向：來自喜靈洲的班次（key=坪洲出發時間）
-      fromHei: {
-        '07:25': '07:10',  // 07:25由坪洲開出，其實07:10由喜靈洲開出
-        '13:00': '12:45',
-        '18:50': '18:35'
-      },
-      // 中環→坪洲方向：會繼續去喜靈洲的班次（key=中環出發時間）
-      toHei: {
-        '09:15': '09:25',  // 09:15由中環開出，到坪洲後09:25繼續去喜靈洲
-        '15:15': '15:25',
-        '19:30': '19:40'
-      }
+      fromHei: { '07:25': '07:10', '13:00': '12:45', '18:50': '18:35' },
+      toHei:   { '09:15': '09:25', '15:15': '15:25', '19:30': '19:40' }
     };
 
     let routesData = {};
     let currentRoute = 'central-sokkwuwan';
+    let hasInitialLoad = false;
     const nextDepartureMinutes = { outbound: null, inbound: null };
 
     async function loadFerryTimes(url, direction) {
@@ -210,7 +193,7 @@
       const text = await res.text();
       const weekdayMatch = text.match(/Monday to Saturday.*?(\[.*?\])/s);
       const holidayMatch = text.match(/Sunday and Public Holidays.*?(\[.*?\])/s);
-      if (!weekdayMatch || !holidayMatch) throw new Error(`${direction} CSV格式錯誤`);
+      if (!weekdayMatch || !holidayMatch) throw new Error(`${direction} CSV format error`);
       const weekday = JSON.parse(weekdayMatch[1].replace(/'/g, '"'));
       const holiday = JSON.parse(holidayMatch[1].replace(/'/g, '"'));
       return { weekday, holiday };
@@ -218,14 +201,14 @@
 
     function isHoliday() { return new Date().getDay() === 0; }
 
-    function normalizeTime(t) {
+    function normaliseTime(t) {
       let s = t.replace(/^[*@#^{\}]+/, '');
       const m = s.match(/(\d{2}:\d{2})/);
       return m ? m[1] : '00:00';
     }
 
     function timeToMinutes(t) {
-      const s = normalizeTime(t);
+      const s = normaliseTime(t);
       const [h, m] = s.split(':').map(Number);
       return h * 60 + m;
     }
@@ -234,84 +217,206 @@
       return times.filter(t => timeToMinutes(t) > nowMinutes).slice(0, 10);
     }
 
-    async function loadAllRoutes() {
-      const [sokOut, sokIn, yungOut, yungIn, pengOut, pengIn] = await Promise.all([
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Sok_Kwu_Wan/data.csv', '中環→索罟灣'),
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Sok_Kwu_Wan_Central/data.csv', '索罟灣→中環'),
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Yung_Shue_Wan/data.csv', '中環→榕樹灣'),
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Yung_Shue_Wan_Central/data.csv', '榕樹灣→中環'),
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Peng_Chau/data.csv', '中環→坪洲'),
-        loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Peng_Chau_Central/data.csv', '坪洲→中環')
-      ]);
+    function ampmTo24(str) {
+      let s = str.trim().toLowerCase();
 
-      routesData = {
-        'central-sokkwuwan': {
-          name: '中環 ↔ 索罟灣', 
-          outbound: { pier: '中環4號 → 索罟灣2號', times: sokOut },
-          inbound: { pier: '索罟灣2號 → 中環4號', times: sokIn }, 
-          duration: '30-40分鐘', 
-          fareKey: 'sokkwuwan'
-        },
-        'central-yungshuewan': {
-          name: '中環 ↔ 榕樹灣', 
-          outbound: { pier: '中環4號 → 榕樹灣碼頭', times: yungOut },
-          inbound: { pier: '榕樹灣碼頭 → 中環4號', times: yungIn }, 
-          duration: '40-50分鐘', 
-          fareKey: 'yungshuewan'
-        },
-        'central-pengchau': {
-          name: '中環 ↔ 坪洲（部分經喜靈洲）', 
-          outbound: { pier: '中環6號 → 坪洲碼頭', times: pengOut },
-          inbound: { pier: '坪洲碼頭 → 中環6號', times: pengIn }, 
-          duration: '35-45分鐘', 
-          fareKey: 'pengchau'
+      if (s.includes('noon')) {
+        const m = s.match(/(\d{1,2}):(\d{2})/);
+        let h = 12;
+        let min = '00';
+        if (m) {
+          h = 12;
+          min = m[2];
         }
-      };
+        return `${h.toString().padStart(2,'0')}:${min}`;
+      }
 
-      document.querySelector('.loading').innerHTML = '✅ 所有航線數據載入完成！';
-      setTimeout(() => selectRoute('central-sokkwuwan'), 500);
+      const m = s.match(/^(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.)$/);
+      if (!m) return null;
+
+      let h = parseInt(m[1], 10);
+      const min = m[2];
+      const suffix = m[3];
+
+      if (suffix === 'a.m.') {
+        if (h === 12) h = 0;
+      } else {
+        if (h !== 12) h += 12;
+      }
+      return `${h.toString().padStart(2,'0')}:${min}`;
+    }
+
+    // Sun Ferry loader – treat all as standard sailings for now
+    async function loadSunFerryBidirectional(url, outboundLabel, inboundLabel) {
+      const res = await fetch(url);
+      const csv = await res.text();
+      const lines = csv.split(/\r?\n/).filter(l => l.trim());
+      const weekday = { outbound: [], inbound: [] };
+      const holiday = { outbound: [], inbound: [] };
+
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split(',');
+        if (row.length < 3) continue;
+        const direction   = row[0].trim();
+        const serviceDate = row[1].trim();
+        const serviceHour = row[2].trim();
+        const hhmm        = ampmTo24(serviceHour);
+        if (!hhmm) continue;
+
+        let dirKey = null;
+        if (direction === outboundLabel)      dirKey = 'outbound';
+        else if (direction === inboundLabel)  dirKey = 'inbound';
+        if (!dirKey) continue;
+
+        const isHolidayRow = /Sundays and public holidays/i.test(serviceDate);
+        const value = hhmm;
+
+        if (isHolidayRow) holiday[dirKey].push(value);
+        else              weekday[dirKey].push(value);
+      }
+
+      ['outbound','inbound'].forEach(d => {
+        weekday[d].sort();
+        holiday[d].sort();
+      });
+
+      return { weekday, holiday };
+    }
+
+    async function loadAllRoutes() {
+      try {
+        const [
+          sokOut, sokIn,
+          yungOut, yungIn,
+          pengOut, pengIn
+        ] = await Promise.all([
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Sok_Kwu_Wan/data.csv', 'Central → Sok Kwu Wan'),
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Sok_Kwu_Wan_Central/data.csv', 'Sok Kwu Wan → Central'),
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Yung_Shue_Wan/data.csv', 'Central → Yung Shue Wan'),
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Yung_Shue_Wan_Central/data.csv', 'Yung Shue Wan → Central'),
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Central_Peng_Chau/data.csv', 'Central → Peng Chau'),
+          loadFerryTimes('https://dannytcchan00.github.io/0Data/data/travel/HKKF/Peng_Chau_Central/data.csv', 'Peng Chau → Central')
+        ]);
+
+        const ccData = await loadSunFerryBidirectional(
+          'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Cheung_Chau/data.csv',
+          'Central to Cheung Chau',
+          'Cheung Chau to Central'
+        );
+
+        const muiData = await loadSunFerryBidirectional(
+          'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Mui_Wo/data.csv',
+          'Central to Mui Wo',
+          'Mui Wo to Central'
+        );
+
+        routesData = {
+          'central-sokkwuwan': {
+            name: 'Central ↔ Sok Kwu Wan',
+            outbound: { pier: 'Central Pier 4 → Sok Kwu Wan Pier 2', times: sokOut },
+            inbound:  { pier: 'Sok Kwu Wan Pier 2 → Central Pier 4', times: sokIn },
+            duration: 'Approx. 30–40 minutes'
+          },
+          'central-yungshuewan': {
+            name: 'Central ↔ Yung Shue Wan',
+            outbound: { pier: 'Central Pier 4 → Yung Shue Wan Pier', times: yungOut },
+            inbound:  { pier: 'Yung Shue Wan Pier → Central Pier 4', times: yungIn },
+            duration: 'Approx. 40–50 minutes'
+          },
+          'central-pengchau': {
+            name: 'Central ↔ Peng Chau (some sailings via Hei Ling Chau)',
+            outbound: { pier: 'Central Pier 6 → Peng Chau Pier', times: pengOut },
+            inbound:  { pier: 'Peng Chau Pier → Central Pier 6', times: pengIn },
+            duration: 'Approx. 35–45 minutes'
+          },
+          'central-cheungchau': {
+            name: 'Central ↔ Cheung Chau (ordinary and fast services)',
+            outbound: { pier: 'Central Pier 5 → Cheung Chau Pier', times: {
+              weekday: ccData.weekday.outbound,
+              holiday: ccData.holiday.outbound
+            }},
+            inbound: { pier: 'Cheung Chau Pier → Central Pier 5', times: {
+              weekday: ccData.weekday.inbound,
+              holiday: ccData.holiday.inbound
+            }},
+            duration: 'Approx. 55–60 minutes, depending on vessel type'
+          },
+          'central-muiwo': {
+            name: 'Central ↔ Mui Wo (ordinary and fast services)',
+            outbound: { pier: 'Central Pier 6 → Mui Wo Pier', times: {
+              weekday: muiData.weekday.outbound,
+              holiday: muiData.holiday.outbound
+            }},
+            inbound: { pier: 'Mui Wo Pier → Central Pier 6', times: {
+              weekday: muiData.weekday.inbound,
+              holiday: muiData.holiday.inbound
+            }},
+            duration: 'Approx. 40–60 minutes, depending on vessel type'
+          }
+        };
+
+        const loading = document.querySelector('.loading');
+        if (loading) loading.innerHTML = '✅ All route data loaded.';
+
+        if (!hasInitialLoad) {
+          hasInitialLoad = true;
+          currentRoute = 'central-sokkwuwan';
+          selectRoute(currentRoute);
+        } else {
+          loadRoute(currentRoute);
+        }
+
+      } catch (error) {
+        console.error('Failed to load route ', error);
+        const loading = document.querySelector('.loading');
+        if (loading) loading.innerHTML = '❌ Failed to load data. Please check the console.';
+      }
     }
 
     function selectRoute(routeId) {
       currentRoute = routeId;
       document.querySelectorAll('.route-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelector(`[data-route="${routeId}"]`).classList.add('active');
+      const btn = document.querySelector(`[data-route="${routeId}"]`);
+      if (btn) btn.classList.add('active');
       loadRoute(routeId);
     }
 
     function loadRoute(routeId) {
       const data = routesData[routeId];
-      const fareText = isHoliday() ? FARE_TEXT[data.fareKey].holiday : FARE_TEXT[data.fareKey].weekday;
+      if (!data) return;
+      const isHol = isHoliday();
+
       document.getElementById('main-content').innerHTML = `
         <div class="route-info">
           <div><strong>${data.name}</strong></div>
           <div>⏱️ ${data.duration}</div>
-          <div class="fare-line ${isHoliday() ? 'fare-holiday' : 'fare-weekday'}">${fareText}</div>
+          <div>Timetables are based on official operator data. Please refer to HKKF / Sun Ferry for the latest notices.</div>
+          <div>${isHol ? 'Today is treated as Sunday / public holiday service.' : 'Today is treated as Monday–Saturday service.'}</div>
         </div>
         <div class="dual-panel">
           <div class="direction-panel direction outbound">
-            <div class="direction-title">🚤 ${data.outbound.pier}</div>
+            <div class="direction-title">🚤 Outbound: ${data.outbound.pier}</div>
             <div class="countdown" id="outbound-countdown">--:--:--</div>
-            <div class="countdown-label">距離下一班</div>
+            <div class="countdown-label">Time until next departure</div>
             <div class="next-ferry">
-              <div id="outbound-status" class="status on-time">準時</div>
+              <div id="outbound-status" class="status on-time">On time</div>
               <div class="next-time" id="outbound-next">--:--</div>
             </div>
             <div class="timetable">
-              <h3 id="outbound-title">平日｜未來10班</h3>
+              <h3 id="outbound-title">${isHol ? 'Holiday' : 'Weekday'} · Next 10 sailings</h3>
               <ul id="outbound-list"></ul>
             </div>
           </div>
           <div class="direction-panel direction inbound">
-            <div class="direction-title">🚤 ${data.inbound.pier}</div>
+            <div class="direction-title">🚤 Inbound: ${data.inbound.pier}</div>
             <div class="countdown" id="inbound-countdown">--:--:--</div>
-            <div class="countdown-label">距離下一班</div>
+            <div class="countdown-label">Time until next departure</div>
             <div class="next-ferry">
-              <div id="inbound-status" class="status on-time">準時</div>
+              <div id="inbound-status" class="status on-time">On time</div>
               <div class="next-time" id="inbound-next">--:--</div>
             </div>
             <div class="timetable">
-              <h3 id="inbound-title">平日｜未來10班</h3>
+              <h3 id="inbound-title">${isHol ? 'Holiday' : 'Weekday'} · Next 10 sailings</h3>
               <ul id="inbound-list"></ul>
             </div>
           </div>
@@ -323,20 +428,17 @@
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
       const data = routesData[currentRoute];
+      if (!data) return;
       const isHol = isHoliday();
 
-      const fareLine = document.querySelector('.fare-line');
-      if (fareLine) {
-        const fareText = isHol ? FARE_TEXT[data.fareKey].holiday : FARE_TEXT[data.fareKey].weekday;
-        fareLine.textContent = fareText;
-        fareLine.className = `fare-line ${isHol ? 'fare-holiday' : 'fare-weekday'}`;
-      }
+      const outTimesAll = data.outbound.times;
+      const inTimesAll  = data.inbound.times;
+      const outTimes = isHol ? outTimesAll.holiday : outTimesAll.weekday;
+      const inTimes  = isHol ? inTimesAll.holiday  : inTimesAll.weekday;
 
-      const outTimes = isHol ? data.outbound.times.holiday : data.outbound.times.weekday;
       const outNext10 = getNext10(nowMin, outTimes);
       updatePanel('outbound', outNext10, nowMin, outTimes, isHol, currentRoute);
 
-      const inTimes = isHol ? data.inbound.times.holiday : data.inbound.times.weekday;
       const inNext10 = getNext10(nowMin, inTimes);
       updatePanel('inbound', inNext10, nowMin, inTimes, isHol, currentRoute);
     }
@@ -350,7 +452,7 @@
       if (!list || !title || !nextTimeEl || !status) return;
 
       if (nextTimes.length > 0) {
-        title.textContent = (isHol ? '假日' : '平日') + '｜未來10班';
+        title.textContent = (isHol ? 'Holiday' : 'Weekday') + ' · Next 10 sailings';
         list.innerHTML = '';
 
         nextTimes.forEach(time => {
@@ -359,25 +461,17 @@
 
           if (time.startsWith('^')) { icon = '🛑'; cls = 'last'; }
           else if (time.startsWith('{')) { icon = '🛎️'; cls = 'saturday-only'; }
-          else if (time.startsWith('*')) { icon = '⚡'; cls = 'optional'; }
           else if (time.startsWith('#')) { icon = '📦'; cls = 'optional'; }
 
-          const displayTime = normalizeTime(time);
+          const displayTime = normaliseTime(time);
 
-          // 🆕 中環↔坪洲專用：喜靈洲註解邏輯
           if (routeId === 'central-pengchau' && HEI_LING_CHAU_INFO_FOR_PENGCHAU) {
             if (prefix === 'outbound') {
-              // 中環→坪洲：檢查是否會繼續去喜靈洲
               const toHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.toHei[displayTime];
-              if (toHei) {
-                note = `之後${toHei}坪洲→喜靈洲`;
-              }
+              if (toHei) note = `Then ${toHei} Peng Chau → Hei Ling Chau`;
             } else if (prefix === 'inbound') {
-              // 坪洲→中環：檢查是否來自喜靈洲
               const fromHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.fromHei[displayTime];
-              if (fromHei) {
-                note = `${fromHei}喜靈洲→坪洲`;
-              }
+              if (fromHei) note = `${fromHei} Hei Ling Chau → Peng Chau`;
             }
           }
 
@@ -391,23 +485,23 @@
 
         const firstTimeStr = nextTimes[0];
         nextDepartureMinutes[prefix] = timeToMinutes(firstTimeStr);
-        const firstClean = normalizeTime(firstTimeStr);
+        const firstClean = normaliseTime(firstTimeStr);
         nextTimeEl.textContent = firstClean;
-        status.textContent = '準時';
+        status.textContent = 'On time';
         status.className = 'status on-time';
       } else {
         nextDepartureMinutes[prefix] = null;
         const tomorrowFirst = allTimes[0];
-        const tomorrowFirstClean = normalizeTime(tomorrowFirst);
-        title.textContent = (isHol ? '假日' : '平日') + '｜明日第一班';
+        const tomorrowFirstClean = normaliseTime(tomorrowFirst);
+        title.textContent = (isHol ? 'Holiday' : 'Weekday') + ' · First sailing tomorrow';
         list.innerHTML = `<li><span class="time tomorrow">${tomorrowFirstClean}</span><span>🌅</span></li>`;
         nextTimeEl.textContent = tomorrowFirstClean;
-        status.textContent = '明日第一班';
+        status.textContent = 'First sailing tomorrow';
         status.className = 'status tomorrow';
       }
     }
 
-    // 實時倒數
+    // 1‑second countdown
     setInterval(() => {
       const now = new Date();
       const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
@@ -437,8 +531,14 @@
       });
     }, 1000);
 
+    // Initial load
     loadAllRoutes();
+
+    // Redraw countdown / next 10 sailings every minute
     setInterval(updateDisplay, 60000);
+
+    // Reload CSV data every 5 minutes, keeping the current route
+    setInterval(loadAllRoutes, 5 * 60 * 1000);
   </script>
 </body>
 </html>
