@@ -98,6 +98,11 @@
       </div>
 
       <div class="route-group">
+        <h3>PITCL</h3>
+        <button class="route-btn" data-route="central-mawan">Central ↔ Ma Wan</button>
+      </div>
+
+      <div class="route-group">
         <h3>Discovery Bay</h3>
         <button class="route-btn" data-route="central-discoverybay">Central ↔ Discovery Bay</button>
         <div class="hint">Timetables are loaded from public CSV datasets. Fares are shown where provided.</div>
@@ -125,6 +130,9 @@
     SUN: {
       CCC: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Cheung_Chau/data.csv',
       CMW: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Mui_Wo/data.csv'
+    },
+    PITCL: {
+      MW:  'https://dannytcchan00.github.io/0Data/data/travel/Ma_Wan/data.csv'
     },
     DBAY: {
       MAIN: 'https://dannytcchan00.github.io/0Data/data/travel/DBay/data.csv'
@@ -213,6 +221,23 @@
         { label:'Resident – Adult', values:[38.2] },
         { label:'Resident – Concessionary', values:[19.1] }
       ]}
+    },
+    'central-mawan': {
+      title: 'Ma Wan fares (one-way)',
+      weekdaySatLabel: 'All days (as provided)',
+      holidayLabel: 'All days (as provided)',
+      weekdaySat: { services:['Fare'], rows:[
+        { label:'Non-resident – Adult', values:[36.0] },
+        { label:'Non-resident – Concessionary', values:[18.0] },
+        { label:'Resident – Adult', values:[24.1] },
+        { label:'Resident – Concessionary', values:[12.1] }
+      ]},
+      holiday: { services:['Fare'], rows:[
+        { label:'Non-resident – Adult', values:[36.0] },
+        { label:'Non-resident – Concessionary', values:[18.0] },
+        { label:'Resident – Adult', values:[24.1] },
+        { label:'Resident – Concessionary', values:[12.1] }
+      ]}
     }
   };
 
@@ -228,12 +253,8 @@
   const nextDepartureMinutes = { outbound: null, inbound: null };
 
   function setMainStatus(title, msg){
-    document.getElementById('main-content').innerHTML = `
-      <div class="card">
-        <div class="title">${title}</div>
-        <div class="meta">${msg}</div>
-      </div>
-    `;
+    document.getElementById('main-content').innerHTML =
+      `<div class="card"><div class="title">${title}</div><div class="meta">${msg}</div></div>`;
   }
   function setSidebarEnabled(enabled){
     document.querySelectorAll('.route-btn').forEach(b => b.disabled = !enabled);
@@ -265,6 +286,7 @@
     return times.filter(x => timeToMinutesHHMM(normaliseTimeHHMM(x)) > nowMin).slice(0, n);
   }
 
+  // supports a.m./p.m./noon
   function ampmTo24(h){
     let s = String(h || '').trim().toLowerCase();
     if (!s) return null;
@@ -321,6 +343,47 @@
       else continue;
 
       const isHolidayRow = serviceDate.includes('sundays and public holidays');
+      if (isHolidayRow) holiday[dirKey].push(hhmm);
+      else weekday[dirKey].push(hhmm);
+    }
+
+    ['outbound','inbound'].forEach(k => {
+      weekday[k] = Array.from(new Set(weekday[k])).sort();
+      holiday[k] = Array.from(new Set(holiday[k])).sort();
+    });
+
+    return { weekday, holiday };
+  }
+
+  // PITCL Ma Wan CSV has:
+  // - weekdays: "Mondays to Fridays except public holidays"
+  // - holidays: "Saturdays, Sundays and public holidays" [web:14]
+  async function loadMaWanFromCsv(url){
+    const res = await fetch(url, { cache:'no-store' });
+    if (!res.ok) throw new Error(`Fetch failed (${res.status})\n${url}`);
+    const csv = await res.text();
+    const lines = csv.split(/\r?\n/).filter(l => l.trim());
+
+    const weekday = { outbound: [], inbound: [] };
+    const holiday = { outbound: [], inbound: [] };
+
+    for (let i=1;i<lines.length;i++){
+      const row = lines[i].split(',');
+      if (row.length < 3) continue;
+
+      const direction = row[0].trim();
+      const serviceDate = row[1].trim().toLowerCase();
+      const serviceHour = row[2].trim();
+
+      const hhmm = ampmTo24(serviceHour);
+      if (!hhmm) continue;
+
+      let dirKey = null;
+      if (direction === 'Central to Ma Wan') dirKey = 'outbound';
+      else if (direction === 'Ma Wan to Central') dirKey = 'inbound';
+      else continue;
+
+      const isHolidayRow = serviceDate.includes('saturdays, sundays and public holidays');
       if (isHolidayRow) holiday[dirKey].push(hhmm);
       else weekday[dirKey].push(hhmm);
     }
@@ -403,9 +466,7 @@
         <div class="fare-title">${f.title}</div>
         <div class="fare-sub">${dayTitle}</div>
         <table class="fare-table">
-          <thead>
-            <tr><th>Passenger</th>${colHead}</tr>
-          </thead>
+          <thead><tr><th>Passenger</th>${colHead}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="fare-note">Note: Fares shown are provided values and may be subject to change.</div>
@@ -435,6 +496,10 @@
       );
       const muiData = await step('Sun Ferry Central ↔ Mui Wo', () =>
         loadSunFerryBidirectionalFromGithubCsv(URLS.SUN.CMW, 'Central to Mui Wo', 'Mui Wo to Central')
+      );
+
+      const maWanData = await step('PITCL Central ↔ Ma Wan', () =>
+        loadMaWanFromCsv(URLS.PITCL.MW)
       );
 
       const dbay = await step('Discovery Bay Central ↔ Discovery Bay', () =>
@@ -475,6 +540,13 @@
           operator:'Sun Ferry',
           outbound:{ pier:'Central → Mui Wo', times:{ weekday:muiData.weekday.outbound, holiday:muiData.holiday.outbound } },
           inbound:{ pier:'Mui Wo → Central', times:{ weekday:muiData.weekday.inbound, holiday:muiData.holiday.inbound } },
+          mode:'sunferry'
+        },
+        'central-mawan': {
+          name:'Central ↔ Ma Wan',
+          operator:'Park Island Transport Company Limited (PITCL)',
+          outbound:{ pier:'Central → Ma Wan', times:{ weekday:maWanData.weekday.outbound, holiday:maWanData.holiday.outbound } },
+          inbound:{ pier:'Ma Wan → Central', times:{ weekday:maWanData.weekday.inbound, holiday:maWanData.holiday.inbound } },
           mode:'sunferry'
         },
         'central-discoverybay': {
@@ -631,7 +703,6 @@
     updateDisplay();
   }
 
-  // Countdown ticker (every second)
   setInterval(() => {
     const now = new Date();
     const nowSec = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
@@ -657,14 +728,13 @@
     btn.addEventListener('click', () => selectRoute(btn.dataset.route));
   });
 
-  // Initial load
   loadAllRoutes(true);
 
-  // Recalculate "Next 10 sailings" every minute
+  // Recalculate “Next 10 sailings” every minute
   setInterval(updateDisplay, 60*1000);
 
-  // Auto-refresh data every minute (no page reload; stays on current route)
-  setInterval(() => loadAllRoutes(false), 60*1000); // uses setInterval for periodic refresh [web:258]
+  // Auto-refresh CSV data every minute (no page reload; stays on current route) [web:258]
+  setInterval(() => loadAllRoutes(false), 60*1000);
 </script>
 </body>
 </html>
