@@ -25,7 +25,6 @@
 
     .route-row{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:stretch}
 
-    /* Minimal fare table */
     .fare-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:18px}
     .fare-title{font-size:14px;font-weight:850;margin-bottom:4px}
     .fare-sub{font-size:12px;color:#aaa;margin-bottom:10px}
@@ -79,6 +78,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="sidebar">
@@ -98,14 +98,22 @@
       </div>
 
       <div class="route-group">
+        <h3>Sun Ferry – Inter-Island</h3>
+        <button class="route-btn" data-route="inter-island-mw-pc">Mui Wo ↔ Peng Chau</button>
+        <button class="route-btn" data-route="inter-island-cc-mw">Cheung Chau ↔ Mui Wo</button>
+        <div class="hint">Inter-Island CSV uses Service Date = Daily (no weekday/holiday split).</div>
+      </div>
+
+      <div class="route-group">
         <h3>PITCL</h3>
-        <button class="route-btn" data-route="central-mawan">Central ↔ Ma Wan</button>
+        <button class="route-btn" data-route="central-mawan">Ma Wan ↔ Central</button>
+        <button class="route-btn" data-route="mawan-tsuenwan">Ma Wan ↔ Tsuen Wan</button>
+        <div class="hint">PITCL holiday group is “Saturdays, Sundays and public holidays”.</div>
       </div>
 
       <div class="route-group">
         <h3>Discovery Bay</h3>
         <button class="route-btn" data-route="central-discoverybay">Central ↔ Discovery Bay</button>
-        <div class="hint">Timetables are loaded from public CSV datasets. Fares are shown where provided.</div>
       </div>
     </div>
 
@@ -129,10 +137,12 @@
     },
     SUN: {
       CCC: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Cheung_Chau/data.csv',
-      CMW: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Mui_Wo/data.csv'
+      CMW: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/Central_Mui_Wo/data.csv',
+      INTER: 'https://dannytcchan00.github.io/0Data/data/travel/SunFerry/InterIsland/data.csv'
     },
     PITCL: {
-      MW:  'https://dannytcchan00.github.io/0Data/data/travel/Ma_Wan/data.csv'
+      MW: 'https://dannytcchan00.github.io/0Data/data/travel/Ma_Wan/data.csv',
+      TW: 'https://dannytcchan00.github.io/0Data/data/travel/Ma_Wan/TW/data.csv'
     },
     DBAY: {
       MAIN: 'https://dannytcchan00.github.io/0Data/data/travel/DBay/data.csv'
@@ -140,92 +150,10 @@
   };
 
   const FARES = {
-    'central-cheungchau': {
-      title: 'Cheung Chau fares (one-way)',
-      weekdaySatLabel: 'Mondays–Saturdays (except public holidays)',
-      holidayLabel: 'Sundays & public holidays',
-      weekdaySat: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[14.8,29.2] },
-        { label:'Elderly / Child / Disabled', values:[7.4,14.5] }
-      ]},
-      holiday: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[22.0,42.3] },
-        { label:'Elderly / Child / Disabled', values:[11.0,21.1] }
-      ]}
-    },
-    'central-muiwo': {
-      title: 'Mui Wo fares (one-way)',
-      weekdaySatLabel: 'Mondays–Saturdays (except public holidays)',
-      holidayLabel: 'Sundays & public holidays',
-      weekdaySat: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[28.6,34.1] },
-        { label:'Elderly / Child / Disabled', values:[14.2,17.0] }
-      ]},
-      holiday: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[41.9,48.9] },
-        { label:'Elderly / Child / Disabled', values:[20.9,24.5] }
-      ]}
-    },
-    'central-pengchau': {
-      title: 'Peng Chau fares (one-way)',
-      weekdaySatLabel: 'Mondays–Saturdays (except public holidays)',
-      holidayLabel: 'Sundays & public holidays',
-      weekdaySat: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[19.8,36.9] },
-        { label:'Elderly / Child / Disabled', values:[9.9,18.4] }
-      ]},
-      holiday: { services:['Ordinary','Fast'], rows:[
-        { label:'Adult', values:[28.4,54.3] },
-        { label:'Elderly / Child / Disabled', values:[14.2,27.1] }
-      ]}
-    },
-    'central-yungshuewan': {
-      title: 'Yung Shue Wan fares (one-way)',
-      weekdaySatLabel: 'Mondays–Saturdays (except public holidays)',
-      holidayLabel: 'Sundays & public holidays',
-      weekdaySat: { services:['Fare'], rows:[
-        { label:'Adult', values:[22.0] },
-        { label:'Elderly / Child / Disabled', values:[11.0] }
-      ]},
-      holiday: { services:['Fare'], rows:[
-        { label:'Adult', values:[30.8] },
-        { label:'Elderly / Child / Disabled', values:[15.4] }
-      ]}
-    },
-    'central-sokkwuwan': {
-      title: 'Sok Kwu Wan fares (one-way)',
-      weekdaySatLabel: 'Mondays–Saturdays (except public holidays)',
-      holidayLabel: 'Sundays & public holidays',
-      weekdaySat: { services:['Fare'], rows:[
-        { label:'Adult', values:[27.5] },
-        { label:'Elderly / Child / Disabled', values:[13.7] }
-      ]},
-      holiday: { services:['Fare'], rows:[
-        { label:'Adult', values:[38.7] },
-        { label:'Elderly / Child / Disabled', values:[19.3] }
-      ]}
-    },
-    'central-discoverybay': {
-      title: 'Discovery Bay fares (one-way)',
-      weekdaySatLabel: 'All days (as provided)',
-      holidayLabel: 'All days (as provided)',
-      weekdaySat: { services:['Fare'], rows:[
-        { label:'Non-resident – Adult', values:[55.8] },
-        { label:'Non-resident – Concessionary', values:[27.9] },
-        { label:'Resident – Adult', values:[38.2] },
-        { label:'Resident – Concessionary', values:[19.1] }
-      ]},
-      holiday: { services:['Fare'], rows:[
-        { label:'Non-resident – Adult', values:[55.8] },
-        { label:'Non-resident – Concessionary', values:[27.9] },
-        { label:'Resident – Adult', values:[38.2] },
-        { label:'Resident – Concessionary', values:[19.1] }
-      ]}
-    },
     'central-mawan': {
-      title: 'Ma Wan fares (one-way)',
-      weekdaySatLabel: 'All days (as provided)',
-      holidayLabel: 'All days (as provided)',
+      title: 'Ma Wan ↔ Central fares (one-way)',
+      weekdaySatLabel: 'Mondays to Fridays (except public holidays)',
+      holidayLabel: 'Saturdays, Sundays & public holidays',
       weekdaySat: { services:['Fare'], rows:[
         { label:'Non-resident – Adult', values:[36.0] },
         { label:'Non-resident – Concessionary', values:[18.0] },
@@ -237,6 +165,49 @@
         { label:'Non-resident – Concessionary', values:[18.0] },
         { label:'Resident – Adult', values:[24.1] },
         { label:'Resident – Concessionary', values:[12.1] }
+      ]}
+    },
+    'mawan-tsuenwan': {
+      title: 'Ma Wan ↔ Tsuen Wan fares (one-way)',
+      weekdaySatLabel: 'All days (as provided)',
+      holidayLabel: 'All days (as provided)',
+      weekdaySat: { services:['Fare'], rows:[
+        { label:'Non-resident – Adult', values:[12.0] },
+        { label:'Non-resident – Senior / Child / Disabled', values:[6.0] },
+        { label:'Resident – Adult', values:[10.2] },
+        { label:'Resident – Senior / Child / Disabled', values:[5.1] }
+      ]},
+      holiday: { services:['Fare'], rows:[
+        { label:'Non-resident – Adult', values:[12.0] },
+        { label:'Non-resident – Senior / Child / Disabled', values:[6.0] },
+        { label:'Resident – Adult', values:[10.2] },
+        { label:'Resident – Senior / Child / Disabled', values:[5.1] }
+      ]}
+    },
+    'inter-island-mw-pc': {
+      title: 'Inter-Island fares (one-way)',
+      weekdaySatLabel: 'All days',
+      holidayLabel: 'All days',
+      weekdaySat: { services:['Fare'], rows:[
+        { label:'Adult', values:[14.5] },
+        { label:'Senior / Child / Disabled', values:[7.3] }
+      ]},
+      holiday: { services:['Fare'], rows:[
+        { label:'Adult', values:[14.5] },
+        { label:'Senior / Child / Disabled', values:[7.3] }
+      ]}
+    },
+    'inter-island-cc-mw': {
+      title: 'Inter-Island fares (one-way)',
+      weekdaySatLabel: 'All days',
+      holidayLabel: 'All days',
+      weekdaySat: { services:['Fare'], rows:[
+        { label:'Adult', values:[14.5] },
+        { label:'Senior / Child / Disabled', values:[7.3] }
+      ]},
+      holiday: { services:['Fare'], rows:[
+        { label:'Adult', values:[14.5] },
+        { label:'Senior / Child / Disabled', values:[7.3] }
       ]}
     }
   };
@@ -260,19 +231,34 @@
     document.querySelectorAll('.route-btn').forEach(b => b.disabled = !enabled);
   }
 
-  function todayBucket(){
+  // ===== date buckets =====
+  function todayBucketGeneral(){
     const dow = new Date().getDay();
     if (dow === 0) return 'holiday';
     if (dow === 6) return 'saturday';
     return 'weekday';
   }
-  function dayLabelForHeader(){
-    const b = todayBucket();
+  function todayBucketPITCL(){
+    // PITCL holiday group includes Saturdays + Sundays + public holidays in the CSV wording. [attached_file:1][web:41]
+    const dow = new Date().getDay();
+    if (dow === 6 || dow === 0) return 'holiday';
+    return 'weekday';
+  }
+  function dayLabelForHeader(mode){
+    if (mode === 'pitcl'){
+      const b = todayBucketPITCL();
+      return (b === 'holiday')
+        ? 'Saturdays, Sundays & public holidays'
+        : 'Mondays to Fridays (except public holidays)';
+    }
+    if (mode === 'daily') return 'Daily';
+    const b = todayBucketGeneral();
     if (b === 'weekday') return 'Weekdays (except public holidays)';
     if (b === 'saturday') return 'Saturdays (except public holidays)';
     return 'Sundays & public holidays';
   }
 
+  // ===== time utils =====
   function normaliseTimeHHMM(t){
     const s = String(t||'').replace(/^[*@#^{\}]+/, '');
     const m = s.match(/(\d{2}:\d{2})/);
@@ -304,6 +290,32 @@
     return `${String(hh).padStart(2,'0')}:${mm}`;
   }
 
+  // ===== robust CSV parser for quoted fields with commas ===== [attached_file:1][web:41]
+  function parseCsvLine(line){
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i=0;i<line.length;i++){
+      const ch = line[i];
+      if (ch === '"'){
+        if (inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes){
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+
+  function normaliseDirection(s){
+    return String(s||'').trim().replace(/\s+/g,' ');
+  }
+
+  // ===== loaders =====
   async function loadHkkfFromGithubCsv(url){
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Fetch failed (${res.status})\n${url}`);
@@ -342,7 +354,7 @@
       else if (direction === inboundLabel) dirKey = 'inbound';
       else continue;
 
-      const isHolidayRow = serviceDate.includes('sundays and public holidays');
+      const isHolidayRow = serviceDate.includes('sundays and public holidays') || serviceDate.includes('sunday and public holidays');
       if (isHolidayRow) holiday[dirKey].push(hhmm);
       else weekday[dirKey].push(hhmm);
     }
@@ -355,35 +367,43 @@
     return { weekday, holiday };
   }
 
-  // PITCL Ma Wan CSV has:
-  // - weekdays: "Mondays to Fridays except public holidays"
-  // - holidays: "Saturdays, Sundays and public holidays" [web:14]
-  async function loadMaWanFromCsv(url){
+  async function loadPITCLFromCsv(url, outboundText, inboundText){
     const res = await fetch(url, { cache:'no-store' });
     if (!res.ok) throw new Error(`Fetch failed (${res.status})\n${url}`);
     const csv = await res.text();
     const lines = csv.split(/\r?\n/).filter(l => l.trim());
 
+    const header = lines[0].replace(/^\uFEFF/, '');
+    const headers = parseCsvLine(header).map(x => x.toLowerCase());
+    const idxDir  = headers.indexOf('direction');
+    const idxDate = headers.indexOf('service date');
+    const idxHour = headers.indexOf('service hour');
+    if (idxDir < 0 || idxDate < 0 || idxHour < 0) throw new Error(`PITCL CSV header not recognised\n${url}`);
+
     const weekday = { outbound: [], inbound: [] };
     const holiday = { outbound: [], inbound: [] };
 
     for (let i=1;i<lines.length;i++){
-      const row = lines[i].split(',');
-      if (row.length < 3) continue;
+      const row = parseCsvLine(lines[i]);
+      if (row.length <= Math.max(idxDir, idxDate, idxHour)) continue;
 
-      const direction = row[0].trim();
-      const serviceDate = row[1].trim().toLowerCase();
-      const serviceHour = row[2].trim();
+      const direction = normaliseDirection(row[idxDir]);
+      const serviceDate = String(row[idxDate]||'').trim().toLowerCase();
+      const serviceHour = String(row[idxHour]||'').trim();
 
       const hhmm = ampmTo24(serviceHour);
       if (!hhmm) continue;
 
       let dirKey = null;
-      if (direction === 'Central to Ma Wan') dirKey = 'outbound';
-      else if (direction === 'Ma Wan to Central') dirKey = 'inbound';
+      if (direction === outboundText) dirKey = 'outbound';
+      else if (direction === inboundText) dirKey = 'inbound';
       else continue;
 
-      const isHolidayRow = serviceDate.includes('saturdays, sundays and public holidays');
+      const isHolidayRow =
+        serviceDate.includes('saturday') ||
+        serviceDate.includes('sunday') ||
+        serviceDate.includes('public holiday');
+
       if (isHolidayRow) holiday[dirKey].push(hhmm);
       else weekday[dirKey].push(hhmm);
     }
@@ -394,6 +414,35 @@
     });
 
     return { weekday, holiday };
+  }
+
+  async function loadInterIslandDirections(url){
+    // CSV is Direction, Service Date, Service Hour, Remark; Service Date = Daily. [attached_file:1]
+    const res = await fetch(url, { cache:'no-store' });
+    if (!res.ok) throw new Error(`Fetch failed (${res.status})\n${url}`);
+    const csv = await res.text();
+    const lines = csv.split(/\r?\n/).filter(l => l.trim());
+
+    const header = lines[0].replace(/^\uFEFF/, '');
+    const headers = header.split(',').map(x => x.trim().toLowerCase());
+    const idxDir  = headers.indexOf('direction');
+    const idxHour = headers.indexOf('service hour');
+    if (idxDir < 0 || idxHour < 0) throw new Error(`Inter-Island CSV header not recognised\n${url}`);
+
+    const out = {}; // dir -> [hhmm]
+    for (let i=1;i<lines.length;i++){
+      const row = lines[i].split(',');
+      if (row.length <= Math.max(idxDir, idxHour)) continue;
+
+      const direction = normaliseDirection(row[idxDir]);
+      const hhmm = ampmTo24(row[idxHour]);
+      if (!direction || !hhmm) continue;
+
+      if (!out[direction]) out[direction] = [];
+      out[direction].push(hhmm);
+    }
+    Object.keys(out).forEach(k => out[k] = Array.from(new Set(out[k])).sort());
+    return out;
   }
 
   async function loadDbayFromGithubCsv(url){
@@ -415,7 +464,7 @@
       const x = String(s||'').trim().toLowerCase();
       if (x.includes('mondays to fridays')) return 'weekday';
       if (x.includes('saturdays')) return 'saturday';
-      if (x.includes('sundays and public holidays')) return 'holiday';
+      if (x.includes('sundays and public holidays') || x.includes('sunday and public holidays')) return 'holiday';
       return null;
     };
 
@@ -447,7 +496,10 @@
       return `<div class="fare-card"><div class="fare-title">Fares</div><div class="fare-sub">No fare data available.</div></div>`;
     }
 
-    const b = todayBucket();
+    const isPITCL = (routeId === 'central-mawan' || routeId === 'mawan-tsuenwan');
+    const isDaily = (routeId.startsWith('inter-island'));
+    const b = isDaily ? 'daily' : (isPITCL ? todayBucketPITCL() : todayBucketGeneral());
+
     const pack = (b === 'holiday') ? f.holiday : f.weekdaySat;
     const dayTitle = (b === 'holiday') ? f.holidayLabel : f.weekdaySatLabel;
 
@@ -464,7 +516,7 @@
     return `
       <div class="fare-card">
         <div class="fare-title">${f.title}</div>
-        <div class="fare-sub">${dayTitle}</div>
+        <div class="fare-sub">${isDaily ? 'All days' : dayTitle}</div>
         <table class="fare-table">
           <thead><tr><th>Passenger</th>${colHead}</tr></thead>
           <tbody>${rows}</tbody>
@@ -472,6 +524,127 @@
         <div class="fare-note">Note: Fares shown are provided values and may be subject to change.</div>
       </div>
     `;
+  }
+
+  function renderNext(prefix, nextTimes, allTimes){
+    const nextList = document.getElementById(`${prefix}-next-list`);
+    const nextEl = document.getElementById(`${prefix}-next`);
+    const status = document.getElementById(`${prefix}-status`);
+    nextList.innerHTML = '';
+
+    if (nextTimes.length){
+      const hhmm0 = normaliseTimeHHMM(nextTimes[0]);
+      nextEl.textContent = hhmm0;
+      status.textContent = 'On time';
+      status.className = 'status on';
+      nextDepartureMinutes[prefix] = timeToMinutesHHMM(hhmm0);
+
+      nextTimes.forEach(raw => {
+        const hhmm = normaliseTimeHHMM(raw);
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="t">${hhmm}</span><span class="tag">Scheduled</span>`;
+        nextList.appendChild(li);
+      });
+    } else {
+      nextDepartureMinutes[prefix] = null;
+      const first = allTimes && allTimes.length ? allTimes[0] : null;
+      nextEl.textContent = first ? normaliseTimeHHMM(first) : '--:--';
+      status.textContent = 'Tomorrow';
+      status.className = 'status tom';
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="t">${first ? normaliseTimeHHMM(first) : '--:--'}</span><span class="tag">First sailing tomorrow</span>`;
+      nextList.appendChild(li);
+    }
+  }
+
+  function updateDisplay(){
+    if (!dataReady) return;
+    const data = routesData[currentRoute];
+    if (!data) return;
+
+    const now = new Date();
+    const nowMin = now.getHours()*60 + now.getMinutes();
+
+    let outTimes = [], inTimes = [];
+
+    if (data.mode === 'hkkf' || data.mode === 'sunferry'){
+      const b = todayBucketGeneral();
+      const isHoliday = (b === 'holiday');
+      outTimes = isHoliday ? data.outbound.times.holiday : data.outbound.times.weekday;
+      inTimes  = isHoliday ? data.inbound.times.holiday  : data.inbound.times.weekday;
+    } else if (data.mode === 'pitcl'){
+      const b = todayBucketPITCL();
+      const isHoliday = (b === 'holiday');
+      outTimes = isHoliday ? data.outbound.times.holiday : data.outbound.times.weekday;
+      inTimes  = isHoliday ? data.inbound.times.holiday  : data.inbound.times.weekday;
+    } else if (data.mode === 'daily'){
+      outTimes = data.outbound.times.daily || [];
+      inTimes  = data.inbound.times.daily  || [];
+    } else if (data.mode === 'dbay'){
+      const b = todayBucketGeneral();
+      outTimes = data.outbound.times[b] || [];
+      inTimes  = data.inbound.times[b] || [];
+    }
+
+    renderNext('outbound', getNextN(nowMin, outTimes, 10), outTimes);
+    renderNext('inbound',  getNextN(nowMin, inTimes, 10),  inTimes);
+  }
+
+  function loadRoute(routeId){
+    const data = routesData[routeId];
+    if (!data){
+      setMainStatus('No data', 'Route data not loaded.');
+      return;
+    }
+
+    document.getElementById('main-content').innerHTML = `
+      <div class="route-row">
+        <div class="card">
+          <div class="title">${data.name}</div>
+          <div class="meta">Operator: ${data.operator}\nTimetable shown for: ${dayLabelForHeader(data.mode)}</div>
+        </div>
+        ${fareHtml(routeId)}
+      </div>
+
+      <div class="grid">
+        <div class="panel outbound">
+          <h3>${data.outbound.pier}</h3>
+          <div class="countdown-wrap"><div class="countdown" id="outbound-countdown">--:--:--</div></div>
+          <div class="sub">Time until next sailing</div>
+          <div class="nextbox">
+            <span class="status on" id="outbound-status">On time</span>
+            <div class="timebig" id="outbound-next">--:--</div>
+          </div>
+          <div class="section-title">Next 10 sailings</div>
+          <ul id="outbound-next-list"></ul>
+        </div>
+
+        <div class="panel inbound">
+          <h3>${data.inbound.pier}</h3>
+          <div class="countdown-wrap"><div class="countdown" id="inbound-countdown">--:--:--</div></div>
+          <div class="sub">Time until next sailing</div>
+          <div class="nextbox">
+            <span class="status on" id="inbound-status">On time</span>
+            <div class="timebig" id="inbound-next">--:--</div>
+          </div>
+          <div class="section-title">Next 10 sailings</div>
+          <ul id="inbound-next-list"></ul>
+        </div>
+      </div>
+    `;
+    updateDisplay();
+  }
+
+  function selectRoute(routeId){
+    if (!dataReady){
+      setMainStatus('Loading…', 'Fetching timetable data. Please wait.');
+      return;
+    }
+    currentRoute = routeId;
+    document.querySelectorAll('.route-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`[data-route="${routeId}"]`);
+    if (btn) btn.classList.add('active');
+    loadRoute(routeId);
   }
 
   async function loadAllRoutes(isFirst=false){
@@ -484,6 +657,7 @@
     };
 
     try {
+      // HKKF
       const sokOut  = await step('HKKF Central → Sok Kwu Wan', () => loadHkkfFromGithubCsv(URLS.HKKF.CSKW));
       const sokIn   = await step('HKKF Sok Kwu Wan → Central', () => loadHkkfFromGithubCsv(URLS.HKKF.SKWC));
       const yungOut = await step('HKKF Central → Yung Shue Wan', () => loadHkkfFromGithubCsv(URLS.HKKF.CYSW));
@@ -491,6 +665,7 @@
       const pengOut = await step('HKKF Central → Peng Chau', () => loadHkkfFromGithubCsv(URLS.HKKF.CPC));
       const pengIn  = await step('HKKF Peng Chau → Central', () => loadHkkfFromGithubCsv(URLS.HKKF.PCC));
 
+      // Sun Ferry main
       const ccData = await step('Sun Ferry Central ↔ Cheung Chau', () =>
         loadSunFerryBidirectionalFromGithubCsv(URLS.SUN.CCC, 'Central to Cheung Chau', 'Cheung Chau to Central')
       );
@@ -498,13 +673,28 @@
         loadSunFerryBidirectionalFromGithubCsv(URLS.SUN.CMW, 'Central to Mui Wo', 'Mui Wo to Central')
       );
 
-      const maWanData = await step('PITCL Central ↔ Ma Wan', () =>
-        loadMaWanFromCsv(URLS.PITCL.MW)
+      // PITCL (robust CSV parsing)
+      const maWanCentral = await step('PITCL Ma Wan ↔ Central', () =>
+        loadPITCLFromCsv(URLS.PITCL.MW, 'Central to Ma Wan', 'Ma Wan to Central')
+      );
+      const maWanTsuenWan = await step('PITCL Ma Wan ↔ Tsuen Wan', () =>
+        loadPITCLFromCsv(URLS.PITCL.TW, 'Ma Wan to Tsuen Wan', 'Tsuen Wan to Ma Wan')
       );
 
+      // Inter-Island (Daily)
+      const inter = await step('Sun Ferry Inter-Island', () =>
+        loadInterIslandDirections(URLS.SUN.INTER)
+      );
+
+      // DBay
       const dbay = await step('Discovery Bay Central ↔ Discovery Bay', () =>
         loadDbayFromGithubCsv(URLS.DBAY.MAIN)
       );
+
+      const dir_mw_pc = (inter['Mui Wo to Peng Chau'] || []);
+      const dir_pc_mw = (inter['Peng Chau to Mui Wo'] || []);
+      const dir_cc_mw = (inter['Cheung Chau to Mui Wo'] || []);
+      const dir_mw_cc = (inter['Mui Wo to Cheung Chau'] || []);
 
       routesData = {
         'central-sokkwuwan': {
@@ -542,13 +732,37 @@
           inbound:{ pier:'Mui Wo → Central', times:{ weekday:muiData.weekday.inbound, holiday:muiData.holiday.inbound } },
           mode:'sunferry'
         },
-        'central-mawan': {
-          name:'Central ↔ Ma Wan',
-          operator:'Park Island Transport Company Limited (PITCL)',
-          outbound:{ pier:'Central → Ma Wan', times:{ weekday:maWanData.weekday.outbound, holiday:maWanData.holiday.outbound } },
-          inbound:{ pier:'Ma Wan → Central', times:{ weekday:maWanData.weekday.inbound, holiday:maWanData.holiday.inbound } },
-          mode:'sunferry'
+
+        'inter-island-mw-pc': {
+          name:'Inter-Island: Mui Wo ↔ Peng Chau',
+          operator:'Sun Ferry',
+          outbound:{ pier:'Mui Wo → Peng Chau', times:{ daily: dir_mw_pc } },
+          inbound:{ pier:'Peng Chau → Mui Wo', times:{ daily: dir_pc_mw } },
+          mode:'daily'
         },
+        'inter-island-cc-mw': {
+          name:'Inter-Island: Cheung Chau ↔ Mui Wo',
+          operator:'Sun Ferry',
+          outbound:{ pier:'Cheung Chau → Mui Wo', times:{ daily: dir_cc_mw } },
+          inbound:{ pier:'Mui Wo → Cheung Chau', times:{ daily: dir_mw_cc } },
+          mode:'daily'
+        },
+
+        'central-mawan': {
+          name:'Ma Wan ↔ Central',
+          operator:'Park Island Transport Company Limited (PITCL)',
+          outbound:{ pier:'Central → Ma Wan', times:{ weekday:maWanCentral.weekday.outbound, holiday:maWanCentral.holiday.outbound } },
+          inbound:{ pier:'Ma Wan → Central', times:{ weekday:maWanCentral.weekday.inbound, holiday:maWanCentral.holiday.inbound } },
+          mode:'pitcl'
+        },
+        'mawan-tsuenwan': {
+          name:'Ma Wan ↔ Tsuen Wan',
+          operator:'Park Island Transport Company Limited (PITCL)',
+          outbound:{ pier:'Ma Wan → Tsuen Wan', times:{ weekday:maWanTsuenWan.weekday.outbound, holiday:maWanTsuenWan.holiday.outbound } },
+          inbound:{ pier:'Tsuen Wan → Ma Wan', times:{ weekday:maWanTsuenWan.weekday.inbound, holiday:maWanTsuenWan.holiday.inbound } },
+          mode:'pitcl'
+        },
+
         'central-discoverybay': {
           name:'Central ↔ Discovery Bay',
           operator:'Discovery Bay Transportation Services',
@@ -570,137 +784,6 @@
       setSidebarEnabled(true);
       if (isFirst) setMainStatus('Error loading data', String(e && e.message ? e.message : e));
     }
-  }
-
-  function selectRoute(routeId){
-    if (!dataReady){
-      setMainStatus('Loading…', 'Fetching timetable data. Please wait.');
-      return;
-    }
-    currentRoute = routeId;
-    document.querySelectorAll('.route-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.querySelector(`[data-route="${routeId}"]`);
-    if (btn) btn.classList.add('active');
-    loadRoute(routeId);
-  }
-
-  function renderNext(prefix, nextTimes, allTimes){
-    const nextList = document.getElementById(`${prefix}-next-list`);
-    const nextEl = document.getElementById(`${prefix}-next`);
-    const status = document.getElementById(`${prefix}-status`);
-
-    nextList.innerHTML = '';
-
-    if (nextTimes.length){
-      const hhmm0 = normaliseTimeHHMM(nextTimes[0]);
-      nextEl.textContent = hhmm0;
-      status.textContent = 'On time';
-      status.className = 'status on';
-      nextDepartureMinutes[prefix] = timeToMinutesHHMM(hhmm0);
-
-      nextTimes.forEach(raw => {
-        const hhmm = normaliseTimeHHMM(raw);
-        let tag = 'Scheduled';
-        if (String(raw).startsWith('^')) tag = 'Last sailing';
-        else if (String(raw).startsWith('{')) tag = 'Saturdays only';
-        else if (String(raw).startsWith('*')) tag = 'Limited freight';
-        else if (String(raw).startsWith('#')) tag = 'Freight booking required';
-
-        if (currentRoute === 'central-pengchau') {
-          if (prefix === 'outbound') {
-            const toHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.toHei[hhmm];
-            if (toHei) tag = `Connects to Hei Ling Chau (${toHei})`;
-          } else {
-            const fromHei = HEI_LING_CHAU_INFO_FOR_PENGCHAU.fromHei[hhmm];
-            if (fromHei) tag = `From Hei Ling Chau (${fromHei})`;
-          }
-        }
-
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="t">${hhmm}</span><span class="tag">${tag}</span>`;
-        nextList.appendChild(li);
-      });
-
-    } else {
-      nextDepartureMinutes[prefix] = null;
-      const first = allTimes && allTimes.length ? allTimes[0] : null;
-      nextEl.textContent = first ? normaliseTimeHHMM(first) : '--:--';
-      status.textContent = 'Tomorrow';
-      status.className = 'status tom';
-
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="t">${first ? normaliseTimeHHMM(first) : '--:--'}</span><span class="tag">First sailing tomorrow</span>`;
-      nextList.appendChild(li);
-    }
-  }
-
-  function updateDisplay(){
-    if (!dataReady) return;
-    const data = routesData[currentRoute];
-    if (!data) return;
-
-    const now = new Date();
-    const nowMin = now.getHours()*60 + now.getMinutes();
-    const b = todayBucket();
-
-    let outTimes = [], inTimes = [];
-    if (data.mode === 'hkkf') {
-      const isHoliday = (b === 'holiday');
-      outTimes = isHoliday ? data.outbound.times.holiday : data.outbound.times.weekday;
-      inTimes  = isHoliday ? data.inbound.times.holiday  : data.inbound.times.weekday;
-    } else if (data.mode === 'sunferry') {
-      const isHoliday = (b === 'holiday');
-      outTimes = isHoliday ? data.outbound.times.holiday : data.outbound.times.weekday;
-      inTimes  = isHoliday ? data.inbound.times.holiday  : data.inbound.times.weekday;
-    } else if (data.mode === 'dbay') {
-      outTimes = data.outbound.times[b] || [];
-      inTimes  = data.inbound.times[b] || [];
-    }
-
-    renderNext('outbound', getNextN(nowMin, outTimes, 10), outTimes);
-    renderNext('inbound',  getNextN(nowMin, inTimes, 10),  inTimes);
-  }
-
-  function loadRoute(routeId){
-    const data = routesData[routeId];
-    if (!data){ setMainStatus('No data', 'Route data not loaded.'); return; }
-
-    document.getElementById('main-content').innerHTML = `
-      <div class="route-row">
-        <div class="card">
-          <div class="title">${data.name}</div>
-          <div class="meta">Operator: ${data.operator}\nTimetable shown for: ${dayLabelForHeader()}</div>
-        </div>
-        ${fareHtml(routeId)}
-      </div>
-
-      <div class="grid">
-        <div class="panel outbound">
-          <h3>${data.outbound.pier}</h3>
-          <div class="countdown-wrap"><div class="countdown" id="outbound-countdown">--:--:--</div></div>
-          <div class="sub">Time until next sailing</div>
-          <div class="nextbox">
-            <span class="status on" id="outbound-status">On time</span>
-            <div class="timebig" id="outbound-next">--:--</div>
-          </div>
-          <div class="section-title">Next 10 sailings</div>
-          <ul id="outbound-next-list"></ul>
-        </div>
-
-        <div class="panel inbound">
-          <h3>${data.inbound.pier}</h3>
-          <div class="countdown-wrap"><div class="countdown" id="inbound-countdown">--:--:--</div></div>
-          <div class="sub">Time until next sailing</div>
-          <div class="nextbox">
-            <span class="status on" id="inbound-status">On time</span>
-            <div class="timebig" id="inbound-next">--:--</div>
-          </div>
-          <div class="section-title">Next 10 sailings</div>
-          <ul id="inbound-next-list"></ul>
-        </div>
-      </div>
-    `;
-    updateDisplay();
   }
 
   setInterval(() => {
@@ -729,11 +812,7 @@
   });
 
   loadAllRoutes(true);
-
-  // Recalculate “Next 10 sailings” every minute
   setInterval(updateDisplay, 60*1000);
-
-  // Auto-refresh CSV data every minute (no page reload; stays on current route) [web:258]
   setInterval(() => loadAllRoutes(false), 60*1000);
 </script>
 </body>
