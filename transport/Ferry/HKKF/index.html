@@ -35,6 +35,7 @@
     .fare-note{font-size:11px;color:#888;margin-top:8px;line-height:1.35}
 
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .grid4{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 
     .panel{background:rgba(20,20,20,.8);border-radius:18px;padding:18px;border:1px solid rgba(255,255,255,.08)}
     .panel.outbound{border-left:6px solid #2f81f7}
@@ -42,6 +43,16 @@
     .panel h3{font-size:14px;font-weight:850;text-align:center;margin-bottom:10px}
     .panel.outbound h3{color:#b6d6ff}
     .panel.inbound h3{color:#ffd4b5}
+
+    /* Inter-Island: color by pier (like other routes) */
+    .panel.inter-cc{border-left:6px solid #22c55e}
+    .panel.inter-cmw{border-left:6px solid #eab308}
+    .panel.inter-mw{border-left:6px solid #3b82f6}
+    .panel.inter-pc{border-left:6px solid #ec4899}
+    .panel.inter-cc h3{color:#bbf7d0}
+    .panel.inter-cmw h3{color:#fef9c3}
+    .panel.inter-mw h3{color:#bfdbfe}
+    .panel.inter-pc h3{color:#f9a8d4}
 
     .countdown-wrap{display:flex;justify-content:center}
     .countdown{
@@ -53,6 +64,10 @@
     }
     .panel.outbound .countdown{border-color:rgba(47,129,247,.45)}
     .panel.inbound .countdown{border-color:rgba(249,115,22,.45)}
+    .panel.inter-cc .countdown{border-color:rgba(34,197,94,.45)}
+    .panel.inter-cmw .countdown{border-color:rgba(234,179,8,.45)}
+    .panel.inter-mw .countdown{border-color:rgba(59,130,246,.45)}
+    .panel.inter-pc .countdown{border-color:rgba(236,72,153,.45)}
 
     .sub{font-size:12px;color:#aaa;text-align:center;margin:8px 0 10px}
     .nextbox{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;text-align:center;margin-bottom:10px}
@@ -70,11 +85,14 @@
     .panel.outbound .tag{color:#b6d6ff;border-color:rgba(47,129,247,.35);background:rgba(47,129,247,.12)}
     .panel.inbound .tag{color:#ffd4b5;border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.12)}
 
+    .small{font-size:12px;color:#aaa;line-height:1.4}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
     @media (max-width:1100px){.route-row{grid-template-columns:1fr}}
     @media (max-width:900px){
       .container{flex-direction:column}
       .sidebar{width:100%;border-right:none;border-bottom:1px solid #333}
-      .grid{grid-template-columns:1fr}
+      .grid,.grid4{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -99,8 +117,7 @@
 
       <div class="route-group">
         <h3>Sun Ferry – Inter-Island</h3>
-        <button class="route-btn" data-route="inter-island-mw-pc">Mui Wo ↔ Peng Chau</button>
-        <button class="route-btn" data-route="inter-island-cc-mw">Cheung Chau ↔ Mui Wo</button>
+        <button class="route-btn" data-route="inter-island-overview">Overview (All piers)</button>
         <div class="hint">Inter-Island CSV uses Service Date = Daily (no weekday/holiday split).</div>
       </div>
 
@@ -184,20 +201,7 @@
         { label:'Resident – Senior / Child / Disabled', values:[5.1] }
       ]}
     },
-    'inter-island-mw-pc': {
-      title: 'Inter-Island fares (one-way)',
-      weekdaySatLabel: 'All days',
-      holidayLabel: 'All days',
-      weekdaySat: { services:['Fare'], rows:[
-        { label:'Adult', values:[14.5] },
-        { label:'Senior / Child / Disabled', values:[7.3] }
-      ]},
-      holiday: { services:['Fare'], rows:[
-        { label:'Adult', values:[14.5] },
-        { label:'Senior / Child / Disabled', values:[7.3] }
-      ]}
-    },
-    'inter-island-cc-mw': {
+    'inter-island-overview': {
       title: 'Inter-Island fares (one-way)',
       weekdaySatLabel: 'All days',
       holidayLabel: 'All days',
@@ -218,10 +222,14 @@
   };
 
   let routesData = {};
+  let interIslandGrouped = null;
   let currentRoute = 'central-sokkwuwan';
   let hasInitialLoad = false;
   let dataReady = false;
   const nextDepartureMinutes = { outbound: null, inbound: null };
+
+  // Inter-Island Overview countdown targets
+  const interNextDepartureMin = {}; // pierKey -> minutes since midnight (today), null if none today
 
   function setMainStatus(title, msg){
     document.getElementById('main-content').innerHTML =
@@ -239,7 +247,6 @@
     return 'weekday';
   }
   function todayBucketPITCL(){
-    // PITCL holiday group includes Saturdays + Sundays + public holidays in the CSV wording. [attached_file:1][web:41]
     const dow = new Date().getDay();
     if (dow === 6 || dow === 0) return 'holiday';
     return 'weekday';
@@ -251,6 +258,7 @@
         ? 'Saturdays, Sundays & public holidays'
         : 'Mondays to Fridays (except public holidays)';
     }
+    if (mode === 'inter-overview') return 'Daily';
     if (mode === 'daily') return 'Daily';
     const b = todayBucketGeneral();
     if (b === 'weekday') return 'Weekdays (except public holidays)';
@@ -290,7 +298,7 @@
     return `${String(hh).padStart(2,'0')}:${mm}`;
   }
 
-  // ===== robust CSV parser for quoted fields with commas ===== [attached_file:1][web:41]
+  // ===== robust CSV parser for quoted fields with commas =====
   function parseCsvLine(line){
     const out = [];
     let cur = '';
@@ -399,10 +407,11 @@
       else if (direction === inboundText) dirKey = 'inbound';
       else continue;
 
+      // FIX: don't match weekday rows like "Mondays to Fridays except public holidays"
+      // Holiday rows are those that include Saturdays/Sundays. [attached_file:1]
       const isHolidayRow =
-        serviceDate.includes('saturday') ||
-        serviceDate.includes('sunday') ||
-        serviceDate.includes('public holiday');
+        serviceDate.includes('saturdays') || serviceDate.includes('saturday') ||
+        serviceDate.includes('sundays')   || serviceDate.includes('sunday');
 
       if (isHolidayRow) holiday[dirKey].push(hhmm);
       else weekday[dirKey].push(hhmm);
@@ -417,7 +426,6 @@
   }
 
   async function loadInterIslandDirections(url){
-    // CSV is Direction, Service Date, Service Hour, Remark; Service Date = Daily. [attached_file:1]
     const res = await fetch(url, { cache:'no-store' });
     if (!res.ok) throw new Error(`Fetch failed (${res.status})\n${url}`);
     const csv = await res.text();
@@ -443,6 +451,32 @@
     }
     Object.keys(out).forEach(k => out[k] = Array.from(new Set(out[k])).sort());
     return out;
+  }
+
+  function groupInterIslandByDeparture(interMap){
+    const byPier = {
+      'Cheung Chau': {},
+      'Mui Wo': {},
+      'Peng Chau': {},
+      'Chi Ma Wan': {}
+    };
+
+    Object.keys(interMap || {}).forEach(dir => {
+      const parts = dir.split(' to ');
+      if (parts.length !== 2) return;
+      const from = parts[0].trim();
+      const to = parts[1].trim();
+      if (!byPier[from]) byPier[from] = {};
+      byPier[from][to] = (interMap[dir] || []).slice();
+    });
+
+    Object.keys(byPier).forEach(from => {
+      Object.keys(byPier[from]).forEach(to => {
+        byPier[from][to] = Array.from(new Set(byPier[from][to])).sort();
+      });
+    });
+
+    return byPier;
   }
 
   async function loadDbayFromGithubCsv(url){
@@ -557,8 +591,141 @@
     }
   }
 
+  // ===== Inter-Island Overview: next departure per pier =====
+  function getNextInterPierDeparture(pier, interData){
+    const destMap = (interData && interData[pier]) ? interData[pier] : {};
+    const all = [];
+    Object.keys(destMap).forEach(dest => {
+      (destMap[dest] || []).forEach(t => all.push({ t, dest }));
+    });
+
+    const now = new Date();
+    const nowMin = now.getHours()*60 + now.getMinutes();
+
+    const future = all
+      .map(x => ({...x, m: timeToMinutesHHMM(x.t)}))
+      .filter(x => x.m > nowMin)
+      .sort((a,b) => a.m - b.m);
+
+    if (future.length) return future[0];
+
+    const earliest = all
+      .map(x => ({...x, m: timeToMinutesHHMM(x.t)}))
+      .sort((a,b) => a.m - b.m);
+
+    return earliest.length ? { ...earliest[0], tomorrow: true } : null;
+  }
+
+  function updateInterIslandOverviewNextTargets(){
+    const data = routesData['inter-island-overview'];
+    if (!data || !data.interData) return;
+
+    const pierOrder = ['Cheung Chau','Chi Ma Wan','Mui Wo','Peng Chau'];
+
+    pierOrder.forEach(pier => {
+      const pierKey = pier.replace(/\s+/g,'-');
+      const next = getNextInterPierDeparture(pier, data.interData);
+
+      const elNext = document.getElementById(`inter-${pierKey}-next`);
+      const elTo = document.getElementById(`inter-${pierKey}-to`);
+      const elStatus = document.getElementById(`inter-${pierKey}-status`);
+
+      if (!next){
+        interNextDepartureMin[pierKey] = null;
+        if (elNext) elNext.textContent = '--:--';
+        if (elTo) elTo.textContent = '';
+        if (elStatus){ elStatus.textContent = 'Tomorrow'; elStatus.className='status tom'; }
+        return;
+      }
+
+      if (elNext) elNext.textContent = next.t;
+      if (elTo) elTo.textContent = next.dest ? ('To: ' + next.dest) : '';
+      if (elStatus){
+        elStatus.textContent = next.tomorrow ? 'Tomorrow' : 'On time';
+        elStatus.className = next.tomorrow ? 'status tom' : 'status on';
+      }
+
+      interNextDepartureMin[pierKey] = next.tomorrow ? null : next.m;
+    });
+  }
+
+  function renderInterIslandOverview(){
+    const data = routesData['inter-island-overview'];
+    if (!data || !data.interData) {
+      setMainStatus('No data', 'Inter-island data not loaded.');
+      return;
+    }
+
+    const pierOrder = ['Cheung Chau','Chi Ma Wan','Mui Wo','Peng Chau'];
+    const pierTitle = (p) => ({
+      'Cheung Chau':'Cheung Chau (長洲)',
+      'Chi Ma Wan':'Chi Ma Wan (芝麻灣)',
+      'Mui Wo':'Mui Wo (梅窩)',
+      'Peng Chau':'Peng Chau (坪洲)'
+    }[p] || p);
+
+    const pierClass = (pier) => ({
+      'Cheung Chau':'inter-cc',
+      'Chi Ma Wan':'inter-cmw',
+      'Mui Wo':'inter-mw',
+      'Peng Chau':'inter-pc'
+    }[pier] || 'inter');
+
+    const panels = pierOrder.map(pier => {
+      const next = getNextInterPierDeparture(pier, data.interData);
+      const nextText = next ? next.t : '--:--';
+      const nextTo = next ? (next.dest || '') : '';
+      const statusText = next ? (next.tomorrow ? 'Tomorrow' : 'On time') : 'Tomorrow';
+
+      const destMap = data.interData[pier] || {};
+      const dests = Object.keys(destMap).sort();
+
+      const blocks = dests.map(dest => {
+        const times = (destMap[dest] || []).slice().sort();
+        const lis = times.map(t => `<li><span class="t mono">${t}</span><span class="tag">${dest}</span></li>`).join('');
+        return `
+          <div class="section-title">${pier} → ${dest}</div>
+          <ul>${lis}</ul>
+        `;
+      }).join('');
+
+      return `
+        <div class="panel ${pierClass(pier)}">
+          <h3>${pierTitle(pier)}</h3>
+          <div class="countdown-wrap"><div class="countdown" id="inter-${pier.replace(/\s+/g,'-')}-countdown">--:--:--</div></div>
+          <div class="sub">Time until next sailing</div>
+          <div class="nextbox">
+            <span class="status ${statusText==='On time'?'on':'tom'}" id="inter-${pier.replace(/\s+/g,'-')}-status">${statusText}</span>
+            <div class="timebig" id="inter-${pier.replace(/\s+/g,'-')}-next">${nextText}</div>
+            <div class="small" id="inter-${pier.replace(/\s+/g,'-')}-to">${nextTo ? ('To: ' + nextTo) : ''}</div>
+          </div>
+          ${blocks || '<div class="small">No departures found.</div>'}
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('main-content').innerHTML = `
+      <div class="route-row">
+        <div class="card">
+          <div class="title">Inter-Island – Overview</div>
+          <div class="meta">Operator: Sun Ferry\nTimetable shown for: Daily</div>
+        </div>
+        ${fareHtml('inter-island-overview')}
+      </div>
+      <div class="grid4">${panels}</div>
+    `;
+
+    updateInterIslandOverviewNextTargets();
+  }
+
   function updateDisplay(){
     if (!dataReady) return;
+
+    if (currentRoute === 'inter-island-overview') {
+      updateInterIslandOverviewNextTargets();
+      return;
+    }
+
     const data = routesData[currentRoute];
     if (!data) return;
 
@@ -591,6 +758,11 @@
   }
 
   function loadRoute(routeId){
+    if (routeId === 'inter-island-overview'){
+      renderInterIslandOverview();
+      return;
+    }
+
     const data = routesData[routeId];
     if (!data){
       setMainStatus('No data', 'Route data not loaded.');
@@ -673,7 +845,7 @@
         loadSunFerryBidirectionalFromGithubCsv(URLS.SUN.CMW, 'Central to Mui Wo', 'Mui Wo to Central')
       );
 
-      // PITCL (robust CSV parsing)
+      // PITCL
       const maWanCentral = await step('PITCL Ma Wan ↔ Central', () =>
         loadPITCLFromCsv(URLS.PITCL.MW, 'Central to Ma Wan', 'Ma Wan to Central')
       );
@@ -681,20 +853,16 @@
         loadPITCLFromCsv(URLS.PITCL.TW, 'Ma Wan to Tsuen Wan', 'Tsuen Wan to Ma Wan')
       );
 
-      // Inter-Island (Daily)
+      // Inter-Island
       const inter = await step('Sun Ferry Inter-Island', () =>
         loadInterIslandDirections(URLS.SUN.INTER)
       );
+      interIslandGrouped = groupInterIslandByDeparture(inter);
 
       // DBay
       const dbay = await step('Discovery Bay Central ↔ Discovery Bay', () =>
         loadDbayFromGithubCsv(URLS.DBAY.MAIN)
       );
-
-      const dir_mw_pc = (inter['Mui Wo to Peng Chau'] || []);
-      const dir_pc_mw = (inter['Peng Chau to Mui Wo'] || []);
-      const dir_cc_mw = (inter['Cheung Chau to Mui Wo'] || []);
-      const dir_mw_cc = (inter['Mui Wo to Cheung Chau'] || []);
 
       routesData = {
         'central-sokkwuwan': {
@@ -733,19 +901,11 @@
           mode:'sunferry'
         },
 
-        'inter-island-mw-pc': {
-          name:'Inter-Island: Mui Wo ↔ Peng Chau',
+        'inter-island-overview': {
+          name:'Inter-Island – Overview',
           operator:'Sun Ferry',
-          outbound:{ pier:'Mui Wo → Peng Chau', times:{ daily: dir_mw_pc } },
-          inbound:{ pier:'Peng Chau → Mui Wo', times:{ daily: dir_pc_mw } },
-          mode:'daily'
-        },
-        'inter-island-cc-mw': {
-          name:'Inter-Island: Cheung Chau ↔ Mui Wo',
-          operator:'Sun Ferry',
-          outbound:{ pier:'Cheung Chau → Mui Wo', times:{ daily: dir_cc_mw } },
-          inbound:{ pier:'Mui Wo → Cheung Chau', times:{ daily: dir_mw_cc } },
-          mode:'daily'
+          mode:'inter-overview',
+          interData: interIslandGrouped
         },
 
         'central-mawan': {
@@ -786,6 +946,7 @@
     }
   }
 
+  // Countdown timer: outbound/inbound + inter overview
   setInterval(() => {
     const now = new Date();
     const nowSec = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
@@ -805,6 +966,24 @@
       const s = diff%60;
       el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     });
+
+    if (currentRoute === 'inter-island-overview'){
+      Object.keys(interNextDepartureMin).forEach(pierKey => {
+        const el = document.getElementById(`inter-${pierKey}-countdown`);
+        if (!el) return;
+
+        const departMin = interNextDepartureMin[pierKey];
+        if (departMin == null){ el.textContent = '--:--:--'; return; }
+
+        let diff = departMin*60 - nowSec;
+        if (diff <= 0){ el.textContent = '00:00:00'; return; }
+
+        const h = Math.floor(diff/3600);
+        const m = Math.floor((diff%3600)/60);
+        const s = diff%60;
+        el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      });
+    }
   }, 1000);
 
   document.querySelectorAll('.route-btn').forEach(btn => {
@@ -812,8 +991,13 @@
   });
 
   loadAllRoutes(true);
+
+  // Every minute: refresh next sailings + inter overview targets
   setInterval(updateDisplay, 60*1000);
+
+  // Every minute: reload all CSV data
   setInterval(() => loadAllRoutes(false), 60*1000);
+
 </script>
 </body>
 </html>
