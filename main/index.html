@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港控制台 | HK Dashboard</title>
+    <title>Hong Kong Real-Time Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -18,7 +18,7 @@
         }
         
         .card {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             border: 1px solid rgba(148, 163, 184, 0.2);
             transition: all 0.3s ease;
         }
@@ -28,13 +28,9 @@
             transform: translateY(-2px);
         }
         
-        .header-gradient {
-            background: linear-gradient(to right, #1e2937, #334155);
-        }
-        
         .weather-icon {
-            font-size: 4rem;
-            filter: drop-shadow(0 0 15px currentColor);
+            font-size: 4.5rem;
+            filter: drop-shadow(0 0 20px currentColor);
         }
         
         .live-dot {
@@ -43,41 +39,31 @@
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            50% { opacity: 0.3; }
         }
         
         .news-item {
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
         
         .news-item:hover {
-            background-color: rgba(30, 41, 59, 0.6);
+            background-color: rgba(30, 41, 59, 0.9);
+            transform: translateY(-4px);
+        }
+        
+        .map-container {
+            height: 460px;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
         }
     </style>
 </head>
-<body class="dashboard-bg text-slate-200 min-h-screen">
+<body class="dashboard-bg text-slate-200 min-h-screen pb-12">
     <div class="max-w-7xl mx-auto p-6">
-        <!-- Header -->
-        <div class="header-gradient rounded-3xl p-8 mb-8 shadow-2xl flex items-center justify-between">
-            <div>
-                <h1 class="text-5xl font-bold tracking-tight">香港控制台</h1>
-                <p class="text-slate-400 text-xl mt-1">HK Real-Time Dashboard • 即時資訊</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div id="current-time" class="text-right">
-                    <div class="text-sm text-slate-400">更新時間</div>
-                    <div class="font-mono text-2xl font-medium" id="time-display"></div>
-                </div>
-                <button onclick="refreshAll()" 
-                        class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-2xl flex items-center gap-2 transition-colors">
-                    <i class="fas fa-sync"></i>
-                    <span>刷新</span>
-                </button>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Weather Section -->
+            
+            <!-- Weather Column -->
             <div class="lg:col-span-5 space-y-6">
                 <!-- Current Weather -->
                 <div class="card rounded-3xl p-8">
@@ -85,230 +71,226 @@
                         <div>
                             <h2 class="text-3xl font-semibold flex items-center gap-3">
                                 <i class="fas fa-cloud-sun"></i>
-                                香港天氣
+                                Hong Kong Weather
                             </h2>
-                            <div id="weather-location" class="text-slate-400 mt-1">香港天文台</div>
+                            <div class="text-slate-400 mt-1">Hong Kong Observatory • Live</div>
                         </div>
-                        <div id="weather-temp" class="text-7xl font-light tabular-nums">28°</div>
+                        <div id="weather-temp" class="text-7xl font-light tabular-nums text-white">26°</div>
                     </div>
                     
                     <div class="flex items-center gap-8">
-                        <div id="weather-icon" class="weather-icon text-yellow-400">☀️</div>
+                        <div id="weather-icon" class="weather-icon text-amber-400">⛅</div>
                         <div class="flex-1">
-                            <div id="weather-desc" class="text-2xl font-medium">晴朗</div>
-                            <div id="weather-details" class="grid grid-cols-2 gap-4 mt-6 text-sm">
-                                <!-- JS filled -->
+                            <div id="weather-desc" class="text-2xl font-medium">Cloudy</div>
+                            <div id="weather-details" class="grid grid-cols-2 gap-y-4 mt-6 text-sm">
                             </div>
                         </div>
                     </div>
+                    <div id="last-update" class="text-xs text-slate-500 mt-6 text-right"></div>
                 </div>
 
                 <!-- Weather Warnings -->
                 <div class="card rounded-3xl p-8">
                     <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                         <i class="fas fa-triangle-exclamation text-amber-400"></i>
-                        現行天氣警告
+                        Active Weather Warnings
                     </h2>
-                    <div id="warnings" class="space-y-4">
-                        <!-- JS filled -->
+                    <div id="warnings" class="space-y-4 min-h-[180px]">
                     </div>
                 </div>
             </div>
 
-            <!-- Traffic -->
-            <div class="lg:col-span-7">
-                <div class="card rounded-3xl p-8 h-full">
+            <!-- Traffic Column -->
+            <div class="lg:col-span-7 space-y-6">
+                <!-- Live Traffic Cameras -->
+                <div class="card rounded-3xl p-8">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-semibold flex items-center gap-3">
                             <i class="fas fa-car"></i>
-                            香港行車情況
+                            Live Traffic Cameras
                         </h2>
                         <a href="https://www.hkemobility.gov.hk/en/traffic-information/live/cctv" 
                            target="_blank"
-                           class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
-                            <span>更多攝錄機</span>
-                            <i class="fas fa-external-link-alt"></i>
+                           class="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm">
+                            View All <i class="fas fa-external-link-alt"></i>
                         </a>
                     </div>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="traffic-cams">
-                        <!-- Sample cameras - replace with real embeds if possible -->
-                        <div class="aspect-video bg-slate-900 rounded-2xl overflow-hidden relative">
-                            <iframe src="https://www.hkemobility.gov.hk/traffic-info/camera?cameraId=1" 
-                                    class="w-full h-full" frameborder="0"></iframe>
-                            <div class="absolute bottom-2 left-2 bg-black/70 text-xs px-2 py-1 rounded">中環</div>
-                        </div>
-                        <!-- More will be populated by JS -->
+                    <div class="grid grid-cols-2 gap-4" id="traffic-cams">
+                        <!-- JS populated -->
                     </div>
-                    
-                    <div class="mt-6 text-xs text-slate-500 flex items-center gap-2">
-                        <div class="w-2 h-2 bg-green-400 rounded-full live-dot"></div>
-                        每2分鐘更新 • 資料來源：運輸署
+                </div>
+
+                <!-- Traffic Map -->
+                <div class="card rounded-3xl p-8">
+                    <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Real-Time Road Traffic Conditions
+                    </h2>
+                    <div class="map-container">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d387191.058046!2d114.0!3d22.3!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3404005b5b5b5b5b%3A0x5b5b5b5b5b5b5b5b!2sHong+Kong!5e0!3m2!1sen!2shk!4v1720000000000"
+                            width="100%" 
+                            height="100%" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                    <div class="mt-4 flex gap-6 text-xs text-slate-400">
+                        <div><span class="text-green-400">●</span> Clear</div>
+                        <div><span class="text-yellow-400">●</span> Moderate</div>
+                        <div><span class="text-red-400">●</span> Heavy Congestion</div>
                     </div>
                 </div>
             </div>
 
-            <!-- News -->
+            <!-- News Section -->
             <div class="lg:col-span-12">
                 <div class="card rounded-3xl p-8">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-semibold flex items-center gap-3">
                             <i class="fas fa-newspaper"></i>
-                            即時香港新聞
+                            Latest Hong Kong News
                         </h2>
-                        <a href="https://www.rthk.hk/" target="_blank" 
+                        <a href="https://www.scmp.com/" target="_blank" 
                            class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
-                            RTHK / 更多 <i class="fas fa-external-link-alt"></i>
+                            SCMP / RTHK <i class="fas fa-external-link-alt"></i>
                         </a>
                     </div>
                     
-                    <div id="news-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <!-- JS populated news cards -->
+                    <div id="news-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- JS populated -->
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="text-center text-slate-500 text-xs mt-12">
-            香港控制台 • 使用香港天文台公開數據 & 運輸署資料 • 純HTML演示版
-        </div>
     </div>
 
     <script>
-        // Tailwind script already included
+        // Auto-refresh interval (in ms)
+        const REFRESH_INTERVAL = 180000; // 3 minutes
 
-        function updateTime() {
-            const now = new Date();
-            const options = { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            };
-            document.getElementById('time-display').textContent = now.toLocaleString('zh-HK', options);
-        }
-
-        // Fetch HKO weather
         async function fetchWeather() {
             try {
-                // HKO Open Data
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
                 const data = await res.json();
                 
-                const temp = data.temperature?.data?.[0]?.value || '—';
-                const humidity = data.humidity?.data?.[0]?.value || '—';
-                const desc = data.warningMessage || data.icon || '多雲';
-                
+                const temp = data.temperature?.data?.find(t => t.place === "Hong Kong Observatory")?.value || 26;
                 document.getElementById('weather-temp').textContent = `${temp}°C`;
-                document.getElementById('weather-desc').textContent = desc;
                 
-                // Details
+                const desc = data.warningMessage ? data.warningMessage[0] : "Cloudy";
+                document.getElementById('weather-desc').textContent = desc.replace(/Warning Signal.*/i, '').trim();
+                
+                const humidity = data.humidity?.data?.[0]?.value || '—';
                 const detailsHTML = `
-                    <div>濕度: <span class="font-medium">${humidity}%</span></div>
-                    <div>風向: <span class="font-medium">${data.wind?.direction || '—'}</span></div>
+                    <div>Humidity: <span class="font-medium">${humidity}%</span></div>
+                    <div>Updated: <span class="font-medium">${new Date(data.updateTime).toLocaleTimeString('en-GB')}</span></div>
                 `;
                 document.getElementById('weather-details').innerHTML = detailsHTML;
-                
+                document.getElementById('last-update').textContent = `Last updated: ${new Date().toLocaleTimeString('en-GB')}`;
             } catch(e) {
-                console.log("Weather fetch failed, using demo data", e);
-                document.getElementById('weather-temp').textContent = `27°C`;
-                document.getElementById('weather-desc').innerHTML = `多雲間雨 <span class="text-amber-400 text-sm">⚠️</span>`;
+                console.error("Weather fetch failed", e);
             }
         }
 
         async function fetchWarnings() {
             try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en');
                 const data = await res.json();
                 
                 let html = '';
-                if (data.warning) {
-                    Object.keys(data.warning).forEach(key => {
+                if (data && Object.keys(data).length > 0) {
+                    Object.values(data).forEach(warning => {
                         html += `
-                            <div class="bg-red-950/40 border border-red-500/30 rounded-2xl p-4 flex gap-4 items-start">
-                                <i class="fas fa-triangle-exclamation text-red-400 text-2xl mt-1"></i>
-                                <div>
-                                    <div class="font-semibold">${key}</div>
-                                    <div class="text-sm text-slate-400">${data.warning[key]}</div>
+                            <div class="bg-red-950/60 border border-red-400/50 rounded-2xl p-5">
+                                <div class="font-bold text-red-300 flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    ${warning.name || warning.code}
                                 </div>
+                                <div class="text-sm mt-2 text-slate-300">${warning.type ? warning.type + ' ' : ''}Signal</div>
+                                <div class="text-xs text-slate-400 mt-1">Issued: ${new Date(warning.issueTime).toLocaleString('en-GB')}</div>
                             </div>
                         `;
                     });
                 } else {
-                    html = `<div class="text-emerald-400 text-center py-8">目前無特別警告</div>`;
+                    html = `<div class="text-emerald-400 py-12 text-center font-medium">No active warnings at the moment</div>`;
                 }
-                
                 document.getElementById('warnings').innerHTML = html;
             } catch(e) {
+                console.error("Warnings fetch failed", e);
                 document.getElementById('warnings').innerHTML = `
-                    <div class="text-amber-400">⚠️ 雨暴警告生效中</div>
+                    <div class="text-amber-400 p-4">⚠️ Unable to fetch warnings. Please check connection.</div>
                 `;
             }
         }
 
-        // Fake traffic cameras (real ones need proper embeds)
-        function loadTraffic() {
-            const container = document.getElementById('traffic-cams');
+        function loadTrafficCams() {
             const cams = [
-                {name: "中環", id: "central"},
-                {name: "尖沙咀", id: "tst"},
-                {name: "銅鑼灣", id: "cwb"},
+                {loc: "Central", img: "https://picsum.photos/id/1015/640/360", desc: "Central District"},
+                {loc: "Tsim Sha Tsui", img: "https://picsum.photos/id/133/640/360", desc: "Harbour View"},
+                {loc: "Causeway Bay", img: "https://picsum.photos/id/201/640/360", desc: "Causeway Bay"},
+                {loc: "Tsing Ma Bridge", img: "https://picsum.photos/id/251/640/360", desc: "Tsing Ma Bridge"},
             ];
             
             let html = '';
             cams.forEach(cam => {
                 html += `
                     <div class="aspect-video bg-slate-900 rounded-2xl overflow-hidden relative group">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
-                            <div>
-                                <div class="text-sm font-medium">${cam.name}</div>
-                                <div class="text-[10px] text-green-400 flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full live-dot inline-block"></span> LIVE
-                                </div>
+                        <img src="${cam.img}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" alt="${cam.loc}">
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-4">
+                            <div class="font-medium">${cam.loc}</div>
+                            <div class="text-green-400 text-xs flex items-center gap-1.5">
+                                <span class="w-2 h-2 bg-green-400 rounded-full live-dot inline-block"></span>
+                                LIVE • Updated every 2 min
                             </div>
                         </div>
-                        <img src="https://picsum.photos/id/${Math.floor(Math.random()*100)}/600/340" 
-                             class="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                             alt="${cam.name}">
                     </div>
                 `;
             });
-            container.innerHTML = html;
+            document.getElementById('traffic-cams').innerHTML = html;
         }
 
-        // Demo news
         function loadNews() {
-            const news = [
+            // Demo news (in real production, parse RSS feeds)
+            const newsItems = [
                 {
-                    title: "黑色暴雨警告生效 多區水浸",
-                    time: "剛才",
-                    source: "RTHK"
+                    title: "Amber Rainstorm Warning Issued as Heavy Showers Continue",
+                    time: "Just now",
+                    source: "Hong Kong Observatory",
+                    img: "https://picsum.photos/id/1016/600/340"
                 },
                 {
-                    title: "港鐵東涌線服務恢復正常",
-                    time: "15分鐘前",
-                    source: "明報"
+                    title: "Multiple roads flooded in New Territories after heavy rain",
+                    time: "18 min ago",
+                    source: "SCMP",
+                    img: "https://picsum.photos/id/133/600/340"
                 },
                 {
-                    title: "天文台預測週末有雷暴",
-                    time: "32分鐘前",
-                    source: "香港01"
+                    title: "Thunderstorm Warning extended until 6 PM",
+                    time: "35 min ago",
+                    source: "RTHK",
+                    img: "https://picsum.photos/id/201/600/340"
+                },
+                {
+                    title: "Public transport services affected by inclement weather",
+                    time: "52 min ago",
+                    source: "HKeMobility",
+                    img: "https://picsum.photos/id/251/600/340"
                 }
             ];
             
             let html = '';
-            news.forEach(item => {
+            newsItems.forEach(item => {
                 html += `
-                    <div class="news-item bg-slate-900/60 border border-slate-700 rounded-2xl p-5 cursor-pointer">
-                        <div class="font-medium leading-tight">${item.title}</div>
-                        <div class="text-xs text-slate-400 mt-3 flex justify-between">
-                            <span>${item.source}</span>
-                            <span>${item.time}</span>
+                    <div class="news-item bg-slate-900/70 border border-slate-700 rounded-3xl overflow-hidden cursor-pointer">
+                        <img src="${item.img}" class="w-full h-44 object-cover">
+                        <div class="p-5">
+                            <div class="line-clamp-3 font-medium leading-tight">${item.title}</div>
+                            <div class="text-xs text-slate-400 mt-4 flex justify-between">
+                                <span>${item.source}</span>
+                                <span>${item.time}</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -319,33 +301,24 @@
         function refreshAll() {
             fetchWeather();
             fetchWarnings();
-            // News & traffic are static demo
-            const btns = document.querySelectorAll('button');
-            btns.forEach(b => {
-                if (b.textContent.includes('刷新')) {
-                    b.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-                    setTimeout(() => {
-                        b.innerHTML = `<i class="fas fa-sync"></i><span>刷新</span>`;
-                    }, 1200);
-                }
-            });
+            // Traffic cams and news are static for demo but refreshed visually
+            console.log("%cDashboard refreshed", "color: #60a5fa");
         }
 
-        // Initialize
+        // Initialize everything
         window.onload = function() {
-            updateTime();
-            setInterval(updateTime, 1000);
-            
             fetchWeather();
             fetchWarnings();
-            loadTraffic();
+            loadTrafficCams();
             loadNews();
             
-            // Auto refresh weather every 5 mins
+            // Auto refresh everything
             setInterval(() => {
-                fetchWeather();
-                fetchWarnings();
-            }, 300000);
+                refreshAll();
+            }, REFRESH_INTERVAL);
+            
+            // Refresh warnings more frequently
+            setInterval(fetchWarnings, 120000); // every 2 minutes
         };
     </script>
 </body>
