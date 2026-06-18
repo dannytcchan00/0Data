@@ -1,14 +1,10 @@
-觀察程式碼發現，當有多個天氣警告同時生效時，天文台 API 回傳的資料結構有些地方需要特別處理。在之前的代碼中，Object.keys(data).forEach(key => ...) 是對外層的 Key 進行遍歷，但天文台的警告摘要 API（warnsum）有時候結構會是：
-```json
-{
-  "WFIRE": { "code": "WFIREY", "name": "黃色火災危險警告", "actionCode": "ISSUE" }
-}
-
-```
-或是多個警告都在同一個物件裡，甚至有時候如果傳入了 lang=tc，外層的 key 會直接變成中文（例如 黃色火災危險警告），這會導致 c.includes(key) 的模糊搜尋失效，最終全部掉進 return "⚠️"。
-另外，像酷熱天氣警告和寒冷天氣警告，在 API 裡面有時會以特殊的代碼（例如 WTW）呈現，而原本代碼裡的 mapping 只有包含 WHOT。
-為了解決**無法正確轉換特定警告代碼、或者多個警告無法正確抓到對應 Emoji** 的問題，我將 getWarningEmoji 函數升級為**「中文名稱 + 欄位代碼」雙重強效比對機制**，並補全了天文台所有常見的警告代碼與中文名稱對照。
-### 完美修正後的完整 HTML 程式碼：
+這裡為你進行了兩大修正與重新設計：
+ 1. **徹底移除 RTHK 即時新聞模組**：刪除了右側的新聞面板、側邊欄的切換按鈕以及相關的 JavaScript 函數與 API 請求。
+ 2. **全新彈性天氣警告卡片設計（Flexbox Auto-sizing）**：
+   * 針對 Emoji 容器使用了 **min-w-[3.5rem] w-auto px-2** 配合 **flex** 佈局。
+   * 當只有 **1 個 Emoji** 時（例如 ❄️），卡片會自動保持精簡、置中且大小適中。
+   * 當出現 **2 個或更多 Emoji** 時（例如 🌀🔟🔴 或 🟡⛈️），容器會**自動向橫伸展拉寬**，確保所有 Emoji 完美並排顯示，絕不擠壓、變形或換行！
+### 重新設計後的完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -131,10 +127,6 @@
                         <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
-                    <button id="btn-news" onclick="toggleMode('news')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
-                        <span class="flex items-center gap-3"><i class="fas fa-newspaper text-amber-400"></i> <span class="font-medium text-slate-200">RTHK 即時新聞</span></span>
-                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -145,13 +137,6 @@
             <i class="fas fa-subway text-pink-500"></i> 港鐵各綫營運狀態
         </h3>
         <div id="mtr-list" class="space-y-2"></div>
-    </div>
-
-    <div id="news-panel" class="hidden floating-panel absolute w-64 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[75vh] overflow-y-auto" style="top: calc(0px + 100px); right: 24px;">
-        <h2 class="text-base font-bold mb-3 flex items-center gap-2 text-white border-b border-slate-800 pb-2">
-            <i class="fas fa-newspaper text-amber-500"></i> RTHK 本地新聞
-        </h2>
-        <div id="news-list" class="space-y-3"></div>
     </div>
 
     <script>
@@ -235,12 +220,10 @@
             }
         }
 
-        // 重構後的雙重判定機制：同時支援代碼與中文名稱判定，確保雙 Emoji 與多重警告能完美輸出
         function getWarningEmoji(code, name) {
             const c = (code || '').toUpperCase().trim();
             const n = name || '';
             
-            // 1. 強制優先匹配：含有特殊複雜 Emoji 組合成對的特殊重大警告
             if (c.includes("TC10") || n.includes("十號")) return "🌀🔟🔴";
             if (c.includes("TC9") || n.includes("九號")) return "🌀9️⃣";
             if (c.includes("TC8NE") || n.includes("東北")) return "🌀8️⃣↗️";
@@ -256,7 +239,6 @@
             if (c.includes("WHOT") || c.includes("WTW") || n.includes("酷熱")) return "☀️🥵";
             if (c.includes("WCOLD") || n.includes("寒冷")) return "💙🥶";
 
-            // 2. 標準字典比對（同時支援代碼模糊匹配及中文名稱關鍵字搜尋）
             const mapping = [
                 { keys: ["WFIREY", "黃色火災"], emoji: "🟡🔥" },
                 { keys: ["WFIRER", "紅色火災"], emoji: "🔴🔥" },
@@ -285,18 +267,17 @@
                 if (data && Object.keys(data).length > 0) {
                     Object.keys(data).forEach(key => {
                         const w = data[key];
-                        // 提取 API 中的所有代碼與中文名稱參數送入轉換器
                         const code = w.code || key;
                         const name = w.name || '';
                         const emojiRepresentation = getWarningEmoji(code, name);
                         
                         html += `
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-                                <div class="text-3xl w-12 h-12 flex items-center justify-center bg-slate-900/60 border border-slate-700/50 rounded-xl flex-shrink-0 select-none">
+                                <div class="text-2xl min-w-[3.5rem] w-auto h-12 px-2 flex items-center justify-center bg-slate-900/60 border border-slate-700/50 rounded-xl flex-shrink-0 select-none tracking-wide whitespace-nowrap transition-all duration-300">
                                     ${emojiRepresentation}
                                 </div>
-                                <div class="flex-1">
-                                    <div class="font-bold text-amber-200 text-xs leading-tight">${name || '天氣警告'}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-amber-200 text-xs leading-tight truncate">${name || '天氣警告'}</div>
                                     <div class="text-[10px] text-slate-400 mt-1 font-medium">現正生效中</div>
                                 </div>
                             </div>
@@ -421,7 +402,6 @@
             activeModes.add('traffic');
         }
 
-        // --- 根據溫度動態分配 地圖 Emoji ---
         function getWeatherEmojiByTemp(temp) {
             const t = parseFloat(temp);
             if (isNaN(t)) return "🌡️";
@@ -432,7 +412,6 @@
             return "🥶";            
         }
 
-        // --- 分區氣象站地圖標記模組 ---
         function toggleWeatherStations() {
             const btn = document.getElementById('btn-weather-stations').querySelector('.status-dot');
             
@@ -545,52 +524,10 @@
             });
         }
 
-        // --- RTHK 即時新聞模組 ---
-        async function toggleNews() {
-            const el = document.getElementById('news-panel');
-            const btn = document.getElementById('btn-news').querySelector('.status-dot');
-            if (activeModes.has('news')) {
-                el.classList.add('hidden');
-                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
-                activeModes.delete('news');
-                return;
-            }
-
-            try {
-                document.getElementById('news-list').innerHTML = `<div class="text-slate-400 text-xs animate-pulse text-center py-4">連線中...</div>`;
-                
-                const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=http%3A%2F%2Frss.rthk.hk%2Frthk%2Fnews%2Fclocal_en.xml');
-                const data = await res.json();
-                
-                let html = '';
-                if(data && data.items && data.items.length > 0) {
-                    data.items.slice(0, 5).forEach(item => {
-                        const time = new Date(item.pubDate).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-                        html += `
-                            <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 hover:border-slate-600 transition-colors">
-                                <span class="text-[9px] bg-slate-700 text-amber-300 font-mono px-1.5 py-0.5 rounded font-bold">${time}</span>
-                                <h4 class="font-bold text-xs text-slate-200 mt-1.5 leading-snug"><a href="${item.link}" target="_blank" class="hover:underline text-white">${item.title}</a></h4>
-                                <p class="text-[11px] text-slate-400 mt-1 line-clamp-2">${item.description.replace(/<[^>]*>/g, '')}</p>
-                            </div>`;
-                    });
-                } else {
-                    html = `<div class="text-slate-500 text-xs text-center py-2">目前無新聞。</div>`;
-                }
-
-                document.getElementById('news-list').innerHTML = html;
-                el.classList.remove('hidden');
-                btn.className = "fas fa-circle text-xs text-amber-400 status-dot";
-                activeModes.add('news');
-            } catch(e) {
-                document.getElementById('news-list').innerHTML = `<div class="text-rose-400 text-xs text-center py-2">獲取失敗</div>`;
-            }
-        }
-
         function toggleMode(mode) {
             if (mode === 'mtr') toggleMTR();
             else if (mode === 'traffic') toggleTraffic();
             else if (mode === 'weather-stations') toggleWeatherStations();
-            else if (mode === 'news') toggleNews();
         }
 
         window.onload = function() {
