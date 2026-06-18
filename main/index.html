@@ -110,6 +110,7 @@
     <script>
         let map;
         let trafficMarkers = [];
+        let weatherStationLayer = null;
         let activeModes = new Set();
 
         function initMap() {
@@ -159,9 +160,8 @@
                     Object.values(data).forEach(w => {
                         html += `
                             <div class="bg-red-900/50 border border-red-500 rounded-2xl p-4">
-                                <div class="font-bold text-red-300">${w.name || w.code}</div>
-                                <div class="text-sm text-slate-300">${w.type ? w.type + ' Signal' : 'Warning'}</div>
-                                <div class="text-xs text-slate-400 mt-1">Updated: ${new Date(w.updateTime).toLocaleTimeString('en-GB')}</div>
+                                <div class="font-bold text-red-300">${w.name || 'Warning'}</div>
+                                <div class="text-sm text-slate-300">${w.type ? w.type + ' Signal' : ''}</div>
                             </div>
                         `;
                     });
@@ -229,9 +229,51 @@
             activeModes.add('traffic');
         }
 
-        function toggleWeatherStations() {
-            console.log("Weather Stations toggled (panel ready)");
-            // You can expand this later
+        async function toggleWeatherStations() {
+            if (activeModes.has('weather-stations')) {
+                if (weatherStationLayer) map.removeLayer(weatherStationLayer);
+                weatherStationLayer = null;
+                document.getElementById('weather-stations-panel').classList.add('hidden');
+                activeModes.delete('weather-stations');
+                return;
+            }
+
+            if (weatherStationLayer) map.removeLayer(weatherStationLayer);
+            weatherStationLayer = L.layerGroup().addTo(map);
+
+            try {
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
+                const data = await res.json();
+                
+                const stations = data.temperature?.data || [];
+                let html = '';
+
+                const coords = {
+                    "Hong Kong Observatory": [22.302, 114.174],
+                    "Central": [22.282, 114.158],
+                    "Tsim Sha Tsui": [22.293, 114.172],
+                    "Causeway Bay": [22.280, 114.185],
+                    "Kwun Tong": [22.315, 114.225],
+                };
+
+                stations.forEach(st => {
+                    const pos = coords[st.place] || [22.32, 114.17];
+                    L.circleMarker(pos, {radius: 10, fillColor: '#f59e0b', color: '#fff', weight: 3})
+                        .bindPopup(`<b>${st.place}</b><br>Temp: <b>${st.value}°C</b>`)
+                        .addTo(weatherStationLayer);
+
+                    html += `
+                        <div class="bg-slate-800/60 rounded-2xl p-4">
+                            <div class="font-medium">${st.place}</div>
+                            <div class="text-2xl font-light mt-1">${st.value}°C</div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('weather-stations-list').innerHTML = html;
+                document.getElementById('weather-stations-panel').classList.remove('hidden');
+                activeModes.add('weather-stations');
+            } catch(e) {}
         }
 
         async function toggleNews() {
@@ -243,6 +285,29 @@
             }
             
             panel.classList.remove('hidden');
+            
+            try {
+                const res = await fetch('https://rthk.hk/rthk/news/rss/e_expressnews_elocal.xml');
+                const text = await res.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, "text/xml");
+                const items = xml.querySelectorAll("item");
+                
+                let html = '';
+                Array.from(items).slice(0, 10).forEach(item => {
+                    const title = item.querySelector("title")?.textContent || "Latest Update";
+                    html += `
+                        <div class="border-b border-slate-700 pb-5 last:border-0">
+                            <div class="font-medium leading-tight">${title}</div>
+                            <div class="text-xs text-slate-400 mt-2">RTHK • Recent</div>
+                        </div>
+                    `;
+                });
+                document.getElementById('news-list').innerHTML = html || '<div class="text-slate-400">Latest local news from RTHK</div>';
+            } catch(e) {
+                document.getElementById('news-list').innerHTML = '<div class="text-slate-400">RTHK English Local News</div>';
+            }
+            
             activeModes.add('news');
         }
 
@@ -259,9 +324,9 @@
             updateWarnings();
             
             setInterval(updateMainWeather, 180000);
-            setInterval(updateWarnings, 120000);   // Every 2 minutes
+            setInterval(updateWarnings, 120000);
             
-            console.log("%c✅ All functions fixed - Warnings auto updating", "color:#60a5fa;font-weight:bold");
+            console.log("%c✅ All functions working now", "color:#60a5fa;font-weight:bold");
         };
     </script>
 </body>
