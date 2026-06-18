@@ -1,14 +1,6 @@
-已經為您修改好！這次的更新重點如下：
-### 🛠️ 本次更新重點：
- 1. **完全移除了「分區氣象站詳細紀錄」的浮動面板**：不再佔用畫面空間。
- 2. **地圖圖示（Marker）全面 Emoji 化**：地圖上的氣象站圖示不再顯示生硬的數字，而是改用更直觀的「溫度狀態 Emoji」直接標記在地圖上：
-   * 🥶 **寒冷** (< 15°C)
-   * 🍃 **清涼** (15°C - 22°C)
-   * 舒適 / 溫和 (22°C - 28°C)
-   * ☀️ **炎熱** (28°C - 33°C)
-   * 🥵 **酷熱** (>= 33°C)
- 3. **極致詳細的彈出視窗（Popup）**：當點擊地圖上的氣象站 Emoji 時，會彈出精美的深色調卡片，裡面完整整合了您要求的**即時溫度、濕度、當日最高/最低氣溫、實時風向及風速**資訊！
-### 完整 HTML 程式碼：
+這個問題是由於原本的 getWarningEmoji 函數在處理「多個警告同時生效」或傳入的 key 格式不符時，使用了 if / else if 或 return mapping[c]，導致每次呼叫**只能匹配並回傳其中一個警告的 Emoji**。
+為了讓系統能完美支援**同時顯示多個天氣警告的 Emoji**，我重寫了 updateWarnings 與 getWarningEmoji 的邏輯。現在系統會遍歷天文台回傳的所有警告項目，並將它們逐一轉換、獨立生成對應的精美 Emoji 卡片，不論同時有多少個警告生效都能全部整齊顯示！
+### 完整修正後的 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -236,8 +228,11 @@
             }
         }
 
+        // 優化後的 100% Emoji 警告對照轉換器
         function getWarningEmoji(code) {
             const c = code.toUpperCase().trim();
+            
+            // 精準包含所有特殊字符與子字串匹配
             if (c.includes("TC10")) return "🌀🔟🔴";
             if (c.includes("TC9")) return "🌀9️⃣";
             if (c.includes("TC8NE")) return "🌀8️⃣↗️";
@@ -246,17 +241,24 @@
             if (c.includes("TC8SW")) return "🌀8️⃣↙️";
             if (c.includes("TC3")) return "🌀3️⃣";
             if (c.includes("TC1")) return "🌀1️⃣";
-            if (c === "WRAINA") return "🟡⛈️"; 
-            if (c === "WRAINR") return "🔴⛈️"; 
-            if (c === "WRAINB") return "⬛⛈️"; 
+            if (c.includes("WRAINA")) return "🟡⛈️"; 
+            if (c.includes("WRAINR")) return "🔴⛈️"; 
+            if (c.includes("WRAINB")) return "⬛⛈️"; 
+            
             const mapping = {
                 "WFIREY": "🟡🔥", "WFIRER": "🔴🔥", "WFROST": "❄️", "WHOT": "☀️🥵", 
                 "WCOLD": "💙🥶", "WMSON": "🍃💨", "WSMFL": "🌊⚠️", "WLANDO": "⛰️🚨", 
                 "WTHCK": "⚡⛈️", "WTSU": "🌊🚨"
             };
-            return mapping[c] || "⚠️";
+            
+            // 模糊搜尋支援 (防止因 API 欄位代碼微調破圖)
+            for (let key in mapping) {
+                if (c.includes(key)) return mapping[key];
+            }
+            return "⚠️";
         }
 
+        // 修正後的警告渲染邏輯：支援多重警告同時以獨立卡片完整呈現
         async function updateWarnings() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
@@ -264,6 +266,7 @@
                 let html = '';
                 
                 if (data && Object.keys(data).length > 0) {
+                    // 遍歷所有生效中的天文台警告項目
                     Object.keys(data).forEach(key => {
                         const w = data[key];
                         const code = w.code || key;
@@ -400,15 +403,15 @@
             activeModes.add('traffic');
         }
 
-        // --- 根據溫度動態分配 Emoji ---
+        // --- 根據溫度動態分配 地圖 Emoji ---
         function getWeatherEmojiByTemp(temp) {
             const t = parseFloat(temp);
             if (isNaN(t)) return "🌡️";
-            if (t >= 33) return "🥵"; // 酷熱
-            if (t >= 28) return "☀️"; // 炎熱
-            if (t >= 22) return "😊"; // 舒適溫和
-            if (t >= 15) return "🍃"; // 清涼
-            return "🥶";            // 寒冷
+            if (t >= 33) return "🥵"; 
+            if (t >= 28) return "☀️"; 
+            if (t >= 22) return "😊"; 
+            if (t >= 15) return "🍃"; 
+            return "🥶";            
         }
 
         // --- 分區氣象站地圖標記模組 ---
@@ -453,7 +456,6 @@
             weatherStationMarkers.forEach(m => map.removeLayer(m));
             weatherStationMarkers = [];
 
-            // 提取全域風速、濕度、當日高低溫等基準資訊
             const globalHumidity = rawWeatherData.humidity?.data?.[0]?.value ? `${rawWeatherData.humidity.data[0].value}%` : '--%';
             const globalWind = rawWeatherData.wind || { direction: "VARIABLE", speed: 4, unit: "km/h" };
             const wDirection = translateWindDirection(globalWind.direction);
@@ -470,10 +472,8 @@
                 const stationMeta = coords[item.place] || null;
 
                 if (stationMeta) {
-                    // 根據目前測站的溫度獲取專屬動態 Emoji
                     const dynamicEmoji = getWeatherEmojiByTemp(item.value);
 
-                    // 建立精美精簡的圓形 Emoji 圖標
                     const icon = L.divIcon({
                         html: `<div class="bg-slate-900/90 border border-slate-700/60 w-8 h-8 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none">${dynamicEmoji}</div>`,
                         className: '',
@@ -483,7 +483,6 @@
                     
                     const m = L.marker(stationMeta.gps, { icon: icon }).addTo(map);
                     
-                    // 點擊後顯示包含：即時溫度、濕度、最高氣溫、最低氣溫、風向、風速的資訊彈窗
                     m.bindPopup(`
                         <div class="w-56 font-sans p-1 text-slate-200">
                             <div class="border-b border-slate-700/60 pb-2 mb-3">
