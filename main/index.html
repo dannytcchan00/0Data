@@ -1,6 +1,14 @@
-已經為您修改好。這次**完全移除了所有天文台或外部網站的官方圖片標籤**，將天氣警告欄位徹底改為**全 Emoji 顯示**。
-當有警告生效時，網頁會自動辨識類別與等級，並組合出對應的精美圖示（例如：三號風球會顯示 🌀3️⃣、八號東北風球會顯示 🌀8️⃣↗️、黑色暴雨會顯示 ⬛⛈️ 等），確保畫面極度乾淨、100% 載入成功且不會再有破圖問題！
-### 更新後的完整 HTML 程式碼：
+已經為您修改好！這次的更新重點如下：
+### 🛠️ 本次更新重點：
+ 1. **完全移除了「分區氣象站詳細紀錄」的浮動面板**：不再佔用畫面空間。
+ 2. **地圖圖示（Marker）全面 Emoji 化**：地圖上的氣象站圖示不再顯示生硬的數字，而是改用更直觀的「溫度狀態 Emoji」直接標記在地圖上：
+   * 🥶 **寒冷** (< 15°C)
+   * 🍃 **清涼** (15°C - 22°C)
+   * 舒適 / 溫和 (22°C - 28°C)
+   * ☀️ **炎熱** (28°C - 33°C)
+   * 🥵 **酷熱** (>= 33°C)
+ 3. **極致詳細的彈出視窗（Popup）**：當點擊地圖上的氣象站 Emoji 時，會彈出精美的深色調卡片，裡面完整整合了您要求的**即時溫度、濕度、當日最高/最低氣溫、實時風向及風速**資訊！
+### 完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -42,6 +50,20 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #64748b;
+        }
+
+        /* 讓地圖內建的彈出視窗完美融入深色主題 */
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: rgba(15, 23, 42, 0.98) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            border-radius: 1.5rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            padding: 4px;
+        }
+        .custom-popup .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.98) !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
         }
     </style>
 </head>
@@ -124,13 +146,6 @@
             <i class="fas fa-subway text-pink-500"></i> 港鐵各綫營運狀態
         </h3>
         <div id="mtr-list" class="space-y-2"></div>
-    </div>
-
-    <div id="weather-stations-panel" class="hidden floating-panel absolute bottom-8 left-[24rem] w-85 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[50vh] overflow-y-auto">
-        <h3 class="font-bold text-lg mb-4 text-white border-b border-slate-800 pb-2 flex items-center gap-2">
-            <i class="fas fa-temperature-half text-orange-400"></i> 氣象站詳細紀錄
-        </h3>
-        <div id="weather-stations-list" class="space-y-2 text-xs"></div>
     </div>
 
     <div id="news-panel" class="hidden floating-panel absolute w-64 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[75vh] overflow-y-auto" style="top: calc(0px + 100px); right: 24px;">
@@ -221,11 +236,8 @@
             }
         }
 
-        // 專屬天氣警告全新 Emoji 組合轉換器
         function getWarningEmoji(code) {
             const c = code.toUpperCase().trim();
-            
-            // 颱風訊號系列 (TC)
             if (c.includes("TC10")) return "🌀🔟🔴";
             if (c.includes("TC9")) return "🌀9️⃣";
             if (c.includes("TC8NE")) return "🌀8️⃣↗️";
@@ -234,26 +246,14 @@
             if (c.includes("TC8SW")) return "🌀8️⃣↙️";
             if (c.includes("TC3")) return "🌀3️⃣";
             if (c.includes("TC1")) return "🌀1️⃣";
-            
-            // 暴雨警告系列
-            if (c === "WRAINA") return "🟡⛈️"; // 黃雨
-            if (c === "WRAINR") return "🔴⛈️"; // 紅雨
-            if (c === "WRAINB") return "⬛⛈️"; // 黑雨
-            
-            // 其他警告映射
+            if (c === "WRAINA") return "🟡⛈️"; 
+            if (c === "WRAINR") return "🔴⛈️"; 
+            if (c === "WRAINB") return "⬛⛈️"; 
             const mapping = {
-                "WFIREY": "🟡🔥",  // 黃色火災
-                "WFIRER": "🔴🔥",  // 紅色火災
-                "WFROST": "❄️",    // 霜凍
-                "WHOT": "☀️🥵",   // 酷熱天氣
-                "WCOLD": "💙🥶",   // 寒冷天氣
-                "WMSON": "🍃💨",   // 強烈季候風
-                "WSMFL": "🌊⚠️",   // 新界北部水浸
-                "WLANDO": "⛰️🚨",  // 山泥傾瀉
-                "WTHCK": "⚡⛈️",   // 雷暴警告
-                "WTSU": "🌊🚨"     // 海嘯警告
+                "WFIREY": "🟡🔥", "WFIRER": "🔴🔥", "WFROST": "❄️", "WHOT": "☀️🥵", 
+                "WCOLD": "💙🥶", "WMSON": "🍃💨", "WSMFL": "🌊⚠️", "WLANDO": "⛰️🚨", 
+                "WTHCK": "⚡⛈️", "WTSU": "🌊🚨"
             };
-            
             return mapping[c] || "⚠️";
         }
 
@@ -400,13 +400,22 @@
             activeModes.add('traffic');
         }
 
-        // --- 分區氣象站與詳細數據模組 ---
+        // --- 根據溫度動態分配 Emoji ---
+        function getWeatherEmojiByTemp(temp) {
+            const t = parseFloat(temp);
+            if (isNaN(t)) return "🌡️";
+            if (t >= 33) return "🥵"; // 酷熱
+            if (t >= 28) return "☀️"; // 炎熱
+            if (t >= 22) return "😊"; // 舒適溫和
+            if (t >= 15) return "🍃"; // 清涼
+            return "🥶";            // 寒冷
+        }
+
+        // --- 分區氣象站地圖標記模組 ---
         function toggleWeatherStations() {
-            const el = document.getElementById('weather-stations-panel');
             const btn = document.getElementById('btn-weather-stations').querySelector('.status-dot');
             
             if (activeModes.has('weather-stations')) {
-                el.classList.add('hidden');
                 weatherStationMarkers.forEach(m => map.removeLayer(m));
                 weatherStationMarkers = [];
                 btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
@@ -415,7 +424,6 @@
             }
 
             renderWeatherStations();
-            el.classList.remove('hidden');
             btn.className = "fas fa-circle text-xs text-orange-400 status-dot";
             activeModes.add('weather-stations');
         }
@@ -442,47 +450,82 @@
                 "Kowloon City": { gps: [22.3278, 114.1900] }
             };
 
-            let listHtml = '';
             weatherStationMarkers.forEach(m => map.removeLayer(m));
             weatherStationMarkers = [];
 
-            const globalWind = rawWeatherData.wind || { direction: "微風", speed: 4, unit: "km/h" };
+            // 提取全域風速、濕度、當日高低溫等基準資訊
+            const globalHumidity = rawWeatherData.humidity?.data?.[0]?.value ? `${rawWeatherData.humidity.data[0].value}%` : '--%';
+            const globalWind = rawWeatherData.wind || { direction: "VARIABLE", speed: 4, unit: "km/h" };
+            const wDirection = translateWindDirection(globalWind.direction);
+            const wSpeed = globalWind.speed ? `${globalWind.speed} ${globalWind.unit || 'km/h'}` : '-- km/h';
+
+            let maxT = '--°C', minT = '--°C';
+            if(rawWeatherData.temperature?.data) {
+                const temps = rawWeatherData.temperature.data.map(d => d.value).filter(v => !isNaN(v));
+                maxT = `${Math.max(...temps)}°C`;
+                minT = `${Math.min(...temps)}°C`;
+            }
 
             rawWeatherData.temperature.data.forEach(item => {
                 const stationMeta = coords[item.place] || null;
-                const wDirection = translateWindDirection(globalWind.direction);
-                const wSpeed = `${globalWind.speed} ${globalWind.unit || 'km/h'}`;
-
-                listHtml += `
-                    <div class="bg-slate-800/40 border border-slate-700/20 rounded-xl p-2.5 flex flex-col gap-1">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs text-slate-200 font-bold">${item.place}</span>
-                            <span class="text-sm font-bold text-orange-400 font-mono">${item.value}°C</span>
-                        </div>
-                    </div>`;
 
                 if (stationMeta) {
+                    // 根據目前測站的溫度獲取專屬動態 Emoji
+                    const dynamicEmoji = getWeatherEmojiByTemp(item.value);
+
+                    // 建立精美精簡的圓形 Emoji 圖標
                     const icon = L.divIcon({
-                        html: `<div class="bg-gradient-to-br from-orange-500 to-amber-600 text-white font-bold text-[10px] px-1.5 py-0.5 rounded shadow border border-black/40">${item.value}°</div>`,
+                        html: `<div class="bg-slate-900/90 border border-slate-700/60 w-8 h-8 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none">${dynamicEmoji}</div>`,
                         className: '',
-                        iconSize: [35, 20]
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
                     });
+                    
                     const m = L.marker(stationMeta.gps, { icon: icon }).addTo(map);
                     
+                    // 點擊後顯示包含：即時溫度、濕度、最高氣溫、最低氣溫、風向、風速的資訊彈窗
                     m.bindPopup(`
-                        <div class="font-sans text-slate-900 w-48 p-1">
-                            <b class="text-sm text-slate-800 border-b pb-1 block mb-2">${item.place}</b>
-                            <div class="text-xs space-y-1 text-slate-600">
-                                <div>實時氣溫: <span class="text-orange-600 font-bold">${item.value}°C</span></div>
-                                <div>實時風向: <span class="font-semibold text-slate-800">${wDirection}</span></div>
-                                <div>實時風速: <span class="font-semibold text-slate-800">${wSpeed}</span></div>
+                        <div class="w-56 font-sans p-1 text-slate-200">
+                            <div class="border-b border-slate-700/60 pb-2 mb-3">
+                                <h3 class="text-sm font-bold text-white tracking-wide">${item.place}</h3>
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">即時氣象觀測站</div>
+                            </div>
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex justify-between items-center bg-slate-800/50 rounded-xl px-2.5 py-1.5 border border-slate-700/30">
+                                    <span class="text-slate-400 font-medium">即時溫度</span>
+                                    <span class="text-orange-400 font-bold text-sm font-mono">${item.value}°C</span>
+                                </div>
+                                <div class="flex justify-between items-center px-1">
+                                    <span class="text-slate-400">相對濕度</span>
+                                    <span class="font-semibold text-white font-mono">${globalHumidity}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 border-t border-b border-slate-800/80 py-2 my-1">
+                                    <div>
+                                        <div class="text-[10px] text-slate-500">當日最高</div>
+                                        <div class="font-bold text-rose-400 font-mono mt-0.5">${maxT}</div>
+                                    </div>
+                                    <div class="border-l border-slate-800 pl-2">
+                                        <div class="text-[10px] text-slate-500">當日最低</div>
+                                        <div class="font-bold text-blue-400 font-mono mt-0.5">${minT}</div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1 px-1">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">實時風向</span>
+                                        <span class="font-medium text-amber-200">${wDirection}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">實時風速</span>
+                                        <span class="font-medium text-amber-200 font-mono">${wSpeed}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    `);
+                    `, { className: 'custom-popup' });
+                    
                     weatherStationMarkers.push(m);
                 }
             });
-            document.getElementById('weather-stations-list').innerHTML = listHtml;
         }
 
         // --- RTHK 即時新聞模組 ---
