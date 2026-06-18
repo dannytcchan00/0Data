@@ -1,6 +1,14 @@
-這個問題是由於原本的 getWarningEmoji 函數在處理「多個警告同時生效」或傳入的 key 格式不符時，使用了 if / else if 或 return mapping[c]，導致每次呼叫**只能匹配並回傳其中一個警告的 Emoji**。
-為了讓系統能完美支援**同時顯示多個天氣警告的 Emoji**，我重寫了 updateWarnings 與 getWarningEmoji 的邏輯。現在系統會遍歷天文台回傳的所有警告項目，並將它們逐一轉換、獨立生成對應的精美 Emoji 卡片，不論同時有多少個警告生效都能全部整齊顯示！
-### 完整修正後的 HTML 程式碼：
+觀察程式碼發現，當有多個天氣警告同時生效時，天文台 API 回傳的資料結構有些地方需要特別處理。在之前的代碼中，Object.keys(data).forEach(key => ...) 是對外層的 Key 進行遍歷，但天文台的警告摘要 API（warnsum）有時候結構會是：
+```json
+{
+  "WFIRE": { "code": "WFIREY", "name": "黃色火災危險警告", "actionCode": "ISSUE" }
+}
+
+```
+或是多個警告都在同一個物件裡，甚至有時候如果傳入了 lang=tc，外層的 key 會直接變成中文（例如 黃色火災危險警告），這會導致 c.includes(key) 的模糊搜尋失效，最終全部掉進 return "⚠️"。
+另外，像酷熱天氣警告和寒冷天氣警告，在 API 裡面有時會以特殊的代碼（例如 WTW）呈現，而原本代碼裡的 mapping 只有包含 WHOT。
+為了解決**無法正確轉換特定警告代碼、或者多個警告無法正確抓到對應 Emoji** 的問題，我將 getWarningEmoji 函數升級為**「中文名稱 + 欄位代碼」雙重強效比對機制**，並補全了天文台所有常見的警告代碼與中文名稱對照。
+### 完美修正後的完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -44,7 +52,6 @@
             background: #64748b;
         }
 
-        /* 讓地圖內建的彈出視窗完美融入深色主題 */
         .custom-popup .leaflet-popup-content-wrapper {
             background: rgba(15, 23, 42, 0.98) !important;
             color: #e2e8f0 !important;
@@ -228,37 +235,47 @@
             }
         }
 
-        // 優化後的 100% Emoji 警告對照轉換器
-        function getWarningEmoji(code) {
-            const c = code.toUpperCase().trim();
+        // 重構後的雙重判定機制：同時支援代碼與中文名稱判定，確保雙 Emoji 與多重警告能完美輸出
+        function getWarningEmoji(code, name) {
+            const c = (code || '').toUpperCase().trim();
+            const n = name || '';
             
-            // 精準包含所有特殊字符與子字串匹配
-            if (c.includes("TC10")) return "🌀🔟🔴";
-            if (c.includes("TC9")) return "🌀9️⃣";
-            if (c.includes("TC8NE")) return "🌀8️⃣↗️";
-            if (c.includes("TC8NW")) return "🌀8️⃣↖️";
-            if (c.includes("TC8SE")) return "🌀8️⃣↘️";
-            if (c.includes("TC8SW")) return "🌀8️⃣↙️";
-            if (c.includes("TC3")) return "🌀3️⃣";
-            if (c.includes("TC1")) return "🌀1️⃣";
-            if (c.includes("WRAINA")) return "🟡⛈️"; 
-            if (c.includes("WRAINR")) return "🔴⛈️"; 
-            if (c.includes("WRAINB")) return "⬛⛈️"; 
+            // 1. 強制優先匹配：含有特殊複雜 Emoji 組合成對的特殊重大警告
+            if (c.includes("TC10") || n.includes("十號")) return "🌀🔟🔴";
+            if (c.includes("TC9") || n.includes("九號")) return "🌀9️⃣";
+            if (c.includes("TC8NE") || n.includes("東北")) return "🌀8️⃣↗️";
+            if (c.includes("TC8NW") || n.includes("西北")) return "🌀8️⃣↖️";
+            if (c.includes("TC8SE") || n.includes("東南")) return "🌀8️⃣↘️";
+            if (c.includes("TC8SW") || n.includes("西南")) return "🌀8️⃣↙️";
+            if (c.includes("TC3") || n.includes("三號強風")) return "🌀3️⃣";
+            if (c.includes("TC1") || n.includes("一號戒備")) return "🌀1️⃣";
             
-            const mapping = {
-                "WFIREY": "🟡🔥", "WFIRER": "🔴🔥", "WFROST": "❄️", "WHOT": "☀️🥵", 
-                "WCOLD": "💙🥶", "WMSON": "🍃💨", "WSMFL": "🌊⚠️", "WLANDO": "⛰️🚨", 
-                "WTHCK": "⚡⛈️", "WTSU": "🌊🚨"
-            };
+            if (c.includes("WRAINA") || n.includes("黃色暴雨")) return "🟡⛈️"; 
+            if (c.includes("WRAINR") || n.includes("紅色暴雨")) return "🔴⛈️"; 
+            if (c.includes("WRAINB") || n.includes("黑色暴雨")) return "⬛⛈️"; 
+            if (c.includes("WHOT") || c.includes("WTW") || n.includes("酷熱")) return "☀️🥵";
+            if (c.includes("WCOLD") || n.includes("寒冷")) return "💙🥶";
+
+            // 2. 標準字典比對（同時支援代碼模糊匹配及中文名稱關鍵字搜尋）
+            const mapping = [
+                { keys: ["WFIREY", "黃色火災"], emoji: "🟡🔥" },
+                { keys: ["WFIRER", "紅色火災"], emoji: "🔴🔥" },
+                { keys: ["WFROST", "霜凍"], emoji: "❄️" },
+                { keys: ["WMSON", "強烈季候風"], emoji: "🍃💨" },
+                { keys: ["WSMFL", "新界北部水浸"], emoji: "🌊⚠️" },
+                { keys: ["WLANDO", "山泥傾瀉"], emoji: "⛰️🚨" },
+                { keys: ["WTHCK", "雷暴"], emoji: "⚡⛈️" },
+                { keys: ["WTSU", "海嘯"], emoji: "🌊🚨" }
+            ];
             
-            // 模糊搜尋支援 (防止因 API 欄位代碼微調破圖)
-            for (let key in mapping) {
-                if (c.includes(key)) return mapping[key];
+            for (let item of mapping) {
+                if (item.keys.some(k => c.includes(k) || n.includes(k))) {
+                    return item.emoji;
+                }
             }
             return "⚠️";
         }
 
-        // 修正後的警告渲染邏輯：支援多重警告同時以獨立卡片完整呈現
         async function updateWarnings() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
@@ -266,11 +283,12 @@
                 let html = '';
                 
                 if (data && Object.keys(data).length > 0) {
-                    // 遍歷所有生效中的天文台警告項目
                     Object.keys(data).forEach(key => {
                         const w = data[key];
+                        // 提取 API 中的所有代碼與中文名稱參數送入轉換器
                         const code = w.code || key;
-                        const emojiRepresentation = getWarningEmoji(code);
+                        const name = w.name || '';
+                        const emojiRepresentation = getWarningEmoji(code, name);
                         
                         html += `
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
@@ -278,7 +296,7 @@
                                     ${emojiRepresentation}
                                 </div>
                                 <div class="flex-1">
-                                    <div class="font-bold text-amber-200 text-xs leading-tight">${w.name || '天氣警告'}</div>
+                                    <div class="font-bold text-amber-200 text-xs leading-tight">${name || '天氣警告'}</div>
                                     <div class="text-[10px] text-slate-400 mt-1 font-medium">現正生效中</div>
                                 </div>
                             </div>
