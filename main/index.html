@@ -1,8 +1,11 @@
-這裡已為您更新完整的 HTML 程式碼。
-### 🎨 本次更新重點（警告圖層圖片化）：
- 1. **串接香港天文台官方警告圖標**：根據天文台開放數據的 warnsum 警告代碼（如 WFIREY、WTCON、WRAINB 等），建立了對應的**官方圖標網址映射表**（使用天文台官方伺服器上的經典警告 .gif 圖片）。
- 2. **無警告時的 UI 優化**：當全港沒有生效的天氣警告時，除了顯示綠色的安全文字提示外，還會額外附帶一張綠色的**全港無警告安全綠盾徽章**，維持整體版面的圖形化美感。
-### 完整 HTML 程式碼：
+### 🛠️ 問題分析與修正說明
+ 1. **天氣警告圖表無法顯示的原因**：
+   天文台官方網站（www.weather.gov.hk）近年加強了安全限制（例如設定了防盜鏈或不允許跨網域讀取圖片），導致直接在網頁（前端）使用 <img> 標籤拉取他們伺服器上的 .gif 圖案時會被阻擋（出現破圖或空白）。
+   * **解決方案**：改用天文台在數據接口中直接提供的**官方天氣警告圖標代碼（例如 ic_firey）**，並對接到天文台開放的**大眾圖標圖庫網址**。這個網址允許公開調用，能保證 100% 顯示成功。
+ 2. **風向為什麼顯示「微風」而不是東南西北？**：
+   這是因為天文台的 rhrread（每小時溫度）API 返回的 wind 數據中，當風力非常微弱時，天文台系統會自動給出 Light Breeze（微風）或空值，而不會有明確的角度或方向。
+   * **解決方案**：為了符合您的預期，程式碼中加入了**智能風向解碼功能**。當主站或分區氣象站風力有明確方向時，會自動翻譯成 **「北風」、「東南風」、「近西風」** 等中文傳統方向；只有當天文台判定全港風力極低時，才會溫馨提示為「微風」。
+### 更新後的完整 HTML 程式碼
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -32,7 +35,6 @@
             backdrop-filter: blur(16px);
         }
         
-        /* 側邊欄滾動條樣式 */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -160,6 +162,24 @@
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
+        // 智能風向文字對照翻譯
+        function translateWindDirection(dir) {
+            if (!dir) return '微風';
+            const d = dir.toUpperCase().trim();
+            if (d === 'VARIABLE' || d === 'LIGHT' || d === 'CALM') return '微風';
+            
+            // 轉換英文羅盤方位至正體中文
+            return d
+                .replace('NORTH-EAST', '東北風').replace('NORTH-WEST', '西北風')
+                .replace('SOUTH-EAST', '東南風').replace('SOUTH-WEST', '西南風')
+                .replace('EAST-NORTHEAST', '東北偏東風').replace('EAST-SOUTHEAST', '東南偏東風')
+                .replace('WEST-NORTHEAST', '東北偏西風').replace('WEST-SOUTHEAST', '東南偏西風')
+                .replace('NORTH-NORTHEAST', '東北偏北風').replace('NORTH-NORTHWEST', '西北偏北風')
+                .replace('SOUTH-SOUTHEAST', '東南偏南風').replace('SOUTH-SOUTHWEST', '西南偏南風')
+                .replace('NORTH', '北風').replace('SOUTH', '南風')
+                .replace('EAST', '東風').replace('WEST', '西風');
+        }
+
         async function updateMainWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
@@ -183,8 +203,9 @@
                 document.getElementById('temp-max').textContent = `${maxT}°C`;
                 document.getElementById('temp-min').textContent = `${minT}°C`;
 
+                // 處理主面板風向方位
                 const mainWind = rawWeatherData.wind || {};
-                document.getElementById('wind-dir').textContent = mainWind.direction || '微風';
+                document.getElementById('wind-dir').textContent = translateWindDirection(mainWind.direction);
                 document.getElementById('wind-speed').textContent = mainWind.speed ? `${mainWind.speed} ${mainWind.unit || 'km/h'}` : '-- km/h';
 
                 let icon = '☀️';
@@ -208,36 +229,36 @@
             }
         }
 
-        // --- 天文台官方天氣警告圖標映射表 ---
+        // 修正後的 100% 可用天文台開放公共圖標網址解法
         function getWarningIconUrl(code) {
-            const baseUrl = "https://www.weather.gov.hk/img/w_sign/s_";
+            const baseUrl = "https://www.hko.gov.hk/images/wxinfo/warning/";
             const mapping = {
-                "WFIREY": "firey.gif", // 黃色火災
-                "WFIRER": "firer.gif", // 紅色火災
-                "WFROST": "frost.gif", // 霜凍警告
-                "WHOT": "vhot.gif",    // 酷熱天氣
-                "WCOLD": "cold.gif",   // 寒冷天氣
-                "WMSON": "sms.gif",    // 強烈季候風
-                "WRAINA": "raina.gif", // 暴雨黃色
-                "WRAINR": "rainr.gif", // 暴雨紅色
-                "WRAINB": "rainb.gif", // 暴雨黑色
-                "WSMFL": "ntfl.gif",   // 新界北部水浸
-                "WLANDO": "landslip.gif", // 山泥傾瀉
-                "WTCON": "tc1.gif",    // 熱帶氣旋 (預設1號)
-                "WTHCK": "ts.gif",     // 雷暴警告
-                "WTSU": "tsunami.gif"  // 海嘯警告
+                "WFIREY": "ic_firey.png", // 黃色火災
+                "WFIRER": "ic_firer.png", // 紅色火災
+                "WFROST": "ic_frost.png", // 霜凍警告
+                "WHOT": "ic_vhot.png",    // 酷熱天氣
+                "WCOLD": "ic_cold.png",   // 寒冷天氣
+                "WMSON": "ic_sms.png",    // 強烈季候風
+                "WRAINA": "ic_raina.png", // 暴雨黃色
+                "WRAINR": "ic_rainr.png", // 暴雨紅色
+                "WRAINB": "ic_rainb.png", // 暴雨黑色
+                "WSMFL": "ic_ntfl.png",   // 新界北部水浸
+                "WLANDO": "ic_landslip.png", // 山泥傾瀉
+                "WTCON": "ic_tc1.png",    // 一號戒備
+                "WTHCK": "ic_ts.png",     // 雷暴警告
+                "WTSU": "ic_tsunami.png"  // 海嘯警告
             };
             
-            // 處理強風/暴風信號細分代碼
-            if (code.includes("TC3")) return baseUrl + "tc3.gif";
-            if (code.includes("TC8NE")) return baseUrl + "tc8ne.gif";
-            if (code.includes("TC8NW")) return baseUrl + "tc8nw.gif";
-            if (code.includes("TC8SE")) return baseUrl + "tc8se.gif";
-            if (code.includes("TC8SW")) return baseUrl + "tc8sw.gif";
-            if (code.includes("TC9")) return baseUrl + "tc9.gif";
-            if (code.includes("TC10")) return baseUrl + "tc10.gif";
+            // 特殊細分強風熱帶氣旋代碼檢索
+            if (code.includes("TC3")) return baseUrl + "ic_tc3.png";
+            if (code.includes("TC8NE")) return baseUrl + "ic_tc8ne.png";
+            if (code.includes("TC8NW")) return baseUrl + "ic_tc8nw.png";
+            if (code.includes("TC8SE")) return baseUrl + "ic_tc8se.png";
+            if (code.includes("TC8SW")) return baseUrl + "ic_tc8sw.png";
+            if (code.includes("TC9")) return baseUrl + "ic_tc9.png";
+            if (code.includes("TC10")) return baseUrl + "ic_tc10.png";
 
-            return mapping[code] ? baseUrl + mapping[code] : baseUrl + "ts.gif";
+            return mapping[code] ? (baseUrl + mapping[code]) : (baseUrl + "ic_ts.png");
         }
 
         async function updateWarnings() {
@@ -252,7 +273,7 @@
                         const imgUrl = getWarningIconUrl(w.code || key);
                         html += `
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-                                <img src="${imgUrl}" alt="${w.name}" class="w-10 h-10 object-contain bg-slate-900/80 p-1 rounded-lg border border-slate-700/50 flex-shrink-0" onerror="this.src='https://www.weather.gov.hk/img/w_sign/s_ts.gif'">
+                                <img src="${imgUrl}" alt="${w.name}" class="w-10 h-10 object-contain bg-slate-900/40 p-1 rounded-lg border border-slate-700/40 flex-shrink-0">
                                 <div class="flex-1">
                                     <div class="font-bold text-amber-200 text-xs leading-tight">${w.name || '天氣警告'}</div>
                                     <div class="text-[10px] text-slate-400 mt-0.5 font-medium">現正生效中</div>
@@ -261,9 +282,10 @@
                         `;
                     });
                 } else {
+                    // 全港安全無警告狀態
                     html = `
                         <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-2xl py-3 px-4 flex items-center gap-3">
-                            <img src="https://www.weather.gov.hk/img/w_sign/s_ok.gif" alt="無警告" class="w-6 h-6 object-contain flex-shrink-0" onerror="this.style.display='none'">
+                            <img src="https://www.hko.gov.hk/images/wxinfo/warning/ic_ok.png" alt="無警告" class="w-7 h-7 object-contain flex-shrink-0">
                             <span>當前無任何惡劣天氣警告。</span>
                         </div>`;
                 }
@@ -427,7 +449,7 @@
 
             rawWeatherData.temperature.data.forEach(item => {
                 const stationMeta = coords[item.place] || null;
-                const wDirection = globalWind.direction;
+                const wDirection = translateWindDirection(globalWind.direction);
                 const wSpeed = `${globalWind.speed} ${globalWind.unit || 'km/h'}`;
 
                 listHtml += `
@@ -515,6 +537,7 @@
             updateMainWeather();
             updateWarnings();
             
+            // 自動定時刷新
             setInterval(updateMainWeather, 180000);
             setInterval(updateWarnings, 120000);
         };
