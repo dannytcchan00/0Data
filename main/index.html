@@ -1,10 +1,6 @@
-這裡已為您修改完整的 HTML 程式碼。
-### 🛠️ 本次更新重點：
- 1. **右側新聞面板位置調整（調到最高再下移 100px）**：
-   * 在 CSS 中計算位置：將 top 設定為 calc(0px + 100px)，也就是完全貼頂後再向下偏移 100px。
- 2. **天氣警告安全備案（圖標破圖時自動切換為 Emoji）**：
-   * 在 <img> 標籤中加入了 onerror 事件監聽器。如果因為任何網路問題、CORS 封鎖或天文台伺服器原因導致圖片無法載入（觸發破圖），網頁會**自動隱藏破圖圖標**，並在旁邊**立刻補上對應的天氣警告 Emoji**（例如：暴雨顯示 🌧️、雷暴顯示 ⛈️、颱風顯示 🌀），確保畫面始終美觀、資訊不漏接！
-### 完整 HTML 程式碼：
+已經為您修改好。這次**完全移除了所有天文台或外部網站的官方圖片標籤**，將天氣警告欄位徹底改為**全 Emoji 顯示**。
+當有警告生效時，網頁會自動辨識類別與等級，並組合出對應的精美圖示（例如：三號風球會顯示 🌀3️⃣、八號東北風球會顯示 🌀8️⃣↗️、黑色暴雨會顯示 ⬛⛈️ 等），確保畫面極度乾淨、100% 載入成功且不會再有破圖問題！
+### 更新後的完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -225,45 +221,40 @@
             }
         }
 
-        // 警告代碼與對應替代 Emoji 的映射表
+        // 專屬天氣警告全新 Emoji 組合轉換器
         function getWarningEmoji(code) {
+            const c = code.toUpperCase().trim();
+            
+            // 颱風訊號系列 (TC)
+            if (c.includes("TC10")) return "🌀🔟🔴";
+            if (c.includes("TC9")) return "🌀9️⃣";
+            if (c.includes("TC8NE")) return "🌀8️⃣↗️";
+            if (c.includes("TC8NW")) return "🌀8️⃣↖️";
+            if (c.includes("TC8SE")) return "🌀8️⃣↘️";
+            if (c.includes("TC8SW")) return "🌀8️⃣↙️";
+            if (c.includes("TC3")) return "🌀3️⃣";
+            if (c.includes("TC1")) return "🌀1️⃣";
+            
+            // 暴雨警告系列
+            if (c === "WRAINA") return "🟡⛈️"; // 黃雨
+            if (c === "WRAINR") return "🔴⛈️"; // 紅雨
+            if (c === "WRAINB") return "⬛⛈️"; // 黑雨
+            
+            // 其他警告映射
             const mapping = {
-                "WFIREY": "🔥", "WFIRER": "💥", "WFROST": "❄️", "WHOT": "☀️", "WCOLD": "🥶",
-                "WMSON": "💨", "WRAINA": "🌧️", "WRAINR": "🌧️", "WRAINB": "⛈️", "WSMFL": "🌊",
-                "WLANDO": "⛰️", "WTCON": "🌀", "WTHCK": "⛈️", "WTSU": "🌊"
-            };
-            if (code.includes("TC")) return "🌀"; // 任何颱風訊號都用氣旋 Emoji
-            return mapping[code] || "⚠️";
-        }
-
-        function getWarningIconUrl(code) {
-            const baseUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/";
-            const mapping = {
-                "WFIREY": "1/15/HK_Yellow_Fire_Danger_Warning.svg/120px-HK_Yellow_Fire_Danger_Warning.svg.png",
-                "WFIRER": "9/9b/HK_Red_Fire_Danger_Warning.svg/120px-HK_Red_Fire_Danger_Warning.svg.png",
-                "WFROST": "0/0e/HK_Frost_Warning.svg/120px-HK_Frost_Warning.svg.png",
-                "WHOT": "f/f7/HK_Very_Hot_Weather_Warning.svg/120px-HK_Very_Hot_Weather_Warning.svg.png",
-                "WCOLD": "f/f0/HK_Cold_Weather_Warning.svg/120px-HK_Cold_Weather_Warning.svg.png",
-                "WMSON": "f/f5/HK_Strong_Monsoon_Signal.svg/120px-HK_Strong_Monsoon_Signal.svg.png",
-                "WRAINA": "1/18/HK_Amber_Rainstorm_Warning.svg/120px-HK_Amber_Rainstorm_Warning.svg.png",
-                "WRAINR": "5/51/HK_Red_Rainstorm_Warning.svg/120px-HK_Red_Rainstorm_Warning.svg.png",
-                "WRAINB": "0/0a/HK_Black_Rainstorm_Warning.svg/120px-HK_Black_Rainstorm_Warning.svg.png",
-                "WSMFL": "a/a3/HK_Northern_New_Territories_Flooding_Warning.svg/120px-HK_Northern_New_Territories_Flooding_Warning.svg.png",
-                "WLANDO": "1/19/HK_Landslip_Warning.svg/120px-HK_Landslip_Warning.svg.png",
-                "WTCON": "b/b5/HK_Tropical_Cyclone_Warning_Signal_Number_1.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_1.svg.png",
-                "WTHCK": "1/14/HK_Thunderstorm_Warning.svg/120px-HK_Thunderstorm_Warning.svg.png",
-                "WTSU": "a/aa/HK_Tsunami_Warning.svg/120px-HK_Tsunami_Warning.svg.png"
+                "WFIREY": "🟡🔥",  // 黃色火災
+                "WFIRER": "🔴🔥",  // 紅色火災
+                "WFROST": "❄️",    // 霜凍
+                "WHOT": "☀️🥵",   // 酷熱天氣
+                "WCOLD": "💙🥶",   // 寒冷天氣
+                "WMSON": "🍃💨",   // 強烈季候風
+                "WSMFL": "🌊⚠️",   // 新界北部水浸
+                "WLANDO": "⛰️🚨",  // 山泥傾瀉
+                "WTHCK": "⚡⛈️",   // 雷暴警告
+                "WTSU": "🌊🚨"     // 海嘯警告
             };
             
-            if (code.includes("TC3")) return baseUrl + "4/47/HK_Tropical_Cyclone_Warning_Signal_Number_3.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_3.svg.png";
-            if (code.includes("TC8NE")) return baseUrl + "d/dc/HK_Tropical_Cyclone_Warning_Signal_Number_8NE.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_8NE.svg.png";
-            if (code.includes("TC8NW")) return baseUrl + "a/a5/HK_Tropical_Cyclone_Warning_Signal_Number_8NW.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_8NW.svg.png";
-            if (code.includes("TC8SE")) return baseUrl + "c/c5/HK_Tropical_Cyclone_Warning_Signal_Number_8SE.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_8SE.svg.png";
-            if (code.includes("TC8SW")) return baseUrl + "2/2d/HK_Tropical_Cyclone_Warning_Signal_Number_8SW.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_8SW.svg.png";
-            if (code.includes("TC9")) return baseUrl + "a/a3/HK_Tropical_Cyclone_Warning_Signal_Number_9.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_9.svg.png";
-            if (code.includes("TC10")) return baseUrl + "0/03/HK_Tropical_Cyclone_Warning_Signal_Number_10.svg/120px-HK_Tropical_Cyclone_Warning_Signal_Number_10.svg.png";
-
-            return mapping[code] ? (baseUrl + mapping[code]) : (baseUrl + "1/14/HK_Thunderstorm_Warning.svg/120px-HK_Thunderstorm_Warning.svg.png");
+            return mapping[c] || "⚠️";
         }
 
         async function updateWarnings() {
@@ -276,19 +267,16 @@
                     Object.keys(data).forEach(key => {
                         const w = data[key];
                         const code = w.code || key;
-                        const imgUrl = getWarningIconUrl(code);
-                        const fallbackEmoji = getWarningEmoji(code);
+                        const emojiRepresentation = getWarningEmoji(code);
                         
                         html += `
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-                                <img src="${imgUrl}" alt="${w.name}" 
-                                     class="w-10 h-10 object-contain bg-slate-900/40 p-1 rounded-lg border border-slate-700/40 flex-shrink-0"
-                                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
-                                <div class="hidden text-2xl w-10 h-10 flex items-center justify-center bg-slate-900/40 border border-slate-700/40 rounded-lg flex-shrink-0">${fallbackEmoji}</div>
-                                
+                                <div class="text-3xl w-12 h-12 flex items-center justify-center bg-slate-900/60 border border-slate-700/50 rounded-xl flex-shrink-0 select-none">
+                                    ${emojiRepresentation}
+                                </div>
                                 <div class="flex-1">
                                     <div class="font-bold text-amber-200 text-xs leading-tight">${w.name || '天氣警告'}</div>
-                                    <div class="text-[10px] text-slate-400 mt-0.5 font-medium">現正生效中</div>
+                                    <div class="text-[10px] text-slate-400 mt-1 font-medium">現正生效中</div>
                                 </div>
                             </div>
                         `;
@@ -412,7 +400,7 @@
             activeModes.add('traffic');
         }
 
-        // --- 朝氣象站與詳細數據模組 ---
+        // --- 分區氣象站與詳細數據模組 ---
         function toggleWeatherStations() {
             const el = document.getElementById('weather-stations-panel');
             const btn = document.getElementById('btn-weather-stations').querySelector('.status-dot');
