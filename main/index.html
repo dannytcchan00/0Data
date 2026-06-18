@@ -52,7 +52,7 @@
         <h1 class="text-2xl font-bold tracking-tight">Hong Kong Real-Time Dashboard</h1>
     </div>
 
-    <!-- Left Sidebar: Weather + Controls -->
+    <!-- Left Sidebar -->
     <div class="floating-panel absolute top-24 left-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto">
         <!-- Weather -->
         <div class="mb-8">
@@ -78,7 +78,7 @@
             <div id="warnings-list" class="space-y-3 text-sm"></div>
         </div>
 
-        <!-- Function Menu -->
+        <!-- Functions -->
         <div>
             <h3 class="font-semibold mb-4 text-slate-300 flex items-center gap-2">
                 <i class="fas fa-sliders-h"></i> Functions
@@ -189,45 +189,28 @@
             if (mtrLayer) map.removeLayer(mtrLayer);
             mtrLayer = L.layerGroup().addTo(map);
 
-            // Improved real-world approximate coordinates for major lines
-            const lines = [
-                // Tsuen Wan Line (Red) - Central to Tsuen Wan
-                {name: "Tsuen Wan Line", color: "#FF0000", path: [
-                    [22.281, 114.158], [22.285, 114.150], [22.295, 114.132], 
-                    [22.310, 114.120], [22.325, 114.105], [22.37, 114.05]
-                ]},
-                // Kwun Tong Line (Green)
-                {name: "Kwun Tong Line", color: "#00A650", path: [
-                    [22.312, 114.226], [22.320, 114.215], [22.340, 114.200], 
-                    [22.355, 114.185]
-                ]},
-                // Island Line (Blue)
-                {name: "Island Line", color: "#0072B0", path: [
-                    [22.281, 114.158], [22.280, 114.185], [22.280, 114.210], 
-                    [22.275, 114.230]
-                ]},
-                // Tuen Ma Line (Brown/Reddish)
-                {name: "Tuen Ma Line", color: "#9B2C2C", path: [
-                    [22.37, 114.05], [22.40, 114.08], [22.42, 114.12], 
-                    [22.45, 114.18], [22.47, 114.20]
-                ]},
-                // East Rail Line (Light Blue)
-                {name: "East Rail Line", color: "#5EB7E4", path: [
-                    [22.45, 114.18], [22.48, 114.17], [22.50, 114.15], 
-                    [22.53, 114.10]
-                ]},
-                // Tung Chung Line (Orange)
-                {name: "Tung Chung Line", color: "#F38B00", path: [
-                    [22.284, 114.158], [22.29, 114.12], [22.30, 114.05], 
-                    [22.32, 113.95]
-                ]},
+            // Only key stations with official colours (no connecting lines)
+            const stations = [
+                {name: "Central", line: "Tsuen Wan / Island", color: "#FF0000", pos: [22.2818, 114.1582]},
+                {name: "Admiralty", line: "Tsuen Wan / Island", color: "#0072B0", pos: [22.2795, 114.1648]},
+                {name: "Tsim Sha Tsui", line: "Tsuen Wan", color: "#FF0000", pos: [22.2930, 114.1725]},
+                {name: "Mong Kok", line: "Tsuen Wan / Kwun Tong", color: "#FF0000", pos: [22.3120, 114.1705]},
+                {name: "Causeway Bay", line: "Island", color: "#0072B0", pos: [22.2805, 114.1850]},
+                {name: "Kwun Tong", line: "Kwun Tong", color: "#00A650", pos: [22.3225, 114.2130]},
+                {name: "Hung Hom", line: "Tuen Ma / East Rail", color: "#9B2C2C", pos: [22.4500, 114.1800]},
+                {name: "Tsing Yi", line: "Tung Chung", color: "#F38B00", pos: [22.3200, 114.0300]},
             ];
 
-            lines.forEach(line => {
-                L.polyline(line.path, {color: line.color, weight: 7, opacity: 0.9}).addTo(mtrLayer);
-                L.circleMarker(line.path[0], {radius: 9, fillColor: line.color, color: '#111', weight: 3})
-                    .bindPopup(`<b>${line.name}</b><br><span class="text-emerald-400">Normal Service</span>`)
-                    .addTo(mtrLayer);
+            stations.forEach(station => {
+                L.circleMarker(station.pos, {
+                    radius: 9,
+                    fillColor: station.color,
+                    color: '#111',
+                    weight: 3,
+                    fillOpacity: 1
+                })
+                .bindPopup(`<b>${station.name}</b><br>${station.line}<br><span class="text-emerald-400">Normal Service</span>`)
+                .addTo(mtrLayer);
             });
 
             document.getElementById('mtr-panel').classList.remove('hidden');
@@ -268,7 +251,6 @@
                 return;
             }
 
-            trafficMarkers.forEach(m => map.removeLayer(m));
             trafficMarkers = [];
             
             const cams = [
@@ -281,7 +263,7 @@
             cams.forEach(cam => {
                 const imgUrl = `https://tdcctv.data.one.gov.hk/${cam.key}.JPG`;
                 const marker = L.marker([cam.lat, cam.lng]).addTo(map)
-                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:720px;margin-top:8px;border-radius:8px;">`); // 3x larger
+                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:720px;margin-top:8px;border-radius:8px;">`);
                 trafficMarkers.push(marker);
             });
             
