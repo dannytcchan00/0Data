@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Live Dashboard</title>
+    <title>Hong Kong Real-Time Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -49,69 +49,68 @@
 
     <!-- Top Header -->
     <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700 rounded-3xl px-8 py-3 flex items-center gap-3 shadow-2xl">
-        <h1 class="text-2xl font-bold tracking-tight text-white">香港即時控制台</h1>
-        <div class="h-6 w-px bg-slate-700"></div>
-        <button onclick="switchMode('weather')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors text-sm">天氣</button>
-        <button onclick="switchMode('traffic')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors text-sm">交通</button>
-        <button onclick="switchMode('mtr')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors text-sm">地鐵</button>
-        <button onclick="switchMode('news')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors text-sm">新聞</button>
+        <h1 class="text-2xl font-bold tracking-tight">Hong Kong Real-Time Dashboard</h1>
     </div>
 
-    <!-- Left Floating Weather + Warnings -->
-    <div id="weather-panel" class="floating-panel absolute top-24 left-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-cloud-sun"></i> 香港天氣
-        </h2>
-        <div class="flex items-center gap-6">
-            <div id="map-weather-icon" class="text-7xl">🌧️</div>
-            <div>
-                <div id="map-weather-temp" class="text-5xl font-light">28°</div>
-                <div id="map-weather-desc" class="text-lg font-medium">暴雨</div>
+    <!-- Left Sidebar: Controls + Weather -->
+    <div class="floating-panel absolute top-24 left-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto">
+        
+        <!-- Weather -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                <i class="fas fa-cloud-sun"></i> Hong Kong Weather
+            </h2>
+            <div class="flex items-center gap-6">
+                <div id="map-weather-icon" class="text-7xl">🌧️</div>
+                <div>
+                    <div id="map-weather-temp" class="text-5xl font-light">28°</div>
+                    <div id="map-weather-desc" class="text-lg font-medium">Heavy Rain</div>
+                </div>
             </div>
+            <div id="map-weather-details" class="mt-6 grid grid-cols-2 gap-3 text-sm"></div>
+            <div id="map-weather-update" class="text-xs text-slate-400 mt-4"></div>
         </div>
-        <div id="map-weather-details" class="mt-6 grid grid-cols-2 gap-3 text-sm"></div>
-        <div id="map-weather-update" class="text-xs text-slate-400 mt-4"></div>
 
-        <!-- Warnings inside weather panel -->
-        <div class="mt-8 pt-6 border-t border-slate-700">
+        <!-- Warnings -->
+        <div class="mb-8 pt-6 border-t border-slate-700">
             <h3 class="text-sm font-medium mb-3 flex items-center gap-2">
-                <i class="fas fa-triangle-exclamation text-amber-400"></i> 現行警告
+                <i class="fas fa-triangle-exclamation text-amber-400"></i> Active Warnings
             </h3>
             <div id="warnings-list" class="space-y-3 text-sm"></div>
         </div>
-    </div>
 
-    <!-- Control Sidebar -->
-    <div class="floating-panel absolute top-24 right-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[75vh] overflow-y-auto">
-        <h3 class="font-semibold mb-5 text-slate-300 flex items-center gap-2">
-            <i class="fas fa-sliders-h"></i> 功能選擇
-        </h3>
-        <div class="space-y-2">
-            <button onclick="switchMode('mtr')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all active:scale-95">
-                <i class="fas fa-subway text-blue-400"></i>
-                <span class="font-medium">地鐵運行情況</span>
-            </button>
-            <button onclick="switchMode('traffic')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all active:scale-95">
-                <i class="fas fa-car text-emerald-400"></i>
-                <span class="font-medium">行車攝錄機</span>
-            </button>
-            <button onclick="switchMode('news')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all active:scale-95">
-                <i class="fas fa-newspaper text-amber-400"></i>
-                <span class="font-medium">即時新聞</span>
-            </button>
+        <!-- Function Menu -->
+        <div>
+            <h3 class="font-semibold mb-4 text-slate-300 flex items-center gap-2">
+                <i class="fas fa-sliders-h"></i> Functions
+            </h3>
+            <div class="space-y-2">
+                <button onclick="switchMode('mtr')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                    <i class="fas fa-subway text-blue-400"></i>
+                    <span class="font-medium">MTR Service Status</span>
+                </button>
+                <button onclick="switchMode('traffic')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                    <i class="fas fa-car text-emerald-400"></i>
+                    <span class="font-medium">Live Traffic Cameras</span>
+                </button>
+                <button onclick="switchMode('news')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                    <i class="fas fa-newspaper text-amber-400"></i>
+                    <span class="font-medium">Latest News</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- MTR Status Panel -->
-    <div id="mtr-panel" class="hidden floating-panel absolute bottom-8 left-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[60vh] overflow-y-auto">
-        <h3 class="font-semibold mb-4">地鐵路線情況</h3>
+    <!-- MTR Panel -->
+    <div id="mtr-panel" class="hidden floating-panel absolute bottom-8 left-96 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[60vh] overflow-y-auto">
+        <h3 class="font-semibold mb-4">MTR Lines Status</h3>
         <div id="mtr-list" class="space-y-4"></div>
     </div>
 
     <!-- News Panel -->
     <div id="news-panel" class="hidden floating-panel absolute top-24 right-6 w-96 rounded-3xl p-6 z-[1000] max-h-[75vh] overflow-y-auto">
         <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <i class="fas fa-newspaper"></i> RTHK 即時新聞
+            <i class="fas fa-newspaper"></i> Latest RTHK News
         </h2>
         <div id="news-list" class="space-y-5"></div>
     </div>
@@ -119,20 +118,15 @@
     <script>
         let map;
         let mtrLayer = null;
+        let trafficMarkers = [];
 
         function initMap() {
             map = L.map('map', { center: [22.3193, 114.1694], zoom: 12 });
 
-            // Dark theme map
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap & CartoDB',
                 maxZoom: 19
             }).addTo(map);
-
-            // Optional HK boundary
-            L.polygon([
-                [22.60, 113.75], [22.60, 114.55], [22.15, 114.55], [22.15, 113.75]
-            ], { color: '#475569', weight: 1.5, fillOpacity: 0.08 }).addTo(map);
         }
 
         async function updateWeather() {
@@ -154,10 +148,10 @@
                 
                 const humidity = data.humidity?.data?.[0]?.value || '—';
                 document.getElementById('map-weather-details').innerHTML = `
-                    <div class="bg-slate-800/50 rounded-2xl p-3">濕度 <span class="font-medium">${humidity}%</span></div>
-                    <div class="bg-slate-800/50 rounded-2xl p-3">風向 <span class="font-medium">${data.wind?.direction || '—'}</span></div>
+                    <div class="bg-slate-800/50 rounded-2xl p-3">Humidity <span class="font-medium">${humidity}%</span></div>
+                    <div class="bg-slate-800/50 rounded-2xl p-3">Wind <span class="font-medium">${data.wind?.direction || '—'}</span></div>
                 `;
-                document.getElementById('map-weather-update').textContent = `更新時間 ${new Date().toLocaleTimeString('en-GB')}`;
+                document.getElementById('map-weather-update').textContent = `Updated ${new Date().toLocaleTimeString('en-GB')}`;
             } catch(e) {}
         }
 
@@ -171,13 +165,13 @@
                         <div class="bg-red-900/40 border border-red-500 rounded-2xl p-4 flex gap-4">
                             <span class="text-4xl">🌧️</span>
                             <div>
-                                <div class="font-bold text-red-300">黑色暴雨警告</div>
-                                <div class="text-xs text-slate-400">生效中 • 每小時雨量超過70毫米</div>
+                                <div class="font-bold text-red-300">Black Rainstorm Warning</div>
+                                <div class="text-xs text-slate-400">In force</div>
                             </div>
                         </div>
                     `;
                 } else {
-                    html = `<div class="text-emerald-400 text-center py-4">目前無特別警告</div>`;
+                    html = `<div class="text-emerald-400 text-center py-4">No active warnings</div>`;
                 }
                 document.getElementById('warnings-list').innerHTML = html;
             } catch(e) {}
@@ -187,33 +181,35 @@
             if (mtrLayer) map.removeLayer(mtrLayer);
             mtrLayer = L.layerGroup().addTo(map);
 
+            // More accurate approximate routes
             const lines = [
-                {name: "Tsuen Wan Line", color: "#FF0000", path: [[22.28,114.15],[22.37,114.05]]},
-                {name: "Kwun Tong Line", color: "#00A650", path: [[22.32,114.21],[22.31,114.23]]},
-                {name: "Island Line", color: "#0072B0", path: [[22.28,114.15],[22.28,114.25]]},
-                {name: "Tuen Ma Line", color: "#9B2C2C", path: [[22.37,114.05],[22.45,114.18]]},
-                {name: "East Rail Line", color: "#5EB7E4", path: [[22.45,114.18],[22.50,114.15]]},
+                {name: "Tsuen Wan Line", color: "#FF0000", path: [[22.282, 114.158], [22.295, 114.132], [22.32, 114.10], [22.37, 114.05]]},
+                {name: "Kwun Tong Line", color: "#00A650", path: [[22.312, 114.226], [22.32, 114.21], [22.34, 114.20]]},
+                {name: "Island Line", color: "#0072B0", path: [[22.281, 114.158], [22.28, 114.19], [22.28, 114.23]]},
+                {name: "Tuen Ma Line", color: "#9B2C2C", path: [[22.37, 114.05], [22.42, 114.10], [22.45, 114.18]]},
+                {name: "East Rail Line", color: "#5EB7E4", path: [[22.45, 114.18], [22.50, 114.15], [22.53, 114.10]]},
+                {name: "Tung Chung Line", color: "#F38B00", path: [[22.28, 114.16], [22.29, 114.05], [22.32, 113.95]]},
             ];
 
             lines.forEach(line => {
                 L.polyline(line.path, {color: line.color, weight: 7, opacity: 0.9}).addTo(mtrLayer);
                 L.circleMarker(line.path[0], {radius: 9, fillColor: line.color, color: '#111', weight: 3})
-                    .bindPopup(`<b>${line.name}</b><br><span class="text-emerald-400">正常服務</span>`)
+                    .bindPopup(`<b>${line.name}</b><br><span class="text-emerald-400">Normal Service</span>`)
                     .addTo(mtrLayer);
             });
 
-            // Show side panel
             document.getElementById('mtr-panel').classList.remove('hidden');
             renderMTRList();
         }
 
         function renderMTRList() {
             const linesInfo = [
-                {name: "Tsuen Wan Line", color: "#FF0000", status: "正常"},
-                {name: "Kwun Tong Line", color: "#00A650", status: "正常"},
-                {name: "Island Line", color: "#0072B0", status: "正常"},
-                {name: "Tuen Ma Line", color: "#9B2C2C", status: "正常"},
-                {name: "East Rail Line", color: "#5EB7E4", status: "正常"},
+                {name: "Tsuen Wan Line", color: "#FF0000", status: "Normal"},
+                {name: "Kwun Tong Line", color: "#00A650", status: "Normal"},
+                {name: "Island Line", color: "#0072B0", status: "Normal"},
+                {name: "Tuen Ma Line", color: "#9B2C2C", status: "Normal"},
+                {name: "East Rail Line", color: "#5EB7E4", status: "Normal"},
+                {name: "Tung Chung Line", color: "#F38B00", status: "Normal"},
             ];
             
             let html = '';
@@ -232,16 +228,22 @@
         }
 
         function showTraffic() {
+            // Clear previous
+            trafficMarkers.forEach(m => map.removeLayer(m));
+            trafficMarkers = [];
+            
             const cams = [
-                {lat:22.280, lng:114.158, name:"中環", key:"H106F"},
-                {lat:22.300, lng:114.172, name:"尖沙咀", key:"K502F"},
-                {lat:22.280, lng:114.185, name:"銅鑼灣", key:"H429F"},
+                {lat:22.280, lng:114.158, name:"Central", key:"H106F"},
+                {lat:22.300, lng:114.172, name:"Tsim Sha Tsui", key:"K502F"},
+                {lat:22.280, lng:114.185, name:"Causeway Bay", key:"H429F"},
+                {lat:22.35, lng:114.10, name:"Tsing Ma Bridge", key:"K914F"},
             ];
             
             cams.forEach(cam => {
                 const imgUrl = `https://tdcctv.data.one.gov.hk/${cam.key}.JPG`;
-                L.marker([cam.lat, cam.lng]).addTo(map)
-                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:260px;margin-top:8px;border-radius:8px;">`);
+                const marker = L.marker([cam.lat, cam.lng]).addTo(map)
+                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:280px;margin-top:8px;border-radius:8px;">`);
+                trafficMarkers.push(marker);
             });
         }
 
@@ -258,17 +260,17 @@
                 
                 let html = '';
                 Array.from(items).slice(0, 10).forEach(item => {
-                    const title = item.querySelector("title")?.textContent || "";
+                    const title = item.querySelector("title")?.textContent || "Latest Update";
                     html += `
                         <div class="border-b border-slate-700 pb-5 last:border-0">
-                            <div class="font-medium leading-tight text-base">${title}</div>
-                            <div class="text-xs text-slate-400 mt-2">RTHK • 剛剛</div>
+                            <div class="font-medium leading-tight">${title}</div>
+                            <div class="text-xs text-slate-400 mt-2">RTHK • Recent</div>
                         </div>
                     `;
                 });
-                document.getElementById('news-list').innerHTML = html || '<div class="text-slate-400">暫無最新新聞</div>';
+                document.getElementById('news-list').innerHTML = html || '<div class="text-slate-400">Latest local news</div>';
             } catch(e) {
-                document.getElementById('news-list').innerHTML = '<div class="text-slate-400">RTHK 即時新聞</div>';
+                document.getElementById('news-list').innerHTML = '<div class="text-slate-400">RTHK news feed</div>';
             }
         }
 
@@ -289,12 +291,11 @@
             initMap();
             updateWeather();
             updateWarnings();
-            showTraffic(); // default traffic markers
             
             setInterval(updateWeather, 240000);
             setInterval(updateWarnings, 300000);
             
-            console.log("%c暗黑香港控制台已載入", "color:#60a5fa;font-size:14px");
+            console.log("%cHong Kong Real-Time Dashboard Loaded", "color:#60a5fa");
         };
     </script>
 </body>
