@@ -1,10 +1,8 @@
-這裡為你進行了兩大修正與重新設計：
- 1. **徹底移除 RTHK 即時新聞模組**：刪除了右側的新聞面板、側邊欄的切換按鈕以及相關的 JavaScript 函數與 API 請求。
- 2. **全新彈性天氣警告卡片設計（Flexbox Auto-sizing）**：
-   * 針對 Emoji 容器使用了 **min-w-[3.5rem] w-auto px-2** 配合 **flex** 佈局。
-   * 當只有 **1 個 Emoji** 時（例如 ❄️），卡片會自動保持精簡、置中且大小適中。
-   * 當出現 **2 個或更多 Emoji** 時（例如 🌀🔟🔴 或 🟡⛈️），容器會**自動向橫伸展拉寬**，確保所有 Emoji 完美並排顯示，絕不擠壓、變形或換行！
-### 重新設計後的完整 HTML 程式碼：
+這通常是因為天文台 API 資料快取（Cache）延遲、或是前端 JavaScript 在判斷非活動狀態警告時的機制問題。
+在香港天文台的警告摘要 API（warnsum）中，當某個警告「剛除下」時，API 回傳的資料內可能仍會短暫保留該警告的欄位，但其內部的狀態代碼或 actionCode 會變成 CANCEL（取消）。
+原本的程式碼中，只要 Object.keys(data) 存在該鍵值，就會直接認定其為「現正生效中」，而沒有去過濾 actionCode。
+以下為您修正這個 Bug，在 updateWarnings() 函數中加入了 **actionCode === 'CANCEL' 的過濾機制**，只要警告一除下，儀表板就會立刻同步消失。
+### 修正後的最新完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -263,10 +261,18 @@
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const data = await res.json();
                 let html = '';
+                let activeWarningCount = 0;
                 
                 if (data && Object.keys(data).length > 0) {
                     Object.keys(data).forEach(key => {
                         const w = data[key];
+                        
+                        // 【關鍵修復】檢查 actionCode，如果為 CANCEL 則跳過不顯示
+                        if (w.actionCode === 'CANCEL') {
+                            return; 
+                        }
+                        
+                        activeWarningCount++;
                         const code = w.code || key;
                         const name = w.name || '';
                         const emojiRepresentation = getWarningEmoji(code, name);
@@ -283,7 +289,10 @@
                             </div>
                         `;
                     });
-                } else {
+                }
+                
+                // 如果沒有任何有效的警告，顯示安全提示
+                if (activeWarningCount === 0) {
                     html = `
                         <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-2xl py-3 px-4 flex items-center gap-3">
                             <div class="w-7 h-7 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/40 text-emerald-400 flex-shrink-0">
