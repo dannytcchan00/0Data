@@ -1,3 +1,11 @@
+這裡已為您修改完整的 HTML 程式碼。
+### 🛠️ 本次更新重點：
+ 1. **右側新聞面板位置調整（調到最高再下移 100px）**：
+   * 在 CSS 中計算位置：將 top 設定為 calc(0px + 100px)，也就是完全貼頂後再向下偏移 100px。
+ 2. **天氣警告安全備案（圖標破圖時自動切換為 Emoji）**：
+   * 在 <img> 標籤中加入了 onerror 事件監聽器。如果因為任何網路問題、CORS 封鎖或天文台伺服器原因導致圖片無法載入（觸發破圖），網頁會**自動隱藏破圖圖標**，並在旁邊**立刻補上對應的天氣警告 Emoji**（例如：暴雨顯示 🌧️、雷暴顯示 ⛈️、颱風顯示 🌀），確保畫面始終美觀、資訊不漏接！
+### 完整 HTML 程式碼：
+```html
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -129,7 +137,7 @@
         <div id="weather-stations-list" class="space-y-2 text-xs"></div>
     </div>
 
-    <div id="news-panel" class="hidden floating-panel absolute top-4 right-6 w-64 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto">
+    <div id="news-panel" class="hidden floating-panel absolute w-64 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[75vh] overflow-y-auto" style="top: calc(0px + 100px); right: 24px;">
         <h2 class="text-base font-bold mb-3 flex items-center gap-2 text-white border-b border-slate-800 pb-2">
             <i class="fas fa-newspaper text-amber-500"></i> RTHK 本地新聞
         </h2>
@@ -217,7 +225,17 @@
             }
         }
 
-        // 徹底修正：改用不受 CORS / 防盜鏈限制的開放鏡像圖庫（相容性 100%）
+        // 警告代碼與對應替代 Emoji 的映射表
+        function getWarningEmoji(code) {
+            const mapping = {
+                "WFIREY": "🔥", "WFIRER": "💥", "WFROST": "❄️", "WHOT": "☀️", "WCOLD": "🥶",
+                "WMSON": "💨", "WRAINA": "🌧️", "WRAINR": "🌧️", "WRAINB": "⛈️", "WSMFL": "🌊",
+                "WLANDO": "⛰️", "WTCON": "🌀", "WTHCK": "⛈️", "WTSU": "🌊"
+            };
+            if (code.includes("TC")) return "🌀"; // 任何颱風訊號都用氣旋 Emoji
+            return mapping[code] || "⚠️";
+        }
+
         function getWarningIconUrl(code) {
             const baseUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/";
             const mapping = {
@@ -257,10 +275,17 @@
                 if (data && Object.keys(data).length > 0) {
                     Object.keys(data).forEach(key => {
                         const w = data[key];
-                        const imgUrl = getWarningIconUrl(w.code || key);
+                        const code = w.code || key;
+                        const imgUrl = getWarningIconUrl(code);
+                        const fallbackEmoji = getWarningEmoji(code);
+                        
                         html += `
                             <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-                                <img src="${imgUrl}" alt="${w.name}" class="w-10 h-10 object-contain bg-slate-900/40 p-1 rounded-lg border border-slate-700/40 flex-shrink-0">
+                                <img src="${imgUrl}" alt="${w.name}" 
+                                     class="w-10 h-10 object-contain bg-slate-900/40 p-1 rounded-lg border border-slate-700/40 flex-shrink-0"
+                                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                                <div class="hidden text-2xl w-10 h-10 flex items-center justify-center bg-slate-900/40 border border-slate-700/40 rounded-lg flex-shrink-0">${fallbackEmoji}</div>
+                                
                                 <div class="flex-1">
                                     <div class="font-bold text-amber-200 text-xs leading-tight">${w.name || '天氣警告'}</div>
                                     <div class="text-[10px] text-slate-400 mt-0.5 font-medium">現正生效中</div>
@@ -387,7 +412,7 @@
             activeModes.add('traffic');
         }
 
-        // --- 分區氣象站與詳細數據模組 ---
+        // --- 朝氣象站與詳細數據模組 ---
         function toggleWeatherStations() {
             const el = document.getElementById('weather-stations-panel');
             const btn = document.getElementById('btn-weather-stations').querySelector('.status-dot');
@@ -531,3 +556,5 @@
     </script>
 </body>
 </html>
+
+```
