@@ -1,7 +1,8 @@
-這裏是為您更新後的完整 HTML 程式碼。
-### 🛠️ 本次修正重點：
- 1. **修復交通鏡頭未顯示問題**：將原本寫死的運輸署 JPG 靜態快照網址，全數替換為政府最新開放數據的**即時影像串流 HLS (m3u8) 影音網址**，並在地圖彈出視窗（Popup）中直接內嵌標準的 <video> 播放器。現在點擊地圖上的錄影機圖標時，會直接加載並播放**真正的實時動態路況畫面**！
- 2. **縮小右邊新聞面板 30%**：已將右側新聞浮動面板的寬度由原來的 w-96（384px）縮小約 30% 至 w-64（256px），讓整體地圖視覺更加寬敞、不擁擠。
+這裡已為您更新完整的 HTML 程式碼。
+### 🎨 本次更新重點（警告圖層圖片化）：
+ 1. **串接香港天文台官方警告圖標**：根據天文台開放數據的 warnsum 警告代碼（如 WFIREY、WTCON、WRAINB 等），建立了對應的**官方圖標網址映射表**（使用天文台官方伺服器上的經典警告 .gif 圖片）。
+ 2. **無警告時的 UI 優化**：當全港沒有生效的天氣警告時，除了顯示綠色的安全文字提示外，還會額外附帶一張綠色的**全港無警告安全綠盾徽章**，維持整體版面的圖形化美感。
+### 完整 HTML 程式碼：
 ```html
 <!DOCTYPE html>
 <html lang="zh-HK">
@@ -207,27 +208,63 @@
             }
         }
 
+        // --- 天文台官方天氣警告圖標映射表 ---
+        function getWarningIconUrl(code) {
+            const baseUrl = "https://www.weather.gov.hk/img/w_sign/s_";
+            const mapping = {
+                "WFIREY": "firey.gif", // 黃色火災
+                "WFIRER": "firer.gif", // 紅色火災
+                "WFROST": "frost.gif", // 霜凍警告
+                "WHOT": "vhot.gif",    // 酷熱天氣
+                "WCOLD": "cold.gif",   // 寒冷天氣
+                "WMSON": "sms.gif",    // 強烈季候風
+                "WRAINA": "raina.gif", // 暴雨黃色
+                "WRAINR": "rainr.gif", // 暴雨紅色
+                "WRAINB": "rainb.gif", // 暴雨黑色
+                "WSMFL": "ntfl.gif",   // 新界北部水浸
+                "WLANDO": "landslip.gif", // 山泥傾瀉
+                "WTCON": "tc1.gif",    // 熱帶氣旋 (預設1號)
+                "WTHCK": "ts.gif",     // 雷暴警告
+                "WTSU": "tsunami.gif"  // 海嘯警告
+            };
+            
+            // 處理強風/暴風信號細分代碼
+            if (code.includes("TC3")) return baseUrl + "tc3.gif";
+            if (code.includes("TC8NE")) return baseUrl + "tc8ne.gif";
+            if (code.includes("TC8NW")) return baseUrl + "tc8nw.gif";
+            if (code.includes("TC8SE")) return baseUrl + "tc8se.gif";
+            if (code.includes("TC8SW")) return baseUrl + "tc8sw.gif";
+            if (code.includes("TC9")) return baseUrl + "tc9.gif";
+            if (code.includes("TC10")) return baseUrl + "tc10.gif";
+
+            return mapping[code] ? baseUrl + mapping[code] : baseUrl + "ts.gif";
+        }
+
         async function updateWarnings() {
             try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en');
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const data = await res.json();
                 let html = '';
+                
                 if (data && Object.keys(data).length > 0) {
-                    Object.values(data).forEach(w => {
+                    Object.keys(data).forEach(key => {
+                        const w = data[key];
+                        const imgUrl = getWarningIconUrl(w.code || key);
                         html += `
-                            <div class="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-3 flex items-start gap-3">
-                                <i class="fas fa-circle-exclamation text-amber-500 mt-1"></i>
-                                <div>
-                                    <div class="font-bold text-amber-200 text-sm">${w.name || '天氣警告'}</div>
-                                    <div class="text-xs text-slate-400 mt-0.5">狀態: 生效中</div>
+                            <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
+                                <img src="${imgUrl}" alt="${w.name}" class="w-10 h-10 object-contain bg-slate-900/80 p-1 rounded-lg border border-slate-700/50 flex-shrink-0" onerror="this.src='https://www.weather.gov.hk/img/w_sign/s_ts.gif'">
+                                <div class="flex-1">
+                                    <div class="font-bold text-amber-200 text-xs leading-tight">${w.name || '天氣警告'}</div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5 font-medium">現正生效中</div>
                                 </div>
                             </div>
                         `;
                     });
                 } else {
                     html = `
-                        <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-2xl py-3 px-4 flex items-center gap-2">
-                            <i class="fas fa-circle-check text-sm"></i> 當前無任何惡劣天氣警告。
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-2xl py-3 px-4 flex items-center gap-3">
+                            <img src="https://www.weather.gov.hk/img/w_sign/s_ok.gif" alt="無警告" class="w-6 h-6 object-contain flex-shrink-0" onerror="this.style.display='none'">
+                            <span>當前無任何惡劣天氣警告。</span>
                         </div>`;
                 }
                 document.getElementById('warnings-list').innerHTML = html;
@@ -289,7 +326,7 @@
             activeModes.add('mtr');
         }
 
-        // --- 實時交通鏡頭模組 (已修復為 HLS 實時動態影像串流播放器) ---
+        // --- 實時交通鏡頭模組 ---
         async function toggleTraffic() {
             const btn = document.getElementById('btn-traffic').querySelector('.status-dot');
             if (activeModes.has('traffic')) {
@@ -300,7 +337,6 @@
                 return;
             }
 
-            // 更新為香港政府 Data.gov.hk 的標準即時視訊串流播放路徑 (m3u8 串流格式)
             const cams = [
                 { lat: 22.2818, lng: 114.1581, title: "中環 - 干諾道中近畢打街", url: "https://tdcctv.data.gov.hk/H411F.m3u8" },
                 { lat: 22.2801, lng: 114.1832, title: "銅鑼灣 - 紅磡海底隧道香港入口", url: "https://tdcctv.data.gov.hk/H215F.m3u8" },
@@ -321,7 +357,6 @@
                 });
                 const m = L.marker([cam.lat, cam.lng], { icon: icon }).addTo(map);
                 
-                // 內嵌標準 HTML5 Video 播放器，直接拉取實時動態路況
                 m.bindPopup(`
                     <div class="w-64 font-sans text-slate-900">
                         <h4 class="font-bold text-sm mb-1 text-slate-800 flex items-center gap-1.5">
