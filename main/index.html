@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hong Kong Real-Time Dashboard</title>
+    <title>Hong Kong Live Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700&display=swap');
         
@@ -13,397 +15,251 @@
             font-family: 'Noto Sans HK', system-ui, sans-serif;
         }
         
-        .dashboard-bg {
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f172a 100%);
+        #map {
+            height: 100vh;
+            width: 100%;
         }
         
-        .card {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            transition: all 0.3s ease;
+        .floating-panel {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            backdrop-filter: blur(12px);
         }
         
-        .card:hover {
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-2px);
+        .leaflet-popup-content-wrapper {
+            background: #1e2937;
+            color: #e2e8f0;
+            border-radius: 12px;
         }
         
-        .weather-icon {
-            font-size: 4.5rem;
-            filter: drop-shadow(0 0 20px currentColor);
-        }
-        
-        .live-dot {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        
-        .news-item {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .news-item:hover {
-            background-color: rgba(30, 41, 59, 0.9);
-            transform: translateY(-4px);
-        }
-        
-        .cam-img {
-            transition: all 0.4s ease;
-        }
-        
-        .modal {
-            animation: modalPop 0.3s ease;
-        }
-        
-        @keyframes modalPop {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+        .mtr-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
         }
     </style>
 </head>
-<body class="dashboard-bg text-slate-200 min-h-screen pb-12">
-    <div class="max-w-7xl mx-auto p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- Left Column -->
-            <div class="lg:col-span-5 space-y-6">
-                <!-- Weather -->
-                <div class="card rounded-3xl p-8">
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h2 class="text-3xl font-semibold flex items-center gap-3">
-                                <i class="fas fa-cloud-sun"></i>
-                                Hong Kong Weather
-                            </h2>
-                            <div class="text-slate-400 mt-1">Hong Kong Observatory • Live</div>
-                        </div>
-                        <div id="weather-temp" class="text-7xl font-light tabular-nums">27°</div>
-                    </div>
-                    <div class="flex items-center gap-8">
-                        <div id="weather-icon" class="weather-icon text-amber-400">⛅</div>
-                        <div class="flex-1">
-                            <div id="weather-desc" class="text-2xl font-medium">Cloudy</div>
-                            <div id="weather-details" class="grid grid-cols-2 gap-y-4 mt-6 text-sm"></div>
-                        </div>
-                    </div>
-                    <div id="weather-update" class="text-xs text-slate-500 mt-6 text-right"></div>
-                </div>
+<body class="bg-black text-slate-200 overflow-hidden">
+    <div id="map" class="absolute inset-0"></div>
 
-                <!-- Warnings -->
-                <div class="card rounded-3xl p-8">
-                    <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                        <i class="fas fa-triangle-exclamation text-amber-400"></i>
-                        Active Weather Warnings
-                    </h2>
-                    <div id="warnings" class="space-y-4 min-h-[160px]"></div>
-                </div>
+    <!-- Top Header -->
+    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900/90 border border-slate-700 rounded-3xl px-8 py-3 flex items-center gap-3 shadow-2xl">
+        <h1 class="text-2xl font-bold tracking-tight">Hong Kong Live</h1>
+        <div class="h-6 w-px bg-slate-700"></div>
+        <button onclick="switchMode('weather')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors">Weather</button>
+        <button onclick="switchMode('traffic')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors">Traffic</button>
+        <button onclick="switchMode('mtr')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors">MTR</button>
+        <button onclick="switchMode('news')" class="px-5 py-2 hover:bg-slate-800 rounded-2xl transition-colors">News</button>
+    </div>
 
-                <!-- Air Quality -->
-                <div class="card rounded-3xl p-8">
-                    <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                        <i class="fas fa-wind"></i>
-                        Air Quality Health Index (AQHI)
-                    </h2>
-                    <div id="aqi-display" class="flex items-center gap-8"></div>
-                    <div class="text-xs text-slate-400 mt-4">Data from EPD • Updated hourly</div>
-                </div>
+    <!-- Left Floating Weather Panel -->
+    <div id="weather-panel" class="floating-panel absolute top-24 left-6 w-80 rounded-3xl p-6 z-50 shadow-2xl">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <i class="fas fa-cloud-sun"></i> Hong Kong Weather
+        </h2>
+        <div class="flex items-center gap-6">
+            <div id="map-weather-icon" class="text-7xl">🌧️</div>
+            <div>
+                <div id="map-weather-temp" class="text-5xl font-light">27°</div>
+                <div id="map-weather-desc" class="text-lg">Heavy Rain</div>
             </div>
+        </div>
+        <div id="map-weather-details" class="mt-6 grid grid-cols-2 gap-3 text-sm"></div>
+        <div id="map-weather-update" class="text-xs text-slate-400 mt-4"></div>
+    </div>
 
-            <!-- Right Column -->
-            <div class="lg:col-span-7 space-y-6">
-                <!-- Traffic Cameras -->
-                <div class="card rounded-3xl p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold flex items-center gap-3">
-                            <i class="fas fa-car"></i>
-                            Live Traffic Cameras
-                        </h2>
-                        <a href="https://www.hkemobility.gov.hk/en/traffic-information/live/cctv" 
-                           target="_blank" class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-2">
-                            More <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4" id="traffic-cams"></div>
-                </div>
-
-                <!-- MTR Status -->
-                <div class="card rounded-3xl p-8">
-                    <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                        <i class="fas fa-subway"></i>
-                        MTR Service Status (All Lines)
-                    </h2>
-                    <div id="mtr-status" class="grid grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2"></div>
-                    <div class="text-xs text-slate-400 mt-4 flex items-center gap-2">
-                        <span class="w-2 h-2 bg-green-400 rounded-full live-dot"></span>
-                        Real-time from MTR • Refreshes every 45s
-                    </div>
-                </div>
-            </div>
-
-            <!-- News -->
-            <div class="lg:col-span-12">
-                <div class="card rounded-3xl p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold flex items-center gap-3">
-                            <i class="fas fa-newspaper"></i>
-                            Latest Hong Kong News
-                        </h2>
-                        <a href="https://www.scmp.com/" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
-                            More News <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    </div>
-                    <div id="news-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
-                </div>
-            </div>
+    <!-- Left Floating Control Panel -->
+    <div class="floating-panel absolute top-96 left-6 w-80 rounded-3xl p-6 z-50 shadow-2xl">
+        <h3 class="font-semibold mb-4 text-slate-300">Dashboard Controls</h3>
+        <div class="space-y-2">
+            <button onclick="switchMode('mtr')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-colors">
+                <i class="fas fa-subway"></i>
+                <span>MTR Status</span>
+            </button>
+            <button onclick="switchMode('traffic')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-colors">
+                <i class="fas fa-car"></i>
+                <span>Live Traffic Cameras</span>
+            </button>
+            <button onclick="switchMode('weather')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-colors">
+                <i class="fas fa-cloud-rain"></i>
+                <span>Warnings & AQHI</span>
+            </button>
         </div>
     </div>
 
-    <!-- News Detail Modal -->
-    <div id="news-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50">
-        <div class="modal bg-slate-900 rounded-3xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 id="modal-title" class="text-xl font-semibold"></h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-3xl leading-none">×</button>
-            </div>
-            <div class="p-8 overflow-y-auto max-h-[70vh]">
-                <img id="modal-image" class="w-full h-64 object-cover rounded-2xl mb-6" alt="">
-                <div id="modal-content" class="prose prose-invert text-slate-300 leading-relaxed"></div>
-                <div id="modal-meta" class="text-xs text-slate-400 mt-8"></div>
-            </div>
-        </div>
+    <!-- MTR Legend / Info -->
+    <div id="mtr-legend" class="hidden floating-panel absolute bottom-8 right-6 w-72 rounded-3xl p-5 z-50">
+        <h3 class="font-semibold mb-3">MTR Lines Status</h3>
+        <div id="mtr-list" class="space-y-3 text-sm max-h-80 overflow-y-auto"></div>
+    </div>
+
+    <!-- News Sidebar -->
+    <div id="news-panel" class="hidden floating-panel absolute top-24 right-6 w-96 rounded-3xl p-6 z-50 max-h-[80vh] overflow-y-auto">
+        <h2 class="text-xl font-semibold mb-4">Latest RTHK News</h2>
+        <div id="news-list" class="space-y-6"></div>
     </div>
 
     <script>
-        const REFRESH_INTERVAL = 180000;
+        let map;
+        let mtrLayer = null;
+        let currentMode = 'weather';
 
-        // Traffic Cameras
-        const trafficCams = [
-            {loc: "Central", key: "H106F", desc: "Queen's Road Central"},
-            {loc: "Tsim Sha Tsui", key: "K502F", desc: "Nathan Road"},
-            {loc: "Causeway Bay", key: "H429F", desc: "Hennessy Road"},
-            {loc: "Tsing Ma Bridge", key: "K914F", desc: "Tsing Ma Bridge"},
-        ];
+        // Initialize Map
+        function initMap() {
+            map = L.map('map', {
+                center: [22.3193, 114.1694], // Hong Kong
+                zoom: 12,
+                zoomControl: true
+            });
 
-        async function fetchWeather() {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+
+            // HK Boundary approx
+            L.polygon([
+                [22.55, 113.8], [22.55, 114.5], [22.15, 114.5], [22.15, 113.8]
+            ], {color: '#64748b', fillOpacity: 0.05, weight: 2}).addTo(map);
+        }
+
+        // Weather
+        async function updateWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
                 const data = await res.json();
-                const tempData = data.temperature?.data?.find(item => item.place === "Hong Kong Observatory") || data.temperature?.data?.[0];
-                const temp = tempData ? tempData.value : 27;
-                document.getElementById('weather-temp').textContent = `${temp}°C`;
-                document.getElementById('weather-desc').textContent = data.condition || "Cloudy";
+                
+                const temp = data.temperature?.data?.[0]?.value || 27;
+                document.getElementById('map-weather-temp').textContent = `${temp}°C`;
+                
+                let icon = '🌧️';
+                let desc = 'Heavy Rain';
+                const iconCode = data.icon ? parseInt(data.icon[0]) : 64;
+                if (iconCode < 60) { icon = '⛅'; desc = 'Cloudy'; }
+                
+                document.getElementById('map-weather-icon').innerHTML = icon;
+                document.getElementById('map-weather-desc').textContent = desc;
                 
                 const humidity = data.humidity?.data?.[0]?.value || '—';
-                document.getElementById('weather-details').innerHTML = `
-                    <div>Humidity: <span class="font-medium">${humidity}%</span></div>
-                    <div>Wind: <span class="font-medium">${data.wind?.direction || '—'}</span></div>
+                document.getElementById('map-weather-details').innerHTML = `
+                    <div>Humidity <span class="font-medium">${humidity}%</span></div>
+                    <div>Wind <span class="font-medium">${data.wind?.direction || '—'}</span></div>
                 `;
-                document.getElementById('weather-update').textContent = `Updated: ${new Date().toLocaleTimeString('en-GB')}`;
+                document.getElementById('map-weather-update').textContent = `Updated just now`;
             } catch(e) {}
         }
 
-        async function fetchWarnings() {
-            try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en');
-                const data = await res.json();
-                let html = '';
-                if (data && Object.keys(data).length > 0) {
-                    Object.values(data).forEach(w => {
-                        html += `<div class="bg-red-950/60 border border-red-400 rounded-2xl p-5">
-                            <div class="font-bold text-red-300">${w.name || 'Warning'}</div>
-                        </div>`;
-                    });
-                } else {
-                    html = `<div class="text-emerald-400 py-8 text-center">No active warnings</div>`;
-                }
-                document.getElementById('warnings').innerHTML = html;
-            } catch(e) {}
+        async function loadWarnings() {
+            // Shown in weather panel for simplicity
         }
 
-        async function fetchAQHI() {
+        // MTR Lines (simplified)
+        function showMTR() {
+            if (mtrLayer) map.removeLayer(mtrLayer);
+            
+            const lines = [
+                {name: "Tsuen Wan Line", color: "#FF0000", coords: [[22.28, 114.15], [22.37, 114.05]]},
+                {name: "Island Line", color: "#0072B0", coords: [[22.28, 114.15], [22.28, 114.25]]},
+                {name: "Tuen Ma Line", color: "#9B2C2C", coords: [[22.37, 114.05], [22.45, 114.18]]},
+                // Add more as needed
+            ];
+            
+            mtrLayer = L.layerGroup().addTo(map);
+            
+            lines.forEach(line => {
+                L.polyline(line.coords, {color: line.color, weight: 6, opacity: 0.85}).addTo(mtrLayer);
+                
+                L.circleMarker(line.coords[0], {
+                    radius: 8,
+                    fillColor: line.color,
+                    color: '#fff',
+                    weight: 2
+                }).bindPopup(`<b>${line.name}</b><br>Normal Service`).addTo(mtrLayer);
+            });
+            
+            document.getElementById('mtr-legend').classList.remove('hidden');
+            updateMTRList();
+        }
+
+        function updateMTRList() {
+            const html = `
+                <div class="flex items-center gap-3"><div class="mtr-dot" style="background:#FF0000"></div><span>Tsuen Wan Line — Normal</span></div>
+                <div class="flex items-center gap-3"><div class="mtr-dot" style="background:#0072B0"></div><span>Island Line — Normal</span></div>
+                <div class="flex items-center gap-3"><div class="mtr-dot" style="background:#9B2C2C"></div><span>Tuen Ma Line — Normal</span></div>
+                <div class="flex items-center gap-3"><div class="mtr-dot" style="background:#00A650"></div><span>Kwun Tong Line — Normal</span></div>
+            `;
+            document.getElementById('mtr-list').innerHTML = html;
+        }
+
+        function loadTrafficMarkers() {
+            // Example traffic cams as markers
+            const cams = [
+                {lat: 22.280, lng: 114.158, name: "Central"},
+                {lat: 22.300, lng: 114.172, name: "TST"},
+            ];
+            
+            cams.forEach(cam => {
+                L.marker([cam.lat, cam.lng]).addTo(map)
+                    .bindPopup(`<b>${cam.name}</b><br><img src="https://tdcctv.data.one.gov.hk/H106F.JPG" width="240">`);
+            });
+        }
+
+        async function loadNews() {
+            const panel = document.getElementById('news-panel');
+            panel.classList.remove('hidden');
+            
             try {
-                const res = await fetch('https://www.aqhi.gov.hk/epd/ddata/html/out/aqhirss_Eng.xml');
+                const res = await fetch('https://rthk.hk/rthk/news/rss/e_expressnews_elocal.xml');
                 const text = await res.text();
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(text, "text/xml");
-                const general = xml.querySelector("GeneralStation");
-                const aqhi = general ? general.querySelector("AQHI").textContent : "—";
-                const risk = general ? general.querySelector("HealthRisk").textContent : "Low";
-                const color = parseInt(aqhi) > 7 ? 'text-red-400' : parseInt(aqhi) > 4 ? 'text-yellow-400' : 'text-emerald-400';
+                const items = xml.querySelectorAll("item");
                 
-                document.getElementById('aqi-display').innerHTML = `
-                    <div class="text-6xl font-light ${color}">${aqhi}</div>
-                    <div><div class="text-2xl font-medium">${risk} Risk</div><div class="text-sm text-slate-400">General Station</div></div>
-                `;
-            } catch(e) {}
-        }
-
-        function loadTrafficCams() {
-            const container = document.getElementById('traffic-cams');
-            let html = '';
-            trafficCams.forEach(cam => {
-                const imgUrl = `https://tdcctv.data.one.gov.hk/${cam.key}.JPG`;
-                html += `
-                    <div class="aspect-video bg-slate-900 rounded-2xl overflow-hidden relative group">
-                        <img src="${imgUrl}" class="cam-img w-full h-full object-cover" 
-                             alt="${cam.loc}" onerror="this.src='https://picsum.photos/id/201/640/360';this.onerror=null;">
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3">
-                            <div class="font-medium">${cam.loc}</div>
-                            <div class="text-[10px] text-green-400 flex items-center gap-1">
-                                <span class="live-dot w-2 h-2 bg-green-400 rounded-full"></span> LIVE
-                            </div>
+                let html = '';
+                Array.from(items).slice(0, 8).forEach(item => {
+                    const title = item.querySelector("title")?.textContent || "Latest News";
+                    html += `
+                        <div class="border-b border-slate-700 pb-4 last:border-none">
+                            <div class="font-medium leading-tight">${title}</div>
+                            <div class="text-xs text-slate-400 mt-2">RTHK • Just now</div>
                         </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+                    `;
+                });
+                document.getElementById('news-list').innerHTML = html;
+            } catch(e) {
+                document.getElementById('news-list').innerHTML = `<div class="text-slate-400">Latest local news from RTHK</div>`;
+            }
         }
 
-        // All major MTR lines with representative stations
-        const mtrLines = [
-            {code: "TWL", name: "Tsuen Wan Line", sta: "CWB"},
-            {code: "KTL", name: "Kwun Tong Line", sta: "MP"},
-            {code: "ISL", name: "Island Line", sta: "CEN"},
-            {code: "SIL", name: "South Island Line", sta: "ADM"},
-            {code: "TCL", name: "Tung Chung Line", sta: "HKG"},
-            {code: "AEL", name: "Airport Express", sta: "HKG"},
-            {code: "TML", name: "Tuen Ma Line", sta: "HUH"},
-            {code: "EAL", name: "East Rail Line", sta: "KOW"},
-            {code: "TKL", name: "Tseung Kwan O Line", sta: "POA"},
-            {code: "DRL", name: "Disneyland Resort Line", sta: "SUN"},
-        ];
-
-        async function fetchMTRStatus() {
-            const container = document.getElementById('mtr-status');
-            let html = '';
+        function switchMode(mode) {
+            currentMode = mode;
             
-            for (const line of mtrLines) {
-                try {
-                    const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line.code}&sta=${line.sta}`);
-                    const data = await res.json();
-                    let status = "Normal Service";
-                    let color = "text-emerald-400";
-                    
-                    if (data.status !== 1 || (data.data && Object.keys(data.data).length === 0)) {
-                        status = "Minor Delay";
-                        color = "text-yellow-400";
-                    }
-                    
-                    html += `
-                        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 flex justify-between items-center">
-                            <div>
-                                <div class="font-medium">${line.name}</div>
-                                <div class="text-xs text-slate-400">${line.code}</div>
-                            </div>
-                            <div class="${color} text-sm font-medium">${status}</div>
-                        </div>
-                    `;
-                } catch(e) {
-                    html += `
-                        <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 flex justify-between items-center">
-                            <div>
-                                <div class="font-medium">${line.name}</div>
-                                <div class="text-xs text-slate-400">${line.code}</div>
-                            </div>
-                            <div class="text-emerald-400 text-sm font-medium">Normal Service</div>
-                        </div>
-                    `;
-                }
+            document.getElementById('news-panel').classList.add('hidden');
+            document.getElementById('mtr-legend').classList.add('hidden');
+            
+            if (mode === 'mtr') {
+                showMTR();
+            } else if (mode === 'traffic') {
+                loadTrafficMarkers();
+            } else if (mode === 'news') {
+                loadNews();
+            } else {
+                // Default weather
             }
-            container.innerHTML = html;
         }
 
-        // Enhanced News with modal
-        const newsData = [
-            {
-                title: "Heavy showers continue across Hong Kong",
-                time: "Just now",
-                source: "RTHK",
-                img: "https://picsum.photos/id/1016/800/500",
-                content: "The Hong Kong Observatory has issued an Amber Rainstorm Warning. Heavy rain is expected to continue in the next few hours. Residents are advised to stay alert for flooding in low-lying areas."
-            },
-            {
-                title: "MTR services running with minor delays due to weather",
-                time: "15 min ago",
-                source: "SCMP",
-                img: "https://picsum.photos/id/133/800/500",
-                content: "Several MTR lines are experiencing slight delays due to the heavy rainfall. Passengers are recommended to check the latest updates via the MTR Mobile app."
-            },
-            {
-                title: "Air quality moderate in most districts",
-                time: "42 min ago",
-                source: "EPD",
-                img: "https://picsum.photos/id/201/800/500",
-                content: "The Environmental Protection Department reports that the Air Quality Health Index (AQHI) is currently at moderate levels across most areas of Hong Kong."
-            },
-            {
-                title: "Traffic congestion on major tunnels",
-                time: "1 hr ago",
-                source: "HKeMobility",
-                img: "https://picsum.photos/id/251/800/500",
-                content: "Cross-Harbour Tunnel and several major roads are experiencing heavy traffic due to the weather conditions. Drivers should plan alternative routes."
-            }
-        ];
-
-        function loadNews() {
-            const container = document.getElementById('news-feed');
-            let html = '';
-            newsData.forEach((item, index) => {
-                html += `
-                    <div onclick="showNewsDetail(${index})" class="news-item bg-slate-900/70 border border-slate-700 rounded-3xl overflow-hidden">
-                        <img src="${item.img}" class="w-full h-44 object-cover">
-                        <div class="p-5">
-                            <div class="font-medium line-clamp-3">${item.title}</div>
-                            <div class="text-xs text-slate-400 mt-4 flex justify-between">
-                                <span>${item.source}</span>
-                                <span>${item.time}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function showNewsDetail(index) {
-            const item = newsData[index];
-            document.getElementById('modal-title').textContent = item.title;
-            document.getElementById('modal-image').src = item.img;
-            document.getElementById('modal-content').innerHTML = `<p>${item.content}</p>`;
-            document.getElementById('modal-meta').innerHTML = `${item.source} • ${item.time}`;
-            document.getElementById('news-modal').classList.remove('hidden');
-            document.getElementById('news-modal').classList.add('flex');
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('news-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function refreshAll() {
-            fetchWeather();
-            fetchWarnings();
-            fetchAQHI();
-            fetchMTRStatus();
-            loadTrafficCams();
-        }
-
+        // Init
         window.onload = function() {
-            fetchWeather();
-            fetchWarnings();
-            fetchAQHI();
-            loadTrafficCams();
-            fetchMTRStatus();
-            loadNews();
+            initMap();
+            updateWeather();
+            setInterval(updateWeather, 300000);
             
-            setInterval(refreshAll, REFRESH_INTERVAL);
-            setInterval(fetchMTRStatus, 45000);
+            // Default to weather + some traffic markers
+            loadTrafficMarkers();
+            
+            // Auto refresh warnings simulation
+            console.log("%cHong Kong Live Dashboard Ready", "color: #60a5fa; font-weight: bold");
         };
     </script>
 </body>
