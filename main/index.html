@@ -52,9 +52,8 @@
         <h1 class="text-2xl font-bold tracking-tight">Hong Kong Real-Time Dashboard</h1>
     </div>
 
-    <!-- Left Sidebar: Controls + Weather -->
+    <!-- Left Sidebar: Weather + Controls -->
     <div class="floating-panel absolute top-24 left-6 w-80 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto">
-        
         <!-- Weather -->
         <div class="mb-8">
             <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -85,15 +84,15 @@
                 <i class="fas fa-sliders-h"></i> Functions
             </h3>
             <div class="space-y-2">
-                <button onclick="switchMode('mtr')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                <button id="btn-mtr" onclick="toggleMode('mtr')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
                     <i class="fas fa-subway text-blue-400"></i>
                     <span class="font-medium">MTR Service Status</span>
                 </button>
-                <button onclick="switchMode('traffic')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                <button id="btn-traffic" onclick="toggleMode('traffic')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
                     <i class="fas fa-car text-emerald-400"></i>
                     <span class="font-medium">Live Traffic Cameras</span>
                 </button>
-                <button onclick="switchMode('news')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
+                <button id="btn-news" onclick="toggleMode('news')" class="w-full text-left px-5 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center gap-3 transition-all">
                     <i class="fas fa-newspaper text-amber-400"></i>
                     <span class="font-medium">Latest News</span>
                 </button>
@@ -119,6 +118,7 @@
         let map;
         let mtrLayer = null;
         let trafficMarkers = [];
+        let activeModes = new Set();
 
         function initMap() {
             map = L.map('map', { center: [22.3193, 114.1694], zoom: 12 });
@@ -177,18 +177,50 @@
             } catch(e) {}
         }
 
-        function showMTR() {
+        function toggleMTR() {
+            if (activeModes.has('mtr')) {
+                if (mtrLayer) map.removeLayer(mtrLayer);
+                mtrLayer = null;
+                document.getElementById('mtr-panel').classList.add('hidden');
+                activeModes.delete('mtr');
+                return;
+            }
+
             if (mtrLayer) map.removeLayer(mtrLayer);
             mtrLayer = L.layerGroup().addTo(map);
 
-            // More accurate approximate routes
+            // Improved real-world approximate coordinates for major lines
             const lines = [
-                {name: "Tsuen Wan Line", color: "#FF0000", path: [[22.282, 114.158], [22.295, 114.132], [22.32, 114.10], [22.37, 114.05]]},
-                {name: "Kwun Tong Line", color: "#00A650", path: [[22.312, 114.226], [22.32, 114.21], [22.34, 114.20]]},
-                {name: "Island Line", color: "#0072B0", path: [[22.281, 114.158], [22.28, 114.19], [22.28, 114.23]]},
-                {name: "Tuen Ma Line", color: "#9B2C2C", path: [[22.37, 114.05], [22.42, 114.10], [22.45, 114.18]]},
-                {name: "East Rail Line", color: "#5EB7E4", path: [[22.45, 114.18], [22.50, 114.15], [22.53, 114.10]]},
-                {name: "Tung Chung Line", color: "#F38B00", path: [[22.28, 114.16], [22.29, 114.05], [22.32, 113.95]]},
+                // Tsuen Wan Line (Red) - Central to Tsuen Wan
+                {name: "Tsuen Wan Line", color: "#FF0000", path: [
+                    [22.281, 114.158], [22.285, 114.150], [22.295, 114.132], 
+                    [22.310, 114.120], [22.325, 114.105], [22.37, 114.05]
+                ]},
+                // Kwun Tong Line (Green)
+                {name: "Kwun Tong Line", color: "#00A650", path: [
+                    [22.312, 114.226], [22.320, 114.215], [22.340, 114.200], 
+                    [22.355, 114.185]
+                ]},
+                // Island Line (Blue)
+                {name: "Island Line", color: "#0072B0", path: [
+                    [22.281, 114.158], [22.280, 114.185], [22.280, 114.210], 
+                    [22.275, 114.230]
+                ]},
+                // Tuen Ma Line (Brown/Reddish)
+                {name: "Tuen Ma Line", color: "#9B2C2C", path: [
+                    [22.37, 114.05], [22.40, 114.08], [22.42, 114.12], 
+                    [22.45, 114.18], [22.47, 114.20]
+                ]},
+                // East Rail Line (Light Blue)
+                {name: "East Rail Line", color: "#5EB7E4", path: [
+                    [22.45, 114.18], [22.48, 114.17], [22.50, 114.15], 
+                    [22.53, 114.10]
+                ]},
+                // Tung Chung Line (Orange)
+                {name: "Tung Chung Line", color: "#F38B00", path: [
+                    [22.284, 114.158], [22.29, 114.12], [22.30, 114.05], 
+                    [22.32, 113.95]
+                ]},
             ];
 
             lines.forEach(line => {
@@ -200,6 +232,7 @@
 
             document.getElementById('mtr-panel').classList.remove('hidden');
             renderMTRList();
+            activeModes.add('mtr');
         }
 
         function renderMTRList() {
@@ -227,8 +260,14 @@
             document.getElementById('mtr-list').innerHTML = html;
         }
 
-        function showTraffic() {
-            // Clear previous
+        function toggleTraffic() {
+            if (activeModes.has('traffic')) {
+                trafficMarkers.forEach(m => map.removeLayer(m));
+                trafficMarkers = [];
+                activeModes.delete('traffic');
+                return;
+            }
+
             trafficMarkers.forEach(m => map.removeLayer(m));
             trafficMarkers = [];
             
@@ -242,13 +281,21 @@
             cams.forEach(cam => {
                 const imgUrl = `https://tdcctv.data.one.gov.hk/${cam.key}.JPG`;
                 const marker = L.marker([cam.lat, cam.lng]).addTo(map)
-                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:280px;margin-top:8px;border-radius:8px;">`);
+                    .bindPopup(`<b>${cam.name}</b><br><img src="${imgUrl}" style="width:720px;margin-top:8px;border-radius:8px;">`); // 3x larger
                 trafficMarkers.push(marker);
             });
+            
+            activeModes.add('traffic');
         }
 
-        async function showNews() {
+        async function toggleNews() {
             const panel = document.getElementById('news-panel');
+            if (activeModes.has('news')) {
+                panel.classList.add('hidden');
+                activeModes.delete('news');
+                return;
+            }
+            
             panel.classList.remove('hidden');
             
             try {
@@ -272,19 +319,14 @@
             } catch(e) {
                 document.getElementById('news-list').innerHTML = '<div class="text-slate-400">RTHK news feed</div>';
             }
+            
+            activeModes.add('news');
         }
 
-        function switchMode(mode) {
-            document.getElementById('news-panel').classList.add('hidden');
-            document.getElementById('mtr-panel').classList.add('hidden');
-            
-            if (mode === 'mtr') {
-                showMTR();
-            } else if (mode === 'traffic') {
-                showTraffic();
-            } else if (mode === 'news') {
-                showNews();
-            }
+        function toggleMode(mode) {
+            if (mode === 'mtr') toggleMTR();
+            else if (mode === 'traffic') toggleTraffic();
+            else if (mode === 'news') toggleNews();
         }
 
         window.onload = function() {
