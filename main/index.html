@@ -160,7 +160,7 @@
         let map;
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
-        let mtrNetworkLayers = []; // 用於存放港鐵所有車站點與線段
+        let mtrNetworkLayers = []; 
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
@@ -205,176 +205,150 @@
             "Macau Ferry Terminal": "港澳客運碼頭"
         };
 
-        // 全香港主要地鐵路線與完整車站資料庫
+        // 統一車站座標註冊表（確保所有轉車站只有唯一一個點）
+        const mtrStationsRegistry = {
+            "Kennedy Town": { zh: "堅尼地城", gps: [22.2811, 114.1288] },
+            "HKU": { zh: "香港大學", gps: [22.2831, 114.1352] },
+            "Sai Ying Pun": { zh: "西營盤", gps: [22.2861, 114.1432] },
+            "Sheung Wan": { zh: "上環", gps: [22.2867, 114.1522] },
+            "Central": { zh: "中環", gps: [22.2820, 114.1584] },
+            "Admiralty": { zh: "金鐘", gps: [22.2794, 114.1645] },
+            "Wan Chai": { zh: "灣仔", gps: [22.2773, 114.1732] },
+            "Causeway Bay": { zh: "銅鑼灣", gps: [22.2803, 114.1852] },
+            "Tin Hau": { zh: "天后", gps: [22.2842, 114.1922] },
+            "Fortress Hill": { zh: "炮台山", gps: [22.2881, 114.1939] },
+            "North Point": { zh: "北角", gps: [22.2913, 114.2007] },
+            "Quarry Bay": { zh: "鰂魚涌", gps: [22.2884, 114.2127] },
+            "Tai Koo": { zh: "太古", gps: [22.2844, 114.2162] },
+            "Sai Wan Ho": { zh: "西灣河", gps: [22.2818, 114.2217] },
+            "Shau Kei Wan": { zh: "筲箕灣", gps: [22.2794, 114.2299] },
+            "Heng Fa Chuen": { zh: "杏花邨", gps: [22.2751, 114.2402] },
+            "Chai Wan": { zh: "柴灣", gps: [22.2641, 114.2361] },
+            "Tsim Sha Tsui": { zh: "尖沙咀", gps: [22.2965, 114.1722] },
+            "Jordan": { zh: "佐敦", gps: [22.3049, 114.1717] },
+            "Yau Ma Tei": { zh: "油麻地", gps: [22.3129, 114.1707] },
+            "Mong Kok": { zh: "旺角", gps: [22.3194, 114.1694] },
+            "Prince Edward": { zh: "太子", gps: [22.3248, 114.1685] },
+            "Sham Shui Po": { zh: "深水埗", gps: [22.3307, 114.1611] },
+            "Cheung Sha Wan": { zh: "長沙灣", gps: [22.3359, 114.1558] },
+            "Lai Chi Kok": { zh: "荔枝角", gps: [22.3371, 114.1486] },
+            "Mei Foo": { zh: "美孚", gps: [22.3374, 114.1396] },
+            "Lai King": { zh: "荔景", gps: [22.3486, 114.1274] },
+            "Kwai Fong": { zh: "葵芳", gps: [22.3567, 114.1258] },
+            "Kwai Hing": { zh: "葵興", gps: [22.3631, 114.1311] },
+            "Tai Wo Hau": { zh: "大窩口", gps: [22.3686, 114.1203] },
+            "Tsuen Wan": { zh: "荃灣", gps: [22.3736, 114.1178] },
+            "Whampoa": { zh: "黃埔", gps: [22.3048, 114.1883] },
+            "Ho Man Tin": { zh: "何文田", gps: [22.3094, 114.1824] },
+            "Shek Kip Mei": { zh: "石硤尾", gps: [22.3331, 114.1686] },
+            "Kowloon Tong": { zh: "九龍塘", gps: [22.3368, 114.1762] },
+            "Lok Fu": { zh: "樂富", gps: [22.3375, 114.1872] },
+            "Wong Tai Sin": { zh: "黃大仙", gps: [22.3382, 114.1936] },
+            "Diamond Hill": { zh: "鑽石山", gps: [22.3401, 114.2015] },
+            "Choi Hung": { zh: "彩虹", gps: [22.3347, 114.2084] },
+            "Kowloon Bay": { zh: "九龍灣", gps: [22.3235, 114.2122] },
+            "Ngau Tau Kok": { zh: "牛頭角", gps: [22.3156, 114.2189] },
+            "Kwun Tong": { zh: "觀塘", gps: [22.3121, 114.2251] },
+            "Lam Tin": { zh: "藍田", gps: [22.3075, 114.2339] },
+            "Yau Tong": { zh: "油塘", gps: [22.2982, 114.2378] },
+            "Tiu Keng Leng": { zh: "調景嶺", gps: [22.3051, 114.2526] },
+            "Exhibition Centre": { zh: "會展", gps: [22.2831, 114.1746] },
+            "Hung Hom": { zh: "紅磡", gps: [22.3029, 114.1818] },
+            "Mong Kok East": { zh: "旺角東", gps: [22.3223, 114.1717] },
+            "Tai Wai": { zh: "大圍", gps: [22.3725, 114.1785] },
+            "Sha Tin": { zh: "沙田", gps: [22.3831, 114.1875] },
+            "Fo Tan": { zh: "火炭", gps: [22.3967, 114.1956] },
+            "University": { zh: "大學", gps: [22.4131, 114.2106] },
+            "Tai Po Market": { zh: "大埔墟", gps: [22.4447, 114.1689] },
+            "Tai Wo": { zh: "太和", gps: [22.4469, 114.1481] },
+            "Fanling": { zh: "粉嶺", gps: [22.4925, 114.1386] },
+            "Sheung Shui": { zh: "上水", gps: [22.5011, 114.1278] },
+            "Lo Wu": { zh: "羅湖", gps: [22.5292, 114.1128] },
+            "Tseung Kwan O": { zh: "將軍澳", gps: [22.3143, 114.2600] },
+            "Hang Hau": { zh: "坑口", gps: [22.3161, 114.2694] },
+            "Po Lam": { zh: "寶琳", gps: [22.3225, 114.2581] },
+            "Hong Kong": { zh: "香港", gps: [22.2846, 114.1581] },
+            "Kowloon": { zh: "九龍", gps: [22.3041, 114.1614] },
+            "Olympic": { zh: "奧運", gps: [22.3178, 114.1603] },
+            "Nam Cheong": { zh: "南昌", gps: [22.3275, 114.1536] },
+            "Tsing Yi": { zh: "青衣", gps: [22.3584, 114.1067] },
+            "Sunny Bay": { zh: "欣澳", gps: [22.3297, 113.9850] },
+            "Tung Chung": { zh: "東涌", gps: [22.2892, 113.9392] },
+            "Airport": { zh: "機場", gps: [22.3151, 113.9352] },
+            "AsiaWorld-Expo": { zh: "博覽館", gps: [22.3211, 113.9422] },
+            "Tuen Mun": { zh: "屯門", gps: [22.3950, 113.9731] },
+            "Siu Hong": { zh: "兆康", gps: [22.4121, 113.9786] },
+            "Tin Shui Wai": { zh: "天水圍", gps: [22.4442, 114.0049] },
+            "Long Ping": { zh: "朗屏", gps: [22.4475, 114.0225] },
+            "Yuen Long": { zh: "元朗", gps: [22.4446, 114.0344] },
+            "Kam Sheung Road": { zh: "錦上路", gps: [22.4289, 114.0617] },
+            "Tsuen Wan West": { zh: "荃灣西", gps: [22.3686, 114.1114] },
+            "Austin": { zh: "柯士甸", gps: [22.3039, 114.1658] },
+            "East Tsim Sha Tsui": { zh: "尖東", gps: [22.2949, 114.1747] },
+            "To Kwa Wan": { zh: "土瓜灣", gps: [22.3175, 114.1884] },
+            "Sung Wong Toi": { zh: "宋皇臺", gps: [22.3242, 114.1917] },
+            "Kai Tak": { zh: "啟德", gps: [22.3317, 114.2006] },
+            "Hin Keng": { zh: "顯徑", gps: [22.3619, 114.1725] },
+            "Che Kung Temple": { zh: "車公廟", gps: [22.3756, 114.1849] },
+            "Sha Tin Wai": { zh: "沙田圍", gps: [22.3769, 114.1942] },
+            "City One": { zh: "第一城", gps: [22.3853, 114.2046] },
+            "Shek Mun": { zh: "石門", gps: [22.3925, 114.2092] },
+            "Tai Shui Hang": { zh: "大水坑", gps: [22.4142, 114.2217] },
+            "Heng On": { zh: "恆安", gps: [22.4219, 114.2272] },
+            "Ma On Shan": { zh: "馬鞍山", gps: [22.4244, 114.2319] },
+            "Wu Kai Sha": { zh: "烏溪沙", gps: [22.4286, 114.2439] },
+            "Ocean Park": { zh: "海洋公園", gps: [22.2491, 114.1739] },
+            "Wong Chuk Hang": { zh: "黃竹坑", gps: [22.2478, 114.1683] },
+            "Lei Tung": { zh: "利東", gps: [22.2428, 114.1556] },
+            "South Horizons": { zh: "海怡半島", gps: [22.2431, 114.1492] }
+        };
+
+        // 鐵路網線路資料結構（關聯 Registry 鍵值）
         const mtrLinesData = [
             {
-                name: "港島綫 (Island Line)",
+                name: "Island Line (港島綫)",
                 color: "#0071ce",
-                stations: [
-                    { name: "堅尼地城", gps: [22.2811, 114.1288] },
-                    { name: "香港大學", gps: [22.2831, 114.1352] },
-                    { name: "西營盤", gps: [22.2861, 114.1432] },
-                    { name: "上環", gps: [22.2867, 114.1522] },
-                    { name: "中環", gps: [22.2820, 114.1584] },
-                    { name: "金鐘", gps: [22.2794, 114.1645] },
-                    { name: "灣仔", gps: [22.2773, 114.1732] },
-                    { name: "銅鑼灣", gps: [22.2803, 114.1852] },
-                    { name: "天后", gps: [22.2842, 114.1922] },
-                    { name: "炮台山", gps: [22.2881, 114.1939] },
-                    { name: "北角", gps: [22.2913, 114.2007] },
-                    { name: "鰂魚涌", gps: [22.2884, 114.2127] },
-                    { name: "太古", gps: [22.2844, 114.2162] },
-                    { name: "西灣河", gps: [22.2818, 114.2217] },
-                    { name: "筲箕灣", gps: [22.2794, 114.2299] },
-                    { name: "杏花邨", gps: [22.2751, 114.2402] },
-                    { name: "柴灣", gps: [22.2641, 114.2361] }
-                ]
+                stationKeys: ["Kennedy Town", "HKU", "Sai Ying Pun", "Sheung Wan", "Central", "Admiralty", "Wan Chai", "Causeway Bay", "Tin Hau", "Fortress Hill", "North Point", "Quarry Bay", "Tai Koo", "Sai Wan Ho", "Shau Kei Wan", "Heng Fa Chuen", "Chai Wan"]
             },
             {
-                name: "荃灣綫 (Tsuen Wan Line)",
+                name: "Tsuen Wan Line (荃灣綫)",
                 color: "#e2231a",
-                stations: [
-                    { name: "中環", gps: [22.2820, 114.1584] },
-                    { name: "金鐘", gps: [22.2794, 114.1645] },
-                    { name: "尖沙咀", gps: [22.2965, 114.1722] },
-                    { name: "佐敦", gps: [22.3049, 114.1717] },
-                    { name: "油麻地", gps: [22.3129, 114.1707] },
-                    { name: "旺角", gps: [22.3194, 114.1694] },
-                    { name: "太子", gps: [22.3248, 114.1685] },
-                    { name: "深水埗", gps: [22.3307, 114.1611] },
-                    { name: "長沙灣", gps: [22.3359, 114.1558] },
-                    { name: "荔枝角", gps: [22.3371, 114.1486] },
-                    { name: "美孚", gps: [22.3374, 114.1396] },
-                    { name: "荔景", gps: [22.3486, 114.1274] },
-                    { name: "葵芳", gps: [22.3567, 114.1258] },
-                    { name: "葵興", gps: [22.3631, 114.1311] },
-                    { name: "大窩口", gps: [22.3686, 114.1203] },
-                    { name: "荃灣", gps: [22.3736, 114.1178] }
-                ]
+                stationKeys: ["Central", "Admiralty", "Tsim Sha Tsui", "Jordan", "Yau Ma Tei", "Mong Kok", "Prince Edward", "Sham Shui Po", "Cheung Sha Wan", "Lai Chi Kok", "Mei Foo", "Lai King", "Kwai Fong", "Kwai Hing", "Tai Wo Hau", "Tsuen Wan"]
             },
             {
-                name: "觀塘綫 (Kwun Tong Line)",
+                name: "Kwun Tong Line (觀塘綫)",
                 color: "#009944",
-                stations: [
-                    { name: "黃埔", gps: [22.3048, 114.1883] },
-                    { name: "何文田", gps: [22.3094, 114.1824] },
-                    { name: "油麻地", gps: [22.3129, 114.1707] },
-                    { name: "旺角", gps: [22.3194, 114.1694] },
-                    { name: "太子", gps: [22.3248, 114.1685] },
-                    { name: "石硤尾", gps: [22.3331, 114.1686] },
-                    { name: "九龍塘", gps: [22.3368, 114.1762] },
-                    { name: "樂富", gps: [22.3375, 114.1872] },
-                    { name: "黃大仙", gps: [22.3382, 114.1936] },
-                    { name: "鑽石山", gps: [22.3401, 114.2015] },
-                    { name: "彩虹", gps: [22.3347, 114.2084] },
-                    { name: "九龍灣", gps: [22.3235, 114.2122] },
-                    { name: "牛頭角", gps: [22.3156, 114.2189] },
-                    { name: "觀塘", gps: [22.3121, 114.2251] },
-                    { name: "藍田", gps: [22.3075, 114.2339] },
-                    { name: "油塘", gps: [22.2982, 114.2378] },
-                    { name: "調景嶺", gps: [22.3051, 114.2526] }
-                ]
+                stationKeys: ["Whampoa", "Ho Man Tin", "Yau Ma Tei", "Mong Kok", "Prince Edward", "Shek Kip Mei", "Kowloon Tong", "Lok Fu", "Wong Tai Sin", "Diamond Hill", "Choi Hung", "Kowloon Bay", "Ngau Tau Kok", "Kwun Tong", "Lam Tin", "Yau Tong", "Tiu Keng Leng"]
             },
             {
-                name: "東鐵綫 (East Rail Line)",
+                name: "East Rail Line (東鐵綫)",
                 color: "#54b4d3",
-                stations: [
-                    { name: "金鐘", gps: [22.2794, 114.1645] },
-                    { name: "會展", gps: [22.2831, 114.1746] },
-                    { name: "紅磡", gps: [22.3029, 114.1818] },
-                    { name: "旺角東", gps: [22.3223, 114.1717] },
-                    { name: "九龍塘", gps: [22.3368, 114.1762] },
-                    { name: "大圍", gps: [22.3725, 114.1785] },
-                    { name: "沙田", gps: [22.3831, 114.1875] },
-                    { name: "火炭", gps: [22.3967, 114.1956] },
-                    { name: "大學", gps: [22.4131, 114.2106] },
-                    { name: "大埔墟", gps: [22.4447, 114.1689] },
-                    { name: "太和", gps: [22.4469, 114.1481] },
-                    { name: "粉嶺", gps: [22.4925, 114.1386] },
-                    { name: "上水", gps: [22.5011, 114.1278] },
-                    { name: "羅湖", gps: [22.5292, 114.1128] }
-                ]
+                stationKeys: ["Admiralty", "Exhibition Centre", "Hung Hom", "Mong Kok East", "Kowloon Tong", "Tai Wai", "Sha Tin", "Fo Tan", "University", "Tai Po Market", "Tai Wo", "Fanling", "Sheung Shui", "Lo Wu"]
             },
             {
-                name: "將軍澳綫 (Tseung Kwan O Line)",
+                name: "Tseung Kwan O Line (將軍澳綫)",
                 color: "#7f1084",
-                stations: [
-                    { name: "北角", gps: [22.2913, 114.2007] },
-                    { name: "鰂魚涌", gps: [22.2884, 114.2127] },
-                    { name: "油塘", gps: [22.2982, 114.2378] },
-                    { name: "調景嶺", gps: [22.3051, 114.2526] },
-                    { name: "將軍澳", gps: [22.3143, 114.2600] },
-                    { name: "坑口", gps: [22.3161, 114.2694] },
-                    { name: "寶琳", gps: [22.3225, 114.2581] }
-                ]
+                stationKeys: ["North Point", "Quarry Bay", "Yau Tong", "Tiu Keng Leng", "Tseung Kwan O", "Hang Hau", "Po Lam"]
             },
             {
-                name: "東涌綫 (Tung Chung Line)",
+                name: "Tung Chung Line (東涌綫)",
                 color: "#f3a11c",
-                stations: [
-                    { name: "香港", gps: [22.2846, 114.1581] },
-                    { name: "九龍", gps: [22.3041, 114.1614] },
-                    { name: "奧運", gps: [22.3178, 114.1603] },
-                    { name: "南昌", gps: [22.3275, 114.1536] },
-                    { name: "荔景", gps: [22.3486, 114.1274] },
-                    { name: "青衣", gps: [22.3584, 114.1067] },
-                    { name: "欣澳", gps: [22.3297, 113.9850] },
-                    { name: "東涌", gps: [22.2892, 113.9392] }
-                ]
+                stationKeys: ["Hong Kong", "Kowloon", "Olympic", "Nam Cheong", "Lai King", "Tsing Yi", "Sunny Bay", "Tung Chung"]
             },
             {
-                name: "機場快綫 (Airport Express)",
+                name: "Airport Express (機場快綫)",
                 color: "#00646e",
-                stations: [
-                    { name: "香港", gps: [22.2846, 114.1581] },
-                    { name: "九龍", gps: [22.3041, 114.1614] },
-                    { name: "青衣", gps: [22.3584, 114.1067] },
-                    { name: "機場", gps: [22.3151, 113.9352] },
-                    { name: "博覽館", gps: [22.3211, 113.9422] }
-                ]
+                stationKeys: ["Hong Kong", "Kowloon", "Tsing Yi", "Airport", "AsiaWorld-Expo"]
             },
             {
-                name: "屯馬綫 (Tuen Ma Line)",
+                name: "Tuen Ma Line (屯馬綫)",
                 color: "#9a3820",
-                stations: [
-                    { name: "屯門", gps: [22.3950, 113.9731] },
-                    { name: "兆康", gps: [22.4121, 113.9786] },
-                    { name: "天水圍", gps: [22.4442, 114.0049] },
-                    { name: "朗屏", gps: [22.4475, 114.0225] },
-                    { name: "元朗", gps: [22.4446, 114.0344] },
-                    { name: "錦上路", gps: [22.4289, 114.0617] },
-                    { name: "荃灣西", gps: [22.3686, 114.1114] },
-                    { name: "美孚", gps: [22.3374, 114.1396] },
-                    { name: "南昌", gps: [22.3275, 114.1536] },
-                    { name: "柯士甸", gps: [22.3039, 114.1658] },
-                    { name: "尖東", gps: [22.2949, 114.1747] },
-                    { name: "紅磡", gps: [22.3029, 114.1818] },
-                    { name: "土瓜灣", gps: [22.3175, 114.1884] },
-                    { name: "宋皇臺", gps: [22.3242, 114.1917] },
-                    { name: "啟德", gps: [22.3317, 114.2006] },
-                    { name: "鑽石山", gps: [22.3401, 114.2015] },
-                    { name: "顯徑", gps: [22.3619, 114.1725] },
-                    { name: "大圍", gps: [22.3725, 114.1785] },
-                    { name: "車公廟", gps: [22.3756, 114.1849] },
-                    { name: "沙田圍", gps: [22.3769, 114.1942] },
-                    { name: "第一城", gps: [22.3853, 114.2046] },
-                    { name: "石門", gps: [22.3925, 114.2092] },
-                    { name: "大水坑", gps: [22.4142, 114.2217] },
-                    { name: "恆安", gps: [22.4219, 114.2272] },
-                    { name: "馬鞍山", gps: [22.4244, 114.2319] },
-                    { name: "烏溪沙", gps: [22.4286, 114.2439] }
-                ]
+                stationKeys: ["Tuen Mun", "Siu Hong", "Tin Shui Wai", "Long Ping", "Yuen Long", "Kam Sheung Road", "Tsuen Wan West", "Mei Foo", "Nam Cheong", "Austin", "East Tsim Sha Tsui", "Hung Hom", "To Kwa Wan", "Sung Wong Toi", "Kai Tak", "Diamond Hill", "Hin Keng", "Tai Wai", "Che Kung Temple", "Sha Tin Wai", "City One", "Shek Mun", "Tai Shui Hang", "Heng On", "Ma On Shan", "Wu Kai Sha"]
             },
             {
-                name: "南港島綫 (South Island Line)",
+                name: "South Island Line (南港島綫)",
                 color: "#b5ad11",
-                stations: [
-                    { name: "金鐘", gps: [22.2794, 114.1645] },
-                    { name: "海洋公園", gps: [22.2491, 114.1739] },
-                    { name: "黃竹坑", gps: [22.2478, 114.1683] },
-                    { name: "利東", gps: [22.2428, 114.1556] },
-                    { name: "海怡半島", gps: [22.2431, 114.1492] }
-                ]
+                stationKeys: ["Admiralty", "Ocean Park", "Wong Chuk Hang", "Lei Tung", "South Horizons"]
             }
         ];
 
@@ -650,14 +624,13 @@
             }
         }
 
-        // 終極解決辦法：用官方配色線條繪製鐵路網絡並串聯所有車站
+        // 核心改動：合併轉車站圓點，繪製完整軌道網
         function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
             
             if (activeModes.has('mtr')) {
                 el.classList.add('hidden');
-                // 移除地圖上所有的港鐵線路和標記
                 mtrNetworkLayers.forEach(layer => map.removeLayer(layer));
                 mtrNetworkLayers = [];
                 btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
@@ -665,60 +638,92 @@
                 return;
             }
 
-            // 1. 循環讀取每條地鐵線，繪製鐵軌線段並點綴車站
+            // 1. 先把所有路線的線條畫好
             mtrLinesData.forEach(line => {
-                const latlngs = line.stations.map(s => s.gps);
+                const latlngs = line.stationKeys
+                    .map(key => mtrStationsRegistry[key] ? mtrStationsRegistry[key].gps : null)
+                    .filter(gps => gps !== null);
                 
-                // 1a. 繪製鐵路軌道外發光黑底（讓在暗色地圖上更明顯）
+                // 黑色發光軌道底
                 const bgPolyline = L.polyline(latlngs, {
                     color: '#000000',
                     weight: 7,
-                    opacity: 0.7
+                    opacity: 0.6
                 }).addTo(map);
                 mtrNetworkLayers.push(bgPolyline);
 
-                // 1b. 繪製官方配色實心線
+                // 官方彩色路線線段
                 const polyline = L.polyline(latlngs, {
                     color: line.color,
                     weight: 4,
-                    opacity: 0.95
+                    opacity: 0.9
                 }).addTo(map);
                 mtrNetworkLayers.push(polyline);
+            });
 
-                // 1c. 為該條路線上的每個車站打上微型專屬圓點
-                line.stations.forEach(station => {
-                    const stationIcon = L.divIcon({
-                        html: `<div class="w-3.5 h-3.5 bg-white border-2 rounded-full shadow-md flex items-center justify-center transition-all duration-150 hover:scale-150 cursor-pointer" style="border-color: ${line.color};"></div>`,
-                        className: '',
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7]
-                    });
+            // 2. 遍歷整個統一車站 Registry，每個車站保證只畫一個標記點
+            Object.keys(mtrStationsRegistry).forEach(stationKey => {
+                const station = mtrStationsRegistry[stationKey];
+                
+                // 找出這個車站隸屬於哪些路線
+                const belongsToLines = mtrLinesData.filter(line => line.stationKeys.includes(stationKey));
+                
+                let markerHtml = '';
+                // 如果是交匯站（擁有2條或以上路線），採用特殊的雙色/多色環狀或漸變效果，或者主體白底拼湊色圈
+                if (belongsToLines.length > 1) {
+                    // 交匯站：稍微放大外圈，內部用精緻的白底黑芯或黑底多色環表示
+                    markerHtml = `<div class="w-4.5 h-4.5 bg-white border-2 border-slate-400 rounded-full shadow-lg flex items-center justify-center transition-all duration-150 hover:scale-150 cursor-pointer">
+                        <div class="w-2 h-2 bg-slate-900 rounded-full"></div>
+                    </div>`;
+                } else {
+                    // 單一線路普通站：直接使用該線路的官方顏色邊框
+                    const lineColor = belongsToLines[0]?.color || '#ffffff';
+                    markerHtml = `<div class="w-3.5 h-3.5 bg-white border-2 rounded-full shadow-md flex items-center justify-center transition-all duration-150 hover:scale-150 cursor-pointer" style="border-color: ${lineColor};"></div>`;
+                }
 
-                    const m = L.marker(station.gps, { icon: stationIcon }).addTo(map);
-                    
-                    m.bindPopup(`
-                        <div class="w-48 font-sans p-1 text-slate-200">
-                            <div class="flex items-center gap-2 border-b border-slate-700/60 pb-1.5 mb-2">
-                                <span class="w-3 h-3 rounded-full" style="background-color: ${line.color};"></span>
-                                <h4 class="text-sm font-bold text-white tracking-wide">${station.name} 站</h4>
-                            </div>
-                            <div class="text-[11px] text-slate-400">
-                                所屬綫路：<span class="font-medium text-slate-200">${line.name.split(' (')[0]}</span>
-                            </div>
+                const stationIcon = L.divIcon({
+                    html: markerHtml,
+                    className: '',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+
+                const m = L.marker(station.gps, { icon: stationIcon }).addTo(map);
+                
+                // 動態生成經過路線的彩色 Tags 標籤
+                let linesTagHtml = '';
+                belongsToLines.forEach(l => {
+                    linesTagHtml += `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium border text-slate-200" style="background-color: ${l.color}20; border-color: ${l.color}50;">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${l.color};"></span>
+                            ${l.name.split(' (')[0]}
+                        </span>
+                    `;
+                });
+
+                // 嚴格規範雙語輸出：第一行英文，第二行中文
+                m.bindPopup(`
+                    <div class="w-52 font-sans p-1 text-slate-200">
+                        <div class="border-b border-slate-700/60 pb-2 mb-2">
+                            <h4 class="text-sm font-bold text-white tracking-wide font-mono leading-tight">${stationKey}</h4>
+                            <h4 class="text-xs font-semibold text-slate-400 mt-0.5 leading-tight">${station.zh} 站</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="text-[10px] text-slate-400">途經路綫 / Passing Lines:</div>
+                            <div class="flex flex-wrap gap-1.5">${linesTagHtml}</div>
                             <div class="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 p-2 rounded-xl text-[10px] flex items-center gap-1.5 mt-2">
                                 <i class="fas fa-circle-check text-xs"></i> 列車服務目前運作正常
                             </div>
                         </div>
-                    `, { className: 'custom-popup' });
+                    </div>
+                `, { className: 'custom-popup' });
 
-                    mtrNetworkLayers.push(m);
-                });
+                mtrNetworkLayers.push(m);
             });
 
-            // 視角平滑移至香港正中心點
             map.flyTo([22.3210, 114.1700], 11);
 
-            // 2. 渲染右下方資訊面板的服務狀態
+            // 右下角控制面板狀態列表
             let html = '';
             mtrLinesData.forEach(l => {
                 html += `
