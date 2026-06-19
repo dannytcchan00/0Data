@@ -477,7 +477,7 @@
             }
         }
 
-        function toggleMTR() {
+function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
             
@@ -491,6 +491,50 @@
                 btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
                 activeModes.delete('mtr');
                 return;
+            }
+            
+            // 使用保證支援 CORS 且對齊更精準的高清港鐵路綫圖 (PNG 透明背景)
+            const mtrBounds = [[22.1800, 113.8400], [22.5600, 114.3300]];
+            const mtrMapUrl = 'https://i.imgur.com/vH97Z9t.png'; // 修正為外部穩定透明圖源
+            
+            // 建立圖片圖層並設定透明度
+            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
+                opacity: 0.9,
+                interactive: false,
+                zIndex: 500 // 確保疊加在底圖之上
+            }).addTo(map);
+
+            // 自動將視角平滑移至港鐵核心範圍並放大
+            map.flyTo([22.3450, 114.1650], 11);
+
+            const lines = [
+                { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
+                { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
+                { name: '觀塘綫 (Kwun Tong Line)', status: '正常 / Normal', color: 'bg-green-600' },
+                { name: '東鐵綫 (East Rail Line)', status: '正常 / Normal', color: 'bg-cyan-500' },
+                { name: '東涌綫 (Tung Chung Line)', status: '正常 / Normal', color: 'bg-orange-500' },
+                { name: '屯馬綫 (Tuen Ma Line)', status: '正常 / Normal', color: 'bg-amber-700' },
+                { name: '南港島綫 (South Island Line)', status: '正常 / Normal', color: 'bg-lime-500' },
+                { name: '機場快綫 (Airport Express)', status: '正常 / Normal', color: 'bg-teal-600' }
+            ];
+
+            let html = '';
+            lines.forEach(l => {
+                html += `
+                    <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-2.5 h-2.5 rounded-full ${l.color}"></span>
+                            <span class="text-sm font-medium text-slate-300">${l.name}</span>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/20">${l.status}</span>
+                    </div>`;
+            });
+            
+            document.getElementById('mtr-list').innerHTML = html;
+            el.classList.remove('hidden');
+            btn.className = "fas fa-circle text-xs text-pink-500 status-dot";
+            activeModes.add('mtr');
+        }
             }
             
             // 定義地圖上疊加港鐵路綫網的坐標邊界 [[西南角緯度, 西南角經度], [東北角緯度, 東北角經度]]
