@@ -1,13 +1,3 @@
-收到！我們把規限拿走，將**香港居民**、**內地訪客**、**其他訪客**的數字全面解放。
-
-現在只要點擊口岸，彈出的視窗（Popup）就會左右徹底拆開：
-
-* **左邊**：完整的**入境**明細（包含香港居民、內地訪客、其他訪客真實數字）
-* **右邊**：完整的**出境**明細（包含香港居民、內地訪客、其他訪客真實數字）
-
-以下是為你解鎖所有數字後的完整程式碼：
-
-```html
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -172,7 +162,7 @@
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
-        let cachedImmiLines = []; 
+        let cachedImmiData = []; // 儲存由 API 獲取的原始資料
 
         const hospitalRegistry = {
             "Alice Ho Miu Ling Nethersole Hospital": { zhName: "雅麗氏何妙齡那打素醫院", gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
@@ -195,9 +185,11 @@
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
         };
 
+        // 對應官方 API 的管制站名稱 (包含常見的英文寫法轉換)
         const immigrationRegistry = {
             "Airport": { zhName: "機場", gps: [22.3080, 113.9185] },
             "Express Rail Link West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
+            "West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
             "Hung Hom": { zhName: "紅磡", gps: [22.3020, 114.1815] },
             "Lo Wu": { zhName: "羅湖", gps: [22.5285, 114.1126] },
             "Lok Ma Chau Spur Line": { zhName: "落馬洲支線", gps: [22.5140, 114.0660] },
@@ -326,7 +318,7 @@
 
         async function updateWarnings() {
             try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/warnsum&lang=tc');
                 const data = await res.json();
                 let html = '';
                 let activeWarningCount = 0;
@@ -617,7 +609,7 @@
             });
         }
 
-        // --- 口岸出入境數據模組 ---
+        // --- 改接入境事務處官方 API 模組 ---
         async function toggleImmigration() {
             const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
             const datePanel = document.getElementById('immi-date-panel');
@@ -632,21 +624,26 @@
             }
 
             try {
-                const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
-                const res = await fetch(csvUrl);
-                const csvText = await res.text();
+                // 串接香港政府官方數據開放平台 (DATA.GOV.HK) 入境事務處旅客流量統計 API
+                const apiUrl = 'https://opendata.immd.gov.hk/contents/v1/statistics/passenger-traffic-stat.json';
+                const res = await fetch(apiUrl);
+                const data = await res.json();
                 
-                cachedImmiLines = csvText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                if (cachedImmiLines.length < 2) return;
-
-                const dateSet = new Set();
-                for (let i = cachedImmiLines.length - 1; i >= 1; i--) {
-                    const cols = cachedImmiLines[i].split(',');
-                    if (cols[0] && cols[0].trim()) {
-                        dateSet.add(cols[0].trim().replace(/"/g, ''));
-                    }
+                // 官方 JSON 結構通常在 data 欄位內
+                cachedImmiData = data.data || data;
+                if (!cachedImmiData || cachedImmiData.length === 0) {
+                    alert("未能從官方 API 讀取到有效的數據結構。");
+                    return;
                 }
-                const dateList = Array.from(dateSet);
+
+                // 收集數據內的所有日期（通常是近期數天），並做倒序排列讓最新的日期排在最前
+                const dateSet = new Set();
+                cachedImmiData.forEach(item => {
+                    if (item.date || item["Date"]) {
+                        dateSet.add((item.date || item["Date"]).trim());
+                    }
+                });
+                const dateList = Array.from(dateSet).sort().reverse();
 
                 const selectEl = document.getElementById('immi-date-select');
                 selectEl.innerHTML = dateList.map((d, index) => `<option value="${d}" ${index === 0 ? 'selected' : ''}>${d}</option>`).join('');
@@ -658,8 +655,8 @@
                 activeModes.add('immigration');
 
             } catch (e) {
-                console.error("出入境數據 CSV 讀取失敗: ", e);
-                alert("無法讀取口岸出入境數據。");
+                console.error("出入境數據官方 API 讀取失敗: ", e);
+                alert("無法從官方 API 獲取出入境旅客數字，請檢查網絡連線。");
             }
         }
 
@@ -674,47 +671,79 @@
 
             const summaryData = {};
 
-            for (let i = 1; i < cachedImmiLines.length; i++) {
-                const cols = cachedImmiLines[i].split(',').map(col => col.trim().replace(/"/g, ''));
-                if (cols.length < 7) continue;
-                
-                if (cols[0] === targetDate) {
-                    let controlPoint = cols[1];
-                    const direction = cols[6] ? cols[6].toLowerCase() : '';
-                    
-                    if (controlPoint.includes("Hong Kong-Zhuhai-Macao Bridge")) {
-                        controlPoint = "Hong Kong-Zhuhai-Macao Bridge";
-                    }
+            // 處理官方欄位對應（相容大小寫、底線及空格命名形式）
+            cachedImmiData.forEach(item => {
+                const itemDate = item.date || item["Date"];
+                if (itemDate !== targetDate) return;
 
-                    const hkRes = parseInt(cols[2]) || 0;
-                    const mainlandVisitor = parseInt(cols[3]) || 0;
-                    const otherVisitor = parseInt(cols[4]) || 0;
-                    const total = parseInt(cols[5]) || 0;
+                let controlPoint = item.control_point || item["Control Point"] || item.controlPoint;
+                if (!controlPoint) return;
 
-                    if (!summaryData[controlPoint]) {
-                        summaryData[controlPoint] = {
-                            arr: { hkRes: 0, mainland: 0, other: 0, total: 0 },
-                            dep: { hkRes: 0, mainland: 0, other: 0, total: 0 },
-                            grandTotal: 0
-                        };
-                    }
-
-                    if (direction === 'arrival' || direction.includes('arr')) {
-                        summaryData[controlPoint].arr.hkRes += hkRes;
-                        summaryData[controlPoint].arr.mainland += mainlandVisitor;
-                        summaryData[controlPoint].arr.other += otherVisitor;
-                        summaryData[controlPoint].arr.total += total;
-                    } else if (direction === 'departure' || direction.includes('dep')) {
-                        summaryData[controlPoint].dep.hkRes += hkRes;
-                        summaryData[controlPoint].dep.mainland += mainlandVisitor;
-                        summaryData[controlPoint].dep.other += otherVisitor;
-                        summaryData[controlPoint].dep.total += total;
-                    }
-                    
-                    summaryData[controlPoint].grandTotal = summaryData[controlPoint].arr.total + summaryData[controlPoint].dep.total;
+                // 統一對應標準名稱
+                if (controlPoint.includes("Hong Kong-Zhuhai-Macao Bridge") || controlPoint.includes("港珠澳大橋")) {
+                    controlPoint = "Hong Kong-Zhuhai-Macao Bridge";
+                } else if (controlPoint.includes("West Kowloon") || controlPoint.includes("西九龍")) {
+                    controlPoint = "Express Rail Link West Kowloon";
+                } else if (controlPoint.includes("Airport") || controlPoint.includes("機場")) {
+                    controlPoint = "Airport";
+                } else if (controlPoint.includes("Lo Wu") || controlPoint.includes("羅湖")) {
+                    controlPoint = "Lo Wu";
+                } else if (controlPoint.includes("Lok Ma Chau Spur Line") || controlPoint.includes("落馬洲支線")) {
+                    controlPoint = "Lok Ma Chau Spur Line";
+                } else if (controlPoint.includes("Lok Ma Chau") || controlPoint.includes("皇崗")) {
+                    controlPoint = "Lok Ma Chau";
+                } else if (controlPoint.includes("Shenzhen Bay") || controlPoint.includes("深圳灣")) {
+                    controlPoint = "Shenzhen Bay";
+                } else if (controlPoint.includes("Heung Yuen Wai") || controlPoint.includes("香園圍")) {
+                    controlPoint = "Heung Yuen Wai";
+                } else if (controlPoint.includes("Man Kam To") || controlPoint.includes("文錦渡")) {
+                    controlPoint = "Man Kam To";
+                } else if (controlPoint.includes("Sha Tau Kok") || controlPoint.includes("沙頭角")) {
+                    controlPoint = "Sha Tau Kok";
+                } else if (controlPoint.includes("Hung Hom") || controlPoint.includes("紅磡")) {
+                    controlPoint = "Hung Hom";
+                } else if (controlPoint.includes("China Ferry") || controlPoint.includes("中國客運碼頭")) {
+                    controlPoint = "China Ferry Terminal";
+                } else if (controlPoint.includes("Macau Ferry") || controlPoint.includes("港澳客運碼頭")) {
+                    controlPoint = "Macau Ferry Terminal";
+                } else if (controlPoint.includes("Kai Tak") || controlPoint.includes("啟德郵輪")) {
+                    controlPoint = "Kai Tak Cruise Terminal";
+                } else if (controlPoint.includes("Harbour") || controlPoint.includes("港口管制")) {
+                    controlPoint = "Harbour Control";
                 }
-            }
 
+                const direction = (item.direction || item["Arrival / Departure"] || "").toLowerCase();
+                
+                // 讀取各細項人數
+                const hkRes = parseInt(item.hong_kong_residents || item["Hong Kong Residents"] || item.hkResidents) || 0;
+                const mainlandVisitor = parseInt(item.mainland_visitors || item["Mainland Visitors"] || item.mainlandVisitors) || 0;
+                const otherVisitor = parseInt(item.other_visitors || item["Other Visitors"] || item.otherVisitors) || 0;
+                const total = parseInt(item.total || item["Total"]) || (hkRes + mainlandVisitor + otherVisitor);
+
+                if (!summaryData[controlPoint]) {
+                    summaryData[controlPoint] = {
+                        arr: { hkRes: 0, mainland: 0, other: 0, total: 0 },
+                        dep: { hkRes: 0, mainland: 0, other: 0, total: 0 },
+                        grandTotal: 0
+                    };
+                }
+
+                if (direction === 'arrival' || direction.includes('arr') || direction.includes('入')) {
+                    summaryData[controlPoint].arr.hkRes += hkRes;
+                    summaryData[controlPoint].arr.mainland += mainlandVisitor;
+                    summaryData[controlPoint].arr.other += otherVisitor;
+                    summaryData[controlPoint].arr.total += total;
+                } else if (direction === 'departure' || direction.includes('dep') || direction.includes('出')) {
+                    summaryData[controlPoint].dep.hkRes += hkRes;
+                    summaryData[controlPoint].dep.mainland += mainlandVisitor;
+                    summaryData[controlPoint].dep.other += otherVisitor;
+                    summaryData[controlPoint].dep.total += total;
+                }
+                
+                summaryData[controlPoint].grandTotal = summaryData[controlPoint].arr.total + summaryData[controlPoint].dep.total;
+            });
+
+            // 把總計後的數據渲染到地圖圓點上
             Object.keys(summaryData).forEach(cpKey => {
                 const meta = immigrationRegistry[cpKey];
                 if (meta) {
@@ -831,5 +860,3 @@
     </script>
 </body>
 </html>
-
-```
