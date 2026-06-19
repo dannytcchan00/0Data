@@ -115,6 +115,10 @@
                         <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
+                    <button id="btn-traffic" onclick="toggleMode('traffic')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-3"><i class="fas fa-camera text-emerald-400"></i> <span class="font-medium text-slate-200">實時交通鏡頭 (Live)</span></span>
+                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                    </button>
                     <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">出入境管制站旅客流量</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
@@ -140,7 +144,7 @@
             <h3 class="font-bold text-lg text-white flex items-center gap-2">
                 <i class="fas fa-passport text-indigo-400"></i> 出入境管制站旅客流量
             </h3>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">Immigration Passenger Flow (Yesterday)</div>
+            <div id="imm-date-display" class="text-[10px] text-indigo-400 font-mono mt-0.5">Loading data date...</div>
             <div id="imm-summary" class="grid grid-cols-2 gap-2 mt-3 bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-xs">
                 <div>
                     <div class="text-[10px] text-slate-400">Total Arrivals<br>總入境人數</div>
@@ -158,6 +162,7 @@
 
     <script>
         let map;
+        let trafficMarkers = [];
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
         let activeModes = new Set();
@@ -173,7 +178,7 @@
             "Pamela Youde Nethersole Eastern Hospital": { zhName: "東區尤德夫人那打素醫院", gps: [22.2692, 114.2361], addr: "柴灣樂民道 3 號" },
             "Pok Oi Hospital": { zhName: "博愛醫院", gps: [22.4444, 114.0414], addr: "元朗坳頭" },
             "Prince of Wales Hospital": { zhName: "威爾斯親王醫院", gps: [22.3811, 114.2025], addr: "沙田銀城街 30-32 號" },
-            "Princess Margaret Hospital": { zhName: "瑪嘉烈醫院", gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號" },
+            "Princess Margaret Hospital": { zhName: "瑪賈烈醫院", gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號" },
             "Queen Elizabeth Hospital": { zhName: "伊利沙伯醫院", gps: [22.3094, 114.1761], addr: "油麻地加士居道 30 號" },
             "Queen Mary Hospital": { zhName: "瑪麗醫院", gps: [22.2706, 114.1313], addr: "薄扶林道 102 號" },
             "Ruttonjee Hospital": { zhName: "律敦治醫院", gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號" },
@@ -515,6 +520,79 @@
             activeModes.add('mtr');
         }
 
+        async function toggleTraffic() {
+            const btn = document.getElementById('btn-traffic').querySelector('.status-dot');
+            if (activeModes.has('traffic')) {
+                trafficMarkers.forEach(m => map.removeLayer(m));
+                trafficMarkers = [];
+                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                activeModes.delete('traffic');
+                return;
+            }
+
+            const cams = [
+                { lat: 22.2818, lng: 114.1581, title: "中環 - 干諾道中近畢打街", url: "https://tdcctv.data.gov.hk/H411F.m3u8" },
+                { lat: 22.2801, lng: 114.1832, title: "銅鑼灣 - 紅磡海底隧道香港入口", url: "https://tdcctv.data.gov.hk/H215F.m3u8" },
+                { lat: 22.3045, lng: 114.1714, title: "尖沙咀 - 梳士巴利道近彌敦道", url: "https://tdcctv.data.gov.hk/K101F.m3u8" },
+                { lat: 22.3194, lng: 114.1694, title: "旺角 - 彌敦道近亞皆老街", url: "https://tdcctv.data.gov.hk/K402F.m3u8" },
+                { lat: 22.3736, lng: 114.1132, title: "荃灣 - 青山公路近大河道", url: "https://tdcctv.data.gov.hk/N115F.m3u8" },
+                { lat: 22.4445, lng: 114.1685, title: "大埔 - 吐露港公路近元洲仔", url: "https://tdcctv.data.gov.hk/N431F.m3u8" }
+            ];
+
+            trafficMarkers.forEach(m => map.removeLayer(m));
+            trafficMarkers = [];
+
+            cams.forEach(cam => {
+                const icon = L.divIcon({
+                    html: `<div class="bg-emerald-500 p-1.5 rounded-full shadow-lg border border-black text-white text-[10px] flex items-center justify-center animate-pulse"><i class="fas fa-video"></i></div>`,
+                    className: '',
+                    iconSize: [24, 24]
+                });
+                const m = L.marker([cam.lat, cam.lng], { icon: icon }).addTo(map);
+                
+                m.bindPopup(`
+                    <div class="w-64 font-sans text-slate-900">
+                        <h4 class="font-bold text-sm mb-1 text-slate-800 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block animate-ping"></span>${cam.title}
+                        </h4>
+                        <div class="bg-black rounded-lg overflow-hidden flex items-center justify-center min-h-[140px]">
+                            <video src="${cam.url}" controls autoplay muted playsinline class="w-full h-auto aspect-video">
+                                您的瀏覽器不支援此實時視訊格式。
+                            </video>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-1 block">數據來源：香港運輸署 (Live Stream)</span>
+                    </div>
+                `);
+                trafficMarkers.push(m);
+            });
+            
+            btn.className = "fas fa-circle text-xs text-emerald-400 status-dot";
+            activeModes.add('traffic');
+        }
+
+        // --- 簡易 CSV 轉 Array 物件解析函數 ---
+        function parseCSV(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            if (lines.length === 0) return [];
+            
+            // 讀取 Header 並清理隱藏字符 (如 BOM)
+            const headers = lines[0].split(',').map(h => h.replace(/^["']|["']$/g, '').trim());
+            const results = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const currentLine = lines[i].split(',');
+                if (currentLine.length === headers.length) {
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header] = currentLine[index].replace(/^["']|["']$/g, '').trim();
+                    });
+                    results.push(obj);
+                }
+            }
+            return results;
+        }
+
+        // --- 更新後的出入境管制站數據模組 (讀取自 GitHub Pages CSV) ---
         async function toggleImmigration() {
             const el = document.getElementById('immigration-panel');
             const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
@@ -527,17 +605,20 @@
             }
 
             try {
-                // 引入公開的 CORS 代理伺服器解決瀏覽器安全性 CORS 限制問題
-                const targetUrl = 'https://www.immd.gov.hk/opendata/html/trans-stat-data.json';
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                // 直接串接指定的 GitHub Pages 數據源（GitHub Pages 預設已開啟跨網域 CORS 權限）
+                const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
+                const res = await fetch(csvUrl);
+                const csvText = await res.text();
                 
-                const res = await fetch(proxyUrl);
-                const data = await res.json();
-                
+                const data = parseCSV(csvText);
                 if (!data || data.length === 0) throw new Error("無可用數據");
                 
+                // 找出最新一天的日期
                 const latestDate = data[data.length - 1].Date;
                 const latestRecords = data.filter(r => r.Date === latestDate);
+
+                // 更新頂部日期標籤
+                document.getElementById('imm-date-display').textContent = `Data Date 數據日期: ${latestDate}`;
 
                 let totalArrival = 0;
                 let totalDeparture = 0;
@@ -592,8 +673,8 @@
                 activeModes.add('immigration');
 
             } catch(e) {
-                console.error("入境處 API 連線異常: ", e);
-                document.getElementById('immigration-list').innerHTML = `<div class="text-slate-500 text-xs py-4 text-center">暫時無法取得出入境旅客流量數據<br><span class="text-[10px] text-slate-600">請確認網路或入境處開放平台狀態</span></div>`;
+                console.error("入境處 CSV 連線解析異常: ", e);
+                document.getElementById('immigration-list').innerHTML = `<div class="text-slate-500 text-xs py-4 text-center">暫時無法取得出入境旅客流量數據<br><span class="text-[10px] text-slate-600">請確認網路或 GitHub Pages 託管狀態</span></div>`;
                 el.classList.remove('hidden');
             }
         }
@@ -677,38 +758,38 @@
                     const m = L.marker(stationMeta.gps, { icon: icon }).addTo(map);
                     
                     m.bindPopup(`
-                        <div class="w-64 font-sans p-1 text-slate-200">
+                        <div class="w-56 font-sans p-1 text-slate-200">
                             <div class="border-b border-slate-700/60 pb-2 mb-3">
                                 <h3 class="text-sm font-bold text-white tracking-wide">${item.place}</h3>
-                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">Real-Time Weather Station<br>即時氣象觀測站</div>
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">即時氣象觀測站</div>
                             </div>
-                            <div class="space-y-3 text-xs">
-                                <div class="bg-slate-800/50 rounded-xl px-3 py-2 border border-slate-700/30">
-                                    <div class="text-[10px] text-slate-400 font-medium">Real-Time Temperature<br>即時溫度</div>
-                                    <div class="text-xl font-bold text-orange-400 font-mono mt-0.5">${item.value}°C</div>
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex justify-between items-center bg-slate-800/50 rounded-xl px-2.5 py-1.5 border border-slate-700/30">
+                                    <span class="text-slate-400 font-medium">即時溫度</span>
+                                    <span class="text-orange-400 font-bold text-sm font-mono">${item.value}°C</span>
                                 </div>
-                                <div class="bg-slate-800/50 rounded-xl px-3 py-2 border border-slate-700/30">
-                                    <div class="text-[10px] text-slate-400 font-medium">Relative Humidity<br>相對濕度</div>
-                                    <div class="text-base font-bold text-white font-mono mt-0.5">${globalHumidity}</div>
+                                <div class="flex justify-between items-center px-1">
+                                    <span class="text-slate-400">相對濕度</span>
+                                    <span class="font-semibold text-white font-mono">${globalHumidity}</span>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 bg-slate-900/40 border border-slate-800 rounded-xl p-2.5">
+                                <div class="grid grid-cols-2 gap-2 border-t border-b border-slate-800/80 py-2 my-1">
                                     <div>
-                                        <div class="text-[10px] text-slate-400">Daily Maximum<br>當日最高氣溫</div>
+                                        <div class="text-[10px] text-slate-500">當日最高</div>
                                         <div class="font-bold text-rose-400 font-mono mt-0.5">${maxT}</div>
                                     </div>
                                     <div class="border-l border-slate-800 pl-2">
-                                        <div class="text-[10px] text-slate-400">Daily Minimum<br>當日最低氣溫</div>
+                                        <div class="text-[10px] text-slate-500">當日最低</div>
                                         <div class="font-bold text-blue-400 font-mono mt-0.5">${minT}</div>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 bg-slate-900/40 border border-slate-800 rounded-xl p-2.5">
-                                    <div>
-                                        <div class="text-[10px] text-slate-400">Wind Direction<br>風向</div>
-                                        <div class="font-medium text-amber-200 mt-0.5">${wDirection}</div>
+                                <div class="space-y-1 px-1">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">實時風向</span>
+                                        <span class="font-medium text-amber-200">${wDirection}</span>
                                     </div>
-                                    <div class="border-l border-slate-800 pl-2">
-                                        <div class="text-[10px] text-slate-400">Wind Speed<br>風速</div>
-                                        <div class="font-medium text-amber-200 font-mono mt-0.5">${wSpeed}</div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">實時風速</span>
+                                        <span class="font-medium text-amber-200 font-mono">${wSpeed}</span>
                                     </div>
                                 </div>
                             </div>
@@ -723,6 +804,7 @@
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
+            else if (mode === 'traffic') toggleTraffic();
             else if (mode === 'immigration') toggleImmigration();
             else if (mode === 'weather-stations') toggleWeatherStations();
         }
