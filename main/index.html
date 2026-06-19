@@ -117,10 +117,6 @@
                         <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
-                    <button id="btn-traffic" onclick="toggleMode('traffic')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
-                        <span class="flex items-center gap-3"><i class="fas fa-camera text-emerald-400"></i> <span class="font-medium text-slate-200">實時交通鏡頭 (Live)</span></span>
-                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
-                    </button>
                     <button id="btn-weather-stations" onclick="toggleMode('weather-stations')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
@@ -157,14 +153,13 @@
 
     <script>
         let map;
-        let trafficMarkers = [];
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
         let immigrationMarkers = []; 
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
-        let cachedImmiData = []; // 儲存解析後的 CSV 陣列數據
+        let cachedImmiData = []; 
 
         const hospitalRegistry = {
             "Alice Ho Miu Ling Nethersole Hospital": { zhName: "雅麗氏何妙齡那打素醫院", gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
@@ -187,7 +182,6 @@
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
         };
 
-        // 對應 CSV 內 Control Point 欄位的地理坐標與中英名稱
         const immigrationRegistry = {
             "Airport": { enName: "Airport", zhName: "機場", gps: [22.3080, 113.9185] },
             "Express Rail Link West Kowloon": { enName: "Express Rail Link West Kowloon", zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
@@ -512,53 +506,6 @@
             activeModes.add('mtr');
         }
 
-        async function toggleTraffic() {
-            const btn = document.getElementById('btn-traffic').querySelector('.status-dot');
-            if (activeModes.has('traffic')) {
-                trafficMarkers.forEach(m => map.removeLayer(m));
-                trafficMarkers = [];
-                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
-                activeModes.delete('traffic');
-                return;
-            }
-
-            const cams = [
-                { lat: 22.2818, lng: 114.1581, title: "中環 - 干諾道中近畢打街", url: "https://tdcctv.data.gov.hk/H411F.m3u8" },
-                { lat: 22.2801, lng: 114.1832, title: "銅鑼灣 - 紅磡海底隧道香港入口", url: "https://tdcctv.data.gov.hk/H215F.m3u8" },
-                { lat: 22.3045, lng: 114.1714, title: "尖沙咀 - 梳士巴利道近彌敦道", url: "https://tdcctv.data.gov.hk/K101F.m3u8" },
-                { lat: 22.3194, lng: 114.1694, title: "旺角 - 彌敦道近亞皆老街", url: "https://tdcctv.data.gov.hk/K402F.m3u8" },
-                { lat: 22.3736, lng: 114.1132, title: "荃灣 - 青山公路近大河道", url: "https://tdcctv.data.gov.hk/N115F.m3u8" },
-                { lat: 22.4445, lng: 114.1685, title: "大埔 - 吐露港公路近元洲仔", url: "https://tdcctv.data.gov.hk/N431F.m3u8" }
-            ];
-
-            trafficMarkers.forEach(m => map.removeLayer(m));
-            trafficMarkers = [];
-
-            cams.forEach(cam => {
-                const icon = L.divIcon({
-                    html: `<div class="bg-emerald-500 p-1.5 rounded-full shadow-lg border border-black text-white text-[10px] flex items-center justify-center animate-pulse"><i class="fas fa-video"></i></div>`,
-                    className: '',
-                    iconSize: [24, 24]
-                });
-                const m = L.marker([cam.lat, cam.lng], { icon: icon }).addTo(map);
-                
-                m.bindPopup(`
-                    <div class="w-64 font-sans text-slate-900">
-                        <h4 class="font-bold text-sm mb-1 text-slate-800 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block animate-ping"></span>${cam.title}
-                        </h4>
-                        <div class="bg-black rounded-lg overflow-hidden flex items-center justify-center min-h-[140px]">
-                            <video src="${cam.url}" controls autoplay muted playsinline class="w-full h-auto aspect-video"></video>
-                        </div>
-                    </div>
-                `);
-                trafficMarkers.push(m);
-            });
-            
-            btn.className = "fas fa-circle text-xs text-emerald-400 status-dot";
-            activeModes.add('traffic');
-        }
-
         function getWeatherEmojiByTemp(temp) {
             const t = parseFloat(temp);
             if (isNaN(t)) return "🌡️";
@@ -610,7 +557,6 @@
             });
         }
 
-        // --- 讀取指定 CSV 數據源模組 ---
         async function toggleImmigration() {
             const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
             const datePanel = document.getElementById('immi-date-panel');
@@ -626,14 +572,12 @@
 
             try {
                 const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
-                // 使用 api.allorigins.win 作為 CORS 代理，確保能繞過跨網域限制順利拉取資料
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(csvUrl)}`;
                 
                 const res = await fetch(proxyUrl);
                 const proxyData = await res.json();
                 const rawCsvText = proxyData.contents;
 
-                // 使用 PapaParse 解析 CSV 文本轉為 JSON 物件陣列
                 const parsed = Papa.parse(rawCsvText, { header: true, skipEmptyLines: true });
                 cachedImmiData = parsed.data;
 
@@ -642,7 +586,6 @@
                     return;
                 }
 
-                // 收集所有不重複的日期並降序排列（最新日期在最前）
                 const dateSet = new Set();
                 cachedImmiData.forEach(item => {
                     const d = item.date || item["Date"];
@@ -684,7 +627,6 @@
                 if (!cpName) return;
                 cpName = cpName.trim();
 
-                // 模糊比對修正 CSV 中的管制站寫法
                 let standardKey = null;
                 for (const key in immigrationRegistry) {
                     if (cpName.toLowerCase() === key.toLowerCase() || cpName.toLowerCase().includes(key.toLowerCase())) {
@@ -754,7 +696,6 @@
 
                     const m = L.marker(meta.gps, { icon: icon }).addTo(map);
 
-                    // 依據規格要求：第一行英文，第二行繁體中文進行顯示對齊
                     m.bindPopup(`
                         <div class="w-[450px] font-sans p-1 text-slate-200">
                             <div class="border-b border-slate-700/60 pb-2 mb-3 flex justify-between items-end">
@@ -769,8 +710,6 @@
                             </div>
                             
                             <div class="grid grid-cols-2 gap-4">
-                                
-                                <!-- 左邊：入境數據 (Arrivals) -->
                                 <div class="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-indigo-500/30 pb-1 flex justify-between items-center bg-indigo-500/10 px-2 py-1 rounded-lg">
                                         <div class="flex flex-col text-left">
@@ -804,7 +743,6 @@
                                     </div>
                                 </div>
 
-                                <!-- 右邊：出境數據 (Departures) -->
                                 <div class="bg-emerald-950/10 border border-emerald-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-emerald-500/30 pb-1 flex justify-between items-center bg-emerald-500/10 px-2 py-1 rounded-lg">
                                         <div class="flex flex-col text-left">
@@ -837,7 +775,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     `, { className: 'custom-popup', maxWidth: 480 });
@@ -850,7 +787,6 @@
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
-            else if (mode === 'traffic') toggleTraffic();
             else if (mode === 'weather-stations') toggleWeatherStations();
             else if (mode === 'immigration') toggleImmigration();
         }
