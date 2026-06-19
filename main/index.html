@@ -302,7 +302,7 @@
                 { keys: ["WFROST", "霜凍"], emoji: "❄️" },
                 { keys: ["WMSON", "強烈季候風"], emoji: "🍃💨" },
                 { keys: ["WSMFL", "新界北部水浸"], emoji: "🌊⚠️" },
-                { keys: ["WLANDO", "山泥傾瀉"], Mountain: "⛰️🚨" },
+                { keys: ["WLANDO", "山泥傾瀉"], emoji: "⛰️🚨" },
                 { keys: ["WTHCK", "雷暴"], emoji: "⚡⛈️" },
                 { keys: ["WTSU", "海嘯"], emoji: "🌊🚨" }
             ];
@@ -527,13 +527,15 @@
             }
 
             try {
-                const res = await fetch('https://www.immd.gov.hk/opendata/html/trans-stat-data.json');
+                // 引入公開的 CORS 代理伺服器解決瀏覽器安全性 CORS 限制問題
+                const targetUrl = 'https://www.immd.gov.hk/opendata/html/trans-stat-data.json';
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                
+                const res = await fetch(proxyUrl);
                 const data = await res.json();
                 
-                // 取得最新一天的數據 (通常是陣列中最後幾筆或是最新日期)
                 if (!data || data.length === 0) throw new Error("無可用數據");
                 
-                // 找出最新的日期
                 const latestDate = data[data.length - 1].Date;
                 const latestRecords = data.filter(r => r.Date === latestDate);
 
@@ -591,7 +593,7 @@
 
             } catch(e) {
                 console.error("入境處 API 連線異常: ", e);
-                document.getElementById('immigration-list').innerHTML = `<div class="text-slate-500 text-xs py-4 text-center">暫時無法取得出入境旅客流量數據</div>`;
+                document.getElementById('immigration-list').innerHTML = `<div class="text-slate-500 text-xs py-4 text-center">暫時無法取得出入境旅客流量數據<br><span class="text-[10px] text-slate-600">請確認網路或入境處開放平台狀態</span></div>`;
                 el.classList.remove('hidden');
             }
         }
