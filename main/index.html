@@ -493,6 +493,57 @@ function toggleMTR() {
                 return;
             }
             
+            // 重新定義覆蓋範圍（涵蓋全港主要港鐵範圍）
+            const mtrBounds = [[22.1400, 113.8000], [22.5600, 114.3500]];
+            
+            // 使用維基百科的高清版拓撲圖（這條網址可完美繞過多數 CORS 限制）
+            const mtrMapUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/MTR_system_map_en_zh.svg/1280px-MTR_system_map_en_zh.svg.png';
+            
+            // 建立圖片圖層，強制加入提升層級的 CSS 屬性
+            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
+                opacity: 0.85,
+                interactive: false,
+                zIndex: 9999, // 強制覆蓋在所有底圖及標記物上方
+                alt: 'MTR System Map'
+            }).addTo(map);
+
+            // 確保圖層真正被渲染，稍微強制重新整理 Leaflet 容器層級
+            if (mtrLayer._image) {
+                mtrLayer._image.style.zIndex = '9999';
+            }
+
+            // 自動將視角平滑移至九龍核心中心點，並放大至 12 級（太小會看不清）
+            map.flyTo([22.3300, 114.1700], 12);
+
+            const lines = [
+                { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
+                { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
+                { name: '觀塘綫 (Kwun Tong Line)', status: '正常 / Normal', color: 'bg-green-600' },
+                { name: '東鐵綫 (East Rail Line)', status: '正常 / Normal', color: 'bg-cyan-500' },
+                { name: '東涌綫 (Tung Chung Line)', status: '正常 / Normal', color: 'bg-orange-500' },
+                { name: '屯馬綫 (Tuen Ma Line)', status: '正常 / Normal', color: 'bg-amber-700' },
+                { name: '南港島綫 (South Island Line)', status: '正常 / Normal', color: 'bg-lime-500' },
+                { name: '機場快綫 (Airport Express)', status: '正常 / Normal', color: 'bg-teal-600' }
+            ];
+
+            let html = '';
+            lines.forEach(l => {
+                html += `
+                    <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-2.5 h-2.5 rounded-full ${l.color}"></span>
+                            <span class="text-sm font-medium text-slate-300">${l.name}</span>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/20">${l.status}</span>
+                    </div>`;
+            });
+            
+            document.getElementById('mtr-list').innerHTML = html;
+            el.classList.remove('hidden');
+            btn.className = "fas fa-circle text-xs text-pink-500 status-dot";
+            activeModes.add('mtr');
+        }
+            
             // 使用保證支援 CORS 且對齊更精準的高清港鐵路綫圖 (PNG 透明背景)
             const mtrBounds = [[22.1800, 113.8400], [22.5600, 114.3300]];
             const mtrMapUrl = 'https://i.imgur.com/vH97Z9t.png'; // 修正為外部穩定透明圖源
