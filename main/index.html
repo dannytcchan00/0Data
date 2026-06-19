@@ -115,6 +115,10 @@
                         <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
+                    <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">出入境管制站旅客流量</span></span>
+                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                    </button>
                     <button id="btn-weather-stations" onclick="toggleMode('weather-stations')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
@@ -129,6 +133,27 @@
             <i class="fas fa-subway text-pink-500"></i> 港鐵各綫營運狀態
         </h3>
         <div id="mtr-list" class="space-y-2"></div>
+    </div>
+
+    <div id="immigration-panel" class="hidden floating-panel absolute bottom-8 right-6 w-96 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[60vh] overflow-y-auto border border-slate-700/50">
+        <div class="border-b border-slate-800 pb-3 mb-4">
+            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                <i class="fas fa-passport text-indigo-400"></i> 出入境管制站旅客流量
+            </h3>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">Immigration Passenger Flow (Yesterday)</div>
+            <div id="imm-summary" class="grid grid-cols-2 gap-2 mt-3 bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-xs">
+                <div>
+                    <div class="text-[10px] text-slate-400">Total Arrivals<br>總入境人數</div>
+                    <div id="imm-total-arrival" class="text-base font-bold text-indigo-400 font-mono mt-0.5">--</div>
+                </div>
+                <div class="border-l border-slate-800 pl-2">
+                    <div class="text-[10px] text-slate-400">Total Passenger Flow<br>總出入境人次</div>
+                    <div id="imm-total-flow" class="text-base font-bold text-emerald-400 font-mono mt-0.5">--</div>
+                </div>
+            </div>
+        </div>
+        <div id="immigration-list" class="space-y-3"></div>
+        <div class="text-[9px] text-slate-500 italic mt-3 leading-tight border-t border-slate-800/60 pt-2">數據來源：香港入境事務處。每日定時更新昨日數據。</div>
     </div>
 
     <script>
@@ -158,6 +183,25 @@
             "Tin Shui Wai Hospital": { zhName: "天水圍醫院", gps: [22.4589, 113.9961], addr: "天水圍天壇街 11 號" },
             "United Christian Hospital": { zhName: "基督教聯合醫院", gps: [22.3222, 114.2347], addr: "觀塘協和街 130 號" },
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
+        };
+
+        const checkpointRegistry = {
+            "Airport": "香港國際機場",
+            "Express Rail Link West Kowloon": "高鐵西九龍",
+            "Hung Hom": "紅磡",
+            "Lo Wu": "羅湖",
+            "Lok Ma Chau Spur Line": "落馬洲支線 (福田)",
+            "Man Kam To": "文錦渡",
+            "Sha Tau Kok": "沙頭角",
+            "Shan Mei Street": "山尾街",
+            "Lok Ma Chau": "落馬洲 (皇崗)",
+            "Heung Yuen Wai": "香園圍",
+            "Shenzhen Bay": "深圳灣",
+            "Hong Kong-Zhuhai-Macao Bridge": "港珠澳大橋",
+            "China Ferry Terminal": "中國客運碼頭",
+            "Harbour Control": "港口管制",
+            "Kai Tak Cruise Terminal": "啟德郵輪碼頭",
+            "Macau Ferry Terminal": "港澳客運碼頭"
         };
 
         function initMap() {
@@ -258,7 +302,7 @@
                 { keys: ["WFROST", "霜凍"], emoji: "❄️" },
                 { keys: ["WMSON", "強烈季候風"], emoji: "🍃💨" },
                 { keys: ["WSMFL", "新界北部水浸"], emoji: "🌊⚠️" },
-                { keys: ["WLANDO", "山泥傾瀉"], emoji: "⛰️🚨" },
+                { keys: ["WLANDO", "山泥傾瀉"], Mountain: "⛰️🚨" },
                 { keys: ["WTHCK", "雷暴"], emoji: "⚡⛈️" },
                 { keys: ["WTSU", "海嘯"], emoji: "🌊🚨" }
             ];
@@ -471,6 +515,87 @@
             activeModes.add('mtr');
         }
 
+        async function toggleImmigration() {
+            const el = document.getElementById('immigration-panel');
+            const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
+            
+            if (activeModes.has('immigration')) {
+                el.classList.add('hidden');
+                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                activeModes.delete('immigration');
+                return;
+            }
+
+            try {
+                const res = await fetch('https://www.immd.gov.hk/opendata/html/trans-stat-data.json');
+                const data = await res.json();
+                
+                // 取得最新一天的數據 (通常是陣列中最後幾筆或是最新日期)
+                if (!data || data.length === 0) throw new Error("無可用數據");
+                
+                // 找出最新的日期
+                const latestDate = data[data.length - 1].Date;
+                const latestRecords = data.filter(r => r.Date === latestDate);
+
+                let totalArrival = 0;
+                let totalDeparture = 0;
+                let checkpointData = {};
+
+                latestRecords.forEach(r => {
+                    const cpEn = r["Control Point"];
+                    if (!checkpointData[cpEn]) {
+                        checkpointData[cpEn] = { arrival: 0, departure: 0 };
+                    }
+                    
+                    const arrivalCount = parseInt(r["Arrival / Departure - Arrival"]) || 0;
+                    const departureCount = parseInt(r["Arrival / Departure - Departure"]) || 0;
+                    
+                    checkpointData[cpEn].arrival += arrivalCount;
+                    checkpointData[cpEn].departure += departureCount;
+                    
+                    totalArrival += arrivalCount;
+                    totalDeparture += departureCount;
+                });
+
+                document.getElementById('imm-total-arrival').textContent = totalArrival.toLocaleString();
+                document.getElementById('imm-total-flow').textContent = (totalArrival + totalDeparture).toLocaleString();
+
+                let html = '';
+                Object.keys(checkpointData).forEach(cpEn => {
+                    const cpZh = checkpointRegistry[cpEn] || cpEn;
+                    const item = checkpointData[cpEn];
+                    
+                    html += `
+                        <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 space-y-2">
+                            <div class="border-b border-slate-800 pb-1.5">
+                                <div class="text-xs font-bold text-white tracking-wide">${cpEn}</div>
+                                <div class="text-[10px] text-slate-400 font-medium">${cpZh}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                                <div class="flex justify-between bg-slate-900/40 px-2 py-1 rounded border border-slate-800/60">
+                                    <span class="text-slate-400">ARR 入境:</span>
+                                    <span class="text-indigo-300 font-bold">${item.arrival.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between bg-slate-900/40 px-2 py-1 rounded border border-slate-800/60">
+                                    <span class="text-slate-400">DEP 出境:</span>
+                                    <span class="text-amber-200 font-bold">${item.departure.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+
+                document.getElementById('immigration-list').innerHTML = html;
+                el.classList.remove('hidden');
+                btn.className = "fas fa-circle text-xs text-indigo-400 status-dot";
+                activeModes.add('immigration');
+
+            } catch(e) {
+                console.error("入境處 API 連線異常: ", e);
+                document.getElementById('immigration-list').innerHTML = `<div class="text-slate-500 text-xs py-4 text-center">暫時無法取得出入境旅客流量數據</div>`;
+                el.classList.remove('hidden');
+            }
+        }
+
         function getWeatherEmojiByTemp(temp) {
             const t = parseFloat(temp);
             if (isNaN(t)) return "🌡️";
@@ -596,6 +721,7 @@
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
+            else if (mode === 'immigration') toggleImmigration();
             else if (mode === 'weather-stations') toggleWeatherStations();
         }
 
