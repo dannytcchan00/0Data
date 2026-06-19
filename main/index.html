@@ -113,7 +113,7 @@
                     </button>
                     <button id="btn-mtr" onclick="toggleMode('mtr')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
-                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                        <i class="fas fa-circle text-xs text-pink-500 status-dot"></i>
                     </button>
                     <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">出入境管制站旅客流量</span></span>
@@ -160,7 +160,7 @@
         let map;
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
-        let mtrLayer = null; // 儲存港鐵路綫網疊加圖層
+        let mtrLayer = null; 
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
@@ -174,7 +174,7 @@
             "Pamela Youde Nethersole Eastern Hospital": { zhName: "東區尤德夫人那打素醫院", gps: [22.2692, 114.2361], addr: "柴灣樂民道 3 號" },
             "Pok Oi Hospital": { zhName: "博愛醫院", gps: [22.4444, 114.0414], addr: "元朗坳頭" },
             "Prince of Wales Hospital": { zhName: "威爾斯親王醫院", gps: [22.3811, 114.2025], addr: "沙田銀城街 30-32 號" },
-            "Princess Margaret Hospital": { zhName: "瑪賈烈醫院", gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號" },
+            "Princess Margaret Hospital": { zhName: "瑪嘉烈醫院", gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號" },
             "Queen Elizabeth Hospital": { zhName: "伊利沙伯醫院", gps: [22.3094, 114.1761], addr: "油麻地加士居道 30 號" },
             "Queen Mary Hospital": { zhName: "瑪麗醫院", gps: [22.2706, 114.1313], addr: "薄扶林道 102 號" },
             "Ruttonjee Hospital": { zhName: "律敦治醫院", gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號" },
@@ -477,12 +477,11 @@
             }
         }
 
-function toggleMTR() {
+        function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
             
             if (activeModes.has('mtr')) {
-                // 隱藏面版與移除港鐵地圖圖層
                 el.classList.add('hidden');
                 if (mtrLayer) {
                     map.removeLayer(mtrLayer);
@@ -493,115 +492,21 @@ function toggleMTR() {
                 return;
             }
             
-            // 重新定義覆蓋範圍（涵蓋全港主要港鐵範圍）
             const mtrBounds = [[22.1400, 113.8000], [22.5600, 114.3500]];
-            
-            // 使用維基百科的高清版拓撲圖（這條網址可完美繞過多數 CORS 限制）
             const mtrMapUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/MTR_system_map_en_zh.svg/1280px-MTR_system_map_en_zh.svg.png';
             
-            // 建立圖片圖層，強制加入提升層級的 CSS 屬性
             mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
                 opacity: 0.85,
                 interactive: false,
-                zIndex: 9999, // 強制覆蓋在所有底圖及標記物上方
+                zIndex: 9999,
                 alt: 'MTR System Map'
             }).addTo(map);
 
-            // 確保圖層真正被渲染，稍微強制重新整理 Leaflet 容器層級
             if (mtrLayer._image) {
                 mtrLayer._image.style.zIndex = '9999';
             }
 
-            // 自動將視角平滑移至九龍核心中心點，並放大至 12 級（太小會看不清）
             map.flyTo([22.3300, 114.1700], 12);
-
-            const lines = [
-                { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
-                { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
-                { name: '觀塘綫 (Kwun Tong Line)', status: '正常 / Normal', color: 'bg-green-600' },
-                { name: '東鐵綫 (East Rail Line)', status: '正常 / Normal', color: 'bg-cyan-500' },
-                { name: '東涌綫 (Tung Chung Line)', status: '正常 / Normal', color: 'bg-orange-500' },
-                { name: '屯馬綫 (Tuen Ma Line)', status: '正常 / Normal', color: 'bg-amber-700' },
-                { name: '南港島綫 (South Island Line)', status: '正常 / Normal', color: 'bg-lime-500' },
-                { name: '機場快綫 (Airport Express)', status: '正常 / Normal', color: 'bg-teal-600' }
-            ];
-
-            let html = '';
-            lines.forEach(l => {
-                html += `
-                    <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 flex items-center justify-between">
-                        <div class="flex items-center gap-2.5">
-                            <span class="w-2.5 h-2.5 rounded-full ${l.color}"></span>
-                            <span class="text-sm font-medium text-slate-300">${l.name}</span>
-                        </div>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/20">${l.status}</span>
-                    </div>`;
-            });
-            
-            document.getElementById('mtr-list').innerHTML = html;
-            el.classList.remove('hidden');
-            btn.className = "fas fa-circle text-xs text-pink-500 status-dot";
-            activeModes.add('mtr');
-        }
-            
-            // 使用保證支援 CORS 且對齊更精準的高清港鐵路綫圖 (PNG 透明背景)
-            const mtrBounds = [[22.1800, 113.8400], [22.5600, 114.3300]];
-            const mtrMapUrl = 'https://i.imgur.com/vH97Z9t.png'; // 修正為外部穩定透明圖源
-            
-            // 建立圖片圖層並設定透明度
-            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
-                opacity: 0.9,
-                interactive: false,
-                zIndex: 500 // 確保疊加在底圖之上
-            }).addTo(map);
-
-            // 自動將視角平滑移至港鐵核心範圍並放大
-            map.flyTo([22.3450, 114.1650], 11);
-
-            const lines = [
-                { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
-                { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
-                { name: '觀塘綫 (Kwun Tong Line)', status: '正常 / Normal', color: 'bg-green-600' },
-                { name: '東鐵綫 (East Rail Line)', status: '正常 / Normal', color: 'bg-cyan-500' },
-                { name: '東涌綫 (Tung Chung Line)', status: '正常 / Normal', color: 'bg-orange-500' },
-                { name: '屯馬綫 (Tuen Ma Line)', status: '正常 / Normal', color: 'bg-amber-700' },
-                { name: '南港島綫 (South Island Line)', status: '正常 / Normal', color: 'bg-lime-500' },
-                { name: '機場快綫 (Airport Express)', status: '正常 / Normal', color: 'bg-teal-600' }
-            ];
-
-            let html = '';
-            lines.forEach(l => {
-                html += `
-                    <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 flex items-center justify-between">
-                        <div class="flex items-center gap-2.5">
-                            <span class="w-2.5 h-2.5 rounded-full ${l.color}"></span>
-                            <span class="text-sm font-medium text-slate-300">${l.name}</span>
-                        </div>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/20">${l.status}</span>
-                    </div>`;
-            });
-            
-            document.getElementById('mtr-list').innerHTML = html;
-            el.classList.remove('hidden');
-            btn.className = "fas fa-circle text-xs text-pink-500 status-dot";
-            activeModes.add('mtr');
-        }
-            }
-            
-            // 定義地圖上疊加港鐵路綫網的坐標邊界 [[西南角緯度, 西南角經度], [東北角緯度, 東北角經度]]
-            // 該範圍大致精準對齊大嶼山延伸至將軍澳、深圳邊界至港島南
-            const mtrBounds = [[22.1500, 113.8200], [22.5600, 114.3200]];
-            // 使用維基百科上公開的高畫質港鐵官方拓撲路綫圖進行 Overlay
-            const mtrMapUrl = 'https://upload.wikimedia.org/wikipedia/commons/e/e5/MTR_system_map_en_zh.svg';
-            
-            // 建立圖片圖層並設定透明度
-            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
-                opacity: 0.85,
-                interactive: false
-            }).addTo(map);
-
-            // 自動將視角平滑移至港鐵核心範圍
-            map.flyTo([22.3350, 114.1650], 11);
 
             const lines = [
                 { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
