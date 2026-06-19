@@ -8,8 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- 引入 PapaParse 解析 CSV -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&display=swap');
         
@@ -117,12 +115,12 @@
                         <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
-                    <button id="btn-weather-stations" onclick="toggleMode('weather-stations')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
-                        <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
+                    <button id="btn-traffic" onclick="toggleMode('traffic')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-3"><i class="fas fa-camera text-emerald-400"></i> <span class="font-medium text-slate-200">實時交通鏡頭 (Live)</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
-                    <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
-                        <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">口岸每日出入境旅客流量</span></span>
+                    <button id="btn-weather-stations" onclick="toggleMode('weather-stations')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
                 </div>
@@ -137,29 +135,14 @@
         <div id="mtr-list" class="space-y-2"></div>
     </div>
 
-    <div id="immi-date-panel" class="hidden floating-panel absolute top-24 right-6 w-72 rounded-3xl p-5 z-[1000] shadow-2xl">
-        <h3 class="font-bold text-base mb-3 text-white flex items-center gap-2">
-            <i class="fas fa-calendar-alt text-indigo-400"></i> 選擇出入境數據日期
-        </h3>
-        <div class="relative">
-            <select id="immi-date-select" onchange="handleImmiDateChange()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-xl px-3 py-2.5 appearance-none focus:outline-none focus:border-indigo-500 cursor-pointer font-mono">
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                <i class="fas fa-chevron-down text-xs"></i>
-            </div>
-        </div>
-        <p class="text-[10px] text-slate-500 mt-2 font-sans">更改日期後，全港各口岸的總流量與顏色標記將即時更新。</p>
-    </div>
-
     <script>
         let map;
+        let trafficMarkers = [];
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
-        let immigrationMarkers = []; 
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
-        let cachedImmiData = []; 
 
         const hospitalRegistry = {
             "Alice Ho Miu Ling Nethersole Hospital": { zhName: "雅麗氏何妙齡那打素醫院", gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
@@ -173,31 +156,13 @@
             "Princess Margaret Hospital": { zhName: "瑪嘉烈醫院", gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號" },
             "Queen Elizabeth Hospital": { zhName: "伊利沙伯醫院", gps: [22.3094, 114.1761], addr: "油麻地加士居道 30 號" },
             "Queen Mary Hospital": { zhName: "瑪麗醫院", gps: [22.2706, 114.1313], addr: "薄扶林道 102 號" },
-            "Ruttonjee Hospital": { zhName: "律治醫院", gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號" },
+            "Ruttonjee Hospital": { zhName: "律敦治醫院", gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號" },
             "St. John Hospital": { zhName: "長洲醫院", gps: [22.2078, 114.0306], addr: "長洲醫院路" },
             "Tseung Kwan O Hospital": { zhName: "將軍澳醫院", gps: [22.3164, 114.2703], addr: "將軍澳坑口寶寧里 2 號" },
             "Tuen Mun Hospital": { zhName: "屯門醫院", gps: [22.4081, 113.9753], addr: "屯門青賢街 11 號" },
             "Tin Shui Wai Hospital": { zhName: "天水圍醫院", gps: [22.4589, 113.9961], addr: "天水圍天壇街 11 號" },
             "United Christian Hospital": { zhName: "基督教聯合醫院", gps: [22.3222, 114.2347], addr: "觀塘協和街 130 號" },
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
-        };
-
-        const immigrationRegistry = {
-            "Airport": { enName: "Airport", zhName: "機場", gps: [22.3080, 113.9185] },
-            "Express Rail Link West Kowloon": { enName: "Express Rail Link West Kowloon", zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
-            "Hung Hom": { enName: "Hung Hom", zhName: "紅磡", gps: [22.3020, 114.1815] },
-            "Lo Wu": { enName: "Lo Wu", zhName: "羅湖", gps: [22.5285, 114.1126] },
-            "Lok Ma Chau Spur Line": { enName: "Lok Ma Chau Spur Line", zhName: "落馬洲支線", gps: [22.5140, 114.0660] },
-            "Heung Yuen Wai": { enName: "Heung Yuen Wai", zhName: "香園圍", gps: [22.5535, 114.1630] },
-            "Man Kam To": { enName: "Man Kam To", zhName: "文錦渡", gps: [22.5410, 114.1375] },
-            "Sha Tau Kok": { enName: "Sha Tau Kok", zhName: "沙頭角", gps: [22.5460, 114.2255] },
-            "Lok Ma Chau": { enName: "Lok Ma Chau", zhName: "落馬洲皇崗", gps: [22.5195, 114.0720] },
-            "Shenzhen Bay": { enName: "Shenzhen Bay", zhName: "深圳灣", gps: [22.4780, 113.9480] },
-            "Hong Kong-Zhuhai-Macao Bridge": { enName: "Hong Kong-Zhuhai-Macao Bridge", zhName: "港珠澳大橋", gps: [22.2950, 113.9550] },
-            "China Ferry Terminal": { enName: "China Ferry Terminal", zhName: "中國客運碼頭", gps: [22.3005, 114.1665] },
-            "Harbour Control": { enName: "Harbour Control", zhName: "港口管制處", gps: [22.2865, 114.1545] },
-            "Kai Tak Cruise Terminal": { enName: "Kai Tak Cruise Terminal", zhName: "啟德郵輪碼頭", gps: [22.3120, 114.2130] },
-            "Macau Ferry Terminal": { enName: "Macau Ferry Terminal", zhName: "港澳客運碼頭", gps: [22.2882, 114.1512] }
         };
 
         function initMap() {
@@ -313,7 +278,7 @@
 
         async function updateWarnings() {
             try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/warnsum&lang=tc');
+                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const data = await res.json();
                 let html = '';
                 let activeWarningCount = 0;
@@ -429,8 +394,10 @@
                                             <span>${colorEmoji}</span> <span>${t45MaxStr || 'N/A'}</span>
                                         </div>
                                     </div>
+
                                     <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-2.5 space-y-2 text-[11px]">
-                                        <div class="text-[10px] font-bold text-slate-400 border-b border-slate-800 pb-1 uppercase tracking-wider">各分流級別指標</div>
+                                        <div class="text-[10px] font-bold text-slate-400 border-b border-slate-800 pb-1 uppercase tracking-wider">各分流級別指標 (A&E Wait Time)</div>
+                                        
                                         <div class="flex justify-between items-center">
                                             <span class="text-rose-400 font-medium">類別 I (危急)</span>
                                             <span class="font-mono text-white bg-rose-950/40 px-1.5 py-0.5 border border-rose-500/20 rounded-md text-[10px]">${h.t1wt || 'Immediate'}</span>
@@ -452,6 +419,7 @@
                                             <span class="font-mono text-slate-300">${h.t45p50 || 'N/A'}</span>
                                         </div>
                                     </div>
+                                    <div class="text-[9px] text-slate-500 italic mt-1 leading-tight">數據來源：香港醫院管理局 (HA Open Data)。每 15 分鐘自動刷新。</div>
                                 </div>
                             </div>
                         `, { className: 'custom-popup' });
@@ -462,8 +430,10 @@
 
                 btn.className = "fas fa-circle text-xs text-rose-500 status-dot";
                 activeModes.add('hospital');
+
             } catch(e) {
-                console.error(e);
+                console.error("醫管局 API 連線異常: ", e);
+                alert("無法即時連線至醫管局開放數據中心，請確認網路或稍後再試。");
             }
         }
 
@@ -506,6 +476,56 @@
             activeModes.add('mtr');
         }
 
+        async function toggleTraffic() {
+            const btn = document.getElementById('btn-traffic').querySelector('.status-dot');
+            if (activeModes.has('traffic')) {
+                trafficMarkers.forEach(m => map.removeLayer(m));
+                trafficMarkers = [];
+                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                activeModes.delete('traffic');
+                return;
+            }
+
+            const cams = [
+                { lat: 22.2818, lng: 114.1581, title: "中環 - 干諾道中近畢打街", url: "https://tdcctv.data.gov.hk/H411F.m3u8" },
+                { lat: 22.2801, lng: 114.1832, title: "銅鑼灣 - 紅磡海底隧道香港入口", url: "https://tdcctv.data.gov.hk/H215F.m3u8" },
+                { lat: 22.3045, lng: 114.1714, title: "尖沙咀 - 梳士巴利道近彌敦道", url: "https://tdcctv.data.gov.hk/K101F.m3u8" },
+                { lat: 22.3194, lng: 114.1694, title: "旺角 - 彌敦道近亞皆老街", url: "https://tdcctv.data.gov.hk/K402F.m3u8" },
+                { lat: 22.3736, lng: 114.1132, title: "荃灣 - 青山公路近大河道", url: "https://tdcctv.data.gov.hk/N115F.m3u8" },
+                { lat: 22.4445, lng: 114.1685, title: "大埔 - 吐露港公路近元洲仔", url: "https://tdcctv.data.gov.hk/N431F.m3u8" }
+            ];
+
+            trafficMarkers.forEach(m => map.removeLayer(m));
+            trafficMarkers = [];
+
+            cams.forEach(cam => {
+                const icon = L.divIcon({
+                    html: `<div class="bg-emerald-500 p-1.5 rounded-full shadow-lg border border-black text-white text-[10px] flex items-center justify-center animate-pulse"><i class="fas fa-video"></i></div>`,
+                    className: '',
+                    iconSize: [24, 24]
+                });
+                const m = L.marker([cam.lat, cam.lng], { icon: icon }).addTo(map);
+                
+                m.bindPopup(`
+                    <div class="w-64 font-sans text-slate-900">
+                        <h4 class="font-bold text-sm mb-1 text-slate-800 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block animate-ping"></span>${cam.title}
+                        </h4>
+                        <div class="bg-black rounded-lg overflow-hidden flex items-center justify-center min-h-[140px]">
+                            <video src="${cam.url}" controls autoplay muted playsinline class="w-full h-auto aspect-video">
+                                您的瀏覽器不支援此實時視訊格式。
+                            </video>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-1 block">數據來源：香港運輸署 (Live Stream)</span>
+                    </div>
+                `);
+                trafficMarkers.push(m);
+            });
+            
+            btn.className = "fas fa-circle text-xs text-emerald-400 status-dot";
+            activeModes.add('traffic');
+        }
+
         function getWeatherEmojiByTemp(temp) {
             const t = parseFloat(temp);
             if (isNaN(t)) return "🌡️";
@@ -518,6 +538,7 @@
 
         function toggleWeatherStations() {
             const btn = document.getElementById('btn-weather-stations').querySelector('.status-dot');
+            
             if (activeModes.has('weather-stations')) {
                 weatherStationMarkers.forEach(m => map.removeLayer(m));
                 weatherStationMarkers = [];
@@ -525,6 +546,7 @@
                 activeModes.delete('weather-stations');
                 return;
             }
+
             renderWeatherStations();
             btn.className = "fas fa-circle text-xs text-orange-400 status-dot";
             activeModes.add('weather-stations');
@@ -532,254 +554,96 @@
 
         function renderWeatherStations() {
             if (!rawWeatherData || !rawWeatherData.temperature?.data) return;
+            
             const coords = {
-                "Hong Kong Observatory": { gps: [22.3022, 114.1742] }, "King's Park": { gps: [22.3119, 114.1728] },
-                "Wong Chuk Hang": { gps: [22.2478, 114.1667] }, "Ta Kwu Ling": { gps: [22.5286, 114.1567] },
-                "Lau Fau Shan": { gps: [22.4689, 113.9836] }, "Tai Po": { gps: [22.4461, 114.1789] },
-                "Sha Tin": { gps: [22.4025, 114.2100] }, "Tuen Mun": { gps: [22.3916, 113.9767] },
-                "Tseung Kwan O": { gps: [22.3156, 114.2614] }, "Sai Kung": { gps: [22.3836, 114.2708] }
+                "Hong Kong Observatory": { gps: [22.3022, 114.1742] },
+                "King's Park": { gps: [22.3119, 114.1728] },
+                "Wong Chuk Hang": { gps: [22.2478, 114.1667] },
+                "Ta Kwu Ling": { gps: [22.5286, 114.1567] },
+                "Lau Fau Shan": { gps: [22.4689, 113.9836] },
+                "Tai Po": { gps: [22.4461, 114.1789] },
+                "Sha Tin": { gps: [22.4025, 114.2100] },
+                "Tuen Mun": { gps: [22.3916, 113.9767] },
+                "Tseung Kwan O": { gps: [22.3156, 114.2614] },
+                "Sai Kung": { gps: [22.3836, 114.2708] },
+                "Chek Lap Kok": { gps: [22.3094, 113.9219] },
+                "Tsing Yi": { gps: [22.3453, 114.1044] },
+                "Tsuen Wan Shing Mun Valley": { gps: [22.3756, 114.1256] },
+                "Hong Kong Park": { gps: [22.2778, 114.1622] },
+                "Shau Kei Wan": { gps: [22.2756, 114.2256] },
+                "Kowloon City": { gps: [22.3278, 114.1900] }
             };
+
             weatherStationMarkers.forEach(m => map.removeLayer(m));
             weatherStationMarkers = [];
 
+            const globalHumidity = rawWeatherData.humidity?.data?.[0]?.value ? `${rawWeatherData.humidity.data[0].value}%` : '--%';
+            const globalWind = rawWeatherData.wind || { direction: "VARIABLE", speed: 4, unit: "km/h" };
+            const wDirection = translateWindDirection(globalWind.direction);
+            const wSpeed = globalWind.speed ? `${globalWind.speed} ${globalWind.unit || 'km/h'}` : '-- km/h';
+
+            let maxT = '--°C', minT = '--°C';
+            if(rawWeatherData.temperature?.data) {
+                const temps = rawWeatherData.temperature.data.map(d => d.value).filter(v => !isNaN(v));
+                maxT = `${Math.max(...temps)}°C`;
+                minT = `${Math.min(...temps)}°C`;
+            }
+
             rawWeatherData.temperature.data.forEach(item => {
-                const stationMeta = coords[item.place];
+                const stationMeta = coords[item.place] || null;
+
                 if (stationMeta) {
                     const dynamicEmoji = getWeatherEmojiByTemp(item.value);
+
                     const icon = L.divIcon({
                         html: `<div class="bg-slate-900/90 border border-slate-700/60 w-8 h-8 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none">${dynamicEmoji}</div>`,
-                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
-                    });
-                    const m = L.marker(stationMeta.gps, { icon: icon }).addTo(map);
-                    m.bindPopup(`<div class="p-1 text-slate-200"><h4 class="font-bold text-sm">${item.place}</h4><p class="text-orange-400 text-lg font-mono">${item.value}°C</p></div>`, { className: 'custom-popup' });
-                    weatherStationMarkers.push(m);
-                }
-            });
-        }
-
-        async function toggleImmigration() {
-            const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
-            const datePanel = document.getElementById('immi-date-panel');
-            
-            if (activeModes.has('immigration')) {
-                immigrationMarkers.forEach(m => map.removeLayer(m));
-                immigrationMarkers = [];
-                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
-                datePanel.classList.add('hidden');
-                activeModes.delete('immigration');
-                return;
-            }
-
-            try {
-                const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(csvUrl)}`;
-                
-                const res = await fetch(proxyUrl);
-                const proxyData = await res.json();
-                const rawCsvText = proxyData.contents;
-
-                const parsed = Papa.parse(rawCsvText, { header: true, skipEmptyLines: true });
-                cachedImmiData = parsed.data;
-
-                if (!cachedImmiData || cachedImmiData.length === 0) {
-                    alert("未能成功從指定 CSV 解析出有效數據。");
-                    return;
-                }
-
-                const dateSet = new Set();
-                cachedImmiData.forEach(item => {
-                    const d = item.date || item["Date"];
-                    if (d) dateSet.add(d.trim());
-                });
-                const dateList = Array.from(dateSet).sort().reverse();
-
-                const selectEl = document.getElementById('immi-date-select');
-                selectEl.innerHTML = dateList.map((d, idx) => `<option value="${d}" ${idx === 0 ? 'selected' : ''}>${d}</option>`).join('');
-
-                datePanel.classList.remove('hidden');
-                renderImmigrationData(dateList[0]);
-
-                btn.className = "fas fa-circle text-xs text-indigo-400 status-dot";
-                activeModes.add('immigration');
-
-            } catch (e) {
-                console.error("CSV 數據拉取或解析失敗: ", e);
-                alert("無法獲取出入境 CSV 數據，請確認 GitHub Pages 來源是否正常。");
-            }
-        }
-
-        function handleImmiDateChange() {
-            const selectedDate = document.getElementById('immi-date-select').value;
-            renderImmigrationData(selectedDate);
-        }
-
-        function renderImmigrationData(targetDate) {
-            immigrationMarkers.forEach(m => map.removeLayer(m));
-            immigrationMarkers = [];
-
-            const summaryData = {};
-
-            cachedImmiData.forEach(item => {
-                const itemDate = item.date || item["Date"];
-                if (itemDate !== targetDate) return;
-
-                let cpName = item.control_point || item["Control Point"] || item.controlPoint;
-                if (!cpName) return;
-                cpName = cpName.trim();
-
-                let standardKey = null;
-                for (const key in immigrationRegistry) {
-                    if (cpName.toLowerCase() === key.toLowerCase() || cpName.toLowerCase().includes(key.toLowerCase())) {
-                        standardKey = key;
-                        break;
-                    }
-                }
-                if (!standardKey) return;
-
-                const direction = (item.direction || item["Arrival / Departure"] || "").toLowerCase();
-                
-                const hkRes = parseInt(item.hong_kong_residents || item["Hong Kong Residents"] || item.hkResidents) || 0;
-                const mainlandVisitor = parseInt(item.mainland_visitors || item["Mainland Visitors"] || item.mainlandVisitors) || 0;
-                const otherVisitor = parseInt(item.other_visitors || item["Other Visitors"] || item.otherVisitors) || 0;
-                const total = parseInt(item.total || item["Total"]) || (hkRes + mainlandVisitor + otherVisitor);
-
-                if (!summaryData[standardKey]) {
-                    summaryData[standardKey] = {
-                        arr: { hkRes: 0, mainland: 0, other: 0, total: 0 },
-                        dep: { hkRes: 0, mainland: 0, other: 0, total: 0 },
-                        grandTotal: 0
-                    };
-                }
-
-                if (direction === 'arrival' || direction.includes('arr') || direction.includes('入')) {
-                    summaryData[standardKey].arr.hkRes += hkRes;
-                    summaryData[standardKey].arr.mainland += mainlandVisitor;
-                    summaryData[standardKey].arr.other += otherVisitor;
-                    summaryData[standardKey].arr.total += total;
-                } else if (direction === 'departure' || direction.includes('dep') || direction.includes('出')) {
-                    summaryData[standardKey].dep.hkRes += hkRes;
-                    summaryData[standardKey].dep.mainland += mainlandVisitor;
-                    summaryData[standardKey].dep.other += otherVisitor;
-                    summaryData[standardKey].dep.total += total;
-                }
-                
-                summaryData[standardKey].grandTotal = summaryData[standardKey].arr.total + summaryData[standardKey].dep.total;
-            });
-
-            Object.keys(summaryData).forEach(cpKey => {
-                const meta = immigrationRegistry[cpKey];
-                if (meta) {
-                    const data = summaryData[cpKey];
-                    
-                    let colorEmoji = "🟢"; 
-                    let bgPulseColor = "bg-emerald-950/90 border-emerald-500";
-                    
-                    if (data.grandTotal >= 80000) {
-                        colorEmoji = "🔴"; 
-                        bgPulseColor = "bg-rose-950/90 border-rose-500 ring-2 ring-rose-500/30";
-                    } else if (data.grandTotal >= 35000) {
-                        colorEmoji = "🟠"; 
-                        bgPulseColor = "bg-orange-950/90 border-orange-500";
-                    } else if (data.grandTotal >= 8000) {
-                        colorEmoji = "🟡"; 
-                        bgPulseColor = "bg-amber-950/90 border-amber-500";
-                    }
-
-                    const icon = L.divIcon({
-                        html: `<div class="${bgPulseColor} border text-white font-mono font-bold text-[11px] rounded-full shadow-2xl flex items-center justify-center transition-transform duration-200 hover:scale-125 select-none cursor-pointer" style="width: 36px; height: 36px;">
-                                <span class="text-xl">${colorEmoji}</span>
-                               </div>`,
                         className: '',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18]
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
                     });
-
-                    const m = L.marker(meta.gps, { icon: icon }).addTo(map);
-
+                    
+                    const m = L.marker(stationMeta.gps, { icon: icon }).addTo(map);
+                    
                     m.bindPopup(`
-                        <div class="w-[450px] font-sans p-1 text-slate-200">
-                            <div class="border-b border-slate-700/60 pb-2 mb-3 flex justify-between items-end">
-                                <div>
-                                    <h3 class="text-base font-bold text-white tracking-wide">${meta.enName}</h3>
-                                    <div class="text-xs text-slate-300 font-medium mt-0.5">${meta.zhName}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-[10px] text-indigo-400 font-mono">總流量 (Total): ${data.grandTotal.toLocaleString()}</div>
-                                    <div class="text-[9px] text-slate-500 font-mono">日期 (Date): ${targetDate}</div>
-                                </div>
+                        <div class="w-64 font-sans p-1 text-slate-200">
+                            <div class="border-b border-slate-700/60 pb-2 mb-3">
+                                <h3 class="text-sm font-bold text-white tracking-wide">${item.place}</h3>
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">Real-Time Weather Station<br>即時氣象觀測站</div>
                             </div>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-2.5 space-y-2">
-                                    <div class="border-b border-indigo-500/30 pb-1 flex justify-between items-center bg-indigo-500/10 px-2 py-1 rounded-lg">
-                                        <div class="flex flex-col text-left">
-                                            <span class="text-xs font-bold text-indigo-300">⬇️ Arrival</span>
-                                            <span class="text-[10px] text-indigo-400 font-medium leading-none">入境</span>
-                                        </div>
-                                        <span class="font-mono text-sm font-bold text-white">${data.arr.total.toLocaleString()}</span>
+                            <div class="space-y-3 text-xs">
+                                <div class="bg-slate-800/50 rounded-xl px-3 py-2 border border-slate-700/30">
+                                    <div class="text-[10px] text-slate-400 font-medium">Real-Time Temperature<br>即時溫度</div>
+                                    <div class="text-xl font-bold text-orange-400 font-mono mt-0.5">${item.value}°C</div>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-xl px-3 py-2 border border-slate-700/30">
+                                    <div class="text-[10px] text-slate-400 font-medium">Relative Humidity<br>相對濕度</div>
+                                    <div class="text-base font-bold text-white font-mono mt-0.5">${globalHumidity}</div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 bg-slate-900/40 border border-slate-800 rounded-xl p-2.5">
+                                    <div>
+                                        <div class="text-[10px] text-slate-400">Daily Maximum<br>當日最高氣溫</div>
+                                        <div class="font-bold text-rose-400 font-mono mt-0.5">${maxT}</div>
                                     </div>
-                                    <div class="space-y-1.5 text-[11px] px-1">
-                                        <div class="flex justify-between items-center">
-                                            <div class="flex flex-col">
-                                                <span>Hong Kong Residents</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">香港居民</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.arr.hkRes.toLocaleString()}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <div class="flex flex-col">
-                                                <span>Mainland Visitors</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">內地訪客</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.arr.mainland.toLocaleString()}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <div class="flex flex-col">
-                                                <span>Other Visitors</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">其他訪客</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.arr.other.toLocaleString()}</span>
-                                        </div>
+                                    <div class="border-l border-slate-800 pl-2">
+                                        <div class="text-[10px] text-slate-400">Daily Minimum<br>當日最低氣溫</div>
+                                        <div class="font-bold text-blue-400 font-mono mt-0.5">${minT}</div>
                                     </div>
                                 </div>
-
-                                <div class="bg-emerald-950/10 border border-emerald-500/15 rounded-2xl p-2.5 space-y-2">
-                                    <div class="border-b border-emerald-500/30 pb-1 flex justify-between items-center bg-emerald-500/10 px-2 py-1 rounded-lg">
-                                        <div class="flex flex-col text-left">
-                                            <span class="text-xs font-bold text-emerald-300">⬆️ Departure</span>
-                                            <span class="text-[10px] text-emerald-400 font-medium leading-none">出境</span>
-                                        </div>
-                                        <span class="font-mono text-sm font-bold text-white">${data.dep.total.toLocaleString()}</span>
+                                <div class="grid grid-cols-2 gap-2 bg-slate-900/40 border border-slate-800 rounded-xl p-2.5">
+                                    <div>
+                                        <div class="text-[10px] text-slate-400">Wind Direction<br>風向</div>
+                                        <div class="font-medium text-amber-200 mt-0.5">${wDirection}</div>
                                     </div>
-                                    <div class="space-y-1.5 text-[11px] px-1">
-                                        <div class="flex justify-between items-center">
-                                            <div class="flex flex-col">
-                                                <span>Hong Kong Residents</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">香港居民</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.dep.hkRes.toLocaleString()}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <div class="flex flex-col">
-                                                <span>Mainland Visitors</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">內地訪客</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.dep.mainland.toLocaleString()}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <div class="flex flex-col">
-                                                <span>Other Visitors</span>
-                                                <span class="text-[10px] text-slate-500 leading-none">其他訪客</span>
-                                            </div>
-                                            <span class="font-mono text-slate-200">${data.dep.other.toLocaleString()}</span>
-                                        </div>
+                                    <div class="border-l border-slate-800 pl-2">
+                                        <div class="text-[10px] text-slate-400">Wind Speed<br>風速</div>
+                                        <div class="font-medium text-amber-200 font-mono mt-0.5">${wSpeed}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    `, { className: 'custom-popup', maxWidth: 480 });
-
-                    immigrationMarkers.push(m);
+                    `, { className: 'custom-popup' });
+                    
+                    weatherStationMarkers.push(m);
                 }
             });
         }
@@ -787,14 +651,15 @@
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
+            else if (mode === 'traffic') toggleTraffic();
             else if (mode === 'weather-stations') toggleWeatherStations();
-            else if (mode === 'immigration') toggleImmigration();
         }
 
         window.onload = function() {
             initMap();
             updateMainWeather();
             updateWarnings();
+            
             setInterval(updateMainWeather, 180000);
             setInterval(updateWarnings, 120000);
         };
