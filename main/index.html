@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 引入 PapaParse 解析 CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&display=swap');
         
@@ -162,7 +164,7 @@
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
-        let cachedImmiData = []; // 儲存由 API 獲取的原始資料
+        let cachedImmiData = []; // 儲存解析後的 CSV 陣列數據
 
         const hospitalRegistry = {
             "Alice Ho Miu Ling Nethersole Hospital": { zhName: "雅麗氏何妙齡那打素醫院", gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
@@ -185,24 +187,23 @@
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
         };
 
-        // 對應官方 API 的管制站名稱 (包含常見的英文寫法轉換)
+        // 對應 CSV 內 Control Point 欄位的地理坐標與中英名稱
         const immigrationRegistry = {
-            "Airport": { zhName: "機場", gps: [22.3080, 113.9185] },
-            "Express Rail Link West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
-            "West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
-            "Hung Hom": { zhName: "紅磡", gps: [22.3020, 114.1815] },
-            "Lo Wu": { zhName: "羅湖", gps: [22.5285, 114.1126] },
-            "Lok Ma Chau Spur Line": { zhName: "落馬洲支線", gps: [22.5140, 114.0660] },
-            "Heung Yuen Wai": { zhName: "香園圍", gps: [22.5535, 114.1630] },
-            "Man Kam To": { zhName: "文錦渡", gps: [22.5410, 114.1375] },
-            "Sha Tau Kok": { zhName: "沙頭角", gps: [22.5460, 114.2255] },
-            "Lok Ma Chau": { zhName: "落馬洲皇崗", gps: [22.5195, 114.0720] },
-            "Shenzhen Bay": { zhName: "深圳灣", gps: [22.4780, 113.9480] },
-            "Hong Kong-Zhuhai-Macao Bridge": { zhName: "港珠澳大橋", gps: [22.2950, 113.9550] },
-            "China Ferry Terminal": { zhName: "中國客運碼頭", gps: [22.3005, 114.1665] },
-            "Harbour Control": { zhName: "港口管制處", gps: [22.2865, 114.1545] },
-            "Kai Tak Cruise Terminal": { zhName: "啟德郵輪碼頭", gps: [22.3120, 114.2130] },
-            "Macau Ferry Terminal": { zhName: "港澳客運碼頭", gps: [22.2882, 114.1512] }
+            "Airport": { enName: "Airport", zhName: "機場", gps: [22.3080, 113.9185] },
+            "Express Rail Link West Kowloon": { enName: "Express Rail Link West Kowloon", zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
+            "Hung Hom": { enName: "Hung Hom", zhName: "紅磡", gps: [22.3020, 114.1815] },
+            "Lo Wu": { enName: "Lo Wu", zhName: "羅湖", gps: [22.5285, 114.1126] },
+            "Lok Ma Chau Spur Line": { enName: "Lok Ma Chau Spur Line", zhName: "落馬洲支線", gps: [22.5140, 114.0660] },
+            "Heung Yuen Wai": { enName: "Heung Yuen Wai", zhName: "香園圍", gps: [22.5535, 114.1630] },
+            "Man Kam To": { enName: "Man Kam To", zhName: "文錦渡", gps: [22.5410, 114.1375] },
+            "Sha Tau Kok": { enName: "Sha Tau Kok", zhName: "沙頭角", gps: [22.5460, 114.2255] },
+            "Lok Ma Chau": { enName: "Lok Ma Chau", zhName: "落馬洲皇崗", gps: [22.5195, 114.0720] },
+            "Shenzhen Bay": { enName: "Shenzhen Bay", zhName: "深圳灣", gps: [22.4780, 113.9480] },
+            "Hong Kong-Zhuhai-Macao Bridge": { enName: "Hong Kong-Zhuhai-Macao Bridge", zhName: "港珠澳大橋", gps: [22.2950, 113.9550] },
+            "China Ferry Terminal": { enName: "China Ferry Terminal", zhName: "中國客運碼頭", gps: [22.3005, 114.1665] },
+            "Harbour Control": { enName: "Harbour Control", zhName: "港口管制處", gps: [22.2865, 114.1545] },
+            "Kai Tak Cruise Terminal": { enName: "Kai Tak Cruise Terminal", zhName: "啟德郵輪碼頭", gps: [22.3120, 114.2130] },
+            "Macau Ferry Terminal": { enName: "Macau Ferry Terminal", zhName: "港澳客運碼頭", gps: [22.2882, 114.1512] }
         };
 
         function initMap() {
@@ -609,7 +610,7 @@
             });
         }
 
-        // --- 改接入境事務處官方 API 模組 ---
+        // --- 讀取指定 CSV 數據源模組 ---
         async function toggleImmigration() {
             const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
             const datePanel = document.getElementById('immi-date-panel');
@@ -624,29 +625,33 @@
             }
 
             try {
-                // 串接香港政府官方數據開放平台 (DATA.GOV.HK) 入境事務處旅客流量統計 API
-                const apiUrl = 'https://opendata.immd.gov.hk/contents/v1/statistics/passenger-traffic-stat.json';
-                const res = await fetch(apiUrl);
-                const data = await res.json();
+                const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
+                // 使用 api.allorigins.win 作為 CORS 代理，確保能繞過跨網域限制順利拉取資料
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(csvUrl)}`;
                 
-                // 官方 JSON 結構通常在 data 欄位內
-                cachedImmiData = data.data || data;
+                const res = await fetch(proxyUrl);
+                const proxyData = await res.json();
+                const rawCsvText = proxyData.contents;
+
+                // 使用 PapaParse 解析 CSV 文本轉為 JSON 物件陣列
+                const parsed = Papa.parse(rawCsvText, { header: true, skipEmptyLines: true });
+                cachedImmiData = parsed.data;
+
                 if (!cachedImmiData || cachedImmiData.length === 0) {
-                    alert("未能從官方 API 讀取到有效的數據結構。");
+                    alert("未能成功從指定 CSV 解析出有效數據。");
                     return;
                 }
 
-                // 收集數據內的所有日期（通常是近期數天），並做倒序排列讓最新的日期排在最前
+                // 收集所有不重複的日期並降序排列（最新日期在最前）
                 const dateSet = new Set();
                 cachedImmiData.forEach(item => {
-                    if (item.date || item["Date"]) {
-                        dateSet.add((item.date || item["Date"]).trim());
-                    }
+                    const d = item.date || item["Date"];
+                    if (d) dateSet.add(d.trim());
                 });
                 const dateList = Array.from(dateSet).sort().reverse();
 
                 const selectEl = document.getElementById('immi-date-select');
-                selectEl.innerHTML = dateList.map((d, index) => `<option value="${d}" ${index === 0 ? 'selected' : ''}>${d}</option>`).join('');
+                selectEl.innerHTML = dateList.map((d, idx) => `<option value="${d}" ${idx === 0 ? 'selected' : ''}>${d}</option>`).join('');
 
                 datePanel.classList.remove('hidden');
                 renderImmigrationData(dateList[0]);
@@ -655,8 +660,8 @@
                 activeModes.add('immigration');
 
             } catch (e) {
-                console.error("出入境數據官方 API 讀取失敗: ", e);
-                alert("無法從官方 API 獲取出入境旅客數字，請檢查網絡連線。");
+                console.error("CSV 數據拉取或解析失敗: ", e);
+                alert("無法獲取出入境 CSV 數據，請確認 GitHub Pages 來源是否正常。");
             }
         }
 
@@ -671,57 +676,33 @@
 
             const summaryData = {};
 
-            // 處理官方欄位對應（相容大小寫、底線及空格命名形式）
             cachedImmiData.forEach(item => {
                 const itemDate = item.date || item["Date"];
                 if (itemDate !== targetDate) return;
 
-                let controlPoint = item.control_point || item["Control Point"] || item.controlPoint;
-                if (!controlPoint) return;
+                let cpName = item.control_point || item["Control Point"] || item.controlPoint;
+                if (!cpName) return;
+                cpName = cpName.trim();
 
-                // 統一對應標準名稱
-                if (controlPoint.includes("Hong Kong-Zhuhai-Macao Bridge") || controlPoint.includes("港珠澳大橋")) {
-                    controlPoint = "Hong Kong-Zhuhai-Macao Bridge";
-                } else if (controlPoint.includes("West Kowloon") || controlPoint.includes("西九龍")) {
-                    controlPoint = "Express Rail Link West Kowloon";
-                } else if (controlPoint.includes("Airport") || controlPoint.includes("機場")) {
-                    controlPoint = "Airport";
-                } else if (controlPoint.includes("Lo Wu") || controlPoint.includes("羅湖")) {
-                    controlPoint = "Lo Wu";
-                } else if (controlPoint.includes("Lok Ma Chau Spur Line") || controlPoint.includes("落馬洲支線")) {
-                    controlPoint = "Lok Ma Chau Spur Line";
-                } else if (controlPoint.includes("Lok Ma Chau") || controlPoint.includes("皇崗")) {
-                    controlPoint = "Lok Ma Chau";
-                } else if (controlPoint.includes("Shenzhen Bay") || controlPoint.includes("深圳灣")) {
-                    controlPoint = "Shenzhen Bay";
-                } else if (controlPoint.includes("Heung Yuen Wai") || controlPoint.includes("香園圍")) {
-                    controlPoint = "Heung Yuen Wai";
-                } else if (controlPoint.includes("Man Kam To") || controlPoint.includes("文錦渡")) {
-                    controlPoint = "Man Kam To";
-                } else if (controlPoint.includes("Sha Tau Kok") || controlPoint.includes("沙頭角")) {
-                    controlPoint = "Sha Tau Kok";
-                } else if (controlPoint.includes("Hung Hom") || controlPoint.includes("紅磡")) {
-                    controlPoint = "Hung Hom";
-                } else if (controlPoint.includes("China Ferry") || controlPoint.includes("中國客運碼頭")) {
-                    controlPoint = "China Ferry Terminal";
-                } else if (controlPoint.includes("Macau Ferry") || controlPoint.includes("港澳客運碼頭")) {
-                    controlPoint = "Macau Ferry Terminal";
-                } else if (controlPoint.includes("Kai Tak") || controlPoint.includes("啟德郵輪")) {
-                    controlPoint = "Kai Tak Cruise Terminal";
-                } else if (controlPoint.includes("Harbour") || controlPoint.includes("港口管制")) {
-                    controlPoint = "Harbour Control";
+                // 模糊比對修正 CSV 中的管制站寫法
+                let standardKey = null;
+                for (const key in immigrationRegistry) {
+                    if (cpName.toLowerCase() === key.toLowerCase() || cpName.toLowerCase().includes(key.toLowerCase())) {
+                        standardKey = key;
+                        break;
+                    }
                 }
+                if (!standardKey) return;
 
                 const direction = (item.direction || item["Arrival / Departure"] || "").toLowerCase();
                 
-                // 讀取各細項人數
                 const hkRes = parseInt(item.hong_kong_residents || item["Hong Kong Residents"] || item.hkResidents) || 0;
                 const mainlandVisitor = parseInt(item.mainland_visitors || item["Mainland Visitors"] || item.mainlandVisitors) || 0;
                 const otherVisitor = parseInt(item.other_visitors || item["Other Visitors"] || item.otherVisitors) || 0;
                 const total = parseInt(item.total || item["Total"]) || (hkRes + mainlandVisitor + otherVisitor);
 
-                if (!summaryData[controlPoint]) {
-                    summaryData[controlPoint] = {
+                if (!summaryData[standardKey]) {
+                    summaryData[standardKey] = {
                         arr: { hkRes: 0, mainland: 0, other: 0, total: 0 },
                         dep: { hkRes: 0, mainland: 0, other: 0, total: 0 },
                         grandTotal: 0
@@ -729,21 +710,20 @@
                 }
 
                 if (direction === 'arrival' || direction.includes('arr') || direction.includes('入')) {
-                    summaryData[controlPoint].arr.hkRes += hkRes;
-                    summaryData[controlPoint].arr.mainland += mainlandVisitor;
-                    summaryData[controlPoint].arr.other += otherVisitor;
-                    summaryData[controlPoint].arr.total += total;
+                    summaryData[standardKey].arr.hkRes += hkRes;
+                    summaryData[standardKey].arr.mainland += mainlandVisitor;
+                    summaryData[standardKey].arr.other += otherVisitor;
+                    summaryData[standardKey].arr.total += total;
                 } else if (direction === 'departure' || direction.includes('dep') || direction.includes('出')) {
-                    summaryData[controlPoint].dep.hkRes += hkRes;
-                    summaryData[controlPoint].dep.mainland += mainlandVisitor;
-                    summaryData[controlPoint].dep.other += otherVisitor;
-                    summaryData[controlPoint].dep.total += total;
+                    summaryData[standardKey].dep.hkRes += hkRes;
+                    summaryData[standardKey].dep.mainland += mainlandVisitor;
+                    summaryData[standardKey].dep.other += otherVisitor;
+                    summaryData[standardKey].dep.total += total;
                 }
                 
-                summaryData[controlPoint].grandTotal = summaryData[controlPoint].arr.total + summaryData[controlPoint].dep.total;
+                summaryData[standardKey].grandTotal = summaryData[standardKey].arr.total + summaryData[standardKey].dep.total;
             });
 
-            // 把總計後的數據渲染到地圖圓點上
             Object.keys(summaryData).forEach(cpKey => {
                 const meta = immigrationRegistry[cpKey];
                 if (meta) {
@@ -774,16 +754,17 @@
 
                     const m = L.marker(meta.gps, { icon: icon }).addTo(map);
 
+                    // 依據規格要求：第一行英文，第二行繁體中文進行顯示對齊
                     m.bindPopup(`
                         <div class="w-[450px] font-sans p-1 text-slate-200">
                             <div class="border-b border-slate-700/60 pb-2 mb-3 flex justify-between items-end">
                                 <div>
-                                    <h3 class="text-base font-bold text-white tracking-wide">${colorEmoji} ${meta.zhName}</h3>
-                                    <div class="text-[10px] text-slate-400 font-medium mt-0.5">${cpKey} Control Point</div>
+                                    <h3 class="text-base font-bold text-white tracking-wide">${meta.enName}</h3>
+                                    <div class="text-xs text-slate-300 font-medium mt-0.5">${meta.zhName}</div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="text-[10px] text-indigo-400 font-mono">總流量: ${data.grandTotal.toLocaleString()}</div>
-                                    <div class="text-[9px] text-slate-500 font-mono">日期: ${targetDate}</div>
+                                    <div class="text-[10px] text-indigo-400 font-mono">總流量 (Total): ${data.grandTotal.toLocaleString()}</div>
+                                    <div class="text-[9px] text-slate-500 font-mono">日期 (Date): ${targetDate}</div>
                                 </div>
                             </div>
                             
@@ -792,20 +773,32 @@
                                 <!-- 左邊：入境數據 (Arrivals) -->
                                 <div class="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-indigo-500/30 pb-1 flex justify-between items-center bg-indigo-500/10 px-2 py-1 rounded-lg">
-                                        <span class="text-xs font-bold text-indigo-300">⬇️ 入境 (Arrival)</span>
-                                        <span class="font-mono text-xs font-bold text-white">${data.arr.total.toLocaleString()}</span>
+                                        <div class="flex flex-col text-left">
+                                            <span class="text-xs font-bold text-indigo-300">⬇️ Arrival</span>
+                                            <span class="text-[10px] text-indigo-400 font-medium leading-none">入境</span>
+                                        </div>
+                                        <span class="font-mono text-sm font-bold text-white">${data.arr.total.toLocaleString()}</span>
                                     </div>
                                     <div class="space-y-1.5 text-[11px] px-1">
                                         <div class="flex justify-between items-center">
-                                            <span class="text-slate-400">香港居民</span>
+                                            <div class="flex flex-col">
+                                                <span>Hong Kong Residents</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">香港居民</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.arr.hkRes.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <span class="text-slate-400">內地訪客</span>
+                                            <div class="flex flex-col">
+                                                <span>Mainland Visitors</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">內地訪客</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.arr.mainland.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <span class="text-slate-400">其他訪客</span>
+                                            <div class="flex flex-col">
+                                                <span>Other Visitors</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">其他訪客</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.arr.other.toLocaleString()}</span>
                                         </div>
                                     </div>
@@ -814,20 +807,32 @@
                                 <!-- 右邊：出境數據 (Departures) -->
                                 <div class="bg-emerald-950/10 border border-emerald-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-emerald-500/30 pb-1 flex justify-between items-center bg-emerald-500/10 px-2 py-1 rounded-lg">
-                                        <span class="text-xs font-bold text-emerald-300">⬆️ 出境 (Departure)</span>
-                                        <span class="font-mono text-xs font-bold text-white">${data.dep.total.toLocaleString()}</span>
+                                        <div class="flex flex-col text-left">
+                                            <span class="text-xs font-bold text-emerald-300">⬆️ Departure</span>
+                                            <span class="text-[10px] text-emerald-400 font-medium leading-none">出境</span>
+                                        </div>
+                                        <span class="font-mono text-sm font-bold text-white">${data.dep.total.toLocaleString()}</span>
                                     </div>
                                     <div class="space-y-1.5 text-[11px] px-1">
                                         <div class="flex justify-between items-center">
-                                            <span class="text-slate-400">香港居民</span>
+                                            <div class="flex flex-col">
+                                                <span>Hong Kong Residents</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">香港居民</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.dep.hkRes.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <span class="text-slate-400">內地訪客</span>
+                                            <div class="flex flex-col">
+                                                <span>Mainland Visitors</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">內地訪客</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.dep.mainland.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
-                                            <span class="text-slate-400">其他訪客</span>
+                                            <div class="flex flex-col">
+                                                <span>Other Visitors</span>
+                                                <span class="text-[10px] text-slate-500 leading-none">其他訪客</span>
+                                            </div>
                                             <span class="font-mono text-slate-200">${data.dep.other.toLocaleString()}</span>
                                         </div>
                                     </div>
