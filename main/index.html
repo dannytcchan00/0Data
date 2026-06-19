@@ -1,15 +1,11 @@
-收到！明白你的核心需求：
+收到！我們把規限拿走，將**香港居民**、**內地訪客**、**其他訪客**的數字全面解放。
 
-1. **點擊口岸標記（Marker）彈出視窗（Popup）時，界面要左右分開，左邊顯示入境數據，右邊顯示出境數據**。
-2. 香港居民那一欄保持**隱藏數字**（顯示 `--`）。
-3. 地圖上的標記依舊使用**純顏色 Emoji**，並以總流量（入境 + 出境）來區分顏色級別。
+現在只要點擊口岸，彈出的視窗（Popup）就會左右徹底拆開：
 
-為了達成「左右分開入境與出境」的正確數據分析，程式碼在解析 CSV 時，會同時抓取：
+* **左邊**：完整的**入境**明細（包含香港居民、內地訪客、其他訪客真實數字）
+* **右邊**：完整的**出境**明細（包含香港居民、內地訪客、其他訪客真實數字）
 
-* **`Arrival`（入境）** 欄位
-* **`Departure`（出境）** 欄位
-
-以下是為你調整後的完整程式碼：
+以下是為你解鎖所有數字後的完整程式碼：
 
 ```html
 <!DOCTYPE html>
@@ -672,7 +668,6 @@
             renderImmigrationData(selectedDate);
         }
 
-        // 核心渲染：左右分開入境與出境數據，並合併計算總流用作標記顏色判斷
         function renderImmigrationData(targetDate) {
             immigrationMarkers.forEach(m => map.removeLayer(m));
             immigrationMarkers = [];
@@ -681,11 +676,11 @@
 
             for (let i = 1; i < cachedImmiLines.length; i++) {
                 const cols = cachedImmiLines[i].split(',').map(col => col.trim().replace(/"/g, ''));
-                if (cols.length < 7) continue; // 確保有包含 Arrival/Departure 標籤欄位
+                if (cols.length < 7) continue;
                 
                 if (cols[0] === targetDate) {
                     let controlPoint = cols[1];
-                    const direction = cols[6] ? cols[6].toLowerCase() : ''; // 'arrival' 或 'departure'
+                    const direction = cols[6] ? cols[6].toLowerCase() : '';
                     
                     if (controlPoint.includes("Hong Kong-Zhuhai-Macao Bridge")) {
                         controlPoint = "Hong Kong-Zhuhai-Macao Bridge";
@@ -716,7 +711,6 @@
                         summaryData[controlPoint].dep.total += total;
                     }
                     
-                    // 總流量 = 該口岸總入境 + 總出境
                     summaryData[controlPoint].grandTotal = summaryData[controlPoint].arr.total + summaryData[controlPoint].dep.total;
                 }
             }
@@ -726,11 +720,10 @@
                 if (meta) {
                     const data = summaryData[cpKey];
                     
-                    // 根據【出境+入境總流量】自動分發顏色 Emoji
                     let colorEmoji = "🟢"; 
                     let bgPulseColor = "bg-emerald-950/90 border-emerald-500";
                     
-                    if (data.grandTotal >= 80000) { // 出入境合併，適度調高特大流量閾值
+                    if (data.grandTotal >= 80000) {
                         colorEmoji = "🔴"; 
                         bgPulseColor = "bg-rose-950/90 border-rose-500 ring-2 ring-rose-500/30";
                     } else if (data.grandTotal >= 35000) {
@@ -752,7 +745,6 @@
 
                     const m = L.marker(meta.gps, { icon: icon }).addTo(map);
 
-                    // 左右分欄的 Popup HTML 結構
                     m.bindPopup(`
                         <div class="w-[450px] font-sans p-1 text-slate-200">
                             <div class="border-b border-slate-700/60 pb-2 mb-3 flex justify-between items-end">
@@ -768,6 +760,7 @@
                             
                             <div class="grid grid-cols-2 gap-4">
                                 
+                                <!-- 左邊：入境數據 (Arrivals) -->
                                 <div class="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-indigo-500/30 pb-1 flex justify-between items-center bg-indigo-500/10 px-2 py-1 rounded-lg">
                                         <span class="text-xs font-bold text-indigo-300">⬇️ 入境 (Arrival)</span>
@@ -776,7 +769,7 @@
                                     <div class="space-y-1.5 text-[11px] px-1">
                                         <div class="flex justify-between items-center">
                                             <span class="text-slate-400">香港居民</span>
-                                            <span class="font-sans text-slate-500 font-medium">--</span>
+                                            <span class="font-mono text-slate-200">${data.arr.hkRes.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
                                             <span class="text-slate-400">內地訪客</span>
@@ -789,6 +782,7 @@
                                     </div>
                                 </div>
 
+                                <!-- 右邊：出境數據 (Departures) -->
                                 <div class="bg-emerald-950/10 border border-emerald-500/15 rounded-2xl p-2.5 space-y-2">
                                     <div class="border-b border-emerald-500/30 pb-1 flex justify-between items-center bg-emerald-500/10 px-2 py-1 rounded-lg">
                                         <span class="text-xs font-bold text-emerald-300">⬆️ 出境 (Departure)</span>
@@ -797,7 +791,7 @@
                                     <div class="space-y-1.5 text-[11px] px-1">
                                         <div class="flex justify-between items-center">
                                             <span class="text-slate-400">香港居民</span>
-                                            <span class="font-sans text-slate-500 font-medium">--</span>
+                                            <span class="font-mono text-slate-200">${data.dep.hkRes.toLocaleString()}</span>
                                         </div>
                                         <div class="flex justify-between items-center border-t border-slate-800 pt-1">
                                             <span class="text-slate-400">內地訪客</span>
