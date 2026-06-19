@@ -57,13 +57,13 @@
 <body class="bg-black text-slate-200 overflow-hidden">
     <div id="map" class="absolute inset-0"></div>
 
-    <div id="top-header" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700 rounded-3xl px-8 py-3 flex items-center gap-3 shadow-2xl pointer-events-auto">
-        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+    <div id="top-header" class="absolute top-4 left-6 w-85 z-[1000] bg-slate-900/95 border border-slate-700 rounded-3xl px-6 py-3 flex items-center gap-3 shadow-2xl pointer-events-auto">
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <i class="fas fa-city text-blue-500"></i> 香港實時數據儀表板
         </h1>
     </div>
 
-    <div id="sidebar" class="floating-panel absolute top-24 left-6 w-85 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto transition-all duration-300">
+    <div id="sidebar" class="floating-panel absolute top-28 left-6 w-85 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[82vh] overflow-y-auto transition-all duration-300">
         
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-semibold flex items-center gap-2 text-white">
@@ -205,7 +205,6 @@
             "Macau Ferry Terminal": "港澳客運碼頭"
         };
 
-        // 精準校對後的港鐵車站經緯度核心資料庫
         const mtrStationsRegistry = {
             "Kennedy Town": { zh: "堅尼地城", gps: [22.2818, 114.1274] },
             "HKU": { zh: "香港大學", gps: [22.2842, 114.1345] },
@@ -355,7 +354,6 @@
             }
         ];
 
-        // 圓滑折線核心演算法 (Chaikin's Algorithm) - 將轉折處進行內插生成高密度柔順曲線
         function smoothPoints(points, iterations = 2) {
             if (points.length < 3) return points;
             let current = points;
@@ -366,7 +364,6 @@
                     let p0 = current[j];
                     let p1 = current[j+1];
                     
-                    // 二次內插切片
                     let Q = [0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]];
                     let R = [0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1]];
                     
@@ -651,7 +648,6 @@
             }
         }
 
-        // 渲染平滑無稜角的地鐵線路網
         function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
@@ -665,7 +661,6 @@
                 return;
             }
 
-            // 1. 繪製平滑路線線條
             mtrLinesData.forEach(line => {
                 const latlngs = line.stationKeys
                     .map(key => mtrStationsRegistry[key] ? mtrStationsRegistry[key].gps : null)
@@ -673,10 +668,8 @@
                 
                 if(latlngs.length < 2) return;
 
-                // 使用內插演算法讓線條極致平滑，告別生硬起角
                 const smoothedLatlngs = smoothPoints(latlngs, 3);
 
-                // 黑色外發光描邊
                 const bgPolyline = L.polyline(smoothedLatlngs, {
                     color: '#000000',
                     weight: 7,
@@ -684,7 +677,6 @@
                 }).addTo(map);
                 mtrNetworkLayers.push(bgPolyline);
 
-                // 彩色高飽和線條
                 const polyline = L.polyline(smoothedLatlngs, {
                     color: line.color,
                     weight: 4.5,
@@ -695,13 +687,11 @@
                 mtrNetworkLayers.push(polyline);
             });
 
-            // 2. 佈置高精度唯一的車站節點
             Object.keys(mtrStationsRegistry).forEach(stationKey => {
                 const station = mtrStationsRegistry[stationKey];
                 const belongsToLines = mtrLinesData.filter(line => line.stationKeys.includes(stationKey));
                 
                 let markerHtml = '';
-                // 區分轉車站與一般普通站
                 if (belongsToLines.length > 1) {
                     markerHtml = `<div class="w-5 h-5 bg-white border-2 border-slate-400 rounded-full shadow-lg flex items-center justify-center transition-all duration-150 hover:scale-130 cursor-pointer">
                         <div class="w-2.5 h-2.5 bg-slate-950 rounded-full"></div>
