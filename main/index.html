@@ -112,8 +112,8 @@
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
                     <button id="btn-mtr" onclick="toggleMode('mtr')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
-                        <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵行車狀態</span></span>
-                        <i class="fas fa-circle text-xs text-pink-500 status-dot"></i>
+                        <span class="flex items-center gap-3"><i class="fas fa-subway text-pink-500"></i> <span class="font-medium text-slate-200">港鐵營運狀態與核心站點</span></span>
+                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
                     <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">出入境管制站旅客流量</span></span>
@@ -160,7 +160,7 @@
         let map;
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
-        let mtrLayer = null; 
+        let mtrStationMarkers = []; // 用於存放港鐵核心站點圖層
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
@@ -204,6 +204,29 @@
             "Kai Tak Cruise Terminal": "啟德郵輪碼頭",
             "Macau Ferry Terminal": "港澳客運碼頭"
         };
+
+        // 港鐵核心樞紐車站資料庫（GPS 座標與轉綫標籤）
+        const mtrHubsRegistry = [
+            { nameEn: "Central / Hong Kong", nameZh: "中環 / 香港", gps: [22.2820, 114.1584], lines: ["港島綫", "荃灣綫", "東涌綫", "機場快綫"] },
+            { nameEn: "Admiralty", nameZh: "金鐘", gps: [22.2794, 114.1645], lines: ["港島綫", "荃灣綫", "南港島綫", "東鐵綫"] },
+            { nameEn: "North Point", nameZh: "北角", gps: [22.2913, 114.2007], lines: ["港島綫", "將軍澳綫"] },
+            { nameEn: "Quarry Bay", nameZh: "鰂魚涌", gps: [22.2884, 114.2127], lines: ["港島綫", "將軍澳綫"] },
+            { nameEn: "Tsim Sha Tsui / East Tsim Sha Tsui", nameZh: "尖沙咀 / 尖東", gps: [22.2965, 114.1722], lines: ["荃灣綫", "屯馬綫"] },
+            { nameEn: "Yau Ma Tei", nameZh: "油麻地", gps: [22.3129, 114.1707], lines: ["荃灣綫", "觀塘綫"] },
+            { nameEn: "Mong Kok", nameZh: "旺角", gps: [22.3194, 114.1694], lines: ["荃灣綫", "觀塘綫"] },
+            { nameEn: "Prince Edward", nameZh: "太子", gps: [22.3248, 114.1685], lines: ["荃灣綫", "觀塘綫"] },
+            { nameEn: "Mei Foo", nameZh: "美孚", gps: [22.3374, 114.1396], lines: ["荃灣綫", "屯馬綫"] },
+            { nameEn: "Lai King", nameZh: "荔景", gps: [22.3486, 114.1274], lines: ["荃灣綫", "東涌綫"] },
+            { nameEn: "Kowloon Tong", nameZh: "九龍塘", gps: [22.3368, 114.1762], lines: ["觀塘綫", "東鐵綫"] },
+            { nameEn: "Diamond Hill", nameZh: "鑽石山", gps: [22.3401, 114.2015], lines: ["觀塘綫", "屯馬綫"] },
+            { nameEn: "Ho Man Tin", nameZh: "何文田", gps: [22.3094, 114.1824], lines: ["觀塘綫", "屯馬綫"] },
+            { nameEn: "Hung Hom", nameZh: "紅磡", gps: [22.3029, 114.1818], lines: ["東鐵綫", "屯馬綫"] },
+            { nameEn: "Tai Wai", nameZh: "大圍", gps: [22.3725, 114.1785], lines: ["東鐵綫", "屯馬綫"] },
+            { nameEn: "Tsing Yi", nameZh: "青衣", gps: [22.3584, 114.1067], lines: ["東涌綫", "機場快綫"] },
+            { nameEn: "Tseung Kwan O", nameZh: "將軍澳", gps: [22.3143, 114.2600], lines: ["將軍澳綫"] },
+            { nameEn: "Yuen Long", nameZh: "元朗", gps: [22.4446, 114.0344], lines: ["屯馬綫", "輕鐵"] },
+            { nameEn: "Tuen Mun", nameZh: "屯門", gps: [22.3950, 113.9731], lines: ["屯馬綫", "輕鐵"] }
+        ];
 
         function initMap() {
             map = L.map('map', { center: [22.3193, 114.1694], zoom: 11, zoomControl: false });
@@ -477,42 +500,80 @@
             }
         }
 
+        // 新辦法：不加載大圖，改用自訂的站點點位圖層
         function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
             
             if (activeModes.has('mtr')) {
                 el.classList.add('hidden');
-                if (mtrLayer) {
-                    map.removeLayer(mtrLayer);
-                    mtrLayer = null;
-                }
+                // 移除所有港鐵核心車站標記
+                mtrStationMarkers.forEach(m => map.removeLayer(m));
+                mtrStationMarkers = [];
                 btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
                 activeModes.delete('mtr');
                 return;
             }
-            
-            const mtrBounds = [[22.1400, 113.8000], [22.5600, 114.3500]];
-            const mtrMapUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/MTR_system_map_en_zh.svg/1280px-MTR_system_map_en_zh.svg.png';
-            
-            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
-                opacity: 0.85,
-                interactive: false,
-                zIndex: 9999,
-                alt: 'MTR System Map'
-            }).addTo(map);
 
-            if (mtrLayer._image) {
-                mtrLayer._image.style.zIndex = '9999';
-            }
+            // 1. 於地圖上動態插入全港核心樞紐轉車站，100% 成功渲染
+            mtrHubsRegistry.forEach(hub => {
+                const stationIcon = L.divIcon({
+                    html: `<div class="w-8 h-8 bg-pink-600 text-white border-2 border-white rounded-full flex items-center justify-center shadow-xl font-bold text-xs transition-transform duration-200 hover:scale-125 cursor-pointer select-none">
+                            <i class="fas fa-subway text-[10px]"></i>
+                           </div>`,
+                    className: '',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
 
-            map.flyTo([22.3300, 114.1700], 12);
+                const m = L.marker(hub.gps, { icon: stationIcon }).addTo(map);
+                
+                // 建立精緻的彈出視窗展示轉綫樞紐
+                let lineBadges = '';
+                hub.lines.forEach(line => {
+                    let c = 'bg-slate-700';
+                    if (line === '港島綫') c = 'bg-blue-600';
+                    else if (line === '荃灣綫') c = 'bg-red-600';
+                    else if (line === '觀塘綫') c = 'bg-green-600';
+                    else if (line === '東鐵綫') c = 'bg-cyan-500 text-slate-900';
+                    else if (line === '將軍澳綫') c = 'bg-purple-600';
+                    else if (line === '東涌綫') c = 'bg-orange-500 text-slate-900';
+                    else if (line === '屯馬綫') c = 'bg-amber-700';
+                    else if (line === '南港島綫') c = 'bg-lime-500 text-slate-900';
+                    else if (line === '機場快綫') c = 'bg-teal-600';
+                    
+                    lineBadges += `<span class="px-2 py-0.5 rounded text-[10px] font-bold text-white ${c}">${line}</span>`;
+                });
 
+                m.bindPopup(`
+                    <div class="w-56 font-sans p-1 text-slate-200">
+                        <div class="border-b border-slate-700/60 pb-1.5 mb-2.5">
+                            <h4 class="text-sm font-bold text-white tracking-wide">${hub.nameZh}</h4>
+                            <div class="text-[9px] text-slate-400 font-mono">${hub.nameEn}</div>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="text-[10px] text-slate-400 font-medium">所屬 / 可轉乘路綫：</div>
+                            <div class="flex flex-wrap gap-1.5">${lineBadges}</div>
+                            <div class="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 p-2 rounded-xl text-[10px] flex items-center gap-1.5 mt-2">
+                                <i class="fas fa-circle-check text-xs"></i> 列車服務目前運作正常
+                            </div>
+                        </div>
+                    </div>
+                `, { className: 'custom-popup' });
+
+                mtrStationMarkers.push(m);
+            });
+
+            // 視角飛移至九龍中心點
+            map.flyTo([22.3250, 114.1700], 12);
+
+            // 2. 渲染右下面板的行車狀態列表
             const lines = [
                 { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
                 { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
                 { name: '觀塘綫 (Kwun Tong Line)', status: '正常 / Normal', color: 'bg-green-600' },
                 { name: '東鐵綫 (East Rail Line)', status: '正常 / Normal', color: 'bg-cyan-500' },
+                { name: '將軍澳綫 (Tseung Kwan O Line)', status: '正常 / Normal', color: 'bg-purple-600' },
                 { name: '東涌綫 (Tung Chung Line)', status: '正常 / Normal', color: 'bg-orange-500' },
                 { name: '屯馬綫 (Tuen Ma Line)', status: '正常 / Normal', color: 'bg-amber-700' },
                 { name: '南港島綫 (South Island Line)', status: '正常 / Normal', color: 'bg-lime-500' },
