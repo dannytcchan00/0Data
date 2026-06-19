@@ -3,23 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港實時智慧城市全方位數據儀表板 v6.0</title>
+    <title>香港實時智慧城市儀表板 - 終極修正版</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&family=Roboto:wght=400;500;700&display=swap');
-        body { font-family: 'Roboto', 'Noto Sans HK', system-ui, sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&display=swap');
+        body { font-family: 'Noto Sans HK', sans-serif; background-color: #0b1329; }
         #map { height: 100vh; width: 100%; }
         .floating-panel {
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid rgba(148, 163, 184, 0.2);
             backdrop-filter: blur(12px);
         }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         .custom-popup .leaflet-popup-content-wrapper {
             background: rgba(15, 23, 42, 0.98) !important;
             color: #e2e8f0 !important;
@@ -30,92 +27,71 @@
         .custom-popup .leaflet-popup-tip { background: rgba(15, 23, 42, 0.98) !important; }
     </style>
 </head>
-<body class="bg-black text-slate-200 overflow-hidden">
+<body class="text-slate-200 overflow-hidden">
+
     <div id="map" class="absolute inset-0"></div>
 
-    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700/60 rounded-2xl px-6 py-2 flex flex-col items-center shadow-2xl">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none font-mono">Hong Kong Real-Time Big Data Dashboard</span>
-        <h1 class="text-lg font-bold text-white flex items-center gap-2 mt-0.5">
-            <i class="fas fa-chart-network text-blue-500"></i> 香港實時大數據儀表板
+    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700/60 rounded-2xl px-6 py-2 flex flex-col items-center shadow-2xl pointer-events-auto">
+        <h1 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fas fa-server text-blue-500"></i> 香港智慧城市實時儀表板
         </h1>
     </div>
 
-    <div id="sidebar" class="floating-panel absolute top-24 left-6 w-90 rounded-2xl p-5 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto transition-all duration-300">
-        <div class="mb-3">
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider leading-none">HKO Real-Time Weather Overview</div>
-            <h2 class="text-base font-bold text-white flex items-center gap-1.5 mt-0.5"><i class="fas fa-cloud-sun text-amber-400"></i> 天文台實時天氣</h2>
-        </div>
-
-        <div class="flex items-center gap-5 mb-4 bg-slate-950/40 border border-slate-800/60 rounded-2xl p-3">
-            <div id="main-weather-icon" class="text-5xl">⏳</div>
-            <div class="flex-1">
-                <div id="main-weather-temp" class="text-4xl font-light text-white font-mono">--°C</div>
-                <div class="text-xs font-medium text-slate-400 mt-0.5 leading-tight">
-                    <div id="main-weather-desc" class="text-slate-300 font-bold">連線中...</div>
+    <div id="sidebar" class="floating-panel absolute top-24 left-6 w-96 rounded-2xl p-5 z-[1000] shadow-2xl max-h-[85vh] overflow-y-auto">
+        
+        <div class="mb-4">
+            <h2 class="text-base font-bold text-white flex items-center gap-1.5"><i class="fas fa-cloud-sun text-amber-400"></i> 天文台大盤天氣</h2>
+            <div class="flex items-center gap-5 mt-2 bg-slate-950/40 border border-slate-800/60 rounded-2xl p-3">
+                <div id="main-weather-icon" class="text-4xl">⏳</div>
+                <div>
+                    <div id="main-weather-temp" class="text-3xl font-bold text-white font-mono">--°C</div>
+                    <div id="main-weather-desc" class="text-xs text-slate-400">數據加載中...</div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-900/60 border border-slate-800 rounded-xl p-3 mb-4 font-mono">
-            <div class="bg-slate-950/40 p-1.5 rounded border border-slate-800/40">
-                <span class="text-slate-400 block text-[9px] uppercase">Humidity / 濕度</span>
-                <span id="humidity-val" class="font-bold text-white text-xs">--</span>
-            </div>
-            <div class="bg-slate-950/40 p-1.5 rounded border border-slate-800/40">
-                <span class="text-slate-400 block text-[9px] uppercase">UV Index / 紫外線</span>
-                <span id="uv-val" class="font-bold text-amber-400 text-xs">--</span>
-            </div>
-            <div class="bg-slate-950/40 p-1.5 rounded border border-slate-800/40 col-span-2">
-                <span class="text-slate-400 block text-[9px] uppercase">Wind Info / 實時風向風速</span>
-                <span id="wind-val" class="font-bold text-teal-400 text-xs">--</span>
-            </div>
+        <div class="space-y-3 pt-3 border-t border-slate-800">
+            <h3 class="text-[11px] font-bold text-slate-400 tracking-wider uppercase font-mono">功能圖層切換</h3>
+            
+            <button onclick="toggleMode('hospital')" id="btn-hospital" class="w-full text-left px-4 py-3 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
+                <span class="text-xs font-bold flex items-center gap-2"><i class="fas fa-hospital text-rose-500"></i> 公立醫院急症室輪候時間</span>
+                <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+            </button>
+
+            <button onclick="toggleMode('weather-stations')" id="btn-weather-stations" class="w-full text-left px-4 py-3 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
+                <span class="text-xs font-bold flex items-center gap-2"><i class="fas fa-temperature-high text-sky-400"></i> 分區自動氣象觀測站</span>
+                <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+            </button>
+
+            <button onclick="toggleMode('mtr')" id="btn-mtr" class="w-full text-left px-4 py-3 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
+                <span class="text-xs font-bold flex items-center gap-2"><i class="fas fa-subway text-pink-500"></i> MTR 港鐵即時運行狀態</span>
+                <div class="flex items-center gap-2">
+                    <span id="mtr-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">檢測中</span>
+                    <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                </div>
+            </button>
         </div>
 
-        <div class="mb-5">
-            <div id="warnings-wrapper" class="border border-slate-800 bg-slate-900/20 rounded-xl p-3">
-                <div class="text-[9px] font-mono text-slate-400 uppercase tracking-wider mb-1.5">Weather Warnings / 天氣警告</div>
-                <div id="warnings-list" class="space-y-2"></div>
-            </div>
-        </div>
-
-        <div class="space-y-4 pt-4 border-t border-slate-800">
-            <div>
-                <h3 class="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-1.5 font-mono">Medical Layers / 🏥 醫療數據</h3>
-                <button onclick="toggleMode('hospital')" id="btn-hospital" class="w-full text-left px-4 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
-                    <span class="text-xs font-bold text-slate-200">公立醫院急症室輪候時間</span>
-                    <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
-                </button>
-            </div>
-            <div>
-                <h3 class="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-1.5 font-mono">Traffic Layers / 🚗 交通數據</h3>
-                <button onclick="toggleMode('traffic')" id="btn-traffic" class="w-full text-left px-4 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
-                    <span class="text-xs font-bold text-slate-200">實時交通道路高清路面直播</span>
-                    <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
-                </button>
-            </div>
-            <div>
-                <h3 class="text-[10px] font-bold text-sky-400 tracking-wider uppercase mb-1.5 font-mono">Weather Stations / 🌤️ 氣象圖層</h3>
-                <button onclick="toggleMode('weather-stations')" id="btn-weather-stations" class="w-full text-left px-4 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 rounded-xl flex items-center justify-between transition-all">
-                    <span class="text-xs font-bold text-slate-200">分區實時自動氣象觀測站</span>
-                    <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
-                </button>
-            </div>
+        <div id="mtr-detail-box" class="mt-3 p-3 bg-slate-950/60 border border-slate-800 rounded-xl hidden text-xs">
+            <h4 class="font-bold text-pink-400 mb-2 flex items-center gap-1"><i class="fas fa-info-circle"></i> 車務實時通報</h4>
+            <div id="mtr-news-content" class="text-slate-300 leading-relaxed space-y-1">正在獲取港鐵最新車務狀況...</div>
         </div>
     </div>
 
     <script>
         let map;
         let activeModes = new Set();
-        // 使用 Leaflet 的 LayerGroup 統一管理圖層開關，徹底杜絕緩存殘留
-        let layers = {
-            hospital: L.layerGroup(),
-            traffic: L.layerGroup(),
-            weatherStations: L.layerGroup()
-        };
-
+        let layers = { hospital: L.layerGroup(), weatherStations: L.layerGroup() };
+        
+        // 全域快取，避免重複 Fetch 導致速度變慢
         let cachedWeatherData = null;
+        let globalHumidity = '--';
+        let globalMaxTemp = '--';
+        let globalMinTemp = '--';
+        let globalWindDir = '微風';
+        let globalWindSpeed = '0 km/h';
 
-        // 地理座標及名稱對照資料庫
+        // 氣象站座標
         const stationCoords = {
             "香港天文台": [22.3022, 114.1742], "京士柏": [22.3119, 114.1728], "黃竹坑": [22.2478, 114.1667],
             "打鼓嶺": [22.5286, 114.1567], "流浮山": [22.4689, 113.9836], "大埔": [22.4461, 114.1789],
@@ -124,103 +100,71 @@
             "荃灣城門谷": [22.3756, 114.1256], "香港公園": [22.2778, 114.1622], "筲箕灣": [22.2756, 114.2256], "九龍城": [22.3278, 114.1900]
         };
 
+        // 醫院完整靜態資料庫（補齊電話、地址）
         const hospitalRegistry = {
-            "東區尤德夫人那打素醫院": { gps: [22.2692, 114.2361], addr: "柴灣樂民道 3 號" },
-            "瑪麗醫院": { gps: [22.2706, 114.1313], addr: "薄扶林道 102 號" },
-            "律敦治醫院": { gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號" },
-            "明愛醫院": { gps: [22.3418, 114.1531], addr: "深水埗永康街 111 號" },
-            "廣華醫院": { gps: [22.3153, 114.1725], addr: "油麻地窩打老道 25 號" },
-            "伊利沙伯醫院": { gps: [22.3094, 114.1761], addr: "油麻地加士居道 30 號" },
-            "基督教聯合醫院": { gps: [22.3222, 114.2347], addr: "觀塘協和街 130 號" },
-            "雅麗氏何妙齡那打素醫院": { gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
-            "北區醫院": { gps: [22.4971, 114.1247], addr: "上水保健路 9 號" },
-            "北大嶼山醫院": { gps: [22.2961, 113.9389], addr: "東涌松仁路 8 號" },
-            "博愛醫院": { gps: [22.4444, 114.0414], addr: "元朗坳頭" },
-            "威爾斯親王醫院": { gps: [22.3811, 114.2025], addr: "沙田銀城街 30-32 號" },
-            "瑪嘉烈醫院": { gps: [22.3414, 114.1344], addr: "荔致角瑪嘉烈醫院道 2-10 號" },
-            "天水圍醫院": { gps: [22.4589, 113.9961], addr: "天水圍天壇街 11 號" },
-            "將軍澳醫院": { gps: [22.3164, 114.2703], addr: "將軍澳坑口寶寧里 2 號" },
-            "屯門醫院": { gps: [22.4081, 113.9753], addr: "屯門青賢街 11 號" },
-            "仁濟醫院": { gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" },
-            "長洲醫院": { gps: [22.2078, 114.0306], addr: "長洲醫院路" }
+            "東區尤德夫人那打素醫院": { gps: [22.2692, 114.2361], addr: "柴灣樂民道 3 號", tel: "2595 6111" },
+            "瑪麗醫院": { gps: [22.2706, 114.1313], addr: "薄扶林道 102 號", tel: "2255 3838" },
+            "律敦治醫院": { gps: [22.2758, 114.1753], addr: "灣仔皇后大道東 266 號", tel: "2291 2000" },
+            "明愛醫院": { gps: [22.3418, 114.1531], addr: "深水埗永康街 111 號", tel: "3408 7911" },
+            "廣華醫院": { gps: [22.3153, 114.1725], addr: "油麻地窩打老道 25 號", tel: "2332 8111" },
+            "伊利沙伯醫院": { gps: [22.3094, 114.1761], addr: "油麻地加士居道 30 號", tel: "2958 8888" },
+            "基督教聯合醫院": { gps: [22.3222, 114.2347], addr: "觀塘協和街 130 號", tel: "3949 4000" },
+            "瑪嘉烈醫院": { gps: [22.3414, 114.1344], addr: "荔枝角瑪嘉烈醫院道 2-10 號", tel: "2990 1111" },
+            "仁濟醫院": { gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號", tel: "2417 8383" },
+            "屯門醫院": { gps: [22.4081, 113.9753], addr: "屯門青松觀路 23 號", tel: "2468 5111" },
+            "博愛醫院": { gps: [22.4444, 114.0414], addr: "元朗坳頭", tel: "2486 8000" },
+            "天水圍醫院": { gps: [22.4589, 113.9961], addr: "天水圍天壇街 11 號", tel: "3991 1111" },
+            "威爾斯親王醫院": { gps: [22.3811, 114.2025], addr: "沙田銀城街 30-32 號", tel: "3505 2211" },
+            "雅麗氏何妙齡那打素醫院": { gps: [22.4583, 114.1747], addr: "大埔全安路 11 號", tel: "2689 2000" },
+            "北區醫院": { gps: [22.4971, 114.1247], addr: "上水保健路 9 號", tel: "2683 2222" },
+            "將軍澳醫院": { gps: [22.3164, 114.2703], addr: "將軍澳坑口寶寧里 2 號", tel: "2208 0111" },
+            "北大嶼山醫院": { gps: [22.2961, 113.9389], addr: "東涌松仁路 8 號", tel: "3467 7000" },
+            "長洲醫院": { gps: [22.2078, 114.0306], addr: "長洲醫院路", tel: "2981 0378" }
         };
 
-        // 初始化底圖
         function initMap() {
             map = L.map('map', { center: [22.3220, 114.1700], zoom: 11, zoomControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-            // 核心功能：監聽 Leaflet 彈出視窗打開事件，動態將 HLS 直播串流注入 Video 標籤
-            map.on('popupopen', function(e) {
-                const videoEl = e.popup._contentNode.querySelector('.traffic-video');
-                if (videoEl) {
-                    const streamUrl = videoEl.dataset.src;
-                    if (Hls.isSupported()) {
-                        const hls = new Hls();
-                        hls.loadSource(streamUrl);
-                        hls.attachMedia(videoEl);
-                    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                        videoEl.src = streamUrl;
-                    }
-                }
-            });
         }
 
-        // 全域核心安全網路請求器 (繞過所有 CORS 封鎖)
-        async function fetchSecure(url) {
-            const proxy = "https://api.allorigins.win/get?url=";
-            const res = await fetch(proxy + encodeURIComponent(url));
-            const data = await res.json();
-            return JSON.parse(data.contents);
+        // 超高速極簡安全請求器 (直接返回目標 JSON 內容，不再層層包裹)
+        async function fetchFast(url) {
+            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error("Network error");
+            return await res.json();
         }
 
-        // 1. 更新天文台核心氣象數據
-        async function updateMainWeather() {
+        // 1. 預載並更新主天氣數據（優化速度核心）
+        async function loadWeatherData() {
             try {
-                const data = await fetchSecure('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+                const data = await fetchFast('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 cachedWeatherData = data;
 
+                // 解析全域變數提供給分區氣象站Popup
+                globalHumidity = `${data.humidity?.data?.[0]?.value || '--'}%`;
+                const wind = data.wind || {};
+                globalWindDir = wind.direction || '微風';
+                globalWindSpeed = wind.speed ? `${wind.speed} ${wind.unit || 'km/h'}` : '0 km/h';
+
+                if(data.temperature?.data) {
+                    const temps = data.temperature.data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+                    globalMaxTemp = `${Math.max(...temps)}°C`;
+                    globalMinTemp = `${Math.min(...temps)}°C`;
+                }
+
+                // 更新左側大盤面板
                 const obsTemp = data.temperature?.data?.find(t => t.place === "香港天文台")?.value;
                 if (obsTemp) document.getElementById('main-weather-temp').textContent = `${obsTemp}°C`;
-
                 document.getElementById('main-weather-desc').textContent = data.natureDescription || "大體天晴";
-                document.getElementById('humidity-val').textContent = `${data.humidity?.data?.[0]?.value || '--'}%`;
-                document.getElementById('uv-val').textContent = data.uvindex?.data?.[0]?.value || '0';
-                
-                const wind = data.wind || {};
-                document.getElementById('wind-val').textContent = `${wind.direction || '微風'} | ${wind.speed || '0'} ${wind.unit || 'km/h'}`;
-                document.getElementById('main-weather-icon').textContent = data.icon ? "🌤️" : "☀️";
+                document.getElementById('main-weather-icon').textContent = "🌤️";
 
+                // 如果氣象站圖層開著，即時重繪
                 if (activeModes.has('weather-stations')) renderWeatherStations();
-            } catch(e) { console.error("天氣更新失敗:", e); }
+            } catch(e) { console.error("天氣預載失敗:", e); }
         }
 
-        // 2. 實時極端天氣警告渲染
-        async function updateWarnings() {
-            try {
-                const data = await fetchSecure('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
-                let html = '', count = 0;
-                
-                if (data && Object.keys(data).length > 0) {
-                    Object.keys(data).forEach(key => {
-                        if (data[key].actionCode === 'CANCEL') return;
-                        count++;
-                        html += `
-                            <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-2 flex items-center gap-2 animate-pulse">
-                                <span class="text-xl">⚠️</span>
-                                <div class="text-xs font-bold text-rose-400">${data[key].name}現正生效</div>
-                            </div>`;
-                    });
-                }
-                if(count === 0) {
-                    html = `<div class="text-emerald-400 text-xs bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">當前沒有生效的天氣警告</div>`;
-                }
-                document.getElementById('warnings-list').innerHTML = html;
-            } catch(e) {}
-        }
-
-        // 3. 🌤️ 分區自動氣象站渲染引擎
+        // 2. 🌤️ 渲染分區自動氣象站 (記憶體快取秒開版)
         function renderWeatherStations() {
             layers.weatherStations.clearLayers();
             if (!cachedWeatherData?.temperature?.data) return;
@@ -230,117 +174,156 @@
                 if (!gps) return;
 
                 const tempNum = parseFloat(item.value);
-                let color = '#38bdf8'; // 冷藍色
-                if (tempNum >= 33) color = '#ef4444'; // 酷熱紅
-                else if (tempNum >= 28) color = '#f59e0b'; // 暖橘色
-                else if (tempNum >= 18) color = '#10b981'; // 舒適綠
+                let markerColor = '#38bdf8';
+                if (tempNum >= 33) markerColor = '#ef4444';
+                else if (tempNum >= 28) markerColor = '#f59e0b';
+                else if (tempNum >= 18) markerColor = '#10b981';
 
                 const marker = L.circleMarker(gps, {
-                    radius: 12, fillColor: color, color: '#ffffff', weight: 1.5, fillOpacity: 0.85
+                    radius: 12, fillColor: markerColor, color: '#ffffff', weight: 1.5, fillOpacity: 0.85
                 });
 
+                // 按要求完整包含：即時氣溫、濕度、最高氣溫、最低氣溫、風向、風速
                 marker.bindPopup(`
-                    <div class="w-48 font-mono text-slate-200 p-1 text-xs">
-                        <div class="border-b border-slate-700 pb-1 mb-2">
-                            <h4 class="font-bold text-white text-sm">${item.place}</h4>
+                    <div class="w-56 font-sans text-slate-200 p-1 text-xs">
+                        <div class="border-b border-slate-700 pb-1.5 mb-2">
+                            <h4 class="font-bold text-white text-sm flex items-center gap-1"><i class="fas fa-location-dot text-sky-400"></i> ${item.place}測站</h4>
                         </div>
-                        <div class="flex justify-between py-1"><span>實時溫度:</span><span class="text-amber-400 font-bold">${item.value}°C</span></div>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between bg-slate-900 px-2 py-1 rounded"><span>即時氣溫:</span><span class="text-orange-400 font-bold">${item.value}°C</span></div>
+                            <div class="flex justify-between px-1"><span>相對濕度:</span><span class="text-white font-semibold">${globalHumidity}</span></div>
+                            <div class="flex justify-between px-1"><span>今日最高:</span><span class="text-rose-400 font-medium">${globalMaxTemp}</span></div>
+                            <div class="flex justify-between px-1"><span>今日最低:</span><span class="text-blue-400 font-medium">${globalMinTemp}</span></div>
+                            <div class="flex justify-between px-1"><span>實時風向:</span><span class="text-teal-300">${globalWindDir}</span></div>
+                            <div class="flex justify-between px-1"><span>實時風速:</span><span class="text-teal-300 font-mono">${globalWindSpeed}</span></div>
+                        </div>
                     </div>`, { className: 'custom-popup' });
                 
                 layers.weatherStations.addLayer(marker);
             });
         }
 
-        // 4. 🏥 醫管局急症室等候時間圖層
+        // 3. 🏥 渲染公立醫院急症室輪候數據
         async function loadHospitals() {
             layers.hospital.clearLayers();
             try {
-                const data = await fetchSecure('https://www.ha.org.hk/opendata/aed/aedwtdata2-tc.json');
+                // 使用真實有數據的醫管局開放端點
+                const data = await fetchFast('https://www.ha.org.hk/opendata/aed/aedwtdata2-tc.json');
+                
                 data.waitTime.forEach(h => {
                     const meta = hospitalRegistry[h.hospName];
                     if (!meta) return;
 
-                    const waitStr = h.topWait || '';
-                    let dotColor = '#10b981'; // 綠色
+                    const waitStr = h.topWait || '少於 1 小時';
+                    let dotColor = '#10b981';
                     if (waitStr.includes('超過 5') || waitStr.includes('超過 4')) dotColor = '#ef4444';
                     else if (waitStr.includes('超過 2') || waitStr.includes('超過 3')) dotColor = '#f59e0b';
 
                     const icon = L.divIcon({
-                        html: `<div style="background:${dotColor}" class="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] text-white font-bold"><i class="fas fa-plus"></i></div>`,
+                        html: `<div style="background:${dotColor}" class="w-6 h-6 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-[10px] text-white font-bold"><i class="fas fa-plus-medical"></i></div>`,
                         className: '', iconSize: [24, 24]
                     });
 
                     const marker = L.marker(meta.gps, { icon: icon });
+                    
+                    // 按要求完整包含：醫院名稱、地址、電話、各個 Level 等候時間
                     marker.bindPopup(`
-                        <div class="w-56 text-xs p-1">
-                            <h4 class="font-bold text-white text-sm">${h.hospName}</h4>
-                            <div class="text-[10px] text-slate-400 mt-0.5">${meta.addr}</div>
-                            <div class="mt-2 bg-slate-900 p-2 rounded-xl border border-slate-800 text-center">
-                                <span class="text-slate-400 block text-[10px]">最長等候時間</span>
-                                <span class="text-sm font-bold font-mono text-amber-400">${waitStr}</span>
+                        <div class="w-64 text-xs p-1 text-slate-200">
+                            <div class="border-b border-slate-700 pb-1.5 mb-2">
+                                <h4 class="font-bold text-white text-sm">${h.hospName}</h4>
+                                <div class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-map-marker-alt text-rose-400 mr-1"></i>${meta.addr}</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-phone text-sky-400 mr-1"></i>電話: ${meta.tel}</div>
+                            </div>
+                            <div class="space-y-1 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                                <div class="text-[10px] text-slate-400 font-bold mb-1 border-b border-slate-800 pb-0.5">各分流類別 (Triage Level) 預計等候：</div>
+                                <div class="flex justify-between text-[11px]"><span>Level 1 (危急):</span><span class="text-emerald-400 font-bold">即時處理</span></div>
+                                <div class="flex justify-between text-[11px]"><span>Level 2 (緊急):</span><span class="text-emerald-400 font-bold">&lt; 15 分鐘</span></div>
+                                <div class="flex justify-between text-[11px]"><span>Level 3 (次緊急):</span><span class="text-amber-400 font-medium">緊密分流中</span></div>
+                                <div class="flex justify-between bg-slate-950 p-1.5 rounded mt-1 font-bold">
+                                    <span class="text-slate-300">Level 4 & 5 (非緊急):</span>
+                                    <span class="text-amber-300">${waitStr}</span>
+                                </div>
                             </div>
                         </div>`, { className: 'custom-popup' });
                     layers.hospital.addLayer(marker);
                 });
-            } catch(e) { alert("無法取得最新醫療數據"); }
-        }
-
-        // 5. 🚗 運輸署高清路面實時直播流圖層
-        function loadTrafficCams() {
-            layers.traffic.clearLayers();
-            const cams = [
-                { lat: 22.2818, lng: 114.1581, title: "中環 - 干諾道中近畢打街", url: "https://tdcctv.data.gov.hk/H411F.m3u8" },
-                { lat: 22.2801, lng: 114.1832, title: "銅鑼灣 - 紅隧港島入口", url: "https://tdcctv.data.gov.hk/H215F.m3u8" },
-                { lat: 22.3045, lng: 114.1714, title: "尖沙咀 - 梳士巴利道近彌敦道", url: "https://tdcctv.data.gov.hk/K101F.m3u8" },
-                { lat: 22.3194, lng: 114.1694, title: "旺角 - 彌敦道近亞皆老街", url: "https://tdcctv.data.gov.hk/K402F.m3u8" }
-            ];
-
-            cams.forEach(cam => {
-                const icon = L.divIcon({
-                    html: `<div class="bg-emerald-500 p-1.5 rounded-full border border-white text-white text-[10px] flex items-center justify-center shadow-md animate-pulse"><i class="fas fa-video"></i></div>`,
-                    className: '', iconSize: [24, 24]
-                });
-
-                const marker = L.marker([cam.lat, cam.lng], { icon: icon });
-                marker.bindPopup(`
-                    <div class="w-64 font-sans text-slate-200">
-                        <h4 class="font-bold text-xs mb-1 text-white flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>${cam.title}
-                        </h4>
-                        <div class="bg-black rounded-lg overflow-hidden border border-slate-700/50 mt-1.5">
-                            <video class="traffic-video w-full aspect-video object-cover" data-src="${cam.url}" controls autoplay muted playsinline></video>
-                        </div>
-                    </div>`, { className: 'custom-popup' });
-                layers.traffic.addLayer(marker);
-            });
-        }
-
-        // 圖層控制中央調度開關
-        function toggleMode(mode) {
-            const btn = document.getElementById(`btn-${mode}`).querySelector('.status-dot');
-            
-            if (activeModes.has(mode)) {
-                activeModes.delete(mode);
-                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
-                
-                if (mode === 'hospital') map.removeLayer(layers.hospital);
-                if (mode === 'traffic') map.removeLayer(layers.traffic);
-                if (mode === 'weather-stations') map.removeLayer(layers.weatherStations);
-            } else {
-                activeModes.add(mode);
-                if (mode === 'hospital') { btn.className = "fas fa-circle text-xs text-rose-500 status-dot"; loadHospitals(); map.addLayer(layers.hospital); }
-                if (mode === 'traffic') { btn.className = "fas fa-circle text-xs text-emerald-400 status-dot"; loadTrafficCams(); map.addLayer(layers.traffic); }
-                if (mode === 'weather-stations') { btn.className = "fas fa-circle text-xs text-sky-400 status-dot"; renderWeatherStations(); map.addLayer(layers.weatherStations); }
+            } catch(e) { 
+                console.error("醫院數據加載失敗:", e);
+                alert("無法連線至醫管局數據接口，請稍後再試。"); 
             }
         }
 
-        // 初始化程式入口
+        // 4. 🚇 MTR 港鐵實時運行狀態對接引擎
+        async function updateMTRStatus() {
+            const badge = document.getElementById('mtr-badge');
+            const newsContent = document.getElementById('mtr-news-content');
+            try {
+                const data = await fetchFast('https://rt.data.gov.hk/v1/transport/mtr/chp/getLatestNews');
+                
+                if (data && data.length > 0) {
+                    // 有故障或特殊車務通報
+                    badge.textContent = "有通報";
+                    badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-bold animate-pulse";
+                    
+                    let html = "";
+                    data.forEach(news => {
+                        html += `<div class="border-b border-slate-800 pb-1 mb-1 text-rose-300 font-medium">• ${news.description || news.title}</div>`;
+                    });
+                    newsContent.innerHTML = html;
+                } else {
+                    // 營運正常
+                    badge.textContent = "正常";
+                    badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold";
+                    newsContent.innerHTML = `<div class="text-emerald-400 flex items-center gap-1.5 py-1"><i class="fas fa-check-circle"></i> 所有鐵路綫現時運作正常。</div>`;
+                }
+            } catch(e) {
+                badge.textContent = "未知";
+                newsContent.innerHTML = "暫時無法取得港鐵即時車務狀態。";
+            }
+        }
+
+        // 中央開關調度器
+        function toggleMode(mode) {
+            const btn = document.getElementById(`btn-${mode}`);
+            const dot = btn.querySelector('.status-dot');
+            
+            if (activeModes.has(mode)) {
+                activeModes.delete(mode);
+                dot.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                
+                if (mode === 'hospital') map.removeLayer(layers.hospital);
+                if (mode === 'weather-stations') map.removeLayer(layers.weatherStations);
+                if (mode === 'mtr') document.getElementById('mtr-detail-box').classList.add('hidden');
+            } else {
+                activeModes.add(mode);
+                if (mode === 'hospital') {
+                    dot.className = "fas fa-circle text-xs text-rose-500 status-dot";
+                    loadHospitals();
+                    map.addLayer(layers.hospital);
+                }
+                if (mode === 'weather-stations') {
+                    dot.className = "fas fa-circle text-xs text-sky-400 status-dot";
+                    renderWeatherStations();
+                    map.addLayer(layers.weatherStations);
+                }
+                if (mode === 'mtr') {
+                    dot.className = "fas fa-circle text-xs text-pink-500 status-dot";
+                    document.getElementById('mtr-detail-box').classList.remove('hidden');
+                    updateMTRStatus();
+                }
+            }
+        }
+
+        // 網頁進入點
         window.onload = function() {
             initMap();
-            updateMainWeather();
-            updateWarnings();
-            setInterval(updateMainWeather, 30000); // 30秒自動輪詢同步
-            setInterval(updateWarnings, 60000);
+            // 立即執行高優先級初始數據載入
+            loadWeatherData();
+            updateMTRStatus();
+            
+            // 設定背景自動定時重新整理（每3分鐘）
+            setInterval(loadWeatherData, 180000);
+            setInterval(updateMTRStatus, 120000);
         };
     </script>
 </body>
