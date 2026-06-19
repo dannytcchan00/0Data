@@ -123,6 +123,11 @@
                         <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
+                    <!-- 新增：口岸入境數據按鈕 -->
+                    <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">口岸每日入境旅客流量</span></span>
+                        <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -140,11 +145,12 @@
         let trafficMarkers = [];
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
+        let immigrationMarkers = [];
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
 
-        // 醫院英文鍵值與中文名稱、地理位置、地址註冊表 (完美映射醫管局 aedwtdata2-en.json 規格)
+        // 醫院英文鍵值與中文名稱、地理位置、地址註冊表
         const hospitalRegistry = {
             "Alice Ho Miu Ling Nethersole Hospital": { zhName: "雅麗氏何妙齡那打素醫院", gps: [22.4583, 114.1747], addr: "大埔全安路 11 號" },
             "Caritas Medical Centre": { zhName: "明愛醫院", gps: [22.3418, 114.1531], addr: "深水埗永康街 111 號" },
@@ -164,6 +170,25 @@
             "Tin Shui Wai Hospital": { zhName: "天水圍醫院", gps: [22.4589, 113.9961], addr: "天水圍天壇街 11 號" },
             "United Christian Hospital": { zhName: "基督教聯合醫院", gps: [22.3222, 114.2347], addr: "觀塘協和街 130 號" },
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
+        };
+
+        // 口岸英文鍵值與中文名稱、地理座標註冊表 (映射入境處大數據資料)
+        const immigrationRegistry = {
+            "Airport": { zhName: "機場", gps: [22.3080, 113.9185] },
+            "Express Rail Link West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
+            "Hung Hom": { zhName: "紅磡", gps: [22.3020, 114.1815] },
+            "Lo Wu": { zhName: "羅湖", gps: [22.5285, 114.1126] },
+            "Lok Ma Chau Spur Line": { zhName: "落馬洲支線", gps: [22.5140, 114.0660] },
+            "Heung Yuen Wai": { zhName: "香園圍", gps: [22.5535, 114.1630] },
+            "Man Kam To": { zhName: "文錦渡", gps: [22.5410, 114.1375] },
+            "Sha Tau Kok": { zhName: "沙頭角", gps: [22.5460, 114.2255] },
+            "Lok Ma Chau": { zhName: "落馬洲皇崗", gps: [22.5195, 114.0720] },
+            "Shenzhen Bay": { zhName: "深圳灣", gps: [22.4780, 113.9480] },
+            "Hong Kong-Zhuhai-Macao Bridge": { zhName: "港珠澳大橋", gps: [22.2950, 113.9550] },
+            "China Ferry Terminal": { zhName: "中國客運碼頭", gps: [22.3005, 114.1665] },
+            "Harbour Control": { zhName: "港口管制處", gps: [22.2865, 114.1545] },
+            "Kai Tak Cruise Terminal": { zhName: "啟德郵輪碼頭", gps: [22.3120, 114.2130] },
+            "Macau Ferry Terminal": { zhName: "港澳客運碼頭", gps: [22.2882, 114.1512] }
         };
 
         function initMap() {
@@ -336,7 +361,7 @@
             }
         }
 
-        // --- 醫院急症室數據（最新 ha.org.hk 2.0 規格） ---
+        // --- 醫院急症室數據 ---
         async function toggleHospital() {
             const btn = document.getElementById('btn-hospital').querySelector('.status-dot');
             if (activeModes.has('hospital')) {
@@ -348,7 +373,6 @@
             }
 
             try {
-                // 串接指定最新的醫管局公立醫院急症室等候時間數據 API 
                 const res = await fetch('https://www.ha.org.hk/opendata/aed/aedwtdata2-en.json');
                 const rawJson = await res.json();
                 const hData = rawJson.waitTime || [];
@@ -359,23 +383,19 @@
                 hData.forEach(h => {
                     const meta = hospitalRegistry[h.hospName];
                     if (meta) {
-                        // 讀取最重要且耗時最長的分流：次緊急與非緊急綜合最長等候指標(t45p95)
                         const t45MaxStr = h.t45p95 || '';
-                        
-                        // 動態演算分析英文等候字串：抽取數字並依據小時數(Hours)定義顏色分級
-                        let colorEmoji = '🟢'; // 預設 1小時內 (流暢)
+                        let colorEmoji = '🟢';
                         const hourMatch = t45MaxStr.match(/(\d+)\s*hour/i);
                         
                         if (hourMatch) {
                             const hours = parseInt(hourMatch[1]);
-                            if (hours > 5) colorEmoji = '🔴';       // 極度飽和 (>5小時)
-                            else if (hours > 3) colorEmoji = '🟠';  // 非常擁擠 (3-5小時)
-                            else if (hours >= 1) colorEmoji = '🟡'; // 輕微繁忙 (1-3小時)
+                            if (hours > 5) colorEmoji = '🔴';
+                            else if (hours > 3) colorEmoji = '🟠';
+                            else if (hours >= 1) colorEmoji = '🟡';
                         } else if (t45MaxStr.includes('Over 5') || t45MaxStr.includes('超過 5')) {
                             colorEmoji = '🔴';
                         }
 
-                        // 建立專屬顏色的動態 Emoji 地圖標記
                         const icon = L.divIcon({
                             html: `<div class="bg-slate-900/90 border border-slate-700/60 w-9 h-9 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none cursor-pointer">${colorEmoji}</div>`,
                             className: '',
@@ -385,12 +405,11 @@
 
                         const m = L.marker(meta.gps, { icon: icon }).addTo(map);
                         
-                        // 當撳入顏色 Emoji 時，彈出精緻黑底透明網格視窗，完整呈現該院詳細資訊與 5 大分流類別時間
                         m.bindPopup(`
                             <div class="w-72 font-sans p-1 text-slate-200">
                                 <div class="border-b border-slate-700/60 pb-2.5 mb-3">
-                                    <h3 class="text-sm font-bold text-white tracking-wide">${meta.zhName}</h3>
-                                    <div class="text-[10px] text-slate-400 mt-0.5 font-sans">${h.hospName}</div>
+                                    <h3 class="text-sm font-bold text-white tracking-wide">${h.hospName}</h3>
+                                    <div class="text-[10px] text-slate-400 mt-0.5 font-sans">${meta.zhName}</div>
                                     <div class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
                                         <i class="fas fa-map-marker-alt text-rose-500"></i> ${meta.addr}
                                     </div>
@@ -658,11 +677,138 @@
             });
         }
 
+        // --- 新增：口岸入境數據模組 ---
+        async function toggleImmigration() {
+            const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
+            if (activeModes.has('immigration')) {
+                immigrationMarkers.forEach(m => map.removeLayer(m));
+                immigrationMarkers = [];
+                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                activeModes.delete('immigration');
+                return;
+            }
+
+            try {
+                // 讀取指定之口岸 csv 數據庫 
+                const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily%20/data.csv';
+                const res = await fetch(csvUrl);
+                const csvText = await res.text();
+                
+                // 解析 CSV 行數據
+                const lines = csvText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                if (lines.length < 2) return;
+
+                // 識別最尾（最新）日期之數據
+                let latestDate = "";
+                for (let i = lines.length - 1; i >= 1; i--) {
+                    const columns = lines[i].split(',');
+                    if (columns[0]) {
+                        latestDate = columns[0].trim();
+                        break;
+                    }
+                }
+
+                // 依據最新日期進行口岸統計分組計演
+                const summaryData = {};
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    if (cols[0] && cols[0].trim() === latestDate) {
+                        const controlPoint = cols[1].trim();
+                        const hkRes = parseInt(cols[2]) || 0;
+                        const mainlandVisitor = parseInt(cols[3]) || 0;
+                        const otherVisitor = parseInt(cols[4]) || 0;
+                        const total = parseInt(cols[5]) || 0;
+
+                        summaryData[controlPoint] = {
+                            hkRes,
+                            mainlandVisitor,
+                            otherVisitor,
+                            total
+                        };
+                    }
+                }
+
+                immigrationMarkers.forEach(m => map.removeLayer(m));
+                immigrationMarkers = [];
+
+                // 地圖渲染標記點生成
+                Object.keys(summaryData).forEach(cpKey => {
+                    const meta = immigrationRegistry[cpKey];
+                    if (meta) {
+                        const data = summaryData[cpKey];
+                        
+                        // 動態規模圈：依據入境人數大小，生成不同粗細縮放感官圓點
+                        let markerSize = 32;
+                        let bgPulseColor = "bg-indigo-600/90";
+                        if (data.total > 50000) {
+                            markerSize = 40;
+                            bgPulseColor = "bg-violet-600/90 border-violet-400";
+                        } else if (data.total < 5000) {
+                            markerSize = 28;
+                        }
+
+                        const icon = L.divIcon({
+                            html: `<div class="${bgPulseColor} border border-slate-500 text-white font-mono font-bold text-[10px] rounded-full shadow-2xl flex flex-col items-center justify-center transition-transform duration-200 hover:scale-125 select-none cursor-pointer" style="width:${markerSize}px; height:${markerSize}px;">
+                                    <i class="fas fa-passport text-[9px] mb-0.5 opacity-80"></i>
+                                    <span>${(data.total / 1000).toFixed(1)}k</span>
+                                   </div>`,
+                            className: '',
+                            iconSize: [markerSize, markerSize],
+                            iconAnchor: [markerSize / 2, markerSize / 2]
+                        });
+
+                        const m = L.marker(meta.gps, { icon: icon }).addTo(map);
+
+                        m.bindPopup(`
+                            <div class="w-64 font-sans p-1 text-slate-200">
+                                <div class="border-b border-slate-700/60 pb-2 mb-3">
+                                    <h3 class="text-sm font-bold text-white tracking-wide">${cpKey}</h3>
+                                    <div class="text-[10px] text-indigo-400 font-medium mt-0.5">${meta.zhName} 入境管制站</div>
+                                    <div class="text-[9px] text-slate-500 font-mono mt-1">數據日期 (Date): ${latestDate}</div>
+                                </div>
+                                <div class="space-y-2.5 text-xs">
+                                    <div class="bg-indigo-950/40 border border-indigo-500/20 rounded-xl p-3 flex justify-between items-center">
+                                        <div class="text-[10px] text-indigo-300 font-medium">總入境總數<br><span class="text-slate-400 font-sans">Total Arrivals</span></div>
+                                        <div class="text-xl font-bold text-indigo-400 font-mono">${data.total.toLocaleString()}</div>
+                                    </div>
+                                    <div class="space-y-1.5 px-1 bg-slate-900/40 p-2 rounded-xl border border-slate-800">
+                                        <div class="flex justify-between items-center text-[11px]">
+                                            <span class="text-slate-400">香港居民<br><span class="text-[9px] text-slate-500">HK Residents</span></span>
+                                            <span class="font-mono text-slate-200 font-semibold">${data.hkRes.toLocaleString()}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-[11px] border-t border-slate-800/60 pt-1.5">
+                                            <span class="text-slate-400">內地訪客<br><span class="text-[9px] text-slate-500">Mainland Visitors</span></span>
+                                            <span class="font-mono text-slate-200 font-semibold">${data.mainlandVisitor.toLocaleString()}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-[11px] border-t border-slate-800/60 pt-1.5">
+                                            <span class="text-slate-400">其他訪客<br><span class="text-[9px] text-slate-500">Other Visitors</span></span>
+                                            <span class="font-mono text-slate-200 font-semibold">${data.otherVisitor.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-[9px] text-slate-500 italic mt-1 leading-tight">數據來源：香港入境事務處 (Immigration Department Open Data)。</div>
+                                </div>
+                            </div>
+                        `, { className: 'custom-popup' });
+
+                        immigrationMarkers.push(m);
+                    }
+                });
+
+                btn.className = "fas fa-circle text-xs text-indigo-400 status-dot";
+                activeModes.add('immigration');
+
+            } catch (e) {
+                console.error("入境數據 CSV 讀取失敗: ", e);
+                alert("無法讀取口岸入境數據，請確認遠端 CSV 分流狀態。");
+            }
+        }
+
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
             else if (mode === 'traffic') toggleTraffic();
             else if (mode === 'weather-stations') toggleWeatherStations();
+            else if (mode === 'immigration') toggleImmigration();
         }
 
         window.onload = function() {
