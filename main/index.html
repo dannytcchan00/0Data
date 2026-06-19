@@ -128,7 +128,6 @@
         </div>
     </div>
 
-    <!-- MTR Panel -->
     <div id="mtr-panel" class="hidden floating-panel absolute bottom-8 left-[24rem] w-80 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[50vh] overflow-y-auto">
         <h3 class="font-bold text-lg mb-4 text-white border-b border-slate-800 pb-2 flex items-center gap-2">
             <i class="fas fa-subway text-pink-500"></i> 港鐵各綫營運狀態
@@ -136,7 +135,6 @@
         <div id="mtr-list" class="space-y-2"></div>
     </div>
 
-    <!-- Immigration Passenger Flow Panel -->
     <div id="immigration-panel" class="hidden floating-panel absolute bottom-8 right-6 w-96 rounded-3xl p-5 z-[1000] shadow-2xl max-h-[60vh] overflow-y-auto border border-slate-700/50">
         <div class="border-b border-slate-800 pb-3 mb-4">
             <h3 class="font-bold text-lg text-white flex items-center gap-2">
@@ -162,6 +160,7 @@
         let map;
         let weatherStationMarkers = [];
         let hospitalMarkers = [];
+        let mtrLayer = null; // 儲存港鐵路綫網疊加圖層
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
@@ -481,13 +480,34 @@
         function toggleMTR() {
             const el = document.getElementById('mtr-panel');
             const btn = document.getElementById('btn-mtr').querySelector('.status-dot');
+            
             if (activeModes.has('mtr')) {
+                // 隱藏面版與移除港鐵地圖圖層
                 el.classList.add('hidden');
+                if (mtrLayer) {
+                    map.removeLayer(mtrLayer);
+                    mtrLayer = null;
+                }
                 btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
                 activeModes.delete('mtr');
                 return;
             }
             
+            // 定義地圖上疊加港鐵路綫網的坐標邊界 [[西南角緯度, 西南角經度], [東北角緯度, 東北角經度]]
+            // 該範圍大致精準對齊大嶼山延伸至將軍澳、深圳邊界至港島南
+            const mtrBounds = [[22.1500, 113.8200], [22.5600, 114.3200]];
+            // 使用維基百科上公開的高畫質港鐵官方拓撲路綫圖進行 Overlay
+            const mtrMapUrl = 'https://upload.wikimedia.org/wikipedia/commons/e/e5/MTR_system_map_en_zh.svg';
+            
+            // 建立圖片圖層並設定透明度
+            mtrLayer = L.imageOverlay(mtrMapUrl, mtrBounds, {
+                opacity: 0.85,
+                interactive: false
+            }).addTo(map);
+
+            // 自動將視角平滑移至港鐵核心範圍
+            map.flyTo([22.3350, 114.1650], 11);
+
             const lines = [
                 { name: '港島綫 (Island Line)', status: '正常 / Normal', color: 'bg-blue-600' },
                 { name: '荃灣綫 (Tsuen Wan Line)', status: '正常 / Normal', color: 'bg-red-600' },
