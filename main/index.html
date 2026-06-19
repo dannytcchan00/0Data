@@ -123,7 +123,7 @@
                         <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                     </button>
-                    <!-- 新增：口岸入境數據按鈕 -->
+                    <!-- 口岸入境數據按鈕 -->
                     <button id="btn-immigration" onclick="toggleMode('immigration')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
                         <span class="flex items-center gap-3"><i class="fas fa-passport text-indigo-400"></i> <span class="font-medium text-slate-200">口岸每日入境旅客流量</span></span>
                         <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
@@ -172,7 +172,7 @@
             "Yan Chai Hospital": { zhName: "仁濟醫院", gps: [22.3703, 114.1192], addr: "荃灣仁濟街 7-11 號" }
         };
 
-        // 口岸英文鍵值與中文名稱、地理座標註冊表 (映射入境處大數據資料)
+        // 口岸對應註冊表
         const immigrationRegistry = {
             "Airport": { zhName: "機場", gps: [22.3080, 113.9185] },
             "Express Rail Link West Kowloon": { zhName: "高鐵西九龍", gps: [22.3028, 114.1675] },
@@ -677,7 +677,7 @@
             });
         }
 
-        // --- 新增：口岸入境數據模組 ---
+        // --- 口岸入境數據模組 ---
         async function toggleImmigration() {
             const btn = document.getElementById('btn-immigration').querySelector('.status-dot');
             if (activeModes.has('immigration')) {
@@ -689,16 +689,15 @@
             }
 
             try {
-                // 讀取指定之口岸 csv 數據庫 
+                // 正確網址：已移除末端的空白字元
                 const csvUrl = 'https://dannytcchan00.github.io/0Data/data/immi/immi_daily/data.csv';
                 const res = await fetch(csvUrl);
                 const csvText = await res.text();
                 
-                // 解析 CSV 行數據
                 const lines = csvText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
                 if (lines.length < 2) return;
 
-                // 識別最尾（最新）日期之數據
+                // 抓取最後一行的最新日期
                 let latestDate = "";
                 for (let i = lines.length - 1; i >= 1; i--) {
                     const columns = lines[i].split(',');
@@ -708,7 +707,7 @@
                     }
                 }
 
-                // 依據最新日期進行口岸統計分組計演
+                // 進行最新日期口岸分類統計
                 const summaryData = {};
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(',');
@@ -731,13 +730,11 @@
                 immigrationMarkers.forEach(m => map.removeLayer(m));
                 immigrationMarkers = [];
 
-                // 地圖渲染標記點生成
                 Object.keys(summaryData).forEach(cpKey => {
                     const meta = immigrationRegistry[cpKey];
                     if (meta) {
                         const data = summaryData[cpKey];
                         
-                        // 動態規模圈：依據入境人數大小，生成不同粗細縮放感官圓點
                         let markerSize = 32;
                         let bgPulseColor = "bg-indigo-600/90";
                         if (data.total > 50000) {
