@@ -635,119 +635,116 @@
             renderWeatherStations(); btn.className = "fas fa-circle text-xs text-orange-400 status-dot"; activeModes.add('weather-stations');
         }
 
-        // 🛠️ 核心更新：重構分區觀測站 Popup，加入全套實時氣象指標
-        function renderWeatherStations() {
-            if (!rawWeatherData || !rawWeatherData.temperature?.data) return;
-            
-            // 完整分區站點地理座標註冊
-            const coords = { 
-                "Hong Kong Observatory": { gps: [22.3022, 114.1742], zh: "香港天文台總部" }, 
-                "King's Park": { gps: [22.3119, 114.1728], zh: "京士柏" }, 
-                "Wong Chuk Hang": { gps: [22.2478, 114.1667], zh: "黃竹坑" }, 
-                "Ta Kwu Ling": { gps: [22.5286, 114.1567], zh: "打鼓嶺" }, 
-                "Lau Fau Shan": { gps: [22.4689, 113.9836], zh: "流浮山" }, 
-                "Tai Po": { gps: [22.4461, 114.1789], zh: "大埔" }, 
-                "Sha Tin": { gps: [22.4025, 114.2100], zh: "沙田" }, 
-                "Tuen Mun": { gps: [22.3916, 113.9767], zh: "屯門" }, 
-                "Tseung Kwan O": { gps: [22.3156, 114.2614], zh: "將軍澳" }, 
-                "Sai Kung": { gps: [22.3836, 114.2708], zh: "西貢" }, 
-                "Chek Lap Kok": { gps: [22.3094, 113.9219], zh: "赤鱲角 (香港國際機場)" }, 
-                "Tsing Yi": { gps: [22.3453, 114.1044], zh: "青衣" }, 
-                "Tsuen Wan Shing Mun Valley": { gps: [22.3756, 114.1256], zh: "荃灣城門谷" }, 
-                "Hong Kong Park": { gps: [22.2778, 114.1622], zh: "香港公園" }, 
-                "Shau Kei Wan": { gps: [22.2756, 114.2256], zh: "筲箕灣" }, 
-                "Kowloon City": { gps: [22.3278, 114.1900], zh: "九龍城" } 
-            };
-            
-            weatherStationMarkers.forEach(m => map.removeLayer(m)); 
-            weatherStationMarkers = [];
-            
-            // 從總體 JSON 中抓取全局相對濕度 (作為各分區的基礎基準線，如果分區無獨立濕度感應器)
-            const globalHumidity = rawWeatherData.humidity?.data?.[0]?.value || '--';
+       // 🛠️ 修正版：核心更新：重構分區觀測站 Popup，加入全套實時氣象指標
+function renderWeatherStations() {
+    if (!rawWeatherData || !rawWeatherData.temperature?.data) return;
+    
+    // 完整分區站點地理座標註冊
+    const coords = { 
+        "Hong Kong Observatory": { gps: [22.3022, 114.1742], zh: "香港天文台總部" }, 
+        "King's Park": { gps: [22.3119, 114.1728], zh: "京士柏" }, 
+        "Wong Chuk Hang": { gps: [22.2478, 114.1667], zh: "黃竹坑" }, 
+        "Ta Kwu Ling": { gps: [22.5286, 114.1567], zh: "打鼓嶺" }, 
+        "Lau Fau Shan": { gps: [22.4689, 113.9836], zh: "流浮山" }, 
+        "Tai Po": { gps: [22.4461, 114.1789], zh: "大埔" }, 
+        "Sha Tin": { gps: [22.4025, 114.2100], zh: "沙田" }, 
+        "Tuen Mun": { gps: [22.3916, 113.9767], zh: "屯門" }, 
+        "Tseung Kwan O": { gps: [22.3156, 114.2614], zh: "將軍澳" }, 
+        "Sai Kung": { gps: [22.3836, 114.2708], zh: "西貢" }, 
+        "Chek Lap Kok": { gps: [22.3094, 113.9219], zh: "赤鱲角 (香港國際機場)" }, 
+        "Tsing Yi": { gps: [22.3453, 114.1044], zh: "青衣" }, 
+        "Tsuen Wan Shing Mun Valley": { gps: [22.3756, 114.1256], zh: "荃灣城門谷" }, 
+        "Hong Kong Park": { gps: [22.2778, 114.1622], zh: "香港公園" }, 
+        "Shau Kei Wan": { gps: [22.2756, 114.2256], zh: "筲箕灣" }, 
+        "Kowloon City": { gps: [22.3278, 114.1900], zh: "九龍城" } 
+    };
+    
+    weatherStationMarkers.forEach(m => map.removeLayer(m)); 
+    weatherStationMarkers = [];
+    
+    const globalHumidity = rawWeatherData.humidity?.data?.[0]?.value || '--';
 
-            rawWeatherData.temperature.data.forEach(item => {
-                const stationMeta = coords[item.place];
-                if (stationMeta) {
-                    const currentTemp = item.value;
-                    
-                    // 1. 匹配分區當日最高氣溫 (submishmax)
-                    let stationMaxTemp = '--';
-                    if (rawWeatherData.submishmax?.data) {
-                        const maxMatch = rawWeatherData.submishmax.data.find(m => m.place === item.place);
-                        if (maxMatch) stationMaxTemp = maxMatch.value;
-                    }
-                    
-                    // 2. 匹配分區當日最低氣溫 (submishmin)
-                    let stationMinTemp = '--';
-                    if (rawWeatherData.submishmin?.data) {
-                        const minMatch = rawWeatherData.submishmin.data.find(m => m.place === item.place);
-                        if (minMatch) stationMinTemp = minMatch.value;
-                    }
-
-                    // 3. 匹配該分區目前的平均風速與風向 (若對應站點無風速儀，則顯示總風速或 '--')
-                    let stationWindDir = '微風';
-                    let stationWindSpeed = '--';
-                    if (rawWeatherData.wind) {
-                        // 處理主站風向風力
-                        stationWindDir = translateWindDirection(rawWeatherData.wind.direction);
-                        stationWindSpeed = rawWeatherData.wind.speed ? `${rawWeatherData.wind.speed} ${rawWeatherData.wind.unit || 'km/h'}` : '--';
-                    }
-
-                    const m = L.marker(stationMeta.gps, { 
-                        icon: L.divIcon({ 
-                            html: `<div class="bg-slate-900/90 border border-slate-700/60 w-8 h-8 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none">${getWeatherEmojiByTemp(currentTemp)}</div>`, 
-                            className: '', iconSize: [32, 32], iconAnchor: [16, 16] 
-                        }) 
-                    }).addTo(map);
-                    
-                    // 渲染多維度的精美資訊 Popup
-                    m.bindPopup(`
-                        <div class="w-64 font-sans p-1 text-slate-200">
-                            <div class="border-b border-slate-700/60 pb-2 mb-2.5">
-                                <h3 class="text-sm font-bold text-white tracking-wide">${stationMeta.zh}</h3>
-                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">${item.place}</div>
-                            </div>
-                            
-                            <div class="space-y-2 text-xs">
-                                <!-- 即時氣溫核心展示 -->
-                                <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 flex justify-between items-center">
-                                    <span class="text-slate-300 font-medium">實時氣溫 Temp:</span>
-                                    <span class="text-xl font-bold text-orange-400 font-mono">${currentTemp}°C</span>
-                                </div>
-                                
-                                <!-- 最高、最低氣溫細節網格 -->
-                                <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                                    <div class="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col">
-                                        <span class="text-[9px] text-slate-400 font-sans">當日最高 Max</span>
-                                        <span class="text-rose-400 font-bold mt-0.5">${stationMaxTemp}°C</span>
-                                    </div>
-                                    <div class="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col">
-                                        <span class="text-[9px] text-slate-400 font-sans">當日最低 Min</span>
-                                        <span class="text-blue-400 font-bold mt-0.5">${stationMinTemp}°C</span>
-                                    </div>
-                                </div>
-                                
-                                <!-- 濕度與風向風速區塊 -->
-                                <div class="bg-slate-900/30 border border-slate-800/80 rounded-xl p-2.5 space-y-1.5 text-[11px]">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-slate-400">相對濕度 Humidity</span>
-                                        <span class="font-bold text-white font-mono">${globalHumidity}%</span>
-                                    </div>
-                                    <div class="border-t border-slate-800/60 my-1"></div>
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-slate-400">平均風速 Mean Wind</span>
-                                        <span class="font-bold text-amber-200 text-right leading-tight max-w-[60%]">
-                                            ${stationWindDir}<br><span class="font-mono text-[10px] font-normal text-slate-400">(${stationWindSpeed})</span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`, { className: 'custom-popup' });
-                        
-                    weatherStationMarkers.push(m);
+    rawWeatherData.temperature.data.forEach(item => {
+        const stationMeta = coords[item.place];
+        if (stationMeta) {
+            const currentTemp = item.value;
+            
+            // 修正：確保正確從數據中提取數值，並處理 'null' 或無數據的情況
+            let stationMaxTemp = '--';
+            if (rawWeatherData.submishmax?.data) {
+                const maxMatch = rawWeatherData.submishmax.data.find(m => m.place === item.place);
+                // 確保數值存在且有效
+                if (maxMatch && maxMatch.value !== null && maxMatch.value !== undefined) {
+                    stationMaxTemp = maxMatch.value;
                 }
-            });
+            }
+            
+            let stationMinTemp = '--';
+            if (rawWeatherData.submishmin?.data) {
+                const minMatch = rawWeatherData.submishmin.data.find(m => m.place === item.place);
+                if (minMatch && minMatch.value !== null && minMatch.value !== undefined) {
+                    stationMinTemp = minMatch.value;
+                }
+            }
+
+            let stationWindDir = '微風';
+            let stationWindSpeed = '--';
+            if (rawWeatherData.wind) {
+                stationWindDir = translateWindDirection(rawWeatherData.wind.direction);
+                stationWindSpeed = rawWeatherData.wind.speed ? `${rawWeatherData.wind.speed} ${rawWeatherData.wind.unit || 'km/h'}` : '--';
+            }
+
+            const m = L.marker(stationMeta.gps, { 
+                icon: L.divIcon({ 
+                    html: `<div class="bg-slate-900/90 border border-slate-700/60 w-8 h-8 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform duration-200 hover:scale-125 select-none">${getWeatherEmojiByTemp(currentTemp)}</div>`, 
+                    className: '', iconSize: [32, 32], iconAnchor: [16, 16] 
+                }) 
+            }).addTo(map);
+            
+            m.bindPopup(`
+                <div class="w-64 font-sans p-1 text-slate-200">
+                    <div class="border-b border-slate-700/60 pb-2 mb-2.5">
+                        <h3 class="text-sm font-bold text-white tracking-wide">${stationMeta.zh}</h3>
+                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">${item.place}</div>
+                    </div>
+                    
+                    <div class="space-y-2 text-xs">
+                        <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 flex justify-between items-center">
+                            <span class="text-slate-300 font-medium">實時氣溫 Temp:</span>
+                            <span class="text-xl font-bold text-orange-400 font-mono">${currentTemp}°C</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+                            <div class="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col">
+                                <span class="text-[9px] text-slate-400 font-sans">當日最高 Max</span>
+                                <span class="text-rose-400 font-bold mt-0.5">${stationMaxTemp !== '--' ? stationMaxTemp + '°C' : '--'}</span>
+                            </div>
+                            <div class="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col">
+                                <span class="text-[9px] text-slate-400 font-sans">當日最低 Min</span>
+                                <span class="text-blue-400 font-bold mt-0.5">${stationMinTemp !== '--' ? stationMinTemp + '°C' : '--'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-900/30 border border-slate-800/80 rounded-xl p-2.5 space-y-1.5 text-[11px]">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">相對濕度 Humidity</span>
+                                <span class="font-bold text-white font-mono">${globalHumidity}%</span>
+                            </div>
+                            <div class="border-t border-slate-800/60 my-1"></div>
+                            <div class="flex justify-between items-start">
+                                <span class="text-slate-400">平均風速 Mean Wind</span>
+                                <span class="font-bold text-amber-200 text-right leading-tight max-w-[60%]">
+                                    ${stationWindDir}<br><span class="font-mono text-[10px] font-normal text-slate-400">(${stationWindSpeed})</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`, { className: 'custom-popup' });
+                
+            weatherStationMarkers.push(m);
         }
+    });
+}
 
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
