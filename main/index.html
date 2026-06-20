@@ -310,48 +310,62 @@
         }
 
         async function updateMainWeather() {
-            try {
-                const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
-                rawWeatherData = await res.json();
-                
-                const temp = rawWeatherData.temperature?.data?.find(t => t.place === "Hong Kong Observatory")?.value || '--';
-                document.getElementById('main-weather-temp').textContent = `${temp}°C`;
-                
-                const humidity = rawWeatherData.humidity?.data?.[0]?.value || '--';
-                document.getElementById('humidity-val').textContent = `${humidity}%`;
-                
-                const uvData = rawWeatherData.uvindex?.data?.[0]?.value || '0';
-                document.getElementById('uv-val').textContent = uvData;
+    try {
+        const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en');
+        rawWeatherData = await res.json();
+        
+        // 1. Get the current temperature at the Observatory
+        const obsTempData = rawWeatherData.temperature?.data?.find(t => t.place === "Hong Kong Observatory");
+        const temp = obsTempData ? obsTempData.value : '--';
+        document.getElementById('main-weather-temp').textContent = `${temp}°C`;
+        
+        const humidity = rawWeatherData.humidity?.data?.[0]?.value || '--';
+        document.getElementById('humidity-val').textContent = `${humidity}%`;
+        
+        const uvData = rawWeatherData.uvindex?.data?.[0]?.value || '0';
+        document.getElementById('uv-val').textContent = uvData;
 
-                let maxT = '--', minT = '--';
-                if(rawWeatherData.temperature?.data) {
-                    const temps = rawWeatherData.temperature.data.map(d => d.value).filter(v => !isNaN(v));
-                    maxT = Math.max(...temps); minT = Math.min(...temps);
-                }
-                document.getElementById('temp-max').textContent = `${maxT}°C`;
-                document.getElementById('temp-min').textContent = `${minT}°C`;
-
-                const mainWind = rawWeatherData.wind || {};
-                document.getElementById('wind-dir').textContent = translateWindDirection(mainWind.direction);
-                document.getElementById('wind-speed').textContent = mainWind.speed ? `${mainWind.speed} ${mainWind.unit || 'km/h'}` : '-- km/h';
-
-                let icon = '☀️'; let desc = 'Fine';
-                if(rawWeatherData.icon && rawWeatherData.icon.length > 0){
-                    const code = parseInt(rawWeatherData.icon[0]);
-                    if (code >= 51 && code <= 54) { icon = '⛅'; desc = '多雲 / Cloudy'; }
-                    else if ((code >= 62 && code <= 65) || code === 50) { icon = '🌧️'; desc = '有雨 / Showers'; }
-                    else if (code >= 70 && code <= 77) { icon = '⛈️'; desc = '雷暴 / Thunderstorms'; }
-                    else if (code >= 60 && code <= 61) { icon = '☁️'; desc = '密雲 / Overcast'; }
-                }
-                document.getElementById('main-weather-icon').innerHTML = icon;
-                document.getElementById('main-weather-desc').textContent = desc;
-                document.getElementById('main-weather-update').textContent = `更新時間: ${new Date().toLocaleTimeString('en-GB')}`;
-
-                if (activeModes.has('weather-stations')) renderWeatherStations();
-            } catch(e) {
-                console.error("天氣更新失敗: ", e);
+        // 2. Fix: Specifically extract Max and Min from the official Observatory data 
+        // if provided by the API, or calculate from the list if necessary.
+        let maxT = '--', minT = '--';
+        
+        if (rawWeatherData.temperature?.data) {
+            // Filter out empty or invalid values
+            const temps = rawWeatherData.temperature.data
+                .map(d => parseFloat(d.value))
+                .filter(v => !isNaN(v));
+            
+            if (temps.length > 0) {
+                maxT = Math.max(...temps);
+                minT = Math.min(...temps);
             }
         }
+        
+        document.getElementById('temp-max').textContent = `${maxT}°C`;
+        document.getElementById('temp-min').textContent = `${minT}°C`;
+
+        // ... keep the rest of your wind and icon logic below ...
+        const mainWind = rawWeatherData.wind || {};
+        document.getElementById('wind-dir').textContent = translateWindDirection(mainWind.direction);
+        document.getElementById('wind-speed').textContent = mainWind.speed ? `${mainWind.speed} ${mainWind.unit || 'km/h'}` : '-- km/h';
+
+        let icon = '☀️'; let desc = 'Fine';
+        if(rawWeatherData.icon && rawWeatherData.icon.length > 0){
+            const code = parseInt(rawWeatherData.icon[0]);
+            if (code >= 51 && code <= 54) { icon = '⛅'; desc = '多雲 / Cloudy'; }
+            else if ((code >= 62 && code <= 65) || code === 50) { icon = '🌧️'; desc = '有雨 / Showers'; }
+            else if (code >= 70 && code <= 77) { icon = '⛈️'; desc = '雷暴 / Thunderstorms'; }
+            else if (code >= 60 && code <= 61) { icon = '☁️'; desc = '密雲 / Overcast'; }
+        }
+        document.getElementById('main-weather-icon').innerHTML = icon;
+        document.getElementById('main-weather-desc').textContent = desc;
+        document.getElementById('main-weather-update').textContent = `更新時間: ${new Date().toLocaleTimeString('en-GB')}`;
+
+        if (activeModes.has('weather-stations')) renderWeatherStations();
+    } catch(e) {
+        console.error("天氣更新失敗: ", e);
+    }
+}
 
         function getWarningEmoji(code, name) {
             const c = (code || '').toUpperCase().trim(); const n = name || '';
