@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&display=swap');
+        /* 引入 Noto Sans HK 同埋復古風嘅 Noto Serif HK */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght=400;500;700&family=Noto+Serif+HK:wght=400;700&display=swap');
         
         body {
             font-family: 'Noto Sans HK', system-ui, sans-serif;
@@ -65,6 +66,33 @@
             animation: warning-flash 1.5s infinite ease-in-out;
             box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
         }
+
+        /* 復古浮動框框樣式 */
+        .retro-alert {
+            position: absolute;
+            top: 20px;
+            right: 400px; /* 避開右邊嘅 sidebar */
+            background-color: #fdfbf7; 
+            color: #594a42; 
+            padding: 12px 24px;
+            border: 1px solid #d3cbbb;
+            border-radius: 2px;
+            box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.2);
+            font-family: 'Noto Serif HK', 'PMingLiU', serif;
+            font-size: 16px;
+            letter-spacing: 3px;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-out;
+            z-index: 1000;
+            pointer-events: none;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            padding: 24px 16px;
+        }
+
+        .retro-alert.hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
     </style>
 </head>
 <body class="bg-black text-slate-200 overflow-hidden">
@@ -74,6 +102,10 @@
         <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <i class="fas fa-city text-blue-500"></i> 香港實時數據儀表板
         </h1>
+    </div>
+
+    <div id="no-typhoon-alert" class="retro-alert hidden">
+        「當下，沒有熱帶氣旋」
     </div>
 
     <div id="sidebar" class="floating-panel absolute top-28 left-6 w-85 rounded-3xl p-6 z-[1000] shadow-2xl max-h-[82vh] overflow-y-auto transition-all duration-300 flex flex-col gap-4">
@@ -142,6 +174,10 @@
                     <span class="flex items-center gap-3"><i class="fas fa-temperature-half text-orange-400"></i> <span class="font-medium text-slate-200">分區實時天氣觀測</span></span>
                     <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
                 </button>
+                <button id="btn-typhoon" onclick="toggleMode('typhoon')" class="w-full text-left px-4 py-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/40 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                    <span class="flex items-center gap-3"><i class="fas fa-globe text-blue-400"></i> <span class="font-medium text-slate-200">全球熱帶氣旋追蹤</span></span>
+                    <i class="fas fa-circle text-xs text-slate-600 status-dot"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -173,6 +209,15 @@
             </div>
             <div id="immigration-list" class="space-y-3"></div>
         </div>
+
+        <div id="typhoon-panel" class="hidden floating-panel w-full rounded-3xl p-5 shadow-2xl max-h-[48vh] overflow-y-auto border border-slate-700/50 pointer-events-auto">
+            <h3 class="font-bold text-lg mb-4 text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+                <i class="fas fa-globe text-blue-400"></i> 全球活躍熱帶氣旋
+            </h3>
+            <div id="typhoon-list" class="space-y-3">
+                <div class="text-xs text-slate-400 text-center py-4">正在追蹤全球數據...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -181,6 +226,7 @@
         let hospitalMarkers = [];
         let mtrNetworkLayers = []; 
         let immigrationMarkers = [];
+        let typhoonMarkers = [];
         let activeModes = new Set();
         let sidebarExpanded = true;
         let rawWeatherData = null;
@@ -682,11 +728,110 @@
             });
         }
 
+        async function toggleTyphoon() {
+            const el = document.getElementById('typhoon-panel');
+            const btn = document.getElementById('btn-typhoon').querySelector('.status-dot');
+            const alertBox = document.getElementById('no-typhoon-alert');
+
+            if (activeModes.has('typhoon')) {
+                el.classList.add('hidden');
+                alertBox.classList.add('hidden');
+                typhoonMarkers.forEach(m => map.removeLayer(m));
+                typhoonMarkers = [];
+                btn.className = "fas fa-circle text-xs text-slate-600 status-dot";
+                activeModes.delete('typhoon');
+                return;
+            }
+
+            try {
+                // GDACS API: 讀取全球活躍熱帶氣旋
+                const res = await fetch('https://www.gdacs.org/gdacsapi/api/events/geteventlist/MAP?eventlist=TC');
+                const data = await res.json();
+                const activeCyclones = data.features || [];
+
+                let html = '';
+                if (activeCyclones.length === 0) {
+                    html = '<div class="text-xs text-slate-500 text-center py-4">目前沒有熱帶氣旋活動。</div>';
+                    // 顯示復古提示框
+                    alertBox.classList.remove('hidden');
+                    alertBox.innerText = '「當下，沒有熱帶氣旋」';
+                } else {
+                    // 隱藏復古提示框
+                    alertBox.classList.add('hidden');
+                    activeCyclones.forEach(cyclone => {
+                        const props = cyclone.properties;
+                        const name = props.name || 'Unknown';
+                        const severity = props.severitydata ? props.severitydata.severitytext : '未知強度';
+                        const date = new Date(props.fromdate).toLocaleDateString('zh-HK');
+                        const lng = cyclone.geometry.coordinates[0];
+                        const lat = cyclone.geometry.coordinates[1];
+
+                        html += `
+                        <div class="bg-slate-800/40 border border-slate-700/30 rounded-xl p-3 mb-2 cursor-pointer hover:bg-slate-800/80 transition-colors" onclick="zoomToCheckpoint(${lat}, ${lng})">
+                            <div class="font-bold text-white mb-1 flex items-center justify-between">
+                                <span>${name}</span>
+                                <span class="text-[10px] font-normal px-2 py-0.5 rounded-md bg-blue-900/50 text-blue-300 border border-blue-500/30">${severity}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400">記錄日期: ${date}</div>
+                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">座標: ${lat.toFixed(2)}N, ${lng.toFixed(2)}E</div>
+                        </div>`;
+
+                        // 加入地圖標記
+                        const m = L.marker([lat, lng], {
+                            icon: L.divIcon({ 
+                                html: '<div class="text-2xl drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] transition-transform hover:scale-125">🌀</div>', 
+                                className: '', 
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            })
+                        }).addTo(map);
+
+                        m.bindPopup(`
+                            <div class="p-1 font-sans text-slate-200 w-48">
+                                <h3 class="font-bold text-white mb-1 border-b border-slate-700/60 pb-1">${name}</h3>
+                                <div class="text-xs space-y-1 mt-2">
+                                    <div><span class="text-slate-400">強度:</span> <span class="text-blue-300">${severity}</span></div>
+                                    <div><span class="text-slate-400">日期:</span> ${date}</div>
+                                </div>
+                            </div>
+                        `, { className: 'custom-popup' });
+
+                        typhoonMarkers.push(m);
+                    });
+                    
+                    // 地圖視角移至第一個颱風附近
+                    if (activeCyclones.length > 0) {
+                        const firstLat = activeCyclones[0].geometry.coordinates[1];
+                        const firstLng = activeCyclones[0].geometry.coordinates[0];
+                        map.flyTo([firstLat, firstLng], 4);
+                    }
+                }
+
+                document.getElementById('typhoon-list').innerHTML = html;
+                el.classList.remove('hidden');
+                btn.className = "fas fa-circle text-xs text-blue-400 status-dot";
+                activeModes.add('typhoon');
+
+            } catch (e) {
+                console.error("颱風數據獲取失敗", e);
+                document.getElementById('typhoon-list').innerHTML = '<div class="text-xs text-rose-500 text-center py-4">無法載入熱帶氣旋數據</div>';
+                
+                // 發生錯誤都出個提示框
+                alertBox.innerText = '「暫時無法獲取氣旋資訊」';
+                alertBox.classList.remove('hidden');
+                
+                el.classList.remove('hidden');
+                btn.className = "fas fa-circle text-xs text-rose-500 status-dot";
+                activeModes.add('typhoon');
+            }
+        }
+
         function toggleMode(mode) {
             if (mode === 'hospital') toggleHospital();
             else if (mode === 'mtr') toggleMTR();
             else if (mode === 'immigration') toggleImmigration();
             else if (mode === 'weather-stations') toggleWeatherStations();
+            else if (mode === 'typhoon') toggleTyphoon();
         }
 
         window.onload = function() {
