@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>HK Dashboard - Quarry Bay Street Westbound V13</title>
+    <title>HK Dashboard - Quarry Bay Street Westbound</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -14,7 +14,6 @@
             --text-main: #ffffff;
             --text-muted: #666666;
             --warning-red: #ff4d4d;
-            --warning-bg: rgba(255, 77, 77, 0.08);
             --normal-bg: rgba(255, 255, 255, 0.02);
             
             --kmb-bg: #140202;
@@ -52,26 +51,27 @@
         
         .datetime-section { flex: 0 0 auto; }
         .date-display { font-size: 1.3rem; font-weight: 600; color: #fff; margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; }
-        .time-container { margin-bottom: 12px; }
-        .time-container:last-child { margin-bottom: 0; }
+        .time-container { margin-bottom: 5px; }
         .location-label { font-size: 0.85rem; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
-        .time-display { font-size: 2.8rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+        .time-display { font-size: 3.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
 
         .weather-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        .weather-display-group { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 0; }
-        .weather-status-emoji { font-size: 3.5rem; line-height: 1; margin-bottom: 6px; }
+        .weather-display-group { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; }
+        .weather-status-icon { height: 75px; width: auto; margin-bottom: 8px; }
         .weather-status-text { font-size: 1.1rem; font-weight: 600; color: #dddddd; letter-spacing: 1px; }
         
-        .alert-box { border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; font-weight: 600; line-height: 1.4; text-align: center; }
-        .warning-active { background: var(--warning-bg); border: 1px solid rgba(255, 77, 77, 0.2); color: var(--warning-red); }
+        .alert-box { border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; font-weight: 600; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+        .alert-box img { height: 45px; width: auto; object-fit: contain; } /* 標準天文台 GIF 尺寸 */
         .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); font-weight: normal; }
 
-        .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .swt-box { border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; line-height: 1.4; text-align: left; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); color: #ffd700; }
+
+        .weather-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .w-item { background: #121212; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #222; }
         .w-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px; }
-        .w-val { font-size: 1.5rem; font-weight: 700; }
-        .w-val.small { font-size: 1.2rem; color: #aaa; }
+        .w-val { font-size: 1.3rem; font-weight: 700; }
+        .w-val.small { font-size: 1.1rem; color: #aaa; }
 
         /* --- 右側佈局 --- */
         .right-col { display: flex; flex-direction: column; gap: 20px; height: 100%; overflow: hidden; }
@@ -93,9 +93,14 @@
         .badge-isl { background: #0071CE; color: #fff; } 
         .badge-tkl { background: #A3238E; color: #fff; } 
 
-        .mtr-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.95rem; }
+        .mtr-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.95rem; overflow: hidden; }
         .mtr-item:last-child { border-bottom: none; }
-        .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; }
+        .mtr-dest { white-space: nowrap; flex: 0 0 75px; }
+        .mtr-eta-container { flex: 1; text-align: right; overflow: hidden; display: flex; justify-content: flex-end; }
+        .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        
+        /* 港鐵收車跑馬燈樣式 */
+        .mtr-marquee { width: 100%; color: var(--warning-red); font-size: 0.85rem; font-weight: bold; }
 
         /* 巴士正方格 */
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -140,31 +145,33 @@
                 <div class="location-label">Hong Kong 香港</div>
                 <div class="time-display" id="hk-time">--:--</div>
             </div>
-            <div class="time-container">
-                <div class="location-label">London 倫敦</div>
-                <div class="time-display" id="uk-time">--:--</div>
-            </div>
         </div>
 
         <div class="panel weather-section">
-            <h2 style="border:none; margin:0 0 10px 0; padding:0; color:#fff; font-size:1.1rem;">香港天氣</h2>
+            <h2 style="border:none; margin:0 0 10px 0; padding:0; color:#fff; font-size:1.1rem;">香港實時天氣</h2>
             <div class="weather-display-group">
-                <div class="weather-status-emoji" id="weather-emoji">☁️</div>
+                <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
                 <div class="weather-status-text" id="weather-text">取得中...</div>
             </div>
-            <div id="warning-box" class="alert-box"></div>
+            
+            <div id="warning-box" class="alert-box alert-none">🟢 現時沒有天氣警告信號</div>
+            
+            <div id="swt-box" class="swt-box" style="display: none;"></div>
+
             <div class="weather-grid">
-                <div class="w-item"><div class="w-label">現時氣溫</div><div class="w-val" id="hk-temp">--°C</div></div>
-                <div class="w-item"><div class="w-label">現時濕度</div><div class="w-val" id="hk-hum">--%</div></div>
+                <div class="w-item"><div class="w-label">氣溫(總部)</div><div class="w-val" id="hk-temp">--°C</div></div>
+                <div class="w-item"><div class="w-label">濕度(總部)</div><div class="w-val" id="hk-hum">--%</div></div>
+                <div class="w-item"><div class="w-label">紫外線指數</div><div class="w-val" id="hk-uv">--</div></div>
                 <div class="w-item"><div class="w-label">今日最高</div><div class="w-val small" id="hk-max">--°C</div></div>
                 <div class="w-item"><div class="w-label">今日最低</div><div class="w-val small" id="hk-min">--°C</div></div>
+                <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val small" id="hk-psr">--</div></div>
             </div>
         </div>
     </div>
 
     <div class="right-col">
         <div class="panel mtr-section">
-            <h2>MTR地鐵 班次 🚆</h2>
+            <h2>港鐵 MTR 實時班次 🚆</h2>
             <div class="mtr-grid">
                 <div class="station-card qub-isl-style">
                     <div class="station-name">鰂魚涌 <span class="line-badge badge-isl">港島綫 ISL</span></div>
@@ -183,72 +190,79 @@
 
         <div class="panel bus-section">
             <h2>
-                <span>鰂魚涌街巴士站站 (西行) 🚌</span>
+                <span>鰂魚涌街實時站 (西行) 🚌</span>
                 <span class="refresh-indicator" id="refresh-status">🔄 系統啟動中...</span>
             </h2>
             <div class="bus-grid" id="bus-data">
-                <!-- 數據依到時排序 -->
-            </div>
+                </div>
         </div>
     </div>
 
     <script>
         let transportTimestamps = { mtr_qub_isl: [], mtr_qub_tkl: [], mtr_tak_isl: [], bus: [] };
         
-        // 限定路線
         const ALLOWED_ROUTES = ['2', '2A', '8H', '18X', '19P', '33X', '77', '77A', '81', '81A', '82', '85', '85A', '99', '302A', '307P', '678', '722', 'A12', 'N8X', 'NA12'];
-        
-        // 全面轉用 v1 API (citybus-nwfb)
         const CTB_API_BASE = 'https://rt.data.gov.hk/v1/transport/citybus-nwfb';
         
         let ctbTargetStops = [];
-        let kmbTargetStops = [];
+        // 套用您提供的完美專屬 API 站點代碼
+        const KMB_TARGET_STOP = 'KI04W10800000';
 
         function updateTick() {
             const now = new Date();
             const options = { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
             document.getElementById('current-date').innerText = '📅 ' + now.toLocaleDateString('zh-HK', options).replace('日', '日 ');
-
             document.getElementById('hk-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: false, hour: '2-digit', minute: '2-digit' });
-            document.getElementById('uk-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'Europe/London', hour12: false, hour: '2-digit', minute: '2-digit' });
             
             renderUI();
         }
 
         function parseRemaining(targetDateStr) {
+            if (!targetDateStr) return { text: "今日的列車服務經已完結", isArriving: false, isEnd: true };
             const diffSec = Math.floor((new Date(targetDateStr) - new Date()) / 1000);
-            if (diffSec <= 0) return { text: "正在開出", isArriving: true };
-            if (diffSec <= 60) return { text: "即將到達", isArriving: true };
+            if (diffSec <= 0) return { text: "正在開出", isArriving: true, isEnd: false };
+            if (diffSec <= 60) return { text: "即將到達", isArriving: true, isEnd: false };
             const m = Math.floor(diffSec / 60);
             const s = diffSec % 60;
-            return { text: `${m}分${s.toString().padStart(2, '0')}秒`, isArriving: false };
+            return { text: `${m}分${s.toString().padStart(2, '0')}秒`, isArriving: false, isEnd: false };
         }
 
         function renderUI() {
+            // MTR 渲染 (支援收車跑馬燈)
             ['mtr_qub_isl', 'mtr_qub_tkl', 'mtr_tak_isl'].forEach(id => {
                 let html = '';
                 const dataArray = transportTimestamps[id];
-                if (!dataArray || dataArray.length === 0) {
-                    html = '<div style="color: #888; text-align: center; padding: 10px 0; font-size: 0.9rem;">🛑 尾班車經已開出</div>';
-                } else {
-                    dataArray.forEach(t => {
-                        const etaInfo = parseRemaining(t.time);
+                
+                dataArray.forEach(t => {
+                    const etaInfo = parseRemaining(t.time);
+                    let etaDisplayHtml = '';
+                    
+                    if (etaInfo.isEnd) {
+                        etaDisplayHtml = `<marquee class="mtr-marquee" scrollamount="4">今日的列車服務經已完結</marquee>`;
+                    } else {
                         const etaClass = etaInfo.isArriving ? 'class="mtr-eta arriving-text"' : 'class="mtr-eta"';
-                        html += `<div class="mtr-item"><div>往 ${t.dest}</div><div ${etaClass}>${etaInfo.text}</div></div>`;
-                    });
-                }
+                        etaDisplayHtml = `<span ${etaClass}>${etaInfo.text}</span>`;
+                    }
+                    
+                    html += `
+                        <div class="mtr-item">
+                            <div class="mtr-dest">往 ${t.dest}</div>
+                            <div class="mtr-eta-container">${etaDisplayHtml}</div>
+                        </div>`;
+                });
+                
                 const targetDiv = document.getElementById(id.replace(/_/g, '-') + '-data');
                 if (targetDiv) targetDiv.innerHTML = html;
             });
 
+            // Bus 渲染
             let busHtml = '';
             if (transportTimestamps.bus.length === 0) {
                 const statusText = document.getElementById('refresh-status').innerText;
                 if (statusText.includes('🔄') || statusText.includes('安全擷取')) {
-                    // 顯示防封鎖 Loading 狀態
-                    busHtml = `<div class="no-service">⏳ 擷取數據中和 (請稍等)...<br><span style="font-size:0.8rem; color:#666;">預計需時 3-5 秒，請耐心等候</span></div>`;
+                    busHtml = `<div class="no-service">⏳ 系統正安全地擷取數據 (避免被政府伺服器封鎖)...<br><span style="font-size:0.8rem; color:#666;">預計需時幾秒，請耐心等候</span></div>`;
                 } else {
-                    busHtml = `<div class="no-service">💤 指定路線目前無即時班次<br><br><span style="font-size:0.8rem; color:#444;">[系統連線 九巴:${kmbTargetStops[0]||'無'} | 城巴:${ctbTargetStops[0]||'無'}]</span></div>`;
+                    busHtml = `<div class="no-service">💤 指定路線目前無即時班次<br><br><span style="font-size:0.8rem; color:#444;">[已連線 九巴:${KMB_TARGET_STOP} | 城巴:${ctbTargetStops[0]||'無'}]</span></div>`;
                 }
             } else {
                 transportTimestamps.bus.forEach(b => {
@@ -269,35 +283,19 @@
             document.getElementById('bus-data').innerHTML = busHtml;
         }
 
-        // --- 防 Rate Limit 順序搜索機制 ---
+        // --- 防 Rate Limit 順序搜索機制 (尋找城巴站) ---
         async function discoverExactStops() {
-            localStorage.removeItem('qb_westbound_stop_v12'); // 清除舊版毒藥快取
-            const cached = JSON.parse(localStorage.getItem('qb_westbound_stop_v13') || '{}');
-            if (cached.ctb && cached.kmb && cached.ctb.length > 0) {
+            const cached = JSON.parse(localStorage.getItem('qb_westbound_stop_v15') || '{}');
+            if (cached.ctb && cached.ctb.length > 0) {
                 ctbTargetStops = cached.ctb;
-                kmbTargetStops = cached.kmb;
                 return;
             }
 
             document.getElementById('refresh-status').className = 'refresh-indicator loading';
-
-            // 1. 搵九巴站 (九巴數據庫較細，可以直接攞)
-            document.getElementById('refresh-status').innerText = '🔄 [1/2] 正在鎖定九巴站 (鰂魚涌街)...';
+            document.getElementById('refresh-status').innerText = '🔄 正在定位城巴站... 防封鎖安全掃描模式';
             renderUI();
+            
             try {
-                const kmbRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop');
-                const kmbJson = await kmbRes.json();
-                if (kmbJson && kmbJson.data) {
-                    const matched = kmbJson.data.filter(s => s.name_tc === '鰂魚涌街');
-                    kmbTargetStops = matched.map(s => s.stop);
-                }
-            } catch (e) { console.error("KMB error", e); }
-
-            // 2. 搵城巴站 (極度小心：逐個站問，避免 429 封鎖)
-            document.getElementById('refresh-status').innerText = '🔄 [2/2] 正在鎖定城巴站 (鰂魚涌街, 英皇道)... 防封鎖模式';
-            renderUI();
-            try {
-                // 抽查 2號西行線沿途站點
                 const ctbRes = await fetch(`${CTB_API_BASE}/route-stop/CTB/2/outbound`);
                 const ctbJson = await ctbRes.json();
                 if (ctbJson && ctbJson.data) {
@@ -306,25 +304,23 @@
                         const stopRes = await fetch(`${CTB_API_BASE}/stop/${stopId}`);
                         const stopData = await stopRes.json();
                         
-                        // 精準匹配你提供嘅兩個特徵
                         if (stopData && stopData.data && stopData.data.name_tc) {
                             if (stopData.data.name_tc.includes('鰂魚涌街') && stopData.data.name_tc.includes('英皇道')) {
                                 ctbTargetStops = [stopId];
-                                break; // 搵到即刻停！極大減低系統負荷
+                                break; 
                             }
                         }
                     }
                 }
-            } catch (e) { console.error("CTB error", e); }
+            } catch (e) { console.error("CTB discovery error", e); }
 
-            // 硬核後備方案：如果政府網依然拒絕連線，直接塞死最常見嘅西行 ID
-            if (ctbTargetStops.length === 0) ctbTargetStops = ['001256'];
+            if (ctbTargetStops.length === 0) ctbTargetStops = ['001256']; // 硬核後備
 
-            localStorage.setItem('qb_westbound_stop_v13', JSON.stringify({ ctb: ctbTargetStops, kmb: kmbTargetStops }));
+            localStorage.setItem('qb_westbound_stop_v15', JSON.stringify({ ctb: ctbTargetStops }));
         }
 
         async function fetchRealBusData() {
-            if (ctbTargetStops.length === 0 || kmbTargetStops.length === 0) await discoverExactStops();
+            if (ctbTargetStops.length === 0) await discoverExactStops();
 
             document.getElementById('refresh-status').innerText = '🔄 讀取最新班次中...';
             
@@ -332,7 +328,7 @@
             const now = new Date();
             let promises = [];
 
-            // 1. 城巴 (使用你提供嘅 v1 API)
+            // 1. 城巴
             ctbTargetStops.forEach(stop => {
                 ALLOWED_ROUTES.forEach(route => {
                     promises.push(
@@ -341,7 +337,6 @@
                         .then(json => {
                             if (json && json.data && Array.isArray(json.data)) {
                                 json.data.forEach(d => {
-                                    // 加入防撞空字串機制
                                     if (d.eta && d.eta !== '' && new Date(d.eta) > now) {
                                         rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'ctb' });
                                     }
@@ -352,22 +347,20 @@
                 });
             });
 
-            // 2. 九巴
-            kmbTargetStops.forEach(stop => {
-                promises.push(
-                    fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stop}`)
-                    .then(r => r.json())
-                    .then(json => {
-                        if (json && json.data && Array.isArray(json.data)) {
-                            json.data.forEach(d => {
-                                if (d.eta && d.eta !== '' && new Date(d.eta) > now && ALLOWED_ROUTES.includes(d.route)) {
-                                    rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'kmb' });
-                                }
-                            });
-                        }
-                    }).catch(() => {})
-                );
-            });
+            // 2. 九巴 (精準整合)
+            promises.push(
+                fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${KMB_TARGET_STOP}`)
+                .then(r => r.json())
+                .then(json => {
+                    if (json && json.data && Array.isArray(json.data)) {
+                        json.data.forEach(d => {
+                            if (d.eta && d.eta !== '' && new Date(d.eta) > now && ALLOWED_ROUTES.includes(d.route)) {
+                                rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'kmb' });
+                            }
+                        });
+                    }
+                }).catch(() => {})
+            );
 
             await Promise.allSettled(promises);
 
@@ -383,84 +376,142 @@
             
             transportTimestamps.bus = finalBusData;
             
-            const ctbID = ctbTargetStops[0] || '無';
-            const kmbID = kmbTargetStops.length > 0 ? kmbTargetStops[0] : '無';
-            
             document.getElementById('refresh-status').className = 'refresh-indicator';
-            document.getElementById('refresh-status').innerText = `🟢 15秒更新 | 已連線: 城巴(${ctbID}) 九巴(${kmbID})`;
+            document.getElementById('refresh-status').innerText = `🟢 15秒更新 | 已連線: 城巴(${ctbTargetStops[0]}) 九巴(${KMB_TARGET_STOP})`;
             
-            renderUI(); // 強制刷新畫面
+            renderUI();
         }
 
         async function fetchWeather() {
             try {
+                // 1. 基本天氣資料
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
-                const iconMap = { 50:"☀️", 51:"🌙", 52:"🌤️", 53:"⛅", 54:"⛅", 60:"☁️", 61:"陰", 62:"🌧️", 63:"🌧️", 64:"🌧️", 65:"🌧️", 70:"⛈️", 71:"⛈️", 72:"⛈️", 73:"⛈️", 74:"⛈️", 75:"⛈️", 76:"⛈️", 77:"⛈️", 78:"🌃", 80:"💨", 81:"💨", 82:"💨", 83:"💨", 84:"💨", 85:"💨" };
-                document.getElementById('weather-emoji').innerText = iconMap[data.icon[0]] || "☁️";
-                document.getElementById('weather-text').innerText = data.flwStatus || "天晴";
+                
+                // 即時天氣圖示與文字對齊
+                if (data.icon && data.icon.length > 0) {
+                    const iconCode = data.icon[0];
+                    document.getElementById('weather-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${iconCode}.png`;
+                    
+                    // 完美對應官方圖示嘅短文字
+                    const iconDesc = { 50:"陽光充沛", 51:"天晴", 52:"短暫陽光", 53:"間有陽光", 54:"間有陽光", 60:"多雲", 61:"密雲", 62:"微雨", 63:"雨", 64:"大雨", 65:"狂風大雨", 70:"雷暴", 71:"雷暴", 72:"雷暴", 73:"雷暴", 74:"雷暴", 75:"雷暴", 76:"雷暴", 77:"雷暴", 78:"多雲", 80:"大風", 81:"大風", 82:"大風", 83:"霧", 84:"薄霧", 85:"煙霞" };
+                    document.getElementById('weather-text').innerText = iconDesc[iconCode] || "天氣報告";
+                }
 
+                // 強制讀取天文台總部(尖沙咀)數據
+                const tstTemp = data.temperature.data.find(d => d.place === '香港天文台');
+                document.getElementById('hk-temp').innerText = tstTemp ? `${tstTemp.value}°C` : '--°C';
+
+                const tstHum = data.humidity.data.find(d => d.place === '香港天文台');
+                document.getElementById('hk-hum').innerText = tstHum ? `${tstHum.value}%` : '--%';
+
+                // 紫外線指數 (京士柏)
+                let uv = '--';
+                if (data.uvindex && data.uvindex.data && data.uvindex.data.length > 0) {
+                    uv = data.uvindex.data[0].value;
+                }
+                document.getElementById('hk-uv').innerText = uv;
+
+                // 2. 天氣警告 (採用經典天文台 GIF 圖示)
+                const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
+                const warnData = await warnRes.json();
                 const warnBox = document.getElementById('warning-box');
-                if (data.warningMessage && data.warningMessage.length > 0) {
-                    warnBox.className = 'alert-box warning-active';
-                    warnBox.innerHTML = '⚠️ ' + data.warningMessage.join('<br>⚠️ ');
+                
+                let warningImagesHtml = '';
+                for (const key in warnData) {
+                    const action = warnData[key].actionCode;
+                    if (action === "ISSUE" || action === "REISSUE") {
+                        const warnCode = warnData[key].code.toLowerCase();
+                        // 採用經典帶字 GIF，同時加入防錯載入 PNG
+                        warningImagesHtml += `<img src="https://www.hko.gov.hk/tc/wxinfo/warning/images/${warnCode}c.gif" onerror="this.onerror=null; this.src='https://www.hko.gov.hk/img/warn/${warnData[key].code}.png';" alt="${warnData[key].name}" title="${warnData[key].name}">`;
+                    }
+                }
+
+                if (warningImagesHtml !== '') {
+                    warnBox.className = 'alert-box';
+                    warnBox.style.background = 'rgba(255, 77, 77, 0.08)';
+                    warnBox.style.border = '1px solid rgba(255, 77, 77, 0.2)';
+                    warnBox.innerHTML = warningImagesHtml;
                 } else {
                     warnBox.className = 'alert-box alert-none';
+                    warnBox.removeAttribute('style');
                     warnBox.innerHTML = '🟢 現時沒有天氣警告信號';
                 }
 
-                document.getElementById('hk-temp').innerText = `${data.temperature.data.find(d => d.place === '香港天文台').value}°C`;
-                document.getElementById('hk-hum').innerText = `${data.humidity.data[0].value}%`;
+                // 3. 特別天氣提示 (SWT)
+                const swtRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc');
+                const swtData = await swtRes.json();
+                const swtBox = document.getElementById('swt-box');
+                
+                if (swtData && swtData.swt && swtData.swt.length > 0) {
+                    let swtHtml = '💡 <b>特別天氣提示：</b><br>';
+                    swtData.swt.forEach(tip => {
+                        swtHtml += `<span style="display:block; margin-top:4px;">• ${tip.desc}</span>`;
+                    });
+                    swtBox.innerHTML = swtHtml;
+                    swtBox.style.display = 'block';
+                } else {
+                    swtBox.style.display = 'none';
+                }
 
+                // 4. 預測及降雨概率
                 const fndRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await fndRes.json();
-                document.getElementById('hk-max').innerText = `${fndData.weatherForecast[0].forecastMaxtemp.value}°C`;
-                document.getElementById('hk-min').innerText = `${fndData.weatherForecast[0].forecastMintemp.value}°C`;
-            } catch (e) {}
+                const todayForecast = fndData.weatherForecast[0];
+                document.getElementById('hk-max').innerText = `${todayForecast.forecastMaxtemp.value}°C`;
+                document.getElementById('hk-min').innerText = `${todayForecast.forecastMintemp.value}°C`;
+                document.getElementById('hk-psr').innerText = `${todayForecast.PSR}`;
+            } catch (e) { console.error("Weather update error", e); }
+        }
+
+        function setupMtrData(data, key, defaultDestinations) {
+            let trains = [];
+            if (data && data.data && data.data[key]) {
+                const upData = data.data[key].UP;
+                const downData = data.data[key].DOWN;
+                
+                if (upData && upData.length > 0) {
+                    const code = upData[0].dest;
+                    let destName = code === 'POA' ? '寶琳' : (code === 'LHP' ? '康城' : (code === 'CHW' ? '柴灣' : code));
+                    trains.push({ dest: destName, time: upData[0].time.replace(' ', 'T') + '+08:00' });
+                } else { trains.push({ dest: defaultDestinations.up, time: null }); }
+
+                if (downData && downData.length > 0) {
+                    const code = downData[0].dest;
+                    let destName = code === 'KNE' ? '堅尼地城' : (code === 'NOP' ? '北角' : code);
+                    trains.push({ dest: destName, time: downData[0].time.replace(' ', 'T') + '+08:00' });
+                } else { trains.push({ dest: defaultDestinations.down, time: null }); }
+            } else {
+                trains = [
+                    { dest: defaultDestinations.up, time: null },
+                    { dest: defaultDestinations.down, time: null }
+                ];
+            }
+            return trains;
         }
 
         async function fetchMTR_QUB_ISL() {
             try {
-                let trains = [];
                 const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=QUB`);
                 const data = await res.json();
-                if(data.data && data.data['ISL-QUB']) {
-                    if(data.data['ISL-QUB'].UP && data.data['ISL-QUB'].UP[0]) trains.push({ dest: '柴灣', time: data.data['ISL-QUB'].UP[0].time.replace(' ', 'T') + '+08:00' });
-                    if(data.data['ISL-QUB'].DOWN && data.data['ISL-QUB'].DOWN[0]) trains.push({ dest: '堅尼地城', time: data.data['ISL-QUB'].DOWN[0].time.replace(' ', 'T') + '+08:00' });
-                }
-                transportTimestamps.mtr_qub_isl = trains;
-            } catch (e) {}
+                transportTimestamps.mtr_qub_isl = setupMtrData(data, 'ISL-QUB', { up: '柴灣', down: '堅尼地城' });
+            } catch (e) { }
         }
 
         async function fetchMTR_QUB_TKL() {
             try {
-                let trains = [];
                 const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TKL&sta=QUB`);
                 const data = await res.json();
-                if(data.data && data.data['TKL-QUB']) {
-                    if(data.data['TKL-QUB'].UP && data.data['TKL-QUB'].UP[0]) {
-                        const code = data.data['TKL-QUB'].UP[0].dest;
-                        trains.push({ dest: code === 'POA' ? '寶琳' : (code === 'LHP' ? '康城' : code), time: data.data['TKL-QUB'].UP[0].time.replace(' ', 'T') + '+08:00' });
-                    }
-                    if(data.data['TKL-QUB'].DOWN && data.data['TKL-QUB'].DOWN[0]) {
-                        trains.push({ dest: '北角', time: data.data['TKL-QUB'].DOWN[0].time.replace(' ', 'T') + '+08:00' });
-                    }
-                }
-                transportTimestamps.mtr_qub_tkl = trains;
-            } catch (e) {}
+                transportTimestamps.mtr_qub_tkl = setupMtrData(data, 'TKL-QUB', { up: '寶琳/康城', down: '北角' });
+            } catch (e) { }
         }
 
         async function fetchMTR_TAK_ISL() {
             try {
-                let trains = [];
                 const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=TAK`);
                 const data = await res.json();
-                if(data.data && data.data['ISL-TAK']) {
-                    if(data.data['ISL-TAK'].UP && data.data['ISL-TAK'].UP[0]) trains.push({ dest: '柴灣', time: data.data['ISL-TAK'].UP[0].time.replace(' ', 'T') + '+08:00' });
-                    if(data.data['ISL-TAK'].DOWN && data.data['ISL-TAK'].DOWN[0]) trains.push({ dest: '堅尼地城', time: data.data['ISL-TAK'].DOWN[0].time.replace(' ', 'T') + '+08:00' });
-                }
-                transportTimestamps.mtr_tak_isl = trains;
-            } catch (e) {}
+                transportTimestamps.mtr_tak_isl = setupMtrData(data, 'ISL-TAK', { up: '柴灣', down: '堅尼地城' });
+            } catch (e) { }
         }
 
         async function runCycle() {
@@ -472,11 +523,10 @@
         }
 
         async function boot() {
-            // 一開波就 Call UI，等用家見到載入中嘅提示
             setInterval(updateTick, 1000); 
             await discoverExactStops(); 
             runCycle();           
-            setInterval(runCycle, 15000);    
+            setInterval(runCycle, 15000);
         }
 
         boot();
