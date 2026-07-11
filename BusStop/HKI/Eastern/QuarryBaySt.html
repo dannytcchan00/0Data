@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>HK Dashboard - Quarry Bay V20</title>
+    <title>HK Dashboard - Quarry Bay V22</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -61,23 +61,27 @@
         .date-display { font-size: 1.3rem; font-weight: 600; color: #fff; }
         .holiday-badge { font-size: 0.9rem; font-weight: 600; color: var(--warning-red); background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.3); padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 8px; letter-spacing: 0.5px; }
         
-        .time-container { margin-bottom: 5px; }
+        .time-container { display: flex; flex-direction: column; gap: 2px; }
         .location-label { font-size: 0.85rem; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
-        .time-display { font-size: 3.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-
-        .weather-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        /* 全新天氣圖表佈局 */
+        /* 時間並排佈局 (HKT + UTC) */
+        .time-row { display: flex; align-items: baseline; gap: 12px; }
+        .time-display { font-size: 3.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+        .utc-display { font-size: 1.75rem; font-weight: 500; color: #888; font-variant-numeric: tabular-nums; }
+
+        .weather-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        
+        /* 天氣頂部圖表 */
         .weather-display-main {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 25px;
-            padding: 15px 0;
+            padding: 15px 0 5px 0;
             background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-            border-radius: 12px;
+            border-radius: 12px 12px 0 0;
             border: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 5px;
+            border-bottom: none;
         }
         .weather-status-icon {
             height: 90px;
@@ -105,11 +109,26 @@
             letter-spacing: 1px;
         }
         .current-hum span {
-            color: #4da6ff; /* 冰藍色突出濕度 */
+            color: #4da6ff;
             font-weight: 700;
             font-size: 1.1rem;
         }
         
+        /* 1x4 同行天氣網格 */
+        .weather-grid-inline { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 4px; 
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            padding: 10px;
+        }
+        .w-item { text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .w-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; white-space: nowrap;}
+        .w-val { font-size: 1rem; font-weight: 700; color: #ddd; }
+
         @keyframes alertBlink {
             0% { opacity: 0.4; box-shadow: 0 0 4px rgba(255, 77, 77, 0.2); }
             50% { opacity: 1; box-shadow: 0 0 15px rgba(255, 77, 77, 0.6); background: rgba(255, 77, 77, 0.15); }
@@ -122,19 +141,33 @@
             100% { opacity: 0.5; box-shadow: 0 0 4px rgba(255, 215, 0, 0.2); }
         }
 
-        @keyframes textBlink { 0% { opacity: 0.4; color: #ff3b30; } 50% { opacity: 1; color: #ff3b30; } 100% { opacity: 0.4; color: #ff3b30; } }
-
-        .alert-box { border-radius: 10px; padding: 12px 15px; font-size: 1rem; font-weight: 600; text-align: left; display: flex; flex-direction: column; gap: 8px; }
+        .alert-box { border-radius: 10px; padding: 12px 15px; font-size: 0.95rem; font-weight: 600; text-align: left; display: flex; flex-direction: column; gap: 8px; }
         .alert-active { background: rgba(255, 77, 77, 0.08); border: 1px solid rgba(255, 77, 77, 0.4); animation: alertBlink 2s infinite ease-in-out; }
         .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); font-weight: normal; animation: none; text-align: center; }
-
         .swt-box { border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; line-height: 1.4; text-align: left; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; animation: swtBlink 2s infinite ease-in-out; }
 
-        /* 天氣網格改為 2x2 */
-        .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .w-item { background: #121212; padding: 12px 10px; border-radius: 10px; text-align: center; border: 1px solid #222; display: flex; flex-direction: column; justify-content: center;}
-        .w-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
-        .w-val { font-size: 1.2rem; font-weight: 700; color: #ddd; }
+        /* 3日天氣預報 */
+        .forecast-container { display: flex; gap: 8px; margin-top: auto; }
+        .forecast-item { 
+            flex: 1; 
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 10px; 
+            padding: 10px 5px; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .fc-date { font-size: 0.8rem; color: #ccc; font-weight: bold; }
+        .fc-icon { width: 35px; height: 35px; }
+        .fc-temp { font-size: 0.9rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;}
+        .fc-psr { font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.3);}
+        .psr-high { color: #ff4d4d; }
+        .psr-mid { color: #ffcc00; }
+        .psr-low { color: #4da6ff; }
 
         /* --- 右側佈局 --- */
         .right-col { display: flex; flex-direction: column; gap: 20px; height: 100%; overflow: hidden; }
@@ -161,7 +194,6 @@
         .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
         .mtr-eta-container { flex: 1; text-align: right; overflow: hidden; display: flex; justify-content: flex-end; }
         .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        
         .mtr-marquee { width: 100%; color: var(--warning-red); font-size: 0.85rem; font-weight: bold; }
 
         /* 巴士 */
@@ -180,13 +212,13 @@
         .bus-card.kmb .bus-eta { color: #ff5252; }
         .bus-card.ctb .bus-eta { color: #ffcc00; }
 
+        @keyframes textBlink { 0% { opacity: 0.4; color: #ff3b30; } 50% { opacity: 1; color: #ff3b30; } 100% { opacity: 0.4; color: #ff3b30; } }
         @keyframes kmbPulse { 0% { background-color: #140202; border-color: #991414; } 50% { background-color: #3b0a0a; border-color: #ff3333; box-shadow: 0 0 8px rgba(255, 51, 51, 0.4); } 100% { background-color: #140202; border-color: #991414; } }
         @keyframes ctbPulse { 0% { background-color: #141100; border-color: #a38200; } 50% { background-color: #382d00; border-color: #ffcc00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.4); } 100% { background-color: #141100; border-color: #a38200; } }
         
         .arriving-pulse.kmb { animation: kmbPulse 1.6s infinite ease-in-out; }
         .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
         .arriving-text { color: #ff3b30 !important; animation: textBlink 1.2s infinite ease-in-out; font-weight: 900; }
-        
         .no-service { grid-column: 1 / -1; text-align: center; color: #555; padding: 40px; font-size: 0.95rem; line-height: 1.6;}
 
         /* --- 交通事故跑馬燈 (置底) --- */
@@ -202,15 +234,10 @@
             align-items: center;
         }
 
-        /* --- 響應式設計 (兼容 iPhone) --- */
+        /* --- 響應式設計 --- */
         @media screen and (max-width: 768px) {
             body { height: 100vh; }
-            .main-content {
-                grid-template-columns: 1fr; 
-                overflow-y: auto; 
-                padding: 10px;
-                gap: 15px;
-            }
+            .main-content { grid-template-columns: 1fr; overflow-y: auto; padding: 10px; gap: 15px; }
             .left-col, .right-col { height: auto; overflow: visible; gap: 15px; }
             .panel { margin-bottom: 0; padding: 15px; }
             .bus-section { min-height: 400px; }
@@ -230,31 +257,41 @@
                 </div>
                 <div class="time-container">
                     <div class="location-label">Hong Kong 香港</div>
-                    <div class="time-display" id="hk-time">--:--</div>
+                    <div class="time-row">
+                        <div class="time-display" id="hk-time">--:--</div>
+                        <div class="utc-display" id="utc-time">--:-- UTC</div>
+                    </div>
                 </div>
             </div>
 
             <div class="panel weather-section">
                 <h2 style="border:none; margin:0 0 5px 0; padding:0; color:#fff; font-size:1.1rem;">香港實時天氣</h2>
                 
-                <!-- 全新並排天氣資訊 -->
-                <div class="weather-display-main">
-                    <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
-                    <div class="weather-current-stats">
-                        <div class="current-temp" id="hk-temp">--°C</div>
-                        <div class="current-hum">相對濕度 <span id="hk-hum">--%</span></div>
+                <div>
+                    <!-- 主天氣顯示 -->
+                    <div class="weather-display-main">
+                        <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
+                        <div class="weather-current-stats">
+                            <div class="current-temp" id="hk-temp">--°C</div>
+                            <div class="current-hum">相對濕度 <span id="hk-hum">--%</span></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 1x4 數據網格 -->
+                    <div class="weather-grid-inline">
+                        <div class="w-item"><div class="w-label">UV指數</div><div class="w-val" id="hk-uv">--</div></div>
+                        <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val" id="hk-psr">--</div></div>
+                        <div class="w-item"><div class="w-label">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
+                        <div class="w-item"><div class="w-label">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
                     </div>
                 </div>
                 
                 <div id="warning-box" class="alert-box alert-none">🟢 現時沒有天氣警告信號</div>
                 <div id="swt-box" class="swt-box" style="display: none;"></div>
 
-                <!-- 完美 2x2 網格 -->
-                <div class="weather-grid">
-                    <div class="w-item"><div class="w-label">紫外線指數</div><div class="w-val" id="hk-uv">--</div></div>
-                    <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val" id="hk-psr">--</div></div>
-                    <div class="w-item"><div class="w-label">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
-                    <div class="w-item"><div class="w-label">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
+                <!-- 3日天氣預報 -->
+                <div id="forecast-container" class="forecast-container">
+                    <!-- 預測資料將由 JS 填入 -->
                 </div>
             </div>
         </div>
@@ -283,13 +320,11 @@
                     <span>鰂魚涌街實時站 (西行) 🚌</span>
                     <span class="refresh-indicator" id="refresh-status">🔄 系統啟動中...</span>
                 </h2>
-                <div class="bus-grid" id="bus-data">
-                </div>
+                <div class="bus-grid" id="bus-data"></div>
             </div>
         </div>
     </div>
 
-    <!-- 置底交通事故跑馬燈 -->
     <div id="traffic-news-bar" class="traffic-news-bar">
         <marquee id="traffic-marquee" scrollamount="6"></marquee>
     </div>
@@ -356,6 +391,7 @@
             
             document.getElementById('current-date').innerText = `📅 ${yyyy}年${now.getMonth() + 1}月${now.getDate()}日 ${daysOfWeek[now.getDay()]}`;
             document.getElementById('hk-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: false, hour: '2-digit', minute: '2-digit' });
+            document.getElementById('utc-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit' }) + ' UTC';
             
             const dateKey = `${yyyy}${mm}${dd}`;
             const holidayBadge = document.getElementById('holiday-badge');
@@ -475,18 +511,15 @@
 
         async function fetchWeather() {
             try {
+                // 1. 取得實時數據
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
                 
                 if (data.icon && data.icon.length > 0) {
                     document.getElementById('weather-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${data.icon[0]}.png`;
                 }
-
-                // 填入氣溫
                 const tstTemp = data.temperature.data.find(d => d.place === '香港天文台');
                 document.getElementById('hk-temp').innerText = tstTemp ? `${tstTemp.value}°C` : '--°C';
-
-                // 填入濕度
                 const tstHum = data.humidity.data.find(d => d.place === '香港天文台');
                 document.getElementById('hk-hum').innerText = tstHum ? `${tstHum.value}%` : '--%';
 
@@ -498,10 +531,10 @@
                 }
                 document.getElementById('hk-uv').innerHTML = uvHtml;
 
+                // 2. 警告與提示
                 const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const warnData = await warnRes.json();
                 const warnBox = document.getElementById('warning-box');
-                
                 let warningHtml = '';
                 for (const key in warnData) {
                     const action = warnData[key].actionCode;
@@ -511,7 +544,6 @@
                         warningHtml += `<span>${emojiDisplay}</span>`;
                     }
                 }
-
                 if (warningHtml !== '') {
                     warnBox.className = 'alert-box alert-active';
                     warnBox.innerHTML = warningHtml;
@@ -523,7 +555,6 @@
                 const swtRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc');
                 const swtData = await swtRes.json();
                 const swtBox = document.getElementById('swt-box');
-                
                 if (swtData?.swt?.length > 0) {
                     let swtHtml = '💡 <b>特別天氣提示：</b><br>';
                     swtData.swt.forEach(tip => { swtHtml += `<span style="display:block; margin-top:4px;">• ${tip.desc}</span>`; });
@@ -533,18 +564,62 @@
                     swtBox.style.display = 'none';
                 }
 
+                // 3. 取得 9天預報 (動態比對日期過濾當日，精準只抽未來3日)
                 const fndRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await fndRes.json();
-                const todayForecast = fndData.weatherForecast[0];
-                document.getElementById('hk-max').innerText = `${todayForecast.forecastMaxtemp.value}°C`;
-                document.getElementById('hk-min').innerText = `${todayForecast.forecastMintemp.value}°C`;
                 
-                const psrVal = todayForecast.PSR;
-                if (psrVal.includes('高')) {
-                    document.getElementById('hk-psr').innerHTML = `<span class="arriving-text">${psrVal} ☔🌧️</span>`;
+                // 獲取精確嘅香港今日日期 (格式：YYYYMMDD)
+                const nowHK = new Date();
+                const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(nowHK);
+                const todayStr = parts.find(p => p.type === 'year').value + parts.find(p => p.type === 'month').value + parts.find(p => p.type === 'day').value;
+
+                // 搵出今日嘅預報，寫入 1x4 數據網格
+                const todayForecast = fndData.weatherForecast.find(fc => fc.forecastDate === todayStr);
+                if (todayForecast) {
+                    document.getElementById('hk-max').innerText = `${todayForecast.forecastMaxtemp.value}°C`;
+                    document.getElementById('hk-min').innerText = `${todayForecast.forecastMintemp.value}°C`;
+                    const psrVal = todayForecast.PSR;
+                    if (psrVal.includes('高')) {
+                        document.getElementById('hk-psr').innerHTML = `<span class="arriving-text">${psrVal} ☔</span>`;
+                    } else {
+                        document.getElementById('hk-psr').innerHTML = psrVal;
+                    }
                 } else {
-                    document.getElementById('hk-psr').innerHTML = psrVal;
+                    // 萬一深夜或清晨天文台提早唔提供今日預報，用第一個做 fallback 廢事斷版面
+                    const fallback = fndData.weatherForecast[0];
+                    if (fallback) {
+                        document.getElementById('hk-max').innerText = `${fallback.forecastMaxtemp.value}°C`;
+                        document.getElementById('hk-min').innerText = `${fallback.forecastMintemp.value}°C`;
+                        document.getElementById('hk-psr').innerHTML = fallback.PSR;
+                    }
                 }
+
+                // 過濾走今日，只抽出緊接其後嘅「未來3日預報」
+                const futureForecasts = fndData.weatherForecast.filter(fc => fc.forecastDate !== todayStr).slice(0, 3);
+
+                let forecastHtml = '';
+                futureForecasts.forEach(fc => {
+                    const dateStr = fc.forecastDate.substring(4,6) + '/' + fc.forecastDate.substring(6,8); 
+                    const min = fc.forecastMintemp.value;
+                    const max = fc.forecastMaxtemp.value;
+                    const psr = fc.PSR;
+                    const icon = fc.ForecastIcon;
+                    
+                    let psrClass = "psr-low";
+                    let psrIcon = "☀️";
+                    if(psr.includes('高')) { psrClass = "psr-high"; psrIcon = "🌧️"; }
+                    else if(psr.includes('中')) { psrClass = "psr-mid"; psrIcon = "☁️"; }
+
+                    forecastHtml += `
+                        <div class="forecast-item">
+                            <div class="fc-date">${dateStr} ${fc.week}</div>
+                            <img class="fc-icon" src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${icon}.png" alt="icon">
+                            <div class="fc-temp">${min}° - ${max}°</div>
+                            <div class="fc-psr ${psrClass}">${psrIcon} ${psr}</div>
+                        </div>
+                    `;
+                });
+                document.getElementById('forecast-container').innerHTML = forecastHtml;
 
             } catch (e) {}
         }
@@ -594,10 +669,8 @@
                     items.forEach(item => {
                         let desc = item.querySelector("description") ? item.querySelector("description").textContent : "";
                         let title = item.querySelector("title") ? item.querySelector("title").textContent : "";
-                        
                         let cleanDesc = desc.replace(/(<([^>]+)>)/gi, "").trim();
                         let contentToUse = cleanDesc || title.replace(/(<([^>]+)>)/gi, "").trim();
-                        
                         if (contentToUse && !contentToUse.includes('現時沒有特別') && !contentToUse.includes('交通回復正常')) {
                             newsArr.push(`⚠️ ${contentToUse}`);
                         }
