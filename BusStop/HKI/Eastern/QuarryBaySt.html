@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>HK Dashboard - Quarry Bay Ver.19</title>
+    <title>HK Dashboard - Quarry Bay V20</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -24,7 +24,6 @@
 
         * { box-sizing: border-box; }
 
-        /* 整個頁面轉用 Flex 佈局，方便跑馬燈置底 */
         body {
             background: var(--bg-color);
             color: var(--text-main);
@@ -36,7 +35,6 @@
             overflow: hidden;
         }
 
-        /* 原本嘅 Grid 佈局放入 Main Content */
         .main-content {
             display: grid;
             grid-template-columns: 350px 1fr;
@@ -69,9 +67,48 @@
 
         .weather-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        .weather-display-group { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; }
-        .weather-status-icon { height: 75px; width: auto; margin-bottom: 8px; }
-        .weather-status-text { font-size: 1.1rem; font-weight: 600; color: #dddddd; letter-spacing: 1px; }
+        /* 全新天氣圖表佈局 */
+        .weather-display-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            padding: 15px 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 5px;
+        }
+        .weather-status-icon {
+            height: 90px;
+            width: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        .weather-current-stats {
+            display: flex;
+            flex-direction: column;
+            border-left: 2px solid rgba(255,255,255,0.1);
+            padding-left: 25px;
+        }
+        .current-temp {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }
+        .current-hum {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .current-hum span {
+            color: #4da6ff; /* 冰藍色突出濕度 */
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
         
         @keyframes alertBlink {
             0% { opacity: 0.4; box-shadow: 0 0 4px rgba(255, 77, 77, 0.2); }
@@ -93,11 +130,11 @@
 
         .swt-box { border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; font-weight: 600; line-height: 1.4; text-align: left; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; animation: swtBlink 2s infinite ease-in-out; }
 
-        .weather-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .w-item { background: #121212; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #222; display: flex; flex-direction: column; justify-content: center;}
-        .w-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px; }
-        .w-val { font-size: 1.3rem; font-weight: 700; }
-        .w-val.small { font-size: 1.1rem; color: #aaa; }
+        /* 天氣網格改為 2x2 */
+        .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .w-item { background: #121212; padding: 12px 10px; border-radius: 10px; text-align: center; border: 1px solid #222; display: flex; flex-direction: column; justify-content: center;}
+        .w-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+        .w-val { font-size: 1.2rem; font-weight: 700; color: #ddd; }
 
         /* --- 右側佈局 --- */
         .right-col { display: flex; flex-direction: column; gap: 20px; height: 100%; overflow: hidden; }
@@ -161,7 +198,7 @@
             padding: 8px 15px;
             font-size: 1.1rem;
             font-weight: bold;
-            display: none; /* 預設隱藏，由 JS 控制顯示 */
+            display: none;
             align-items: center;
         }
 
@@ -169,8 +206,8 @@
         @media screen and (max-width: 768px) {
             body { height: 100vh; }
             .main-content {
-                grid-template-columns: 1fr; /* 改為單行顯示 */
-                overflow-y: auto; /* 讓內容在上面獨立滑動，不影響置底跑馬燈 */
+                grid-template-columns: 1fr; 
+                overflow-y: auto; 
                 padding: 10px;
                 gap: 15px;
             }
@@ -179,13 +216,11 @@
             .bus-section { min-height: 400px; }
             .bus-grid { overflow-y: visible; }
             .weather-section { min-height: 350px; }
-            .weather-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 主要內容區 -->
     <div class="main-content">
         <div class="left-col">
             <div class="panel datetime-section">
@@ -200,33 +235,33 @@
             </div>
 
             <div class="panel weather-section">
-                <h2 style="border:none; margin:0 0 10px 0; padding:0; color:#fff; font-size:1.1rem;">香港天氣</h2>
-                <div class="weather-display-group">
+                <h2 style="border:none; margin:0 0 5px 0; padding:0; color:#fff; font-size:1.1rem;">香港實時天氣</h2>
+                
+                <!-- 全新並排天氣資訊 -->
+                <div class="weather-display-main">
                     <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
-                    <div class="weather-status-text" id="weather-text">取得中...</div>
+                    <div class="weather-current-stats">
+                        <div class="current-temp" id="hk-temp">--°C</div>
+                        <div class="current-hum">相對濕度 <span id="hk-hum">--%</span></div>
+                    </div>
                 </div>
                 
-                <!-- 天氣警告 (Emoji) -->
                 <div id="warning-box" class="alert-box alert-none">🟢 現時沒有天氣警告信號</div>
-                
-                <!-- 特別天氣提示 -->
                 <div id="swt-box" class="swt-box" style="display: none;"></div>
 
-                <!-- 天氣網格 -->
+                <!-- 完美 2x2 網格 -->
                 <div class="weather-grid">
-                    <div class="w-item"><div class="w-label">氣溫(總部)</div><div class="w-val" id="hk-temp">--°C</div></div>
-                    <div class="w-item"><div class="w-label">濕度(總部)</div><div class="w-val" id="hk-hum">--%</div></div>
                     <div class="w-item"><div class="w-label">紫外線指數</div><div class="w-val" id="hk-uv">--</div></div>
-                    <div class="w-item"><div class="w-label">今日最高</div><div class="w-val small" id="hk-max">--°C</div></div>
-                    <div class="w-item"><div class="w-label">今日最低</div><div class="w-val small" id="hk-min">--°C</div></div>
-                    <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val small" id="hk-psr">--</div></div>
+                    <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val" id="hk-psr">--</div></div>
+                    <div class="w-item"><div class="w-label">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
+                    <div class="w-item"><div class="w-label">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
                 </div>
             </div>
         </div>
 
         <div class="right-col">
             <div class="panel mtr-section">
-                <h2>🚆 地鐵班次</h2>
+                <h2>港鐵 MTR 實時班次 🚆</h2>
                 <div class="mtr-grid">
                     <div class="station-card qub-isl-style">
                         <div class="station-name">鰂魚涌 <span class="line-badge badge-isl">港島綫 ISL</span></div>
@@ -245,11 +280,10 @@
 
             <div class="panel bus-section">
                 <h2>
-                    <span>🚌 鰂魚涌街巴士站</span>
+                    <span>鰂魚涌街實時站 (西行) 🚌</span>
                     <span class="refresh-indicator" id="refresh-status">🔄 系統啟動中...</span>
                 </h2>
                 <div class="bus-grid" id="bus-data">
-                    <!-- 數據依到時排序 -->
                 </div>
             </div>
         </div>
@@ -336,7 +370,7 @@
         }
 
         function parseRemaining(targetDateStr) {
-            if (!targetDateStr) return { text: "今日的列車服務經已終止", isArriving: false, isEnd: true };
+            if (!targetDateStr) return { text: "今日的列車服務經已完結", isArriving: false, isEnd: true };
             const diffSec = Math.floor((new Date(targetDateStr) - new Date()) / 1000);
             if (diffSec <= 0) return { text: "正在開出", isArriving: true, isEnd: false };
             if (diffSec <= 60) return { text: "即將到達", isArriving: true, isEnd: false };
@@ -351,7 +385,7 @@
                 transportTimestamps[id].forEach(t => {
                     const etaInfo = parseRemaining(t.time);
                     let etaDisplayHtml = etaInfo.isEnd ? 
-                        `<marquee class="mtr-marquee" scrollamount="4">今日的列車服務經已終止</marquee>` : 
+                        `<marquee class="mtr-marquee" scrollamount="4">今日的列車服務經已完結</marquee>` : 
                         `<span class="mtr-eta ${etaInfo.isArriving ? 'arriving-text' : ''}">${etaInfo.text}</span>`;
                     
                     html += `<div class="mtr-item"><div class="mtr-dest">往 ${t.dest}</div><div class="mtr-eta-container">${etaDisplayHtml}</div></div>`;
@@ -364,7 +398,7 @@
             if (transportTimestamps.bus.length === 0) {
                 const statusText = document.getElementById('refresh-status').innerText;
                 if (statusText.includes('🔄') || statusText.includes('安全')) {
-                    busHtml = `<div class="no-service">⏳ 系統正擷取數據...<br><span style="font-size:0.8rem; color:#666;">預計需時幾秒，請耐心等候</span></div>`;
+                    busHtml = `<div class="no-service">⏳ 系統正安全地擷取數據...<br><span style="font-size:0.8rem; color:#666;">預計需時幾秒，請耐心等候</span></div>`;
                 } else {
                     busHtml = `<div class="no-service">💤 指定路線目前無即時班次<br><br><span style="font-size:0.8rem; color:#444;">[已連線 九巴:${KMB_TARGET_STOP} | 城巴:${ctbTargetStops[0]||'無'}]</span></div>`;
                 }
@@ -446,13 +480,13 @@
                 
                 if (data.icon && data.icon.length > 0) {
                     document.getElementById('weather-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${data.icon[0]}.png`;
-                    const iconDesc = { 50:"陽光充沛", 51:"天晴", 52:"短暫陽光", 53:"間有陽光", 54:"間有陽光", 60:"多雲", 61:"密雲", 62:"微雨", 63:"雨", 64:"大雨", 65:"狂風大雨", 70:"雷暴", 71:"雷暴", 72:"雷暴", 73:"雷暴", 74:"雷暴", 75:"雷暴", 76:"雷暴", 77:"雷暴", 78:"多雲", 80:"大風", 81:"大風", 82:"大風", 83:"霧", 84:"薄霧", 85:"煙霞" };
-                    document.getElementById('weather-text').innerText = iconDesc[data.icon[0]] || "天氣報告";
                 }
 
+                // 填入氣溫
                 const tstTemp = data.temperature.data.find(d => d.place === '香港天文台');
                 document.getElementById('hk-temp').innerText = tstTemp ? `${tstTemp.value}°C` : '--°C';
 
+                // 填入濕度
                 const tstHum = data.humidity.data.find(d => d.place === '香港天文台');
                 document.getElementById('hk-hum').innerText = tstHum ? `${tstHum.value}%` : '--%';
 
@@ -545,10 +579,8 @@
             } catch (e) {}
         }
 
-        // 🚨 新增：擷取並解析特別交通事故 RSS/XML 
         async function fetchTrafficNews() {
             try {
-                // 因為瀏覽器有 CORS 限制，所以使用免費代理 API (AllOrigins) 去讀取 XML
                 const rssUrl = encodeURIComponent('https://www.td.gov.hk/tc/special_news/trafficnews.xml');
                 const res = await fetch(`https://api.allorigins.win/get?url=${rssUrl}`);
                 const data = await res.json();
@@ -563,11 +595,9 @@
                         let desc = item.querySelector("description") ? item.querySelector("description").textContent : "";
                         let title = item.querySelector("title") ? item.querySelector("title").textContent : "";
                         
-                        // 清除潛在嘅 HTML 標籤並移除頭尾空格
                         let cleanDesc = desc.replace(/(<([^>]+)>)/gi, "").trim();
                         let contentToUse = cleanDesc || title.replace(/(<([^>]+)>)/gi, "").trim();
                         
-                        // 確保內容唔係預設嘅「無事發生」訊息
                         if (contentToUse && !contentToUse.includes('現時沒有特別') && !contentToUse.includes('交通回復正常')) {
                             newsArr.push(`⚠️ ${contentToUse}`);
                         }
@@ -576,12 +606,11 @@
                     const bar = document.getElementById('traffic-news-bar');
                     const marquee = document.getElementById('traffic-marquee');
                     
-                    // 如果有突發交通消息，就顯示底部跑馬燈
                     if (newsArr.length > 0) {
                         marquee.innerText = newsArr.join('  ｜  ');
-                        bar.style.display = 'flex'; // 顯示 Flex Bar
+                        bar.style.display = 'flex';
                     } else {
-                        bar.style.display = 'none'; // 無特別消息就隱藏
+                        bar.style.display = 'none'; 
                     }
                 }
             } catch (e) {
@@ -594,17 +623,15 @@
             setInterval(updateTick, 1000); 
             await discoverExactStops(); 
             
-            // 初次載入
             await fetchWeather();
             await fetchMTR();
             await fetchRealBusData();
-            await fetchTrafficNews(); // 載入交通消息
+            await fetchTrafficNews(); 
                       
-            // 定時更新頻率
-            setInterval(fetchMTR, 30000); // 港鐵 15 秒
-            setInterval(fetchRealBusData, 60000); // 巴士 60 秒
-            setInterval(fetchWeather, 900000); // 天氣 15 分鐘
-            setInterval(fetchTrafficNews, 300000); // 交通消息 5 分鐘 (300,000 毫秒)
+            setInterval(fetchMTR, 15000); 
+            setInterval(fetchRealBusData, 60000); 
+            setInterval(fetchWeather, 900000); 
+            setInterval(fetchTrafficNews, 300000); 
             
             setInterval(() => { window.location.reload(); }, 24 * 60 * 60 * 1000); 
         }
