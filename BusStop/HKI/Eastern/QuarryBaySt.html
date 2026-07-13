@@ -120,7 +120,7 @@
         .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); font-weight: normal; animation: none; text-align: center; }
         .swt-box { border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; font-weight: 600; line-height: 1.4; text-align: left; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; animation: swtBlink 2s infinite ease-in-out; margin-top: 5px; }
 
-        /* 3日天氣預報 (已合併至上方資訊流) */
+        /* 3日天氣預報 */
         .forecast-container { display: flex; gap: 6px; margin-top: 8px; margin-bottom: 5px; }
         .forecast-item { 
             flex: 1; 
@@ -168,9 +168,9 @@
         .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
         .mtr-eta-container { flex: 1; text-align: right; overflow: hidden; display: flex; justify-content: flex-end; }
         .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .mtr-marquee { width: 100%; color: var(--warning-red); font-size: 0.85rem; font-weight: bold; }
+        .mtr-marquee { width: 100%; color: var(--warning-red); font-size: 0.85rem; font-weight: bold; display: block; }
 
-        /* 巴士 (縮小¼ 修改區) */
+        /* 巴士 */
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 5px; overflow-y: auto; align-content: flex-start; padding-right: 5px; }
         .bus-grid::-webkit-scrollbar { width: 4px; }
@@ -258,7 +258,7 @@
                     </div>
                 </div>
 
-                <!-- 3日天氣預報 (已完美融入主板塊下方) -->
+                <!-- 3日天氣預報 -->
                 <div id="forecast-container" class="forecast-container">
                     <!-- 預測資料將由 JS 填入 -->
                 </div>
@@ -393,11 +393,13 @@
                 let html = '';
                 transportTimestamps[id].forEach(t => {
                     const etaInfo = parseRemaining(t.time);
-                    let etaDisplayHtml = etaInfo.isEnd ? 
-                        `<marquee class="mtr-marquee" scrollamount="2">今日的列車服務經已終止</marquee>` : 
-                        `<span class="mtr-eta ${etaInfo.isArriving ? 'arriving-text' : ''}">${etaInfo.text}</span>`;
                     
-                    html += `<div class="mtr-item"><div class="mtr-dest">往 ${t.dest}</div><div class="mtr-eta-container">${etaDisplayHtml}</div></div>`;
+                    if (etaInfo.isEnd) {
+                        html += `<div class="mtr-item" style="display: block; text-align: center; overflow: hidden; padding: 6px 0;"><marquee class="mtr-marquee" scrollamount="4">往 ${t.dest}：今日的列車服務經已終止</marquee></div>`;
+                    } else {
+                        let etaDisplayHtml = `<span class="mtr-eta ${etaInfo.isArriving ? 'arriving-text' : ''}">${etaInfo.text}</span>`;
+                        html += `<div class="mtr-item"><div class="mtr-dest">往 ${t.dest}</div><div class="mtr-eta-container">${etaDisplayHtml}</div></div>`;
+                    }
                 });
                 const targetDiv = document.getElementById(id.replace(/_/g, '-') + '-data');
                 if (targetDiv) targetDiv.innerHTML = html;
@@ -406,7 +408,7 @@
             let busHtml = '';
             if (transportTimestamps.bus.length === 0) {
                 const statusText = document.getElementById('refresh-status').innerText;
-                if (statusText.includes('🔄') || statusText.includes('安全')) {
+                if (statusText.includes('🔄') || statusText.includes('啟動中')) {
                     busHtml = `<div class="no-service">⏳ 系統正擷取數據...<br><span style="font-size:0.8rem; color:#666;">預計需時幾秒，請耐心等候</span></div>`;
                 } else {
                     busHtml = `<div class="no-service">💤 指定路線目前無即時班次<br><br><span style="font-size:0.8rem; color:#444;">[已連線 九巴:${KMB_TARGET_STOP} | 城巴:${ctbTargetStops[0]||'無'}]</span></div>`;
@@ -459,22 +461,51 @@
             const now = new Date();
             let promises = [];
 
+            // 修正還原：城巴 API 必須要「車站 + 路線」逐條問，無得偷雞！
+            // 由於已經改做背景非同步載入，即使發出 20 幾個請求，都絕對唔會卡死畫面。
             ctbTargetStops.forEach(stop => {
                 ALLOWED_ROUTES.forEach(route => {
-                    promises.push(fetch(`${CTB_API_BASE}/eta/CTB/${stop}/${route}`).then(r => r.json()).then(json => {
-                        if (json?.data) json.data.forEach(d => { if (d.eta && new Date(d.eta) > now) rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'ctb' }); });
-                    }).catch(()=>{}));
+                    promises.push(
+                        fetch(`${CTB_API_BASE}/eta/CTB/${stop}/${route}`)
+                        .then(r => r.json())
+                        .then(json => {
+                            if (json && json.data) {
+                                json.data.forEach(d => { 
+                                    if (d.eta && new Date(d.eta) > now) {
+                                        rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'ctb' }); 
+                                    }
+                                });
+                            }
+                        })
+                        .catch(()=>{})
+                    );
                 });
             });
 
-            promises.push(fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${KMB_TARGET_STOP}`).then(r => r.json()).then(json => {
-                if (json?.data) json.data.forEach(d => { if (d.eta && new Date(d.eta) > now && ALLOWED_ROUTES.includes(d.route)) rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'kmb' }); });
-            }).catch(()=>{}));
+            // 九巴 API 就可以只用車站 ID 問晒所有車
+            promises.push(
+                fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${KMB_TARGET_STOP}`)
+                .then(r => r.json())
+                .then(json => {
+                    if (json?.data) {
+                        json.data.forEach(d => { 
+                            if (d.eta && new Date(d.eta) > now && ALLOWED_ROUTES.includes(d.route)) {
+                                rawBusData.push({ no: d.route, dest: d.dest_tc, time: d.eta, co: 'kmb' }); 
+                            }
+                        });
+                    }
+                })
+                .catch(()=>{})
+            );
 
             await Promise.allSettled(promises);
 
             let uniqueBuses = {};
-            rawBusData.forEach(b => { if (!uniqueBuses[b.no] || new Date(b.time) < new Date(uniqueBuses[b.no].time)) uniqueBuses[b.no] = b; });
+            rawBusData.forEach(b => { 
+                if (!uniqueBuses[b.no] || new Date(b.time) < new Date(uniqueBuses[b.no].time)) {
+                    uniqueBuses[b.no] = b; 
+                }
+            });
             
             transportTimestamps.bus = Object.values(uniqueBuses).sort((a, b) => new Date(a.time) - new Date(b.time));
             document.getElementById('refresh-status').className = 'refresh-indicator';
@@ -484,7 +515,6 @@
 
         async function fetchWeather() {
             try {
-                // 1. 取得實時數據
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
                 
@@ -504,7 +534,6 @@
                 }
                 document.getElementById('hk-uv').innerHTML = uvHtml;
 
-                // 2. 警告與提示
                 const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const warnData = await warnRes.json();
                 const warnBox = document.getElementById('warning-box');
@@ -537,7 +566,6 @@
                     swtBox.style.display = 'none';
                 }
 
-                // 3. 取得 9天預報 
                 const fndRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc');
                 const fndData = await fndRes.json();
                 
@@ -595,15 +623,17 @@
 
         function setupMtrData(data, key, defaultDestinations) {
             let trains = [];
-            if (data?.data?.[key]) {
+            if (data && data.data && data.data[key]) {
                 const upData = data.data[key].UP;
                 const downData = data.data[key].DOWN;
                 
-                if (upData?.length > 0) trains.push({ dest: MTR_DEST_MAP[upData[0].dest] || upData[0].dest, time: upData[0].time.replace(' ', 'T') + '+08:00' });
-                else trains.push({ dest: defaultDestinations.up, time: null });
+                const upTime = (upData && upData.length > 0 && upData[0].time) ? upData[0].time.replace(' ', 'T') + '+08:00' : null;
+                const upDest = (upData && upData.length > 0 && upData[0].dest) ? (MTR_DEST_MAP[upData[0].dest] || upData[0].dest) : defaultDestinations.up;
+                trains.push({ dest: upDest, time: upTime });
 
-                if (downData?.length > 0) trains.push({ dest: MTR_DEST_MAP[downData[0].dest] || downData[0].dest, time: downData[0].time.replace(' ', 'T') + '+08:00' });
-                else trains.push({ dest: defaultDestinations.down, time: null });
+                const downTime = (downData && downData.length > 0 && downData[0].time) ? downData[0].time.replace(' ', 'T') + '+08:00' : null;
+                const downDest = (downData && downData.length > 0 && downData[0].dest) ? (MTR_DEST_MAP[downData[0].dest] || downData[0].dest) : defaultDestinations.down;
+                trains.push({ dest: downDest, time: downTime });
             } else {
                 trains = [{ dest: defaultDestinations.up, time: null }, { dest: defaultDestinations.down, time: null }];
             }
@@ -611,16 +641,26 @@
         }
 
         async function fetchMTR() {
-            try {
-                const [resIslQ, resTklQ, resIslT] = await Promise.all([
-                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=QUB`).then(r=>r.json()),
-                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TKL&sta=QUB`).then(r=>r.json()),
-                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=TAK`).then(r=>r.json())
-                ]);
-                transportTimestamps.mtr_qub_isl = setupMtrData(resIslQ, 'ISL-QUB', { up: '柴灣', down: '堅尼地城' });
-                transportTimestamps.mtr_qub_tkl = setupMtrData(resTklQ, 'TKL-QUB', { up: '寶琳/康城', down: '北角' });
-                transportTimestamps.mtr_tak_isl = setupMtrData(resIslT, 'ISL-TAK', { up: '柴灣', down: '堅尼地城' });
-            } catch (e) {}
+            const fetchSafe = async (url, key, defaultDestinations) => {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('API 無反應');
+                    const data = await res.json();
+                    return setupMtrData(data, key, defaultDestinations);
+                } catch(e) {
+                    return [{ dest: defaultDestinations.up, time: null }, { dest: defaultDestinations.down, time: null }];
+                }
+            };
+
+            const [qubIsl, qubTkl, takIsl] = await Promise.all([
+                fetchSafe(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=QUB`, 'ISL-QUB', { up: '柴灣', down: '堅尼地城' }),
+                fetchSafe(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TKL&sta=QUB`, 'TKL-QUB', { up: '寶琳/康城', down: '北角' }),
+                fetchSafe(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=ISL&sta=TAK`, 'ISL-TAK', { up: '柴灣', down: '堅尼地城' })
+            ]);
+
+            transportTimestamps.mtr_qub_isl = qubIsl;
+            transportTimestamps.mtr_qub_tkl = qubTkl;
+            transportTimestamps.mtr_tak_isl = takIsl;
         }
 
         async function fetchTrafficNews() {
@@ -661,14 +701,15 @@
         }
 
         async function boot() {
-            await fetchHolidays(); 
+            fetchHolidays(); 
             setInterval(updateTick, 1000); 
+            
             await discoverExactStops(); 
             
-            await fetchWeather();
-            await fetchMTR();
-            await fetchRealBusData();
-            await fetchTrafficNews(); 
+            fetchWeather();
+            fetchMTR();
+            fetchRealBusData();
+            fetchTrafficNews(); 
                       
             setInterval(fetchMTR, 15000); 
             setInterval(fetchRealBusData, 60000); 
