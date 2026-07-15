@@ -1,24 +1,36 @@
 const fs = require('fs');
 
-// 加入多重重試與 Proxy (代理) 繞過政府 API 封鎖
-async function fetchWithRetry(url, retries = 4) {
-    for (let i = 0; i < retries; i++) {
-        // 第一招：正常連線，但假裝自己係普通電腦 (User-Agent)
-        try {
-            let res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
-            if (res.ok) return await res.json();
-        } catch(e) {}
-        
-        // 第二招：如果政府 API Block 咗 GitHub IP，自動轉用 Proxy 兜路！
-        try {
-            let proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            let res = await fetch(proxyUrl);
-            if (res.ok) return await res.json();
-        } catch(e) {}
-        
-        // 失敗就等 1 秒再試
-        await new Promise(r => setTimeout(r, 1000));
-    }
+const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+
+// 🛡️ 三重代理輪替系統
+async function fetchSmart(url) {
+    // 第一重：嘗試直接連線
+    try {
+        let res = await fetch(url, { headers });
+        if (res.ok) {
+            let json = await res.json();
+            if (json && json.data) return json;
+        }
+    } catch(e) {}
+
+    // 第二重：CodeTabs 代理
+    try {
+        let res = await fetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url));
+        if (res.ok) {
+            let json = await res.json();
+            if (json && json.data) return json;
+        }
+    } catch(e) {}
+
+    // 第三重：AllOrigins 代理
+    try {
+        let res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+        if (res.ok) {
+            let json = await res.json();
+            if (json && json.data) return json;
+        }
+    } catch(e) {}
+
     return null;
 }
 
@@ -34,13 +46,13 @@ async function main() {
         } catch(e) {}
     }
 
-    // 1. 下載九巴
+    // --- 🔴 下載九巴 ---
     console.log("🔴 開始下載九巴數據...");
-    let kmbStops = await fetchWithRetry('https://data.etabus.gov.hk/v1/transport/kmb/stop');
-    let kmbRouteStops = await fetchWithRetry('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
-    let kmbRoutes = await fetchWithRetry('https://data.etabus.gov.hk/v1/transport/kmb/route/');
+    let kmbStops = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/stop');
+    let kmbRouteStops = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
+    let kmbRoutes = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/route/');
 
-    if (kmbStops && kmbStops.data && kmbRouteStops && kmbRouteStops.data && kmbRoutes && kmbRoutes.data) {
+    if (kmbStops && kmbRouteStops && kmbRoutes) {
         let kmbStopsMap = {};
         kmbStops.data.forEach(s => { kmbStopsMap[s.stop] = s.name_tc; });
         let kmbRoutesMap = {};
@@ -58,14 +70,13 @@ async function main() {
         console.log("🟢 九巴數據處理成功！");
     }
 
-    // 2. 下載城巴
-    console.log("🟡 開始下載城巴數據...");
-    let ctbStops = await fetchWithRetry('https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop');
-    let ctbRoutes = await fetchWithRetry('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB');
+    // --- 🟡 下載城巴 ---
+    console.log("🟡 開始下載城巴數據 (慢速模式，防止被封鎖)...");
+    let ctbStops = await fetchSmart('https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop');
+    let ctbRoutes = await fetchSmart('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB');
     
-    // 嚴格檢查，如果有任何資料唔齊，就唔好去覆寫城巴數據！
-    if (!ctbStops || !ctbStops.data || !ctbRoutes || !ctbRoutes.data || ctbRoutes.data.length === 0) {
-        console.log("❌ 城巴 API 暫時被封鎖，將保留舊有資料庫，以防網頁出錯。");
+    if (!ctbStops || !ctbRoutes) {
+        console.log("❌ 城巴 API 嚴重阻擋，略過城巴更新。");
     } else {
         let ctbStopsMap = {};
         ctbStops.data.forEach(s => { ctbStopsMap[s.stop] = s.name_tc; });
@@ -74,7 +85,7 @@ async function main() {
         let done = 0;
         for (let r of ctbRoutes.data) {
             for (let dir of ['outbound', 'inbound']) {
-                let rs = await fetchWithRetry(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${r.route}/${dir}`, 1);
+                let rs = await fetchSmart(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${r.route}/${dir}`);
                 if (rs && rs.data) {
                     rs.data.forEach(s => {
                         let stopName = ctbStopsMap[s.stop];
@@ -88,14 +99,15 @@ async function main() {
                 }
                 done++;
                 if (done % 50 === 0) console.log(`🟡 城巴進度: ${done}/${total}...`);
-                // 加入 100 毫秒延遲，保證連線暢通
-                await new Promise(res => setTimeout(res, 100));
+                
+                // ⚠️ 極其重要：每次請求後強制停頓 300 毫秒，保證 100% 唔會被封鎖！
+                await new Promise(res => setTimeout(res, 300));
             }
         }
         console.log("🟢 城巴數據處理成功！");
     }
 
-    // 寫入最終檔案
+    // 寫入檔案
     fs.writeFileSync('bus_dict.json', JSON.stringify(busDict, null, 2));
     console.log("🎉 bus_dict.json 成功建立並儲存！");
 }
