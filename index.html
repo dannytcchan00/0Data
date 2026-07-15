@@ -33,6 +33,7 @@
         .top-info-bar { display: flex; justify-content: flex-start; align-items: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; }
         .date-container { display: flex; align-items: center; gap: 8px; }
         .date-display { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .holiday-badge { font-size: 0.8rem; font-weight: 600; color: var(--warning-red); background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.3); padding: 2px 6px; border-radius: 6px; letter-spacing: 0.5px; }
         
         .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); border-radius: 12px 12px 0 0; border: 1px solid rgba(255,255,255,0.05); border-bottom: none; gap: 10px; }
         .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1; }
@@ -63,6 +64,7 @@
         .fc-icon { width: 35px; height: 35px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));}
         .fc-temp { font-size: 0.8rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;}
         .fc-psr { font-size: 0.68rem; font-weight: 600; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.3);}
+        .psr-high { color: #ff4d4d; } .psr-mid { color: #ffcc00; } .psr-low { color: #4da6ff; }
 
         .right-col { display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; }
         h2 { margin: 0 0 12px 0; font-size: 1.05rem; color: var(--text-muted); border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -101,6 +103,7 @@
         @keyframes ctbPulse { 0% { background-color: #141100; border-color: #a38200; } 50% { background-color: #382d00; border-color: #ffcc00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.4); } 100% { background-color: #141100; border-color: #a38200; } }
         @keyframes alertBlink { 0% { opacity: 0.4; box-shadow: 0 0 4px rgba(255, 77, 77, 0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(255, 77, 77, 0.6); background: rgba(255, 77, 77, 0.15); } 100% { opacity: 0.4; box-shadow: 0 0 4px rgba(255, 77, 77, 0.2); } }
         @keyframes swtBlink { 0% { opacity: 0.5; box-shadow: 0 0 4px rgba(255, 215, 0, 0.2); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); background: rgba(255, 215, 0, 0.15); } 100% { opacity: 0.5; box-shadow: 0 0 4px rgba(255, 215, 0, 0.2); } }
+        
         .arriving-pulse.kmb { animation: kmbPulse 1.6s infinite ease-in-out; }
         .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
         .arriving-text { color: #ff3b30 !important; animation: textBlink 1.2s infinite ease-in-out; font-weight: 900; }
@@ -177,6 +180,21 @@
     </div>
 
     <button id="install-btn" class="install-btn" onclick="installWebApp()"><span>📲</span> 加至桌面</button>
+
+    <div id="ios-install-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:300px; text-align:center;">
+            <div class="modal-header"><h3>📲 加至主畫面</h3></div>
+            <div class="modal-body" style="padding:20px; font-size:1rem; line-height:1.6; color:#ddd;">
+                <p>要將此程式變成獨立 App，請：</p>
+                <br>
+                <p>1. 點擊下方工具列的 <b>分享 <span style="font-size:1.2rem;">[↑]</span></b> 按鈕</p>
+                <p>2. 選擇 <b>「加入主畫面」 ➕</b></p>
+            </div>
+            <div class="modal-footer" style="justify-content:center;">
+                <button class="modal-btn btn-save" onclick="document.getElementById('ios-install-modal').classList.remove('active')">我知道了</button>
+            </div>
+        </div>
+    </div>
 
     <div class="main-content">
         <div class="left-col">
@@ -502,7 +520,7 @@
             } catch(e) { resDiv.innerHTML = `<div style="color:red; text-align:center;">載入失敗</div><button class="btn-back" onclick="resetBusSearchUI()">返回重試</button>`; }
         }
 
-        // --- 車站搜尋 (讀取 GitHub Actions Json) ---
+        // --- 車站搜尋 (直接讀取 GitHub 0Data 倉庫的 bus_dict.json) ---
         function searchStop() {
             let keyword = document.getElementById('stop-name-input').value.trim();
             if (!keyword) return;
@@ -510,7 +528,7 @@
             let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
 
             if (!isBusDataReady || Object.keys(busDict).length === 0) {
-                resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 返回</button><p style="text-align:center;color:#ffcc00;padding:20px;">⚠️ 找不到車站字典檔<br><span style="font-size:0.8rem">請確保 GitHub Actions 已經成功執行</span></p>`;
+                resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 返回</button><p style="text-align:center;color:#ffcc00;padding:20px;">⚠️ 找不到車站字典檔<br><span style="font-size:0.8rem">請確保 GitHub 數據源已載入</span></p>`;
                 return;
             }
 
@@ -627,11 +645,20 @@
             } catch(e) {}
         }
 
+        // ==========================================
+        // 🔴 終極修正：跨網域讀取你的 0Data 倉庫
+        // ==========================================
         async function initStaticDatabase() {
             try {
                 document.getElementById('progress-bar').style.width = '50%';
-                let res = await fetch('https://dannytcchan00.github.io/0Data/bus_dict.json', { cache: 'no-store' });
-                if (!res.ok) throw new Error('Dict not found');
+                
+                let res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/main/bus_dict.json', { cache: 'no-store' });
+                
+                if (!res.ok) {
+                    res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/master/bus_dict.json', { cache: 'no-store' });
+                    if (!res.ok) throw new Error('Dict not found');
+                }
+                
                 busDict = await res.json();
                 document.getElementById('progress-bar').style.width = '100%';
                 isBusDataReady = true;
@@ -639,9 +666,9 @@
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 300);
                 fetchRealBusData();
             } catch(e) {
-                document.getElementById('progress-detail').innerHTML = '⚠️ 欠缺 bus_dict.json<br>請等待 GitHub Actions 完成構建';
+                document.getElementById('progress-detail').innerHTML = '⚠️ 無法連接你的 Github 數據庫<br>請檢查 bus_dict.json 是否存在';
                 document.getElementById('progress-bar').style.background = '#ffcc00';
-                isBusDataReady = true; // 放行以允許地鐵與天氣載入
+                isBusDataReady = true; 
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 2000);
             }
         }
