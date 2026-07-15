@@ -17,7 +17,7 @@
         }
         * { box-sizing: border-box; }
         
-        /* ✅ 完美支援 iPhone (iOS) 動態高度，防止底部 Bar 遮擋 */
+        /* 支援動態高度 */
         html { height: -webkit-fill-available; }
         body { 
             background: var(--bg-color); color: var(--text-main); 
@@ -96,14 +96,14 @@
         .marquee-container {
             width: 100%; overflow: hidden; background: #151515; border: 1px solid #333;
             border-radius: 8px; padding: 10px 0; margin-bottom: 12px; display: flex;
-            white-space: nowrap; position: relative;
+            white-space: nowrap; position: relative; flex: none;
         }
         .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 20s linear infinite; }
         .marquee-text.has-issue { color: #ffcc00; animation: marqueeScroll 25s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
         /* 地鐵格仔 */
-        .mtr-section { flex: 0 0 auto; }
+        .mtr-section { flex: 0 0 auto; display: flex; flex-direction: column; }
         .mtr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
         .station-card { border-radius: 12px; padding: 12px; background: #111; border: 1px solid #333; position: relative; overflow: hidden; }
         .station-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 2; position: relative; }
@@ -185,12 +185,16 @@
         
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
-        @media screen and (max-width: 768px) {
-            .main-content { grid-template-columns: 1fr; overflow-y: auto; padding: 10px; gap: 15px; }
+        /* ✅ iPad 直向 (Portrait) 及手機完美兼容排版 */
+        @media screen and (max-width: 1024px) {
+            html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+            .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
             .left-col, .right-col { height: auto; overflow: visible; gap: 15px; }
-            .panel { margin-bottom: 0; padding: 15px; }
-            .bus-section { min-height: 400px; }
-            .bus-grid { overflow-y: visible; }
+            .integrated-weather-panel { overflow: visible; }
+            .panel { margin-bottom: 0; padding: 15px; flex: none; height: auto; }
+            .mtr-section { flex: none; }
+            .bus-section { min-height: 400px; flex: none; }
+            .bus-grid { overflow-y: visible; align-content: flex-start; }
         }
     </style>
 </head>
@@ -201,7 +205,7 @@
         <div class="loading-title">🚌 系統準備中</div>
         <div class="progress-container"><div id="progress-bar"></div></div>
         <div id="progress-text">0%</div>
-        <div id="progress-detail">正在連接數據庫...</div>
+        <div id="progress-detail">正在連接 GitHub JSON 數據庫...</div>
     </div>
 
     <button id="install-btn" class="install-btn" onclick="installWebApp()"><span>📲</span> 加至桌面</button>
@@ -216,7 +220,6 @@
                     </div>
                 </div>
                 
-                <!-- 即時天氣格格 -->
                 <div>
                     <div class="weather-time-main">
                         <div class="time-block">
@@ -239,7 +242,7 @@
                     </div>
                 </div>
                 
-                <!-- 天氣警告獨立並列框框區域 -->
+                <!-- 天氣警告區域 -->
                 <div id="warnings-container" class="warnings-container"></div>
                 <!-- 特別天氣提示 -->
                 <div id="swt-box" class="swt-box" style="display: none;"></div>
@@ -252,10 +255,10 @@
         <div class="right-col">
             <div class="panel mtr-section">
                 <h2>
-                    <span>🚇 即時地鐵班次</span>
+                    <span>🚇 即時地鐵班次 (每方向限一班)</span>
                     <div class="header-actions"><span class="settings-btn" onclick="openMtrModal()">⚙️</span></div>
                 </h2>
-                <!-- ✅ 港鐵狀態走馬燈 -->
+                <!-- 港鐵走馬燈 -->
                 <div class="marquee-container" id="mtr-marquee-container">
                     <div class="marquee-text" id="mtr-marquee-text">📡 正在連線至港鐵系統 Connecting to MTR...</div>
                 </div>
@@ -264,7 +267,7 @@
 
             <div class="panel bus-section">
                 <h2>
-                    <span>🚌 巴士追蹤</span>
+                    <span>🚌 自訂巴士追蹤 (上限 60 個)</span>
                     <div class="header-actions">
                         <span class="refresh-indicator" id="refresh-status">🔄 連線中...</span>
                         <span class="settings-btn" onclick="openBusModal()">⚙️</span>
@@ -287,7 +290,7 @@
         </div>
     </div>
 
-    <!-- Bus Modal (讀取 JSON) -->
+    <!-- Bus Modal -->
     <div id="bus-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -327,11 +330,10 @@
     </div>
 
     <script>
-        // ✅ Web App 專屬安裝按鈕 (支援 iOS 偵測)
+        // Web App 專屬安裝按鈕 (支援 iOS 偵測)
         let deferredPrompt; 
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
         
-        // 偵測是否 iOS Safari
         const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
         if (isIos && !isStandalone) { document.getElementById('install-btn').style.display = 'flex'; }
@@ -352,7 +354,6 @@
         let busDict = {}; 
         let isBusDataReady = false;
 
-        // 時間解析引擎
         function parseRemaining(targetDate) {
             if (!targetDate) return { text: "服務已終止", status: "end" };
             const diffSec = Math.floor((targetDate - new Date()) / 1000);
@@ -364,9 +365,6 @@
             return { text: `${m}分${s.toString().padStart(2, '0')}秒`, status: "normal" };
         }
 
-        // ==========================================
-        // UI 更新引擎
-        // ==========================================
         function updateTick() {
             const now = new Date();
             const days = ['日','一','二','三','四','五','六'];
@@ -377,7 +375,6 @@
         }
 
         function renderUI() {
-            // MTR 渲染 
             let mtrHtml = '';
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
@@ -387,7 +384,7 @@
                     <div class="mtr-data-container">`;
                 
                 if (s.data.length === 0) {
-                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
+                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本站的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
                         let etaInfo = parseRemaining(t.localTarget);
@@ -402,7 +399,6 @@
             });
             document.getElementById('mtr-dynamic-grid').innerHTML = mtrHtml;
 
-            // 巴士追蹤渲染
             let busHtml = '';
             if (transportTimestamps.bus.length === 0) {
                 busHtml = myBuses.length === 0 ? `<div class="no-service">📭 尚未設定任何追蹤，請點擊 ⚙️ 加入</div>` : `<div class="no-service">⏳ 正在讀取巴士實時班次...</div>`;
@@ -429,9 +425,6 @@
             document.getElementById('bus-data').innerHTML = busHtml;
         }
 
-        // ==========================================
-        // 港鐵 API 數據及全綫狀態檢查 (走馬燈版)
-        // ==========================================
         const MTR_NETWORK = {
             "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIN": "天后", "FOT": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
             "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWH": "葵芳", "KWE": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
@@ -450,7 +443,6 @@
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             
-            // 偵測是否屬於港鐵收車時間 (約 01:30 至 05:30)
             let nowHK = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
             let h = nowHK.getHours();
             let m = nowHK.getMinutes();
@@ -485,7 +477,7 @@
                 });
 
                 if (issues.length === 0) {
-                    marqueeEl.innerHTML = "🟢其他路綫服務正常 Good service on all lines🚇";
+                    marqueeEl.innerHTML = "🟢 其他路綫服務正常 Good service on all other lines";
                     marqueeEl.className = "marquee-text";
                 } else {
                     marqueeEl.innerHTML = "⚠️ 注意 Attention: " + issues.join(" ｜ ");
@@ -626,7 +618,6 @@
         }
         function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); renderBusManagerList(); fetchRealBusData(); }
 
-        // --- 路線搜尋 (全庫快篩模式) ---
         async function searchRoute(co) {
             let inputId = co === 'kmb' ? 'kmb-route-input' : 'ctb-route-input';
             let route = document.getElementById(inputId).value.trim().toUpperCase();
@@ -688,7 +679,6 @@
             } catch(e) { resDiv.innerHTML = `<div style="color:red; text-align:center;">載入失敗</div><button class="btn-back" onclick="resetBusSearchUI()">返回重試</button>`; }
         }
 
-        // --- 車站搜尋 ---
         function searchStop() {
             let keyword = document.getElementById('stop-name-input').value.trim();
             if (!keyword) return;
