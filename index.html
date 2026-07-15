@@ -56,7 +56,7 @@
         .w-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; white-space: nowrap;}
         .w-val { font-size: 0.95rem; font-weight: 700; color: #ddd; }
 
-        /* 3日預報 (緊接實時天氣) */
+        /* 三日預報 */
         .forecast-container { display: flex; gap: 6px; margin-top: 5px; margin-bottom: 5px; }
         .forecast-item { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 3px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .fc-date { font-size: 0.72rem; color: #ccc; font-weight: bold; }
@@ -64,7 +64,7 @@
         .fc-temp { font-size: 0.8rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;}
         .fc-psr { font-size: 0.68rem; font-weight: 600; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.3);}
 
-        /* 獨立天氣警告框框 */
+        /* 警告框框區域 */
         .warnings-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
         .alert-box { border-radius: 10px; padding: 12px; font-size: 1rem; font-weight: bold; text-align: center; }
         .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; }
@@ -173,6 +173,8 @@
     </style>
 </head>
 <body>
+    <link rel="manifest" id="manifest-link">
+
     <div id="loading-overlay">
         <div class="loading-title">🚌 系統準備中</div>
         <div class="progress-container"><div id="progress-bar"></div></div>
@@ -218,7 +220,7 @@
                 <!-- ✅ 三日預報 (緊接喺即時天氣下面) -->
                 <div id="forecast-container" class="forecast-container"></div>
                 
-                <!-- ✅ 天氣警告獨立框框區域 -->
+                <!-- ✅ 天氣警告獨立並列框框區域 -->
                 <div id="warnings-container" class="warnings-container"></div>
                 
                 <!-- ✅ 樓下特別天氣提示 -->
@@ -301,8 +303,8 @@
     </div>
 
     <script>
-        let myBuses = JSON.parse(localStorage.getItem('my_buses_gh_v8')) || [];
-        let myMtrStations = JSON.parse(localStorage.getItem('my_mtr_gh_v8')) || [{ line: 'ISL', sta: 'QUB' }];
+        let myBuses = JSON.parse(localStorage.getItem('my_buses_gh_v9')) || [];
+        let myMtrStations = JSON.parse(localStorage.getItem('my_mtr_gh_v9')) || [{ line: 'ISL', sta: 'QUB' }];
         let transportTimestamps = { mtr: [], bus: [] };
         
         let busDict = {}; 
@@ -333,7 +335,7 @@
         }
 
         function renderUI() {
-            // MTR 渲染 (限定每方向顯示最快嗰一班)
+            // ✅ MTR 渲染 (絕對只顯示 API 有回傳嘅真實列車)
             let mtrHtml = '';
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
@@ -343,7 +345,8 @@
                     <div class="mtr-data-container">`;
                 
                 if (s.data.length === 0) {
-                    mtrHtml += `<div class="mtr-item"><div class="mtr-dest">服務已終止</div></div>`;
+                    // 如果 API 兩邊都無車，先顯示終止
+                    mtrHtml += `<div class="mtr-item"><div class="mtr-dest">無列車服務</div><div class="mtr-eta" style="color:#888; font-weight:normal;">服務已終止</div></div>`;
                 } else {
                     s.data.forEach(t => {
                         let etaInfo = parseRemaining(t.localTarget);
@@ -377,7 +380,7 @@
         }
 
         // ==========================================
-        // 港鐵 API 數據 (完全修正方向錯亂問題)
+        // 港鐵 API 數據 (完全修正方向及錯亂問題)
         // ==========================================
         const MTR_NETWORK = {
             "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIN": "天后", "FOT": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
@@ -416,7 +419,7 @@
         }
         function saveMtrSelection() {
             if (tempMtrSelections.length === 0) { alert('最少要選擇 1 個車站！'); return; }
-            myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); localStorage.setItem('my_mtr_gh_v8', JSON.stringify(myMtrStations));
+            myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); localStorage.setItem('my_mtr_gh_v9', JSON.stringify(myMtrStations));
             closeMtrModal(); fetchMTR();
         }
 
@@ -427,23 +430,23 @@
                     let res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}`);
                     let json = await res.json();
                     let key = `${s.line}-${s.sta}`;
-                    if(json?.data?.[key]) {
+                    
+                    if(json?.data?.[key] && json.curr_time) {
                         // 修正時間誤差：計算本地時間與 API 伺服器時間的差距
-                        let apiTime = new Date(json.curr_time.replace(' ','T')+'+08:00');
-                        let offset = Date.now() - apiTime.getTime();
+                        let apiTime = new Date(json.curr_time.replace(' ','T')+'+08:00').getTime();
 
-                        // 每個方向只提取第一班（[0]）
+                        // 每個方向只提取第一班（[0]），而且有資料先會顯示！
                         ['UP','DOWN'].forEach(dir => {
                             let list = json.data[key][dir];
                             if(list && list.length > 0) {
                                 let d = list[0];
                                 let targetTime = null;
                                 if (d.time && d.time !== '-') {
-                                    targetTime = new Date(new Date(d.time.replace(' ','T')+'+08:00').getTime() + offset);
+                                    let trainTime = new Date(d.time.replace(' ','T')+'+08:00').getTime();
+                                    targetTime = new Date(Date.now() + (trainTime - apiTime));
                                 } else if (d.ttnt) {
                                     targetTime = new Date(Date.now() + parseInt(d.ttnt) * 60000);
                                 }
-                                // 如果確實有合法車次，則只推送該方向唯一一班車
                                 if (targetTime) {
                                     trains.push({ dest: MTR_DEST_MAP[d.dest] || d.dest, localTarget: targetTime, dir: dir });
                                 }
@@ -482,7 +485,7 @@
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 300);
                 fetchRealBusData();
             } catch(e) {
-                document.getElementById('progress-detail').innerHTML = '⚠️ GitHub bus_dict.json 是空白的<br>請使用下方新腳本更新 GitHub Actions';
+                document.getElementById('progress-detail').innerHTML = '⚠️ 你的 bus_dict.json 是空白的<br>請使用下方新腳本更新 GitHub Actions，以獲取城巴資料！';
                 document.getElementById('progress-bar').style.background = '#ffcc00';
                 isBusDataReady = true; 
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 3000);
@@ -503,7 +506,7 @@
             });
             area.innerHTML = html;
         }
-        function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); localStorage.setItem('my_buses_gh_v8', JSON.stringify(myBuses)); renderBusManagerList(); fetchRealBusData(); }
+        function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); localStorage.setItem('my_buses_gh_v9', JSON.stringify(myBuses)); renderBusManagerList(); fetchRealBusData(); }
 
         // --- 路線搜尋 (Native Fetch) ---
         async function searchRoute(co) {
@@ -607,7 +610,7 @@
                     myBuses.push({ id: Date.now() + Math.random().toString(36).substring(2,5), co: item.co, route: item.route, stop: item.stop, name: item.name, dest: item.dest });
                 }
             });
-            localStorage.setItem('my_buses_gh_v8', JSON.stringify(myBuses));
+            localStorage.setItem('my_buses_gh_v9', JSON.stringify(myBuses));
             renderBusManagerList(); resetBusSearchUI(); fetchRealBusData();
         }
 
@@ -646,7 +649,7 @@
                 let h = res.humidity.data.find(x => x.place === '香港天文台'); if(h) document.getElementById('hk-hum').innerText = `${h.value}%`;
                 if(res.uvindex?.data?.[0]) document.getElementById('hk-uv').innerHTML = res.uvindex.data[0].value;
 
-                // 2. 三日預報 (顯示確切日期號數)
+                // 2. 三日預報 (✅ 搬咗嚟即時天氣下面，並顯示確切日期號數)
                 let fnd = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc').then(r=>r.json());
                 if(fnd?.weatherForecast) {
                     document.getElementById('hk-max').innerText = `${fnd.weatherForecast[0].forecastMaxtemp.value}°C`;
@@ -663,7 +666,7 @@
                     document.getElementById('forecast-container').innerHTML = html;
                 }
 
-                // 3. 天氣警告 (多個警告並列框框顯示，使用官方原名)
+                // 3. 天氣警告 (✅ 每個警告獨立一個 alert-box，跟足官方全名)
                 let warnSumRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc').then(r=>r.json());
                 const WMAP = {
                     'WFIREY':'🟡🔥', 'WFIRER':'🔴🔥',
@@ -678,6 +681,7 @@
                 if (warnSumRes) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
+                        // 只要係生效中，就即刻加入獨立紅框
                         if (w.actionCode === "ISSUE" || w.actionCode === "REISSUE") {
                             let emoji = WMAP[w.code] || '⚠️';
                             warningHtml += `<div class="alert-box alert-active">${emoji} ${w.name}</div>`;
