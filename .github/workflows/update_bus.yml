@@ -1,0 +1,28 @@
+name: Auto Update Bus DB
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run Scanner
+        run: node build_dict.js
+      - name: Push to GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          touch bus_dict.json
+          git add bus_dict.json || true
+          git commit -m "Auto update bus database" || true
+          git push || true
