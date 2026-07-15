@@ -1,11 +1,10 @@
-name: 每天自動更新巴士車站總庫
+name: Auto Update Bus DB
 
 on:
   schedule:
-    - cron: '0 20 * * *' # HKT 每個凌晨 04:00 自動執行
-  workflow_dispatch: # 容許你在 GitHub 網頁上隨時手動點擊按鈕執行
+    - cron: '0 20 * * *'
+  workflow_dispatch:
 
-# 加入呢段，強制賦予機器人寫入權限，唔使再人手 Set
 permissions:
   contents: write
 
@@ -13,21 +12,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: 複製代碼
-      uses: actions/checkout@v4 # 升級至最新 v4
-
-    - name: 設定 Node.js
-      uses: actions/setup-node@v4 # 升級至最新 v4
-      with:
-        node-version: 20 # ✅ 修正咗呢度嘅 Typo
-
-    - name: 執行雷達數據抓取
-      run: node build_dict.js
-
-    - name: 自動提交及推送至 Repository
-      run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-        git add bus_dict.json
-        git commit -m "🔄 自動更新全港巴士數據庫" || echo "No changes to commit"
-        git push
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Scanner
+        run: node build_dict.js
+      - name: Push to GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          touch bus_dict.json
+          git add bus_dict.json || true
+          git commit -m "Auto update bus database" || true
+          git push || true
