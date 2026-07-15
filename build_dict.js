@@ -1,36 +1,18 @@
 const fs = require('fs');
 
-const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' };
 
-// 🛡️ 三重代理輪替系統
-async function fetchSmart(url) {
-    // 第一重：嘗試直接連線
-    try {
-        let res = await fetch(url, { headers });
-        if (res.ok) {
-            let json = await res.json();
-            if (json && json.data) return json;
-        }
-    } catch(e) {}
-
-    // 第二重：CodeTabs 代理
-    try {
-        let res = await fetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url));
-        if (res.ok) {
-            let json = await res.json();
-            if (json && json.data) return json;
-        }
-    } catch(e) {}
-
-    // 第三重：AllOrigins 代理
-    try {
-        let res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-        if (res.ok) {
-            let json = await res.json();
-            if (json && json.data) return json;
-        }
-    } catch(e) {}
-
+// 自帶重試與防封鎖延遲嘅請求功能
+async function fetchAPI(url, delayMs = 0) {
+    if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+    for (let i = 0; i < 3; i++) {
+        try {
+            let res = await fetch(url, { headers });
+            if (res.ok) return await res.json();
+        } catch(e) {}
+        // 失敗就等 1 秒再試
+        await new Promise(r => setTimeout(r, 1000));
+    }
     return null;
 }
 
@@ -38,21 +20,13 @@ async function main() {
     console.log("🚀 GitHub Actions 開始構建全港巴士車站總庫...");
     let busDict = {};
     
-    // 如果舊有檔案存在，先讀取作為墊底防禦
-    if (fs.existsSync('bus_dict.json')) {
-        try { 
-            let fileData = fs.readFileSync('bus_dict.json', 'utf8');
-            if (fileData.trim() !== "") busDict = JSON.parse(fileData); 
-        } catch(e) {}
-    }
-
-    // --- 🔴 下載九巴 ---
+    // --- 🔴 下載九巴 (一次過下載模式) ---
     console.log("🔴 開始下載九巴數據...");
-    let kmbStops = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/stop');
-    let kmbRouteStops = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
-    let kmbRoutes = await fetchSmart('https://data.etabus.gov.hk/v1/transport/kmb/route/');
+    let kmbStops = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/stop');
+    let kmbRouteStops = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
+    let kmbRoutes = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/route/');
 
-    if (kmbStops && kmbRouteStops && kmbRoutes) {
+    if (kmbStops && kmbStops.data && kmbRouteStops && kmbRouteStops.data && kmbRoutes && kmbRoutes.data) {
         let kmbStopsMap = {};
         kmbStops.data.forEach(s => { kmbStopsMap[s.stop] = s.name_tc; });
         let kmbRoutesMap = {};
@@ -63,51 +37,60 @@ async function main() {
             let dest = kmbRoutesMap[`${item.route}_${item.bound}`] || "九巴目的地";
             if (stopName) {
                 if (!busDict[stopName]) busDict[stopName] = [];
-                busDict[stopName] = busDict[stopName].filter(x => !(x.co === 'kmb' && x.route === item.route && x.stopId === item.stop));
-                busDict[stopName].push({ co: 'kmb', route: item.route, stopId: item.stop, dest: dest });
+                if (!busDict[stopName].some(x => x.co === 'kmb' && x.route === item.route && x.stopId === item.stop)) {
+                    busDict[stopName].push({ co: 'kmb', route: item.route, stopId: item.stop, dest: dest });
+                }
             }
         });
         console.log("🟢 九巴數據處理成功！");
     }
 
-    // --- 🟡 下載城巴 ---
-    console.log("🟡 開始下載城巴數據 (慢速模式，防止被封鎖)...");
-    let ctbStops = await fetchSmart('https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop');
-    let ctbRoutes = await fetchSmart('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB');
+    // --- 🟡 下載城巴 (逐站查問模式) ---
+    console.log("🟡 開始下載城巴數據...");
+    let ctbRoutes = await fetchAPI('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB');
     
-    if (!ctbStops || !ctbRoutes) {
-        console.log("❌ 城巴 API 嚴重阻擋，略過城巴更新。");
-    } else {
-        let ctbStopsMap = {};
-        ctbStops.data.forEach(s => { ctbStopsMap[s.stop] = s.name_tc; });
-
+    if (ctbRoutes && ctbRoutes.data) {
         let total = ctbRoutes.data.length * 2;
-        let done = 0;
+        let count = 0;
+        let ctbStopNameCache = {}; // 記憶體：記低問過嘅城巴站名，極大提升速度
+
         for (let r of ctbRoutes.data) {
             for (let dir of ['outbound', 'inbound']) {
-                let rs = await fetchSmart(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${r.route}/${dir}`);
+                let rs = await fetchAPI(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${r.route}/${dir}`, 20);
+                
                 if (rs && rs.data) {
-                    rs.data.forEach(s => {
-                        let stopName = ctbStopsMap[s.stop];
+                    for (let s of rs.data) {
+                        let stopId = s.stop;
+                        let stopName = ctbStopNameCache[stopId];
+                        
+                        // 🔑 破解關鍵：如果呢個車站未查過名，就逐個去向 API 查問！
+                        if (!stopName) {
+                            let stopInfo = await fetchAPI(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${stopId}`, 20);
+                            if (stopInfo && stopInfo.data && stopInfo.data.name_tc) {
+                                stopName = stopInfo.data.name_tc;
+                                ctbStopNameCache[stopId] = stopName; // 查完記低佢
+                            } else {
+                                stopName = `城巴車站 ${stopId}`;
+                            }
+                        }
+
                         let dest = dir === 'outbound' ? r.dest_tc : r.orig_tc;
                         if (stopName) {
                             if (!busDict[stopName]) busDict[stopName] = [];
-                            busDict[stopName] = busDict[stopName].filter(x => !(x.co === 'ctb' && x.route === r.route && x.stopId === s.stop));
-                            busDict[stopName].push({ co: 'ctb', route: r.route, stopId: s.stop, dest: dest });
+                            if (!busDict[stopName].some(x => x.co === 'ctb' && x.route === r.route && x.stopId === stopId)) {
+                                busDict[stopName].push({ co: 'ctb', route: r.route, stopId: stopId, dest: dest });
+                            }
                         }
-                    });
+                    }
                 }
-                done++;
-                if (done % 50 === 0) console.log(`🟡 城巴進度: ${done}/${total}...`);
-                
-                // ⚠️ 極其重要：每次請求後強制停頓 300 毫秒，保證 100% 唔會被封鎖！
-                await new Promise(res => setTimeout(res, 300));
+                count++;
+                if (count % 20 === 0) console.log(`🟡 城巴進度: ${count}/${total}...`);
             }
         }
         console.log("🟢 城巴數據處理成功！");
     }
 
-    // 寫入檔案
+    // 寫入最終檔案
     fs.writeFileSync('bus_dict.json', JSON.stringify(busDict, null, 2));
     console.log("🎉 bus_dict.json 成功建立並儲存！");
 }
