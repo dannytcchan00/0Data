@@ -16,7 +16,16 @@
             --ctb-bg: #141100; --ctb-border: #a38200;
         }
         * { box-sizing: border-box; }
-        body { background: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* ✅ 完美支援 iPhone (iOS) 動態高度，防止底部 Bar 遮擋 */
+        html { height: -webkit-fill-available; }
+        body { 
+            background: var(--bg-color); color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            height: 100vh; height: 100dvh; min-height: -webkit-fill-available; 
+            display: flex; flex-direction: column; overflow: hidden; 
+        }
 
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; transition: opacity 0.3s; }
         .loading-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #4da6ff; letter-spacing: 2px;}
@@ -83,35 +92,15 @@
         .settings-btn:hover { transform: scale(1.1); }
         .refresh-indicator { font-size: 0.75rem; color: #00ff66; font-weight: normal; margin-right: 10px;}
 
-        /* ✅ 全新港鐵走馬燈 */
+        /* 港鐵走馬燈 */
         .marquee-container {
-            width: 100%;
-            overflow: hidden;
-            background: #151515;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 10px 0;
-            margin-bottom: 12px;
-            display: flex;
-            white-space: nowrap;
-            position: relative;
+            width: 100%; overflow: hidden; background: #151515; border: 1px solid #333;
+            border-radius: 8px; padding: 10px 0; margin-bottom: 12px; display: flex;
+            white-space: nowrap; position: relative;
         }
-        .marquee-text {
-            display: inline-block;
-            padding-left: 100%;
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #00ff66;
-            animation: marqueeScroll 20s linear infinite;
-        }
-        .marquee-text.has-issue {
-            color: #ffcc00;
-            animation: marqueeScroll 25s linear infinite;
-        }
-        @keyframes marqueeScroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
+        .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 20s linear infinite; }
+        .marquee-text.has-issue { color: #ffcc00; animation: marqueeScroll 25s linear infinite; }
+        @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
         /* 地鐵格仔 */
         .mtr-section { flex: 0 0 auto; }
@@ -197,7 +186,6 @@
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
         @media screen and (max-width: 768px) {
-            body { height: 100vh; }
             .main-content { grid-template-columns: 1fr; overflow-y: auto; padding: 10px; gap: 15px; }
             .left-col, .right-col { height: auto; overflow: visible; gap: 15px; }
             .panel { margin-bottom: 0; padding: 15px; }
@@ -228,6 +216,7 @@
                     </div>
                 </div>
                 
+                <!-- 即時天氣格格 -->
                 <div>
                     <div class="weather-time-main">
                         <div class="time-block">
@@ -263,10 +252,10 @@
         <div class="right-col">
             <div class="panel mtr-section">
                 <h2>
-                    <span>🚇 即時地鐵班次</span>
+                    <span>🚇 即時地鐵班次 (每方向限一班)</span>
                     <div class="header-actions"><span class="settings-btn" onclick="openMtrModal()">⚙️</span></div>
                 </h2>
-                <!-- ✅ 全新港鐵狀態走馬燈 -->
+                <!-- ✅ 港鐵狀態走馬燈 -->
                 <div class="marquee-container" id="mtr-marquee-container">
                     <div class="marquee-text" id="mtr-marquee-text">📡 正在連線至港鐵系統 Connecting to MTR...</div>
                 </div>
@@ -275,7 +264,7 @@
 
             <div class="panel bus-section">
                 <h2>
-                    <span>🚌 巴士路線追蹤</span>
+                    <span>🚌 自訂巴士追蹤 (上限 60 個)</span>
                     <div class="header-actions">
                         <span class="refresh-indicator" id="refresh-status">🔄 連線中...</span>
                         <span class="settings-btn" onclick="openBusModal()">⚙️</span>
@@ -338,7 +327,23 @@
     </div>
 
     <script>
-        // 永久固定記憶體名稱，防止以後因為改 Code 而遺失設定
+        // ✅ Web App 專屬安裝按鈕 (支援 iOS 偵測)
+        let deferredPrompt; 
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
+        
+        // 偵測是否 iOS Safari
+        const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
+        if (isIos && !isStandalone) { document.getElementById('install-btn').style.display = 'flex'; }
+
+        function installWebApp() { 
+            if (isIos && !isStandalone) {
+                alert("🍎 iPhone / iPad 用家請點擊瀏覽器底部的「分享」按鈕 [↑] ➔ 選擇「加入主畫面 ➕」即可安裝成獨立 App！");
+            } else if (deferredPrompt) { 
+                deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => deferredPrompt = null); 
+            } 
+        }
+
         let myBuses = JSON.parse(localStorage.getItem('my_saved_buses')) || [];
         let myMtrStations = JSON.parse(localStorage.getItem('my_saved_mtr')) || [{ line: 'ISL', sta: 'QUB' }];
         let transportTimestamps = { mtr: [], bus: [] };
@@ -347,13 +352,13 @@
         let busDict = {}; 
         let isBusDataReady = false;
 
-        // 時間解析引擎：加入負 60 秒緩衝，並回傳專屬 status class 區分顏色
+        // 時間解析引擎
         function parseRemaining(targetDate) {
             if (!targetDate) return { text: "服務已終止", status: "end" };
             const diffSec = Math.floor((targetDate - new Date()) / 1000);
             if (diffSec < -60) return { text: "服務已終止", status: "end" }; 
-            if (diffSec <= 0) return { text: "正在開出", status: "departing" }; // 螢光綠
-            if (diffSec <= 60) return { text: "即將到達", status: "arriving" }; // 警告紅
+            if (diffSec <= 0) return { text: "正在開出", status: "departing" }; 
+            if (diffSec <= 60) return { text: "即將到達", status: "arriving" }; 
             const m = Math.floor(diffSec / 60); 
             const s = diffSec % 60;
             return { text: `${m}分${s.toString().padStart(2, '0')}秒`, status: "normal" };
@@ -365,14 +370,14 @@
         function updateTick() {
             const now = new Date();
             const days = ['日','一','二','三','四','五','六'];
-            document.getElementById('current-date').innerText = `📅 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ( 禮拜${days[now.getDay()]} )`;
+            document.getElementById('current-date').innerText = `📅 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (禮拜${days[now.getDay()]})`;
             document.getElementById('hk-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: false, hour: '2-digit', minute: '2-digit' });
             document.getElementById('utc-time').innerText = now.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit' }) + ' UTC';
             renderUI();
         }
 
         function renderUI() {
-            // MTR 渲染 (套用全新雙色邏輯)
+            // MTR 渲染 
             let mtrHtml = '';
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
@@ -397,7 +402,7 @@
             });
             document.getElementById('mtr-dynamic-grid').innerHTML = mtrHtml;
 
-            // 巴士追蹤渲染 (套用全新雙色邏輯)
+            // 巴士追蹤渲染
             let busHtml = '';
             if (transportTimestamps.bus.length === 0) {
                 busHtml = myBuses.length === 0 ? `<div class="no-service">📭 尚未設定任何追蹤，請點擊 ⚙️ 加入</div>` : `<div class="no-service">⏳ 正在讀取巴士實時班次...</div>`;
@@ -441,8 +446,20 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 全新功能：港鐵全綫狀態走馬燈
+        // ✅ 智能收車偵測 + 港鐵全綫狀態走馬燈
         async function fetchMtrStatusMarquee() {
+            let marqueeEl = document.getElementById('mtr-marquee-text');
+            
+            // 偵測是否屬於港鐵收車時間 (約 01:30 至 05:30)
+            let nowHK = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+            let h = nowHK.getHours();
+            let m = nowHK.getMinutes();
+            if ((h === 1 && m >= 30) || (h > 1 && h < 5) || (h === 5 && m <= 30)) {
+                marqueeEl.innerHTML = "🌙 今日的列車服務經已終止 Train services for today have ended";
+                marqueeEl.className = "marquee-text";
+                return;
+            }
+
             const checkStations = [
                 {line: 'ISL', sta: 'CEN'}, {line: 'TWL', sta: 'CEN'}, {line: 'KTL', sta: 'YMT'},
                 {line: 'TKL', sta: 'NOP'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
@@ -462,14 +479,13 @@
                         if (d.status === 0) {
                             issues.push(`⚫ ${lineName} 暫停服務 Service Suspended`);
                         } else if (d.isdelay === 'Y') {
-                            issues.push(`🔴 ${lineName} 服務延誤 Service Delayed`);
+                            issues.push(`🔴 ${lineName} 延誤 Service Delayed`);
                         }
                     }
                 });
 
-                let marqueeEl = document.getElementById('mtr-marquee-text');
                 if (issues.length === 0) {
-                    marqueeEl.innerHTML = "🟢 各路綫服務正常 Good service on all other lines";
+                    marqueeEl.innerHTML = "🟢 其他路綫服務正常 Good service on all other lines";
                     marqueeEl.className = "marquee-text";
                 } else {
                     marqueeEl.innerHTML = "⚠️ 注意 Attention: " + issues.join(" ｜ ");
@@ -751,7 +767,7 @@
                 let h = res.humidity.data.find(x => x.place === '香港天文台'); if(h) document.getElementById('hk-hum').innerText = `${h.value}%`;
                 if(res.uvindex?.data?.[0]) document.getElementById('hk-uv').innerHTML = res.uvindex.data[0].value;
 
-                // 2. 天氣警告
+                // 2. 天氣警告 
                 let warnSumRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc').then(r=>r.json()).catch(()=>({}));
                 const WMAP = {
                     'WFIREY':'🟡🔥', 'WFIRER':'🔴🔥',
@@ -766,7 +782,7 @@
                 if (warnSumRes) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
-                        if (w.name && w.code) {
+                        if (w.name && w.code && w.actionCode && w.actionCode !== "CANCEL") {
                             let emoji = WMAP[w.code] || '⚠️';
                             warningHtml += `<div class="alert-box alert-active">${emoji} ${w.name}</div>`;
                         }
@@ -820,7 +836,6 @@
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 300000); 
             
-            // ✅ 每 1 分鐘更新走馬燈
             fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 60000); 
             
             fetchMTR(); setInterval(fetchMTR, 15000); 
