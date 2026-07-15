@@ -1,0 +1,29 @@
+name: 每天自動更新巴士車站總庫
+
+on:
+  schedule:
+    - cron: '0 20 * * *' # HKT 每個凌晨 04:00 自動執行
+  workflow_dispatch: # 容許你在 GitHub 網頁上隨時手動點擊按鈕執行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 複製代碼
+      uses: actions/checkout@v3
+
+    - name: 設定 Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-node-version: 20
+
+    - name: 執行雷達數據抓取
+      run: node build_dict.js
+
+    - name: 自動提交及推送至 Repository
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        git add bus_dict.json
+        git commit -m "🔄 自動更新全港巴士數據庫" || echo "No changes to commit"
+        git push
