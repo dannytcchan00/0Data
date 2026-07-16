@@ -24,21 +24,25 @@ jobs:
 
     - name: 執行 Python 腳本
       run: python fetch_data.py
-
-    - name: 提交及推送到 GitHub
+- name: 提交及推送到 GitHub
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        # 1. 設定 git 身份
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         
-        # 用 git add -A 代替指定檔名，就算 data.json 唔存在都唔會報錯 (解決 128 錯誤)
+        # 2. 強制將所有變更（包括新產生嘅 data.json）加入暫存區
         git add -A
         
-        if git diff --staged --quiet; then
-          echo "數據無變更或未成功生成，跳過提交。"
+        # 3. 檢查係咪真係有嘢要 commit
+        # git status --porcelain 會列出所有修改過/新增嘅檔案，如果無輸出代表無變更
+        if [ -z "$(git status --porcelain)" ]; then
+          echo "無新數據，跳過 Commit。"
         else
+          # 有新檔案或內容有變，執行 Commit
           git commit -m "Auto-update JMA Data"
-          # 強制帶上 Token 執行 push，解決因為權限不足導致嘅 128 錯誤
-          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          
+          # 4. 強制 Push
+          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
         fi
