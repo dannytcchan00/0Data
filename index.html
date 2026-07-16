@@ -172,6 +172,10 @@
         .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid #1a1a1a; color: #ccc; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; line-height: 1.3; }
         .detail-stop-item:last-child { border-bottom: none; }
         .stop-num { background: #222; color: #888; min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.75rem; font-weight: bold; }
+        
+        /* 🔥 你所在車站的高亮標記樣式 */
+        .current-stop-highlight { background: rgba(77, 166, 255, 0.15); border-left: 4px solid #4da6ff !important; color: #fff !important; font-weight: bold; }
+        .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #4da6ff; color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 900; }
 
         .line-group { margin-bottom: 15px; }
         .line-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; padding-left: 5px; display: flex; align-items: center; gap: 6px; }
@@ -468,9 +472,9 @@
                     let planeIcon = (b.dest.includes('機場') || b.dest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
                     let busNoDisplay = `${moonIcon}${planeIcon}${b.no}`;
 
-                    // ✅ 加入 onClick 事件觸發詳細資料彈窗
+                    // ✅ 加入 onClick 事件觸發詳細資料彈窗，並傳入 b.stop 作為目前車站識別
                     busHtml += `
-                        <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${b.no}', '${b.dest}')">
+                        <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${b.no}', '${b.dest}', '${b.stop}')">
                             <div>
                                 <div class="bus-no">${busNoDisplay}</div>
                                 <div class="bus-dest">往 ${b.dest}</div>
@@ -822,7 +826,8 @@
                     if(json?.data) {
                         json.data.forEach(d => {
                             if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(b.route).toUpperCase()) {
-                                raw.push({ no: d.route, dest: b.dest, time: d.eta, co: b.co, stopName: b.name, localTarget: new Date(d.eta), uid: `${b.co}_${b.route}_${d.eta}` });
+                                // ⚠️ 修正：將 b.stop 加入去 raw 數據度，方便打開 Modal 嗰時傳入去比對
+                                raw.push({ no: d.route, dest: b.dest, time: d.eta, co: b.co, stop: b.stop, stopName: b.name, localTarget: new Date(d.eta), uid: `${b.co}_${b.route}_${d.eta}` });
                             }
                         });
                     }
@@ -841,7 +846,8 @@
             document.getElementById('bus-detail-modal').classList.remove('active');
         }
 
-        async function openBusDetail(co, route, dest) {
+        // ⚠️ 修正：加入 currentStopId 參數
+        async function openBusDetail(co, route, dest, currentStopId = null) {
             const modal = document.getElementById('bus-detail-modal');
             const body = document.getElementById('bus-detail-body');
             modal.classList.add('active');
@@ -852,45 +858,52 @@
                 let stopsHtml = '';
 
                 if (co === 'kmb') {
-                    // 1. 獲取九巴路線基本資訊
                     let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
                     let routeInfo = rRes.data.find(r => r.route === route && r.dest_tc === dest);
-                    if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route); // 防呆包底
+                    if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route);
 
-                    // ⚠️ 修正：九巴 API 需要將 O/I 轉換為 outbound/inbound
                     let rawBound = routeInfo ? routeInfo.bound : 'O';
                     let bound = rawBound === 'O' ? 'outbound' : 'inbound';
                     let serviceType = routeInfo ? routeInfo.service_type : '1';
                     let orig = routeInfo ? routeInfo.orig_tc : '未知';
                     let actualDest = routeInfo ? routeInfo.dest_tc : dest;
 
-                    // 2. 獲取九巴所有車站 (已移除車費、價錢接口)
                     let sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${serviceType}`).then(r=>r.json());
                     let stops = sRes.data || [];
                     
                     let stopDetails = await Promise.all(stops.map(async (s, idx) => {
                         let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
-                        return `<div class="detail-stop-item"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop}</div>`;
+                        
+                        // ⚠️ 修正：高亮標記你目前嘅車站
+                        let isCurrent = (s.stop === currentStopId);
+                        let highlightClass = isCurrent ? 'current-stop-highlight' : '';
+                        let currentLabel = isCurrent ? '<span class="current-stop-badge">📍 你喺呢度</span>' : '';
+
+                        return `<div class="detail-stop-item ${highlightClass}"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop} ${currentLabel}</div>`;
                     }));
                     stopsHtml = stopDetails.join('');
 
                     renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml);
 
                 } else {
-                    // 1. 獲取城巴路線基本資訊
                     let rRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB/${route}`).then(r=>r.json());
                     let info = rRes.data;
                     let bound = (info.dest_tc === dest) ? 'outbound' : 'inbound';
                     let orig = bound === 'outbound' ? info.orig_tc : info.dest_tc;
                     let actualDest = bound === 'outbound' ? info.dest_tc : info.orig_tc;
 
-                    // 2. 獲取城巴所有車站 (已移除車費、價錢接口)
                     let sRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`).then(r=>r.json());
                     let stops = sRes.data || [];
                     
                     let stopDetails = await Promise.all(stops.map(async (s, idx) => {
                         let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
-                        return `<div class="detail-stop-item"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop}</div>`;
+                        
+                        // ⚠️ 修正：高亮標記你目前嘅車站
+                        let isCurrent = (s.stop === currentStopId);
+                        let highlightClass = isCurrent ? 'current-stop-highlight' : '';
+                        let currentLabel = isCurrent ? '<span class="current-stop-badge">📍 你喺呢度</span>' : '';
+
+                        return `<div class="detail-stop-item ${highlightClass}"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop} ${currentLabel}</div>`;
                     }));
                     stopsHtml = stopDetails.join('');
 
@@ -915,6 +928,14 @@
                     ${stopsHtml}
                 </div>
             `;
+            
+            // ⚠️ 自動捲動到你所在嘅車站 (延遲一陣等畫面渲染完成)
+            setTimeout(() => {
+                let currentStopElement = document.querySelector('.current-stop-highlight');
+                if (currentStopElement) {
+                    currentStopElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
         }
 
         // ==========================================
