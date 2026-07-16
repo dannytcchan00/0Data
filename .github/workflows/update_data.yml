@@ -1,27 +1,28 @@
 name: Update JMA Data
 
-# 設定觸發條件
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每 10 分鐘執行一次 (GitHub Actions 可能會有少少延遲)
-  workflow_dispatch: # 允許手動觸發
+    - cron: '*/10 * * * *' # 每 10 分鐘執行一次
+  workflow_dispatch: # 允許手動撳掣觸發
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     
-    # 設定權限，允許 Action 推送代碼
+    # 明確聲明需要寫入權限
     permissions:
       contents: write
 
     steps:
+    # 解決警告：升級到 v4
     - name: 檢出代碼
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
+    # 解決警告：升級到 v5
     - name: 設定 Python 環境
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'
 
     - name: 執行 Python 腳本
       run: python fetch_data.py
@@ -31,6 +32,11 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add data.json
-        # 如果 data.json 有改變先會 commit，避免產生吉嘅 commit
-        git diff --quiet && git diff --staged --quiet || git commit -m "自動更新 JMA 數據"
-        git push
+        
+        # 檢查 data.json 係咪真係有更新，有更新先 commit
+        if git diff --staged --quiet; then
+          echo "數據無變更，跳過提交。"
+        else
+          git commit -m "自動更新 JMA 數據"
+          git push
+        fi
