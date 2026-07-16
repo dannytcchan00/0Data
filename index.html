@@ -852,9 +852,29 @@
                 let stopsHtml = '';
 
                 if (co === 'kmb') {
-                    // 九巴沒有路線資料處理
-                    stopsHtml = '<div style="text-align:center; padding: 20px; color:#aaa;">⚠️ 九巴未有提供詳細路線資料</div>';
-                    renderDetailModalBody(companyName, route, '未知', dest, stopsHtml);
+                    // 1. 獲取九巴路線基本資訊
+                    let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
+                    let routeInfo = rRes.data.find(r => r.route === route && r.dest_tc === dest);
+                    if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route); // 防呆包底
+
+                    // ⚠️ 修正：九巴 API 需要將 O/I 轉換為 outbound/inbound
+                    let rawBound = routeInfo ? routeInfo.bound : 'O';
+                    let bound = rawBound === 'O' ? 'outbound' : 'inbound';
+                    let serviceType = routeInfo ? routeInfo.service_type : '1';
+                    let orig = routeInfo ? routeInfo.orig_tc : '未知';
+                    let actualDest = routeInfo ? routeInfo.dest_tc : dest;
+
+                    // 2. 獲取九巴所有車站 (已移除車費、價錢接口)
+                    let sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${serviceType}`).then(r=>r.json());
+                    let stops = sRes.data || [];
+                    
+                    let stopDetails = await Promise.all(stops.map(async (s, idx) => {
+                        let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
+                        return `<div class="detail-stop-item"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop}</div>`;
+                    }));
+                    stopsHtml = stopDetails.join('');
+
+                    renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml);
 
                 } else {
                     // 1. 獲取城巴路線基本資訊
@@ -864,7 +884,7 @@
                     let orig = bound === 'outbound' ? info.orig_tc : info.dest_tc;
                     let actualDest = bound === 'outbound' ? info.dest_tc : info.orig_tc;
 
-                    // 2. 獲取城巴所有車站
+                    // 2. 獲取城巴所有車站 (已移除車費、價錢接口)
                     let sRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`).then(r=>r.json());
                     let stops = sRes.data || [];
                     
