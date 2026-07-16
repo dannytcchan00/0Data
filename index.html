@@ -478,7 +478,7 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 強效版走馬燈 (同步顯示路線訊號故障包底及英文)
+        // ✅ 強效版走馬燈 (多點偵測，修復局部故障無法顯示嘅問題)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
@@ -489,64 +489,106 @@
                 return;
             }
 
-            const checkStations = [
-                {line: 'ISL', sta: 'CEN'}, {line: 'TWL', sta: 'CEN'}, {line: 'KTL', sta: 'YMT'},
-                {line: 'TKL', sta: 'NOP'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
-                {line: 'TCL', sta: 'HOK'}, {line: 'AEL', sta: 'HOK'}, {line: 'SIL', sta: 'ADM'},
-                {line: 'DRL', sta: 'SUN'}
+            // 定義每條路線需要抽查嘅關鍵車站（兩端總站，將軍澳綫及東鐵綫包含支線總站）
+            const lineChecks = [
+                { line: 'ISL', stations: ['KET', 'CHW'] },
+                { line: 'TWL', stations: ['CEN', 'TSW'] },
+                { line: 'KTL', stations: ['WHA', 'TIK'] },
+                { line: 'TKL', stations: ['NOP', 'POA', 'LHP'] }, // 將軍澳綫：北角、寶琳、康城
+                { line: 'TML', stations: ['TUM', 'WKS'] },
+                { line: 'EAL', stations: ['ADM', 'LOW', 'LMC'] }, // 東鐵綫：金鐘、羅湖、落馬洲
+                { line: 'TCL', stations: ['HOK', 'TUC'] },
+                { line: 'AEL', stations: ['HOK', 'AWE'] },
+                { line: 'SIL', stations: ['ADM', 'SOH'] },
+                { line: 'DRL', stations: ['SUN', 'DIS'] }
             ];
             
             try {
                 let ts = Date.now();
-                let results = await Promise.allSettled(checkStations.map(s => 
-                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, { cache: 'no-store' })
-                    .then(r => {
-                        if (!r.ok) throw new Error("HTTP Error");
-                        return r.json();
-                    })
-                ));
+                let allFetches = [];
+                let fetchMeta = [];
+
+                // 準備所有 API 請求
+                lineChecks.forEach(lc => {
+                    lc.stations.forEach(sta => {
+                        allFetches.push(
+                            fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${lc.line}&sta=${sta}&_=${ts}`, { cache: 'no-store' })
+                            .then(r => {
+                                if (!r.ok) throw new Error("HTTP Error");
+                                return r.json();
+                            })
+                        );
+                        fetchMeta.push({ line: lc.line, sta: sta });
+                    });
+                });
+
+                let results = await Promise.allSettled(allFetches);
                 
-                let issues = [];
+                // 按照路線紀錄狀態
+                let lineStatusMap = {};
+                for (let line in MTR_NETWORK) {
+                    lineStatusMap[line] = { issues: [], hasData: false };
+                }
+
                 results.forEach((res, i) => {
-                    let s = checkStations[i];
-                    let lineName = MTR_NETWORK[s.line].name;
-                    let key = `${s.line}-${s.sta}`;
+                    let meta = fetchMeta[i];
+                    let lineCode = meta.line;
+                    let key = `${meta.line}-${meta.sta}`;
                     
                     if (res.status === 'rejected') {
-                        // 系統死機時，明確指出該線訊號故障
-                        issues.push(`⚫ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
+                        lineStatusMap[lineCode].issues.push(`服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
                         return;
                     }
                     
                     let d = res.value;
                     if (!d) return;
                     
+                    lineStatusMap[lineCode].hasData = true;
+
                     let status = Number(d.status);
                     let msg = d.message ? String(d.message).trim() : "";
                     let isNormalMsg = (msg === "" || msg.toLowerCase() === "successful");
                     let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
 
                     if (status === 0) {
-                        issues.push(`⚫ ${lineName} ${!isNormalMsg ? msg : "服務異常 / 訊號故障 (Service Disrupted / Signal Fault)"}`);
+                        let issueMsg = !isNormalMsg ? msg : "服務異常 / 訊號故障 (Service Disrupted / Signal Fault)";
+                        lineStatusMap[lineCode].issues.push(issueMsg);
                     } else if (!d.data || !d.data[key]) {
-                        // 營運時間內，API 包底攞唔到數據，跑馬燈同步顯示訊號故障連英文解釋
-                        issues.push(`⚠️ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
+                        // 營運時間內，API 包底攞唔到數據
+                        lineStatusMap[lineCode].issues.push(`服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
                     } else {
                         let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
                         let isDelayed = String(delayFlag).toUpperCase() === 'Y';
                         if (isDelayed) {
-                            issues.push(`🔴 ${lineName} 延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
+                            lineStatusMap[lineCode].issues.push(`延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
                         } else if (!isNormalMsg || hasIncidentUrl) {
-                            issues.push(`⚠️ ${lineName}: ${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
+                            lineStatusMap[lineCode].issues.push(`${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
                         }
                     }
                 });
 
-                if (issues.length === 0) {
+                let displayIssues = [];
+                
+                // 整理每條線嘅最終狀態
+                for (let lineCode in lineStatusMap) {
+                    let info = lineStatusMap[lineCode];
+                    let lineName = MTR_NETWORK[lineCode].name;
+                    
+                    // 去除重複嘅錯誤訊息（避免兩邊總站回傳同一個 Delay message 時重複顯示）
+                    let uniqueIssues = [...new Set(info.issues)];
+                    
+                    if (uniqueIssues.length > 0) {
+                        displayIssues.push(`⚠️ ${lineName}: ${uniqueIssues.join(" ｜ ")}`);
+                    } else if (!info.hasData && isOpHours) {
+                        displayIssues.push(`⚫ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
+                    }
+                }
+
+                if (displayIssues.length === 0) {
                     marqueeEl.innerHTML = " 🟢 All Lines Operating Normally 目前全線皆正常營運 ";
                     marqueeEl.className = "marquee-text";
                 } else {
-                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + issues.join(" ｜ ") + " All other lines are operating on schedule 其餘路線皆正常行駛 " ;
+                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + displayIssues.join(" ｜｜ ") + " ｜ All other lines are operating on schedule 其餘路線皆正常行駛 " ;
                     marqueeEl.className = "marquee-text has-issue";
                 }
             } catch(e) { 
