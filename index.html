@@ -185,7 +185,7 @@
         
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
-        /* ✅ iPad 直向 (Portrait) 及手機完美兼容排版 */
+        /* ✅ iPad 直向 (Portrait) 及手機兼容排版 */
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
             .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
@@ -330,7 +330,6 @@
     </div>
 
     <script>
-        // Web App 專屬安裝按鈕 (支援 iOS 偵測)
         let deferredPrompt; 
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
         
@@ -383,7 +382,9 @@
                     <div class="station-name">${lineInfo.stations[s.sta]} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
                     <div class="mtr-data-container">`;
                 
-                if (s.data.length === 0) {
+                if (s.suspended) {
+                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ff4d4d; font-weight:bold; padding: 15px 0;">⚠️ 服務暫停 / 系統異常</div>`;
+                } else if (s.data.length === 0) {
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
@@ -440,7 +441,7 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 智能收車偵測 + 港鐵全綫狀態走馬燈 (⚠️ 加入強效破壞緩存 Cache-Busting 及 訊息攔截)
+        // ✅ 強效版走馬燈 (解決 String "0" 及 伺服器死機不報錯問題)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             
@@ -461,32 +462,43 @@
             ];
             
             try {
-                let ts = Date.now(); // 強制產生新時間戳，防 iPad 緩存
+                let ts = Date.now();
                 let results = await Promise.allSettled(checkStations.map(s => 
                     fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, { cache: 'no-store' })
-                    .then(r => r.json())
-                    .then(json => ({line: s.line, data: json}))
+                    .then(r => {
+                        if (!r.ok) throw new Error("HTTP Error");
+                        return r.json();
+                    })
                 ));
                 
                 let issues = [];
-                results.forEach((res) => {
-                    if (res.status === 'fulfilled' && res.value.data) {
-                        let d = res.value.data;
-                        let lineName = MTR_NETWORK[res.value.line].name;
-                        
-                        let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
-                        let isDelayed = String(delayFlag).toUpperCase() === 'Y';
-                        
-                        let msg = d.message ? String(d.message).trim() : "";
-                        let isNormalMsg = (msg === "" || msg.toLowerCase() === "successful");
+                results.forEach((res, i) => {
+                    let s = checkStations[i];
+                    let lineName = MTR_NETWORK[s.line].name;
+                    
+                    if (res.status === 'rejected') {
+                        // 當港鐵伺服器死機/無回應時，截擊並顯示異常
+                        issues.push(`⚫ ${lineName}: 系統連線異常`);
+                        return;
+                    }
+                    
+                    let d = res.value;
+                    if (!d) return;
+                    
+                    let status = Number(d.status); // 強制將可能嘅字串 "0" 轉為數字 0
+                    let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
+                    let isDelayed = String(delayFlag).toUpperCase() === 'Y';
+                    
+                    let msg = d.message ? String(d.message).trim() : "";
+                    let isNormalMsg = (msg === "" || msg.toLowerCase() === "successful");
+                    let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
 
-                        if (d.status === 0) {
-                            issues.push(`⚫ ${lineName}: ${!isNormalMsg ? msg : "暫停服務"}`);
-                        } else if (isDelayed) {
-                            issues.push(`🔴 ${lineName} 延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
-                        } else if (!isNormalMsg) {
-                            issues.push(`⚠️ ${lineName}: ${msg}`);
-                        }
+                    if (status === 0) {
+                        issues.push(`⚫ ${lineName}: ${!isNormalMsg ? msg : "服務暫停"}`);
+                    } else if (isDelayed) {
+                        issues.push(`🔴 ${lineName} 延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
+                    } else if (!isNormalMsg || hasIncidentUrl) {
+                        issues.push(`⚠️ ${lineName}: ${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
                     }
                 });
 
@@ -497,7 +509,10 @@
                     marqueeEl.innerHTML = "⚠️ Attention 注意 : " + issues.join(" ｜ ");
                     marqueeEl.className = "marquee-text has-issue";
                 }
-            } catch(e) { console.error("MTR Status Fetch Error", e); }
+            } catch(e) { 
+                marqueeEl.innerHTML = "📡 無法連線至港鐵系統...";
+                marqueeEl.className = "marquee-text has-issue";
+            }
         }
 
         function openMtrModal() { 
@@ -530,50 +545,57 @@
             document.getElementById('mtr-select-count').innerText = tempMtrSelections.length;
         }
 
-        // ✅ 地鐵班次數據同樣加入防緩存機制
         async function fetchMTR() {
             let ts = Date.now();
             let promises = myMtrStations.map(async s => {
                 let trains = [];
+                let suspended = false;
                 try {
                     let res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, { cache: 'no-store' });
+                    if (!res.ok) throw new Error("HTTP Error");
                     let json = await res.json();
-                    let key = `${s.line}-${s.sta}`;
                     
-                    if(json?.data?.[key] && json.curr_time) {
-                        let apiTime = new Date(json.curr_time.replace(' ','T')+'+08:00').getTime();
+                    if (Number(json.status) === 0) {
+                        suspended = true;
+                    } else {
+                        let key = `${s.line}-${s.sta}`;
+                        if(json?.data?.[key] && json.curr_time) {
+                            let apiTime = new Date(json.curr_time.replace(' ','T')+'+08:00').getTime();
 
-                        ['UP','DOWN'].forEach(dir => {
-                            let list = json.data[key][dir];
-                            if(list && list.length > 0) {
-                                let validTrain = list.find(d => {
-                                    if (d.time && d.time !== '-') {
-                                        let t = new Date(d.time.replace(' ','T')+'+08:00').getTime();
-                                        return (t - apiTime) > -60000;
-                                    } else if (d.ttnt !== undefined && d.ttnt !== '') {
-                                        return parseInt(d.ttnt) >= 0;
-                                    }
-                                    return false;
-                                });
+                            ['UP','DOWN'].forEach(dir => {
+                                let list = json.data[key][dir];
+                                if(list && list.length > 0) {
+                                    let validTrain = list.find(d => {
+                                        if (d.time && d.time !== '-') {
+                                            let t = new Date(d.time.replace(' ','T')+'+08:00').getTime();
+                                            return (t - apiTime) > -60000;
+                                        } else if (d.ttnt !== undefined && d.ttnt !== '') {
+                                            return parseInt(d.ttnt) >= 0;
+                                        }
+                                        return false;
+                                    });
 
-                                if (validTrain) {
-                                    let targetTime = null;
-                                    if (validTrain.time && validTrain.time !== '-') {
-                                        let trainTime = new Date(validTrain.time.replace(' ','T')+'+08:00').getTime();
-                                        targetTime = new Date(Date.now() + (trainTime - apiTime));
-                                    } else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') {
-                                        targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000);
-                                    }
-                                    if (targetTime) {
-                                        trains.push({ dest: MTR_DEST_MAP[validTrain.dest] || validTrain.dest, localTarget: targetTime, dir: dir });
+                                    if (validTrain) {
+                                        let targetTime = null;
+                                        if (validTrain.time && validTrain.time !== '-') {
+                                            let trainTime = new Date(validTrain.time.replace(' ','T')+'+08:00').getTime();
+                                            targetTime = new Date(Date.now() + (trainTime - apiTime));
+                                        } else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') {
+                                            targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000);
+                                        }
+                                        if (targetTime) {
+                                            trains.push({ dest: MTR_DEST_MAP[validTrain.dest] || validTrain.dest, localTarget: targetTime, dir: dir });
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
-                } catch(e) {}
+                } catch(e) {
+                    suspended = true;
+                }
                 
-                return { line: s.line, sta: s.sta, data: trains };
+                return { line: s.line, sta: s.sta, data: trains, suspended: suspended };
             });
             transportTimestamps.mtr = await Promise.all(promises);
             renderUI();
@@ -768,14 +790,12 @@
         async function fetchWeather() {
             try {
                 let ts = Date.now();
-                // 1. 即時天氣
                 let res = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json());
                 if(res?.icon?.[0]) document.getElementById('weather-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${res.icon[0]}.png`;
                 let t = res.temperature.data.find(x => x.place === '香港天文台'); if(t) document.getElementById('hk-temp').innerText = `${t.value}°C`;
                 let h = res.humidity.data.find(x => x.place === '香港天文台'); if(h) document.getElementById('hk-hum').innerText = `${h.value}%`;
                 if(res.uvindex?.data?.[0]) document.getElementById('hk-uv').innerHTML = res.uvindex.data[0].value;
 
-                // 2. 天氣警告 
                 let warnSumRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>({}));
                 const WMAP = {
                     'WFIREY':'🟡🔥', 'WFIRER':'🔴🔥',
@@ -798,7 +818,6 @@
                 }
                 warningsContainer.innerHTML = (warningHtml !== '') ? warningHtml : `<div class="alert-box alert-none">🟢 現時沒有生效的天氣警告</div>`;
 
-                // 3. 特別天氣提示
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 const swtBox = document.getElementById('swt-box');
                 if (swtData && swtData.swt && swtData.swt.length > 0) {
@@ -810,7 +829,6 @@
                     swtBox.classList.remove('swt-blink');
                 }
 
-                // 4. 三日預報
                 let fnd = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json());
                 if(fnd?.weatherForecast) {
                     document.getElementById('hk-max').innerText = `${fnd.weatherForecast[0].forecastMaxtemp.value}°C`;
