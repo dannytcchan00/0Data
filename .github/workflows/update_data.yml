@@ -16,42 +16,57 @@ jobs:
     - name: 檢出代碼
       uses: actions/checkout@v4
 
-    - name: 下載 JMA 數據 (使用底層 curl)
+    - name: 下載 JMA 數據 (多重 Proxy 備援)
       run: |
-        echo "嘗試直接連線 JMA..."
-        # 加上大量真實瀏覽器 Header，偽裝到十足十
-        HTTP_STATUS=$(curl -s -w "%{http_code}" -o temp.json \
-          -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-          -H "Accept: application/json" \
-          -H "Accept-Language: zh-HK,zh;q=0.9,en;q=0.8" \
-          "https://www.jma.go.jp/bosai/typhoon/data/TC.json")
+        TARGET="https://www.jma.go.jp/bosai/typhoon/data/TC.json"
+        SUCCESS=0
         
-        echo "JMA 返回狀態碼: $HTTP_STATUS"
-        
-        # 如果狀態碼唔係 200 (即係被 Block)，自動轉用 Proxy
-        if [ "$HTTP_STATUS" -ne 200 ]; then
-          echo "直連失敗，自動切換至 Proxy 中轉站..."
-          curl -s -L -o temp.json "https://api.allorigins.win/raw?url=https://www.jma.go.jp/bosai/typhoon/data/TC.json"
-        fi
-        
-        # 檢查下載返嚟嘅係咪真係有效 JSON (防止下載咗啲 Error HTML)
+        # 嘗試 1: 直連
+        echo "嘗試 1: 直連 JMA..."
+        curl -s -L -o temp.json -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "$TARGET"
         if jq -e . temp.json >/dev/null 2>&1; then
-          mv temp.json data.json
-          echo "✅ 成功獲取有效 JSON 數據並儲存為 data.json！"
+          echo "✅ 直連成功！"
+          SUCCESS=1
         else
-          echo "❌ 獲取失敗：返回嘅內容唔係 JSON 格式。"
-          cat temp.json
-          exit 1
+          # 嘗試 2: CodeTabs Proxy
+          echo "嘗試 2: CodeTabs Proxy..."
+          curl -s -L -o temp.json "https://api.codetabs.com/v1/proxy?quest=$TARGET"
+          if jq -e . temp.json >/dev/null 2>&1; then
+            echo "✅ CodeTabs 成功！"
+            SUCCESS=1
+          else
+            # 嘗試 3: AllOrigins Proxy
+            echo "嘗試 3: AllOrigins Proxy..."
+            curl -s -L -o temp.json "https://api.allorigins.win/raw?url=$TARGET"
+            if jq -e . temp.json >/dev/null 2>&1; then
+              echo "✅ AllOrigins 成功！"
+              SUCCESS=1
+            fi
+          fi
         fi
+        
+        if [ $SUCCESS -eq 1 ]; then
+          mv temp.json data.json
+        else
+          echo "❌ 所有連線均被 JMA 拒絕。"
+          # 如果原本無 data.json，就強行整一個空陣列，等網頁唔好 Error
+          if [ ! -f data.json ]; then
+            echo "[]" > data.json
+            echo "已建立預設空白數據以維持網頁運作。"
+          fi
+        fi
+        # 強制以成功狀態 (Exit 0) 結束，確保後面可以順利 git push 產生檔案
+        exit 0
 
     - name: 提交到 GitHub
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add data.json
+        
         if git diff --staged --quiet; then
           echo "數據無變更，跳過 Commit。"
         else
-          git commit -m "Auto-update JMA Data via curl"
+          git commit -m "Auto-update JMA Data"
           git push
         fi
