@@ -2,14 +2,14 @@ name: Update JMA Data
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *' # 每 10 分鐘自動執行一次
+  workflow_dispatch: # 允許手動撳掣觸發
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     
-    # 再次聲明寫入權限
+    # 必須要有寫入權限
     permissions:
       contents: write
 
@@ -24,11 +24,12 @@ jobs:
 
     - name: 執行 Python 腳本
       run: python fetch_data.py
-- name: 提交及推送到 GitHub
+
+    - name: 提交及推送到 GitHub
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # 1. 設定 git 身份
+        # 1. 設定 git 機器人身份
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         
@@ -36,13 +37,12 @@ jobs:
         git add -A
         
         # 3. 檢查係咪真係有嘢要 commit
-        # git status --porcelain 會列出所有修改過/新增嘅檔案，如果無輸出代表無變更
         if [ -z "$(git status --porcelain)" ]; then
           echo "無新數據，跳過 Commit。"
         else
           # 有新檔案或內容有變，執行 Commit
           git commit -m "Auto-update JMA Data"
           
-          # 4. 強制 Push
+          # 4. 強制 Push (注意：預設分支為 main。如果你個 repo 預設係 master，請將尾段 HEAD:main 改為 HEAD:master)
           git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
         fi
