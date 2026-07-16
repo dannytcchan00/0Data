@@ -9,6 +9,7 @@ jobs:
   update-data:
     runs-on: ubuntu-latest
     
+    # 再次聲明寫入權限
     permissions:
       contents: write
 
@@ -25,13 +26,19 @@ jobs:
       run: python fetch_data.py
 
     - name: 提交及推送到 GitHub
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git add data.json
+        
+        # 用 git add -A 代替指定檔名，就算 data.json 唔存在都唔會報錯 (解決 128 錯誤)
+        git add -A
+        
         if git diff --staged --quiet; then
-          echo "No changes to commit."
+          echo "數據無變更或未成功生成，跳過提交。"
         else
           git commit -m "Auto-update JMA Data"
-          git push
+          # 強制帶上 Token 執行 push，解決因為權限不足導致嘅 128 錯誤
+          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         fi
