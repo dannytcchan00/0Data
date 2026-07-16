@@ -113,6 +113,15 @@
         .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
         .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; flex: 1; }
 
+        /* ⚠️ 港鐵異常狀態閃爍動畫 */
+        @keyframes mtrErrorPulse {
+            0% { background-color: rgba(255, 77, 77, 0.05); border-color: #660000; box-shadow: 0 0 5px rgba(255,77,77,0.1); }
+            50% { background-color: rgba(255, 77, 77, 0.2); border-color: #ff3333; box-shadow: 0 0 15px rgba(255,77,77,0.5); }
+            100% { background-color: rgba(255, 77, 77, 0.05); border-color: #660000; box-shadow: 0 0 5px rgba(255,77,77,0.1); }
+        }
+        .mtr-anomaly-box { animation: mtrErrorPulse 1.5s infinite ease-in-out !important; }
+        .mtr-anomaly-text { color: #ff4d4d; font-weight: bold; text-align: center; padding: 15px 0; text-shadow: 0 0 8px rgba(255,77,77,0.4); }
+
         /* 巴士格仔 */
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 8px; overflow-y: auto; align-content: flex-start; padding-right: 5px; }
@@ -389,21 +398,26 @@
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
                 if(!lineInfo) return;
-                mtrHtml += `<div class="station-card" style="background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;">
+
+                // 判斷是否發生異常
+                let isSuspended = s.suspended;
+                let noDataInOpHours = (s.data.length === 0 && isOpHours);
+                let isAnomaly = isSuspended || noDataInOpHours;
+
+                // 如果異常，加入 mtr-anomaly-box 閃爍 Class
+                let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
+                let boxStyle = isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`;
+
+                mtrHtml += `<div class="${boxClass}" style="${boxStyle}">
                     <div class="station-name">${lineInfo.stations[s.sta]} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
                     <div class="mtr-data-container">`;
                 
-                // 邏輯修正：區分系統斷線、空數據與非營運時間
-                if (s.suspended) {
-                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ff4d4d; font-weight:bold; padding: 15px 0;">⚠️ 系統連線異常 / 服務暫停</div>`;
-                } else if (s.data.length === 0) {
-                    if (isOpHours) {
-                        // 營運時間內卻無數據 = 服務異常/訊號故障
-                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ffcc00; font-weight:bold; padding: 15px 0;">⚠️ 該路綫服務異常 / 訊號故障</div>`;
-                    } else {
-                        // 凌晨收車時間無數據
-                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
-                    }
+                if (isAnomaly) {
+                    // 顯示明確的路線故障訊息
+                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務異常/訊號故障</div>`;
+                } else if (s.data.length === 0 && !isOpHours) {
+                    // 凌晨收車時間無數據
+                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
                         let etaInfo = parseRemaining(t.localTarget);
@@ -459,7 +473,7 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 強效版走馬燈 (完美攔截「空數據」當作故障)
+        // ✅ 強效版走馬燈 (同步顯示路線訊號故障)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
@@ -494,7 +508,8 @@
                     let key = `${s.line}-${s.sta}`;
                     
                     if (res.status === 'rejected') {
-                        issues.push(`⚫ ${lineName}: 系統連線異常 / 訊號故障`);
+                        // 系統死機時，明確指出該線訊號故障
+                        issues.push(`⚫ ${lineName} 訊號故障`);
                         return;
                     }
                     
@@ -507,10 +522,10 @@
                     let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
 
                     if (status === 0) {
-                        issues.push(`⚫ ${lineName}: ${!isNormalMsg ? msg : "服務異常 / 訊號故障"}`);
+                        issues.push(`⚫ ${lineName} ${!isNormalMsg ? msg : "服務異常 / 訊號故障"}`);
                     } else if (!d.data || !d.data[key]) {
-                        // 核心修復：營運時間內，API 俾唔出數據，即視為故障被抽起！
-                        issues.push(`⚠️ ${lineName}: 系統未能提供數據 (服務異常 / 訊號故障)`);
+                        // 營運時間內，API 俾唔出數據，跑馬燈同步顯示訊號故障
+                        issues.push(`⚠️ ${lineName} 訊號故障`);
                     } else {
                         let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
                         let isDelayed = String(delayFlag).toUpperCase() === 'Y';
