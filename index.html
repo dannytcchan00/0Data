@@ -440,7 +440,7 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 智能收車偵測 + 港鐵全綫狀態走馬燈
+        // ✅ 智能收車偵測 + 港鐵全綫狀態走馬燈 (已修正延誤及官方訊息讀取)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             
@@ -453,6 +453,7 @@
                 return;
             }
 
+            // 已包攬全部 10 條地鐵綫，確保與官方同步
             const checkStations = [
                 {line: 'ISL', sta: 'CEN'}, {line: 'TWL', sta: 'CEN'}, {line: 'KTL', sta: 'YMT'},
                 {line: 'TKL', sta: 'NOP'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
@@ -470,9 +471,15 @@
                     if (res.status === 'fulfilled' && res.value.data) {
                         let d = res.value.data;
                         let lineName = MTR_NETWORK[res.value.line].name;
+                        
+                        // 修正 1：確保同時兼容大階 Isdelay 同細階 isdelay
+                        let isDelayed = (d.isdelay === 'Y' || d.Isdelay === 'Y');
+                        
                         if (d.status === 0) {
-                            issues.push(`⚫ ${lineName} Service Suspended 暫停服務`);
-                        } else if (d.isdelay === 'Y') {
+                            // 修正 2：如果發生事故，直接讀取 MTR 官方實時廣播訊息 (d.message)
+                            let officialMsg = d.message ? d.message : "Service Suspended 暫停服務";
+                            issues.push(`⚫ ${lineName}: ${officialMsg}`);
+                        } else if (isDelayed) {
                             issues.push(`🔴 ${lineName} Service Delayed 延誤`);
                         }
                     }
