@@ -113,7 +113,7 @@
         .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
         .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; flex: 1; }
 
-        /* ⚠️ 港鐵異常狀態閃爍動畫 (動態使用路線顏色) */
+        /* ⚠️ 港鐵異常狀態閃爍動畫 */
         @keyframes mtrErrorPulse {
             0% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); }
             50% { box-shadow: 0 0 20px var(--line-color); opacity: 1; background-color: rgba(255,255,255,0.15); border-color: var(--line-color); }
@@ -127,7 +127,8 @@
         .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 8px; overflow-y: auto; align-content: flex-start; padding-right: 5px; }
         .bus-grid::-webkit-scrollbar { width: 4px; }
         .bus-grid::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
-        .bus-card { min-height: 106px; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+        .bus-card { min-height: 106px; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.1s; }
+        .bus-card:active { transform: scale(0.96); } /* 增加點擊反饋 */
         .bus-card.kmb { background: var(--kmb-bg); border: 1px solid var(--kmb-border); }
         .bus-card.ctb { background: var(--ctb-bg); border: 1px solid var(--ctb-border); }
         .bus-no { font-size: 1.45rem; font-weight: 900; line-height: 1; }
@@ -160,6 +161,18 @@
         .btn-cancel { background: #333; color: #fff; }
         .btn-save { background: #0071CE; color: #fff; }
         .btn-back { background: #444; color: #fff; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;}
+
+        /* 🆕 巴士路線詳情 Modal 專用樣式 */
+        .detail-header-card { background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; text-align: center; }
+        .detail-route-title { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 5px; }
+        .detail-route-desc { font-size: 1.1rem; font-weight: bold; color: #4da6ff; margin-bottom: 10px; }
+        .detail-route-meta { display: flex; justify-content: center; gap: 10px; }
+        .meta-badge { background: #333; color: #ddd; padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; }
+        .fare-badge { background: #2b5c2b; color: #66ff66; border: 1px solid #3d803d; }
+        .detail-stops-container { background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 5px; }
+        .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid #1a1a1a; color: #ccc; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; line-height: 1.3; }
+        .detail-stop-item:last-child { border-bottom: none; }
+        .stop-num { background: #222; color: #888; min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.75rem; font-weight: bold; }
 
         .line-group { margin-bottom: 15px; }
         .line-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; padding-left: 5px; display: flex; align-items: center; gap: 6px; }
@@ -299,7 +312,7 @@
         </div>
     </div>
 
-    <!-- Bus Modal -->
+    <!-- Bus Manager Modal -->
     <div id="bus-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -338,6 +351,19 @@
         </div>
     </div>
 
+    <!-- 🆕 巴士詳細資料 Modal -->
+    <div id="bus-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🚌 路線詳細資料</h3>
+                <button onclick="closeBusDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+            </div>
+            <div id="bus-detail-body" class="modal-body">
+                <!-- 內容會由 JavaScript 動態寫入 -->
+            </div>
+        </div>
+    </div>
+
     <script>
         let deferredPrompt; 
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
@@ -362,7 +388,6 @@
         let busDict = {}; 
         let isBusDataReady = false;
 
-        // ✅ 判斷是否為營運時間 (避開 01:30 - 05:30 收車時段)
         function checkIsOperatingHours() {
             let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
             let h = now.getHours();
@@ -399,12 +424,10 @@
                 let lineInfo = MTR_NETWORK[s.line];
                 if(!lineInfo) return;
 
-                // 判斷是否發生異常
                 let isSuspended = s.suspended;
                 let noDataInOpHours = (s.data.length === 0 && isOpHours);
                 let isAnomaly = isSuspended || noDataInOpHours;
 
-                // 如果異常，加入 mtr-anomaly-box 閃爍 Class，並寫入專屬路線顏色到變數 --line-color
                 let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
                 let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
 
@@ -413,10 +436,8 @@
                     <div class="mtr-data-container">`;
                 
                 if (isAnomaly) {
-                    // 顯示明確的路線故障訊息及英文
                     mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務異常 / 訊號故障<br><span style="font-size:0.75rem;">(Service Disrupted / Signal Fault)</span></div>`;
                 } else if (s.data.length === 0 && !isOpHours) {
-                    // 凌晨收車時間無數據
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
@@ -444,13 +465,13 @@
                     if (etaInfo.status === 'departing') { colorClass = 'departing-text'; pulseClass = 'arriving-pulse'; }
                     else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
 
-                    // 加入巴士專屬圖標：通宵線 🌙，機場線 ✈️
                     let moonIcon = b.no.toUpperCase().startsWith('N') ? '🌙 ' : '';
                     let planeIcon = (b.dest.includes('機場') || b.dest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
                     let busNoDisplay = `${moonIcon}${planeIcon}${b.no}`;
 
+                    // ✅ 加入 onClick 事件觸發詳細資料彈窗
                     busHtml += `
-                        <div class="bus-card ${b.co} ${pulseClass}">
+                        <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${b.no}', '${b.dest}')">
                             <div>
                                 <div class="bus-no">${busNoDisplay}</div>
                                 <div class="bus-dest">往 ${b.dest}</div>
@@ -478,7 +499,6 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 極簡版走馬燈 (直接檢查有無 ETA 班次倒數數據)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
@@ -489,7 +509,6 @@
                 return;
             }
 
-            // 每條線抽查一個最核心、班次最密嘅中途站
             const checkStations = [
                 {line: 'ISL', sta: 'ADM'}, {line: 'TWL', sta: 'ADM'}, {line: 'KTL', sta: 'YMT'},
                 {line: 'TKL', sta: 'TKO'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
@@ -513,7 +532,6 @@
                     let lineName = MTR_NETWORK[s.line].name;
                     let key = `${s.line}-${s.sta}`;
 
-                    // 1. 斷網或 API 完全死機
                     if (res.status === 'rejected') {
                         issues.push(`⚫ ${lineName} 無法連線`);
                         return;
@@ -522,22 +540,15 @@
                     let d = res.value;
                     let hasData = false;
 
-                    // 2. 直頭檢查 data 裡面有無上下行嘅班次陣列
                     if (d && d.data && d.data[key]) {
                         let upTrains = d.data[key].UP || [];
                         let downTrains = d.data[key].DOWN || [];
-
-                        // 只要任何一個方向有車，就當有數據
-                        if (upTrains.length > 0 || downTrains.length > 0) {
-                            hasData = true;
-                        }
+                        if (upTrains.length > 0 || downTrains.length > 0) hasData = true;
                     }
 
-                    // 3. 判斷邏輯
                     if (!hasData) {
                         issues.push(`⚠️ ${lineName} 服務異常 (無班次數據)`);
                     } else {
-                        // 雖然有數據，但如果 API 有俾 Delay 標籤，都照樣溫馨提示
                         let isDelayed = String(d.isdelay || d.isDelay || d.Isdelay || 'N').toUpperCase() === 'Y';
                         if (isDelayed) {
                             issues.push(`🔴 ${lineName} 班次延誤`);
@@ -652,9 +663,6 @@
             fetchMTR();
         }
 
-        // ==========================================
-        // 🚌 巴士從 GitHub JSON 讀取
-        // ==========================================
         async function initStaticDatabase() {
             try {
                 document.getElementById('progress-bar').style.width = '50%';
@@ -825,6 +833,100 @@
             transportTimestamps.bus = Object.values(unique).sort((a,b)=> a.localTarget - b.localTarget);
             document.getElementById('refresh-status').innerText = '🟢 15s定時更新';
             renderUI();
+        }
+
+        // ==========================================
+        // 🆕 巴士詳細資料 Modal 核心邏輯
+        // ==========================================
+        function closeBusDetailModal() {
+            document.getElementById('bus-detail-modal').classList.remove('active');
+        }
+
+        async function openBusDetail(co, route, dest) {
+            const modal = document.getElementById('bus-detail-modal');
+            const body = document.getElementById('bus-detail-body');
+            modal.classList.add('active');
+            body.innerHTML = '<div style="text-align:center; padding: 30px; color:#4da6ff;">⏳ 正在連線讀取路線及車站詳情...</div>';
+
+            try {
+                let companyName = co === 'kmb' ? '九巴 (KMB)' : '城巴 (CTB)';
+                let fareText = '未提供';
+                let stopsHtml = '';
+
+                if (co === 'kmb') {
+                    // 1. 獲取九巴路線基本資訊
+                    let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
+                    let routeInfo = rRes.data.find(r => r.route === route && r.dest_tc === dest);
+                    if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route); // 防呆包底
+
+                    let bound = routeInfo ? routeInfo.bound : 'O';
+                    let serviceType = routeInfo ? routeInfo.service_type : '1';
+                    let orig = routeInfo ? routeInfo.orig_tc : '未知';
+                    let actualDest = routeInfo ? routeInfo.dest_tc : dest;
+
+                    // 2. 獲取九巴車費 (最高車費通常為全程收費)
+                    try {
+                        let fRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-fare/${route}/${bound}/${serviceType}`).then(r=>r.json());
+                        if (fRes.data && fRes.data.length > 0) {
+                            let maxFare = Math.max(...fRes.data.map(f => parseFloat(f.fare)));
+                            fareText = '$' + maxFare.toFixed(1);
+                        }
+                    } catch(e) {}
+
+                    // 3. 獲取九巴所有車站
+                    let sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${serviceType}`).then(r=>r.json());
+                    let stops = sRes.data || [];
+                    
+                    let stopDetails = await Promise.all(stops.map(async (s, idx) => {
+                        let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
+                        return `<div class="detail-stop-item"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop}</div>`;
+                    }));
+                    stopsHtml = stopDetails.join('');
+
+                    renderDetailModalBody(companyName, route, orig, actualDest, fareText, stopsHtml);
+
+                } else {
+                    // 1. 獲取城巴路線基本資訊
+                    let rRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB/${route}`).then(r=>r.json());
+                    let info = rRes.data;
+                    let bound = (info.dest_tc === dest) ? 'outbound' : 'inbound';
+                    let orig = bound === 'outbound' ? info.orig_tc : info.dest_tc;
+                    let actualDest = bound === 'outbound' ? info.dest_tc : info.orig_tc;
+
+                    fareText = '按分段收費'; // 城巴 API 沒有單一的全程車費 Endpoint，統一顯示此字眼
+
+                    // 2. 獲取城巴所有車站
+                    let sRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`).then(r=>r.json());
+                    let stops = sRes.data || [];
+                    
+                    let stopDetails = await Promise.all(stops.map(async (s, idx) => {
+                        let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
+                        return `<div class="detail-stop-item"><span class="stop-num">${idx+1}</span> ${st?.data?.name_tc || s.stop}</div>`;
+                    }));
+                    stopsHtml = stopDetails.join('');
+
+                    renderDetailModalBody(companyName, route, orig, actualDest, fareText, stopsHtml);
+                }
+            } catch (e) {
+                body.innerHTML = '<div style="text-align:center; padding: 30px; color: #ff4d4d;">❌ 無法載入路線資料或網絡超時</div>';
+            }
+        }
+
+        function renderDetailModalBody(coName, route, orig, dest, fare, stopsHtml) {
+            document.getElementById('bus-detail-body').innerHTML = `
+                <div class="detail-header-card">
+                    <div class="detail-route-title">${route}</div>
+                    <div class="detail-route-desc">${orig} ➔ ${dest}</div>
+                    <div class="detail-route-meta">
+                        <span class="meta-badge">${coName}</span>
+                        <span class="meta-badge fare-badge">全程車費: ${fare}</span>
+                    </div>
+                </div>
+                <h4 style="margin:15px 0 10px 0; color:#aaa; font-size:0.9rem;">所有沿途停靠車站：</h4>
+                <div class="detail-stops-container">
+                    ${stopsHtml}
+                </div>
+            `;
         }
 
         // ==========================================
