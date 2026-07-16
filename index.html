@@ -113,14 +113,14 @@
         .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
         .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; flex: 1; }
 
-        /* ⚠️ 港鐵異常狀態閃爍動畫 */
+        /* ⚠️ 港鐵異常狀態閃爍動畫 (動態使用路線顏色) */
         @keyframes mtrErrorPulse {
-            0% { background-color: rgba(255, 77, 77, 0.05); border-color: #660000; box-shadow: 0 0 5px rgba(255,77,77,0.1); }
-            50% { background-color: rgba(255, 77, 77, 0.2); border-color: #ff3333; box-shadow: 0 0 15px rgba(255,77,77,0.5); }
-            100% { background-color: rgba(255, 77, 77, 0.05); border-color: #660000; box-shadow: 0 0 5px rgba(255,77,77,0.1); }
+            0% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); }
+            50% { box-shadow: 0 0 20px var(--line-color); opacity: 1; background-color: rgba(255,255,255,0.15); border-color: var(--line-color); }
+            100% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); }
         }
         .mtr-anomaly-box { animation: mtrErrorPulse 1.5s infinite ease-in-out !important; }
-        .mtr-anomaly-text { color: #ff4d4d; font-weight: bold; text-align: center; padding: 15px 0; text-shadow: 0 0 8px rgba(255,77,77,0.4); }
+        .mtr-anomaly-text { color: var(--line-color); font-weight: bold; text-align: center; padding: 15px 0; text-shadow: 0 0 8px var(--line-color); }
 
         /* 巴士格仔 */
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -404,17 +404,17 @@
                 let noDataInOpHours = (s.data.length === 0 && isOpHours);
                 let isAnomaly = isSuspended || noDataInOpHours;
 
-                // 如果異常，加入 mtr-anomaly-box 閃爍 Class
+                // 如果異常，加入 mtr-anomaly-box 閃爍 Class，並寫入專屬路線顏色到變數 --line-color
                 let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
-                let boxStyle = isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`;
+                let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
 
                 mtrHtml += `<div class="${boxClass}" style="${boxStyle}">
                     <div class="station-name">${lineInfo.stations[s.sta]} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
                     <div class="mtr-data-container">`;
                 
                 if (isAnomaly) {
-                    // 顯示明確的路線故障訊息
-                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務異常/訊號故障</div>`;
+                    // 顯示明確的路線故障訊息及英文
+                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務異常 / 訊號故障<br><span style="font-size:0.75rem;">(Service Disrupted / Signal Fault)</span></div>`;
                 } else if (s.data.length === 0 && !isOpHours) {
                     // 凌晨收車時間無數據
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
@@ -444,10 +444,15 @@
                     if (etaInfo.status === 'departing') { colorClass = 'departing-text'; pulseClass = 'arriving-pulse'; }
                     else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
 
+                    // 加入巴士專屬圖標：通宵線 🌙，機場線 ✈️
+                    let moonIcon = b.no.toUpperCase().startsWith('N') ? '🌙 ' : '';
+                    let planeIcon = (b.dest.includes('機場') || b.dest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
+                    let busNoDisplay = `${moonIcon}${planeIcon}${b.no}`;
+
                     busHtml += `
                         <div class="bus-card ${b.co} ${pulseClass}">
                             <div>
-                                <div class="bus-no">${b.no}</div>
+                                <div class="bus-no">${busNoDisplay}</div>
                                 <div class="bus-dest">往 ${b.dest}</div>
                                 <div style="font-size:0.75rem; color:#888; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${b.stopName}</div>
                             </div>
@@ -473,7 +478,7 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 強效版走馬燈 (同步顯示路線訊號故障)
+        // ✅ 強效版走馬燈 (同步顯示路線訊號故障包底及英文)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
@@ -509,7 +514,7 @@
                     
                     if (res.status === 'rejected') {
                         // 系統死機時，明確指出該線訊號故障
-                        issues.push(`⚫ ${lineName} 訊號故障`);
+                        issues.push(`⚫ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
                         return;
                     }
                     
@@ -522,10 +527,10 @@
                     let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
 
                     if (status === 0) {
-                        issues.push(`⚫ ${lineName} ${!isNormalMsg ? msg : "服務異常 / 訊號故障"}`);
+                        issues.push(`⚫ ${lineName} ${!isNormalMsg ? msg : "服務異常 / 訊號故障 (Service Disrupted / Signal Fault)"}`);
                     } else if (!d.data || !d.data[key]) {
-                        // 營運時間內，API 俾唔出數據，跑馬燈同步顯示訊號故障
-                        issues.push(`⚠️ ${lineName} 訊號故障`);
+                        // 營運時間內，API 包底攞唔到數據，跑馬燈同步顯示訊號故障連英文解釋
+                        issues.push(`⚠️ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
                     } else {
                         let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
                         let isDelayed = String(delayFlag).toUpperCase() === 'Y';
@@ -815,7 +820,7 @@
             }));
             let unique = {}; raw.forEach(x => { if(!unique[x.uid]) unique[x.uid] = x; });
             transportTimestamps.bus = Object.values(unique).sort((a,b)=> a.localTarget - b.localTarget);
-            document.getElementById('refresh-status').innerText = '🟢 60s定時更新';
+            document.getElementById('refresh-status').innerText = '🟢 15s定時更新';
             renderUI();
         }
 
@@ -895,15 +900,15 @@
 
         async function boot() {
             updateTick(); setInterval(updateTick, 1000); 
-            fetchWeather(); setInterval(fetchWeather, 300000); 
+            fetchWeather(); setInterval(fetchWeather, 60000); 
             
-            fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 60000); 
+            fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 15000); 
             
             fetchMTR(); setInterval(fetchMTR, 15000); 
-            setInterval(fetchRealBusData, 60000);
+            setInterval(fetchRealBusData, 15000);
             initStaticDatabase();
 
-            setTimeout(() => { window.location.reload(true); }, 43200000);
+            setTimeout(() => { window.location.reload(true); }, 3600000);
         }
         boot();
     </script>
