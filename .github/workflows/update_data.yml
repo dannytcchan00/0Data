@@ -2,23 +2,20 @@ name: Update JMA Data
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每 10 分鐘執行一次
-  workflow_dispatch: # 允許手動撳掣觸發
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     
-    # 明確聲明需要寫入權限
     permissions:
       contents: write
 
     steps:
-    # 解決警告：升級到 v4
     - name: 檢出代碼
       uses: actions/checkout@v4
 
-    # 解決警告：升級到 v5
     - name: 設定 Python 環境
       uses: actions/setup-python@v5
       with:
@@ -32,11 +29,9 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add data.json
-        
-        # 檢查 data.json 係咪真係有更新，有更新先 commit
         if git diff --staged --quiet; then
-          echo "數據無變更，跳過提交。"
+          echo "No changes to commit."
         else
-          git commit -m "自動更新 JMA 數據"
+          git commit -m "Auto-update JMA Data"
           git push
         fi
