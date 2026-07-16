@@ -1,6 +1,5 @@
 import urllib.request
 import json
-import os
 
 # JMA 嘅目標網址
 url = 'https://www.jma.go.jp/bosai/typhoon/data/TC.json'
@@ -14,6 +13,6 @@ try:
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
         
-    print("數據更新成功！")
+    print("數據更新成功，已寫入 data.json！")
 except Exception as e:
     print(f"更新數據失敗: {e}")
