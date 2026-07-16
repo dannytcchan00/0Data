@@ -353,6 +353,15 @@
         let busDict = {}; 
         let isBusDataReady = false;
 
+        // ✅ 判斷是否為營運時間 (避開 01:30 - 05:30 收車時段)
+        function checkIsOperatingHours() {
+            let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+            let h = now.getHours();
+            let m = now.getMinutes();
+            if ((h === 1 && m >= 30) || (h > 1 && h < 5) || (h === 5 && m <= 30)) return false;
+            return true;
+        }
+
         function parseRemaining(targetDate) {
             if (!targetDate) return { text: "服務已終止", status: "end" };
             const diffSec = Math.floor((targetDate - new Date()) / 1000);
@@ -375,6 +384,8 @@
 
         function renderUI() {
             let mtrHtml = '';
+            let isOpHours = checkIsOperatingHours();
+            
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
                 if(!lineInfo) return;
@@ -382,10 +393,17 @@
                     <div class="station-name">${lineInfo.stations[s.sta]} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
                     <div class="mtr-data-container">`;
                 
+                // 邏輯修正：區分系統斷線、空數據與非營運時間
                 if (s.suspended) {
-                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ff4d4d; font-weight:bold; padding: 15px 0;">⚠️ 服務暫停 / 系統異常</div>`;
+                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ff4d4d; font-weight:bold; padding: 15px 0;">⚠️ 系統連線異常 / 服務暫停</div>`;
                 } else if (s.data.length === 0) {
-                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
+                    if (isOpHours) {
+                        // 營運時間內卻無數據 = 服務異常/訊號故障
+                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#ffcc00; font-weight:bold; padding: 15px 0;">⚠️ 該路綫服務異常 / 訊號故障</div>`;
+                    } else {
+                        // 凌晨收車時間無數據
+                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
+                    }
                 } else {
                     s.data.forEach(t => {
                         let etaInfo = parseRemaining(t.localTarget);
@@ -441,14 +459,12 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 強效版走馬燈 (解決 String "0" 及 伺服器死機不報錯問題)
+        // ✅ 強效版走馬燈 (完美攔截「空數據」當作故障)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
+            let isOpHours = checkIsOperatingHours();
             
-            let nowHK = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
-            let h = nowHK.getHours();
-            let m = nowHK.getMinutes();
-            if ((h === 1 && m >= 30) || (h > 1 && h < 5) || (h === 5 && m <= 30)) {
+            if (!isOpHours) {
                 marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 ";
                 marqueeEl.className = "marquee-text";
                 return;
@@ -475,30 +491,34 @@
                 results.forEach((res, i) => {
                     let s = checkStations[i];
                     let lineName = MTR_NETWORK[s.line].name;
+                    let key = `${s.line}-${s.sta}`;
                     
                     if (res.status === 'rejected') {
-                        // 當港鐵伺服器死機/無回應時，截擊並顯示異常
-                        issues.push(`⚫ ${lineName}: 系統連線異常`);
+                        issues.push(`⚫ ${lineName}: 系統連線異常 / 訊號故障`);
                         return;
                     }
                     
                     let d = res.value;
                     if (!d) return;
                     
-                    let status = Number(d.status); // 強制將可能嘅字串 "0" 轉為數字 0
-                    let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
-                    let isDelayed = String(delayFlag).toUpperCase() === 'Y';
-                    
+                    let status = Number(d.status);
                     let msg = d.message ? String(d.message).trim() : "";
                     let isNormalMsg = (msg === "" || msg.toLowerCase() === "successful");
                     let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
 
                     if (status === 0) {
-                        issues.push(`⚫ ${lineName}: ${!isNormalMsg ? msg : "服務暫停"}`);
-                    } else if (isDelayed) {
-                        issues.push(`🔴 ${lineName} 延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
-                    } else if (!isNormalMsg || hasIncidentUrl) {
-                        issues.push(`⚠️ ${lineName}: ${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
+                        issues.push(`⚫ ${lineName}: ${!isNormalMsg ? msg : "服務異常 / 訊號故障"}`);
+                    } else if (!d.data || !d.data[key]) {
+                        // 核心修復：營運時間內，API 俾唔出數據，即視為故障被抽起！
+                        issues.push(`⚠️ ${lineName}: 系統未能提供數據 (服務異常 / 訊號故障)`);
+                    } else {
+                        let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
+                        let isDelayed = String(delayFlag).toUpperCase() === 'Y';
+                        if (isDelayed) {
+                            issues.push(`🔴 ${lineName} 延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
+                        } else if (!isNormalMsg || hasIncidentUrl) {
+                            issues.push(`⚠️ ${lineName}: ${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
+                        }
                     }
                 });
 
