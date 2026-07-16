@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>實時颱風追蹤系統 (自建 API 版)</title>
+    <title>實時颱風追蹤系統 (GitHub Pages 版)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { 
@@ -34,6 +34,7 @@
         
         .note { font-size: 12px; color: #888; line-height: 1.5; margin-top: 15px; }
         
+        /* 颱風圖標動畫 */
         .typhoon-icon { font-size: 24px; text-align: center; animation: spin 2s linear infinite; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
@@ -63,6 +64,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // 1. 初始化地圖 (置中於菲律賓海域)
     const map = L.map('map').setView([15.0, 130.0], 5);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
@@ -79,6 +81,7 @@
         iconAnchor: [15, 15]
     });
 
+    // 2. 輔助函數：解析 JMA 座標格式 "+16.2+132.5/"
     function parseJMACoord(coordStr) {
         if (!coordStr) return null;
         const parts = coordStr.split(/[+-]/).filter(p => p !== "" && p !== "/");
@@ -90,6 +93,7 @@
         return null;
     }
 
+    // 3. 主要抓取數據函數
     async function fetchJMATyphoons() {
         const statusIcon = document.getElementById('api-status');
         const statusText = document.getElementById('status-text');
@@ -97,19 +101,20 @@
         
         try {
             statusIcon.className = 'indicator waiting';
-            statusText.innerText = '讀取數據中...';
+            statusText.innerText = '讀取 Cloudflare Worker 數據中...';
             
-            // 【關鍵修改】改為讀取你自己 Server 提供嘅 API
-            // 如果你 Server 放喺其他 Domain，請將 localhost 換成你嘅 Domain
-            const myApiUrl = 'http://localhost:3000/api/jma/tc'; 
+            // 👇 【請將下面呢條 Link 換成你專屬嘅 Cloudflare Worker 網址】👇
+            const myWorkerUrl = 'https://jma-proxy.你的用戶名.workers.dev'; 
             
-            const dirResponse = await fetch(myApiUrl);
-            if (!dirResponse.ok) throw new Error("無法讀取自建 API");
+            const dirResponse = await fetch(myWorkerUrl);
+            if (!dirResponse.ok) throw new Error("無法讀取 Cloudflare Proxy API");
             const activeTyphoons = await dirResponse.json();
 
+            // 清除舊圖層同列表
             typhoonLayerGroup.clearLayers();
             listContainer.innerHTML = '';
 
+            // 如果無颱風
             if (activeTyphoons.length === 0) {
                 statusIcon.className = 'indicator online';
                 statusText.innerText = '系統正常 (無活躍颱風)';
@@ -117,6 +122,7 @@
                 return;
             }
 
+            // 如果有颱風
             statusText.innerText = `發現 ${activeTyphoons.length} 個系統，載入詳情...`;
             statusIcon.className = 'indicator online';
 
@@ -127,6 +133,7 @@
                     let hpa = ty.center ? ty.center.pressure : "未知";
                     
                     if (currentCoord) {
+                        // 更新右側面板列表
                         listContainer.innerHTML += `
                             <div class="typhoon-item">
                                 <span class="typhoon-name">${tyName}</span><br>
@@ -135,10 +142,12 @@
                             </div>
                         `;
 
+                        // 喺地圖畫出當前位置
                         L.marker(currentCoord, {icon: typhoonIcon})
                             .bindPopup(`<b>${tyName}</b><br>中心氣壓: ${hpa} hPa`)
                             .addTo(typhoonLayerGroup);
 
+                        // 喺地圖畫出暴風圈 (假設半徑 150km)
                         L.circle(currentCoord, {
                             color: '#ff1744', fillColor: '#ff1744', fillOpacity: 0.2, radius: 150000 
                         }).addTo(typhoonLayerGroup);
@@ -148,16 +157,19 @@
                 }
             }
 
-            statusText.innerText = '數據同步完成';
+            statusText.innerText = '數據實時同步完成';
 
         } catch (error) {
             console.error('數據抓取失敗:', error);
             statusIcon.className = 'indicator offline';
-            statusText.innerText = '連線失敗，請檢查 Server 是否運作中';
+            statusText.innerText = '連線失敗，請檢查 Cloudflare 網址是否正確';
         }
     }
 
+    // 首次載入執行
     fetchJMATyphoons();
+    
+    // 設定每 5 分鐘 (300,000 毫秒) 自動刷新一次，保持數據實時
     setInterval(fetchJMATyphoons, 300000); 
 
 </script>
