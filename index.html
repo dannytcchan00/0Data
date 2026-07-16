@@ -34,7 +34,10 @@
         #progress-text { margin-top: 15px; font-size: 1.1rem; font-weight: bold; font-variant-numeric: tabular-nums; }
         #progress-detail { margin-top: 5px; font-size: 0.85rem; color: #888; text-align: center; padding: 0 20px; line-height: 1.4;}
 
-        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 15px; padding: 15px; flex: 1; overflow: hidden; }
+        /* 🔥 下拉更新 (Pull-to-refresh) UI */
+        .ptr-indicator { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; color: #4da6ff; font-weight: bold; font-size: 0.95rem; z-index: 1000; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 15px; padding: 15px; flex: 1; overflow: hidden; position: relative; z-index: 2; background: var(--bg-color); }
         .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; }
 
         /* 左側天氣面板 */
@@ -173,7 +176,6 @@
         .detail-stop-item:last-child { border-bottom: none; }
         .stop-num { background: #222; color: #888; min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.75rem; font-weight: bold; }
         
-        /* 🔥 你所在車站的高亮標記樣式 */
         .current-stop-highlight { background: rgba(77, 166, 255, 0.15); border-left: 4px solid #4da6ff !important; color: #fff !important; font-weight: bold; }
         .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #4da6ff; color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 900; }
 
@@ -234,6 +236,9 @@
     </div>
 
     <button id="install-btn" class="install-btn" onclick="installWebApp()"><span>📲</span> 加至桌面</button>
+
+    <!-- 隱藏在頂部嘅下拉指示器 -->
+    <div id="ptr-indicator" class="ptr-indicator">⬇️ 下拉以更新數據</div>
 
     <div class="main-content">
         <!-- 左側天氣面板 -->
@@ -368,6 +373,107 @@
     </div>
 
     <script>
+        // ==========================================
+        // iPad / 手機下拉更新 (Pull-to-Refresh) 核心邏輯
+        // ==========================================
+        let ptrStartY = 0;
+        let ptrCurrentY = 0;
+        let isPulling = false;
+        const ptrIndicator = document.getElementById('ptr-indicator');
+        const ptrMainContent = document.querySelector('.main-content');
+
+        document.addEventListener('touchstart', (e) => {
+            // 如果畫面有 Modal 打開咗，就唔允許下拉更新
+            if (document.querySelector('.modal-overlay.active')) return;
+
+            let el = e.target;
+            let canScrollUp = false;
+            
+            // 檢查點擊嘅位置係咪喺一個已經向下拉咗嘅列表入面 (例如天氣或巴士列表)
+            while(el && el !== document.body && el !== document.documentElement) {
+                if (el.scrollTop > 0) {
+                    canScrollUp = true;
+                    break;
+                }
+                el = el.parentElement;
+            }
+
+            // 只有當所有容器都喺最頂部 (冇得再向上捲) 嘅時候，先啟動下拉功能
+            if (!canScrollUp) {
+                ptrStartY = e.touches[0].clientY;
+                isPulling = true;
+                ptrMainContent.style.transition = 'none';
+                ptrIndicator.style.transition = 'none';
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            ptrCurrentY = e.touches[0].clientY;
+            let distance = ptrCurrentY - ptrStartY;
+
+            // 如果係向下拉
+            if (distance > 0) {
+                // 阻止 iOS Safari 原生嘅「橡皮筋」邊緣回彈效果
+                if (e.cancelable) e.preventDefault(); 
+
+                let moveY = Math.min(distance * 0.4, 80); // 增加阻力感，最多只拉動 80px
+                ptrMainContent.style.transform = `translateY(${moveY}px)`;
+                ptrIndicator.style.transform = `translateY(${moveY}px)`;
+
+                if (moveY > 55) {
+                    ptrIndicator.innerHTML = '🔄 鬆開即刻更新...';
+                } else {
+                    ptrIndicator.innerHTML = '⬇️ 下拉以更新數據';
+                }
+            } else {
+                // 如果向上推，取消下拉狀態，交返俾原生滾動
+                isPulling = false;
+                ptrMainContent.style.transform = `translateY(0)`;
+                ptrIndicator.style.transform = `translateY(0)`;
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (!isPulling) return;
+            isPulling = false;
+            
+            let distance = ptrCurrentY - ptrStartY;
+            // 加上平滑回彈嘅動畫效果
+            ptrMainContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+            ptrIndicator.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+
+            if (distance * 0.4 > 55) {
+                // 拉動超過觸發點：固定喺 Loading 位置並刷新資料
+                ptrIndicator.innerHTML = '⏳ 正在獲取最新數據...';
+                ptrMainContent.style.transform = `translateY(50px)`;
+                ptrIndicator.style.transform = `translateY(50px)`;
+                
+                // 執行更新
+                fetchWeather();
+                fetchMtrStatusMarquee();
+                fetchMTR();
+                fetchRealBusData();
+
+                // 停留一陣等用戶睇到更新狀態，然後彈回頂部
+                setTimeout(() => {
+                    ptrMainContent.style.transform = `translateY(0)`;
+                    ptrIndicator.style.transform = `translateY(0)`;
+                }, 1200);
+            } else {
+                // 拉動距離唔夠，咩都唔做，直接彈回
+                ptrMainContent.style.transform = `translateY(0)`;
+                ptrIndicator.style.transform = `translateY(0)`;
+            }
+            
+            ptrStartY = 0;
+            ptrCurrentY = 0;
+        });
+
+        // ==========================================
+        // 原有其他邏輯
+        // ==========================================
+
         let deferredPrompt; 
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
         
@@ -472,7 +578,6 @@
                     let planeIcon = (b.dest.includes('機場') || b.dest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
                     let busNoDisplay = `${moonIcon}${planeIcon}${b.no}`;
 
-                    // ✅ 加入 onClick 事件觸發詳細資料彈窗，並傳入 b.stop 作為目前車站識別
                     busHtml += `
                         <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${b.no}', '${b.dest}', '${b.stop}')">
                             <div>
@@ -826,7 +931,6 @@
                     if(json?.data) {
                         json.data.forEach(d => {
                             if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(b.route).toUpperCase()) {
-                                // ⚠️ 修正：將 b.stop 加入去 raw 數據度，方便打開 Modal 嗰時傳入去比對
                                 raw.push({ no: d.route, dest: b.dest, time: d.eta, co: b.co, stop: b.stop, stopName: b.name, localTarget: new Date(d.eta), uid: `${b.co}_${b.route}_${d.eta}` });
                             }
                         });
@@ -839,14 +943,10 @@
             renderUI();
         }
 
-        // ==========================================
-        // 🆕 巴士詳細資料 Modal 核心邏輯
-        // ==========================================
         function closeBusDetailModal() {
             document.getElementById('bus-detail-modal').classList.remove('active');
         }
 
-        // ⚠️ 修正：加入 currentStopId 參數
         async function openBusDetail(co, route, dest, currentStopId = null) {
             const modal = document.getElementById('bus-detail-modal');
             const body = document.getElementById('bus-detail-body');
@@ -874,7 +974,6 @@
                     let stopDetails = await Promise.all(stops.map(async (s, idx) => {
                         let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         
-                        // ⚠️ 修正：高亮標記你目前嘅車站
                         let isCurrent = (s.stop === currentStopId);
                         let highlightClass = isCurrent ? 'current-stop-highlight' : '';
                         let currentLabel = isCurrent ? '<span class="current-stop-badge">📍 你喺呢度</span>' : '';
@@ -898,7 +997,6 @@
                     let stopDetails = await Promise.all(stops.map(async (s, idx) => {
                         let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         
-                        // ⚠️ 修正：高亮標記你目前嘅車站
                         let isCurrent = (s.stop === currentStopId);
                         let highlightClass = isCurrent ? 'current-stop-highlight' : '';
                         let currentLabel = isCurrent ? '<span class="current-stop-badge">📍 你喺呢度</span>' : '';
@@ -929,7 +1027,6 @@
                 </div>
             `;
             
-            // ⚠️ 自動捲動到你所在嘅車站 (延遲一陣等畫面渲染完成)
             setTimeout(() => {
                 let currentStopElement = document.querySelector('.current-stop-highlight');
                 if (currentStopElement) {
