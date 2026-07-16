@@ -478,120 +478,81 @@
         const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        // ✅ 強效版走馬燈 (多點偵測，修復局部故障無法顯示嘅問題)
+        // ✅ 極簡版走馬燈 (直接檢查有無 ETA 班次倒數數據)
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
-            
+
             if (!isOpHours) {
                 marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 ";
                 marqueeEl.className = "marquee-text";
                 return;
             }
 
-            // 定義每條路線需要抽查嘅關鍵車站（兩端總站，將軍澳綫及東鐵綫包含支線總站）
-            const lineChecks = [
-                { line: 'ISL', stations: ['KET', 'CHW'] },
-                { line: 'TWL', stations: ['CEN', 'TSW'] },
-                { line: 'KTL', stations: ['WHA', 'TIK'] },
-                { line: 'TKL', stations: ['NOP', 'POA', 'LHP'] }, // 將軍澳綫：北角、寶琳、康城
-                { line: 'TML', stations: ['TUM', 'WKS'] },
-                { line: 'EAL', stations: ['ADM', 'LOW', 'LMC'] }, // 東鐵綫：金鐘、羅湖、落馬洲
-                { line: 'TCL', stations: ['HOK', 'TUC'] },
-                { line: 'AEL', stations: ['HOK', 'AWE'] },
-                { line: 'SIL', stations: ['ADM', 'SOH'] },
-                { line: 'DRL', stations: ['SUN', 'DIS'] }
+            // 每條線抽查一個最核心、班次最密嘅中途站
+            const checkStations = [
+                {line: 'ISL', sta: 'ADM'}, {line: 'TWL', sta: 'ADM'}, {line: 'KTL', sta: 'YMT'},
+                {line: 'TKL', sta: 'TKO'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
+                {line: 'TCL', sta: 'NAC'}, {line: 'AEL', sta: 'KOW'}, {line: 'SIL', sta: 'OCP'},
+                {line: 'DRL', sta: 'SUN'}
             ];
-            
+
             try {
                 let ts = Date.now();
-                let allFetches = [];
-                let fetchMeta = [];
+                let results = await Promise.allSettled(checkStations.map(s =>
+                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, { cache: 'no-store' })
+                    .then(r => {
+                        if (!r.ok) throw new Error("HTTP Error");
+                        return r.json();
+                    })
+                ));
 
-                // 準備所有 API 請求
-                lineChecks.forEach(lc => {
-                    lc.stations.forEach(sta => {
-                        allFetches.push(
-                            fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${lc.line}&sta=${sta}&_=${ts}`, { cache: 'no-store' })
-                            .then(r => {
-                                if (!r.ok) throw new Error("HTTP Error");
-                                return r.json();
-                            })
-                        );
-                        fetchMeta.push({ line: lc.line, sta: sta });
-                    });
-                });
-
-                let results = await Promise.allSettled(allFetches);
-                
-                // 按照路線紀錄狀態
-                let lineStatusMap = {};
-                for (let line in MTR_NETWORK) {
-                    lineStatusMap[line] = { issues: [], hasData: false };
-                }
-
+                let issues = [];
                 results.forEach((res, i) => {
-                    let meta = fetchMeta[i];
-                    let lineCode = meta.line;
-                    let key = `${meta.line}-${meta.sta}`;
-                    
+                    let s = checkStations[i];
+                    let lineName = MTR_NETWORK[s.line].name;
+                    let key = `${s.line}-${s.sta}`;
+
+                    // 1. 斷網或 API 完全死機
                     if (res.status === 'rejected') {
-                        lineStatusMap[lineCode].issues.push(`服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
+                        issues.push(`⚫ ${lineName} 無法連線`);
                         return;
                     }
-                    
+
                     let d = res.value;
-                    if (!d) return;
-                    
-                    lineStatusMap[lineCode].hasData = true;
+                    let hasData = false;
 
-                    let status = Number(d.status);
-                    let msg = d.message ? String(d.message).trim() : "";
-                    let isNormalMsg = (msg === "" || msg.toLowerCase() === "successful");
-                    let hasIncidentUrl = (d.url && String(d.url).trim() !== "");
+                    // 2. 直頭檢查 data 裡面有無上下行嘅班次陣列
+                    if (d && d.data && d.data[key]) {
+                        let upTrains = d.data[key].UP || [];
+                        let downTrains = d.data[key].DOWN || [];
 
-                    if (status === 0) {
-                        let issueMsg = !isNormalMsg ? msg : "服務異常 / 訊號故障 (Service Disrupted / Signal Fault)";
-                        lineStatusMap[lineCode].issues.push(issueMsg);
-                    } else if (!d.data || !d.data[key]) {
-                        // 營運時間內，API 包底攞唔到數據
-                        lineStatusMap[lineCode].issues.push(`服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
+                        // 只要任何一個方向有車，就當有數據
+                        if (upTrains.length > 0 || downTrains.length > 0) {
+                            hasData = true;
+                        }
+                    }
+
+                    // 3. 判斷邏輯
+                    if (!hasData) {
+                        issues.push(`⚠️ ${lineName} 服務異常 (無班次數據)`);
                     } else {
-                        let delayFlag = d.isdelay || d.isDelay || d.Isdelay || 'N';
-                        let isDelayed = String(delayFlag).toUpperCase() === 'Y';
+                        // 雖然有數據，但如果 API 有俾 Delay 標籤，都照樣溫馨提示
+                        let isDelayed = String(d.isdelay || d.isDelay || d.Isdelay || 'N').toUpperCase() === 'Y';
                         if (isDelayed) {
-                            lineStatusMap[lineCode].issues.push(`延誤 ${!isNormalMsg ? ' - ' + msg : ''}`);
-                        } else if (!isNormalMsg || hasIncidentUrl) {
-                            lineStatusMap[lineCode].issues.push(`${hasIncidentUrl && isNormalMsg ? "請留意特別交通消息" : msg}`);
+                            issues.push(`🔴 ${lineName} 班次延誤`);
                         }
                     }
                 });
 
-                let displayIssues = [];
-                
-                // 整理每條線嘅最終狀態
-                for (let lineCode in lineStatusMap) {
-                    let info = lineStatusMap[lineCode];
-                    let lineName = MTR_NETWORK[lineCode].name;
-                    
-                    // 去除重複嘅錯誤訊息（避免兩邊總站回傳同一個 Delay message 時重複顯示）
-                    let uniqueIssues = [...new Set(info.issues)];
-                    
-                    if (uniqueIssues.length > 0) {
-                        displayIssues.push(`⚠️ ${lineName}: ${uniqueIssues.join(" ｜ ")}`);
-                    } else if (!info.hasData && isOpHours) {
-                        displayIssues.push(`⚫ ${lineName} 服務異常 / 訊號故障 (Service Disrupted / Signal Fault)`);
-                    }
-                }
-
-                if (displayIssues.length === 0) {
+                if (issues.length === 0) {
                     marqueeEl.innerHTML = " 🟢 All Lines Operating Normally 目前全線皆正常營運 ";
                     marqueeEl.className = "marquee-text";
                 } else {
-                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + displayIssues.join(" ｜｜ ") + " ｜ All other lines are operating on schedule 其餘路線皆正常行駛 " ;
+                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + issues.join(" ｜ ") + " ｜ All other lines are operating on schedule 其餘路線皆正常行駛 ";
                     marqueeEl.className = "marquee-text has-issue";
                 }
-            } catch(e) { 
+            } catch(e) {
                 marqueeEl.innerHTML = "📡 無法連線至港鐵系統...";
                 marqueeEl.className = "marquee-text has-issue";
             }
