@@ -26,12 +26,6 @@
             display: flex; flex-direction: column; overflow: hidden; 
         }
 
-        /* 🚨 iOS 滾動鎖定狀態 🚨 */
-        html.modal-open, body.modal-open {
-            overflow: hidden !important;
-            height: 100% !important;
-        }
-
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; transition: opacity 0.3s; }
         .loading-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #4da6ff; letter-spacing: 2px;}
         .progress-container { width: 80%; max-width: 400px; height: 12px; background: #222; border-radius: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
@@ -39,11 +33,13 @@
         #progress-text { margin-top: 15px; font-size: 1.1rem; font-weight: bold; font-variant-numeric: tabular-nums; }
         #progress-detail { margin-top: 5px; font-size: 0.85rem; color: #888; text-align: center; padding: 0 20px; line-height: 1.4;}
 
+        /* 下拉更新 (Pull-to-refresh) UI */
         .ptr-indicator { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; color: #4da6ff; font-weight: bold; font-size: 0.95rem; z-index: 1000; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
         .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 15px; padding: 15px; flex: 1; overflow: hidden; position: relative; z-index: 2; background: var(--bg-color); }
         .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; }
 
+        /* 左側天氣面板 */
         .left-col { display: flex; flex-direction: column; gap: 15px; height: 100%; }
         .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
         .integrated-weather-panel::-webkit-scrollbar { width: 4px; }
@@ -88,6 +84,7 @@
         .fc-temp { font-size: 0.8rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;}
         .fc-psr { font-size: 0.68rem; font-weight: 600; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.3);}
 
+        /* 右側面板 */
         .right-col { display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; }
         h2 { margin: 0 0 12px 0; font-size: 1.05rem; color: var(--text-muted); border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .header-actions { display: flex; align-items: center; gap: 10px; }
@@ -137,13 +134,14 @@
         .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
         .no-service { grid-column: 1 / -1; text-align: center; color: #555; padding: 40px; font-size: 0.95rem; line-height: 1.6;}
 
-        /* Modal 基礎樣式 */
+        /* ========================================= */
+        /* ✅ 乾淨標準嘅 Modal 排版 (保證碌得郁) */
+        /* ========================================= */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); 
             display: flex; justify-content: center; align-items: center; 
             z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
-            overscroll-behavior: none;
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
@@ -153,8 +151,7 @@
             border-radius: 16px; 
             width: 90%; 
             max-width: 500px; 
-            height: 80vh; 
-            height: 80dvh;
+            max-height: 85vh; /* 標準彈性高度限制 */
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
@@ -168,8 +165,8 @@
         .modal-body { 
             padding: 15px; 
             flex: 1 1 auto; 
-            overflow-y: auto !important; 
-            -webkit-overflow-scrolling: touch !important; 
+            overflow-y: auto; /* 原生自然滾動 */
+            -webkit-overflow-scrolling: touch; 
         }
 
         .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; flex: 0 0 auto;}
@@ -179,6 +176,7 @@
         .btn-save { background: #0071CE; color: #fff; }
         .btn-back { background: #444; color: #fff; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;}
 
+        /* 巴士路線詳情 Modal 專用樣式 */
         .detail-header-card { background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; text-align: center; }
         .detail-route-title { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 5px; }
         .detail-route-desc { font-size: 1.1rem; font-weight: bold; color: #4da6ff; margin-bottom: 10px; }
@@ -193,18 +191,7 @@
         .current-stop-highlight { background: rgba(77, 166, 255, 0.15); border-left: 4px solid #4da6ff !important; color: #fff !important; font-weight: bold; }
         .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #4da6ff; color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 900; }
 
-        /* 右側浮動 Menu */
-        .side-menu-wrapper { position: fixed; top: 50%; right: -75px; transform: translateY(-50%); display: flex; align-items: center; z-index: 8000; transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .side-menu-handle { width: 28px; height: 70px; background: #222; color: #fff; font-size: 0.9rem; border-radius: 12px 0 0 12px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: -4px 0 10px rgba(0,0,0,0.5); border: 1px solid #444; border-right: none; user-select: none; }
-        .side-menu-arrow { transition: transform 0.3s ease; }
-        .side-menu-wrapper.active .side-menu-arrow, .side-menu-wrapper:hover .side-menu-arrow { transform: rotate(180deg); color: #4da6ff; }
-        .side-menu-content { width: 75px; background: #151515; display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px 0; border: 1px solid #333; border-right: none; border-radius: 0 0 0 12px; box-shadow: -4px 0 15px rgba(0,0,0,0.6); }
-        .menu-icon { width: 45px; height: 45px; background: #2a2a2a; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; cursor: pointer; transition: all 0.2s ease; border: 1px solid #444; }
-        .menu-icon:hover { background: #4da6ff; transform: scale(1.15); box-shadow: 0 0 10px rgba(77, 166, 255, 0.5); }
-        .menu-icon:active { transform: scale(0.9); }
-        @media (hover: hover) and (pointer: fine) { .side-menu-wrapper:hover { right: 0; } }
-        .side-menu-wrapper.active { right: 0; }
-
+        /* 按鈕及列表樣式 */
         .line-group { margin-bottom: 15px; }
         .line-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; padding-left: 5px; display: flex; align-items: center; gap: 6px; }
         .line-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -230,7 +217,14 @@
         .bus-dir-btn.kmb { border-left: 5px solid var(--warning-red); }
         .bus-dir-btn.ctb { border-left: 5px solid #ffcc00; }
         
-        .bus-stop-list { background: #0a0a0a; border-radius: 6px; border: 1px solid #222; padding: 5px; }
+        /* 巴士搜尋列表：限制最大高度，允許內部滾動 */
+        .bus-stop-list { 
+            max-height: 40vh; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            background: #0a0a0a; border-radius: 6px; border: 1px solid #222; padding: 5px; 
+        }
+
         .bus-stop-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 0.95rem; color:#ddd; transition: 0.2s; display:flex; align-items:center; gap:12px; margin:0;}
         .bus-stop-item:hover { background: #1a1a1a; color:#fff;}
         .bus-stop-item input[type="checkbox"] { transform: scale(1.4); cursor: pointer; accent-color: #0071CE;}
@@ -239,47 +233,6 @@
         
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
-        /* ========================================= */
-        /* 🚨 終極 Iframe iOS Safari 滾動修復區域 🚨 */
-        /* ========================================= */
-        .iframe-modal-content { 
-            width: 95vw !important; 
-            max-width: 1200px !important; 
-            height: 90vh !important; 
-            height: 90dvh !important; 
-            display: flex !important; 
-            flex-direction: column !important; 
-        }
-        
-        /* 將 Modal Body 變成不可滾動嘅容器，等入面嘅絕對定位框嚟做滾動 */
-        .iframe-modal-body { 
-            flex: 1 1 auto !important; 
-            position: relative !important; 
-            padding: 0 !important; 
-            overflow: hidden !important; 
-            background: #fff !important; 
-            border-radius: 0 0 16px 16px !important; 
-        }
-        
-        /* 呢個 div 負責框死個 iframe，並開啟原生滾動 */
-        .iframe-ios-scroll-fix { 
-            position: absolute !important; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            overflow-y: auto !important; 
-            -webkit-overflow-scrolling: touch !important; 
-            z-index: 10; 
-            border-radius: 0 0 16px 16px; 
-        }
-        
-        /* 強制 iframe 唔好超過 100% 寬度，否則會破壞滾動圖層 */
-        .iframe-wrapper-class { 
-            width: 1px !important; 
-            min-width: 100% !important; 
-            height: 100% !important; 
-            border: none !important; 
-            display: block !important; 
-        }
-
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
             .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
@@ -287,9 +240,6 @@
             .panel { margin-bottom: 0; padding: 15px; flex: none; height: auto; }
             .mtr-section { flex: none; }
             .bus-section { min-height: 400px; flex: none; }
-            
-            .modal-content { height: 85dvh; width: 95%; }
-            .iframe-modal-content { width: 98vw !important; height: 90dvh !important; }
         }
     </style>
 </head>
@@ -307,20 +257,8 @@
 
     <div id="ptr-indicator" class="ptr-indicator">⬇️ 下拉以更新數據</div>
 
-    <div id="side-menu-wrapper" class="side-menu-wrapper">
-        <div class="side-menu-handle" onclick="toggleSideMenu()">
-            <span class="side-menu-arrow">◀</span>
-        </div>
-        <div class="side-menu-content">
-            <div class="menu-icon" onclick="openIframeModal('https://dannytcchan00.github.io/0Data/tp.html', '颱風路徑')" title="颱風路徑">🌀</div>
-            <div class="menu-icon" onclick="openIframeModal('https://www.hko.gov.hk/tc/wxinfo/radars/radar.htm', '即時雷達圖')" title="即時雷達圖">📡</div>
-            <div class="menu-icon" onclick="openIframeModal('https://www.gov.hk/tc/residents/', '香港政府一站通')" title="政府一站通">🏛️</div>
-            <div class="menu-icon" onclick="openIframeModal('https://data.gov.hk/tc/', '資料一線通')" title="香港數據">📊</div>
-            <div class="menu-icon" onclick="openIframeModal('https://example.com', '測試網頁 (Example)')" title="測試網頁">🛠️</div>
-        </div>
-    </div>
-
     <div class="main-content">
+        <!-- 左側天氣面板 -->
         <div class="left-col">
             <div class="panel integrated-weather-panel">
                 <div class="top-info-bar">
@@ -357,6 +295,7 @@
             </div>
         </div>
 
+        <!-- 右側面板 -->
         <div class="right-col">
             <div class="panel mtr-section">
                 <h2>
@@ -446,99 +385,24 @@
         </div>
     </div>
 
-    <!-- 網站 Iframe 浮動視窗 (重點更新區) -->
-    <div id="iframe-modal" class="modal-overlay">
-        <div class="modal-content iframe-modal-content">
-            <div class="modal-header">
-                <h3 id="iframe-title">網站</h3>
-                <button onclick="closeIframeModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
-            </div>
-            <div class="iframe-modal-body">
-                <!-- 用絕對定位層包住 Iframe，呢個係碌得郁嘅核心 -->
-                <div class="iframe-ios-scroll-fix">
-                    <iframe id="site-iframe" class="iframe-wrapper-class" src="" scrolling="yes" frameborder="0"></iframe>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 圖片專用浮動視窗 -->
-    <div id="image-modal" class="modal-overlay">
-        <div class="modal-content" style="width: 95vw; height: 85vh; max-width: 800px;">
-            <div class="modal-header">
-                <h3 id="image-title">圖片</h3>
-                <button onclick="closeImageModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
-            </div>
-            <div class="modal-body" style="padding: 0; background: #000; border-radius: 0 0 16px 16px;">
-                <img id="modal-image" src="" style="width: 100%; height: 100%; object-fit: contain; display: block;">
-            </div>
-        </div>
-    </div>
-
     <script>
         // ==========================================
-        // 🚨 終極 iOS 背景防滾動鎖定 (Scroll Lock) 🚨
+        // 🔒 背景鎖定 (防 iOS 底部滾動)
         // ==========================================
         let iosScrollPosition = 0;
         
         function lockBackgroundScroll() {
             iosScrollPosition = window.scrollY || window.pageYOffset;
-            document.documentElement.classList.add('modal-open');
-            document.body.classList.add('modal-open');
             document.body.style.position = 'fixed';
             document.body.style.top = `-${iosScrollPosition}px`;
             document.body.style.width = '100%';
         }
         
         function unlockBackgroundScroll() {
-            document.documentElement.classList.remove('modal-open');
-            document.body.classList.remove('modal-open');
             document.body.style.position = '';
             document.body.style.top = '';
             document.body.style.width = '';
             window.scrollTo(0, iosScrollPosition);
-        }
-
-        // ==========================================
-        // 側邊 Menu, 網頁 iframe 同圖片視窗邏輯
-        // ==========================================
-        function toggleSideMenu() {
-            document.getElementById('side-menu-wrapper').classList.toggle('active');
-        }
-
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('side-menu-wrapper');
-            if (menu.classList.contains('active') && !menu.contains(e.target)) {
-                menu.classList.remove('active');
-            }
-        });
-
-        function openIframeModal(url, title) {
-            lockBackgroundScroll();
-            document.getElementById('iframe-title').innerText = title;
-            document.getElementById('site-iframe').src = url;
-            document.getElementById('iframe-modal').classList.add('active');
-            document.getElementById('side-menu-wrapper').classList.remove('active'); 
-        }
-
-        function closeIframeModal() {
-            unlockBackgroundScroll();
-            document.getElementById('iframe-modal').classList.remove('active');
-            setTimeout(() => { document.getElementById('site-iframe').src = ''; }, 300);
-        }
-        
-        function openImageModal(url, title) {
-            lockBackgroundScroll();
-            document.getElementById('image-title').innerText = title;
-            document.getElementById('modal-image').src = url;
-            document.getElementById('image-modal').classList.add('active');
-            document.getElementById('side-menu-wrapper').classList.remove('active'); 
-        }
-
-        function closeImageModal() {
-            unlockBackgroundScroll();
-            document.getElementById('image-modal').classList.remove('active');
-            setTimeout(() => { document.getElementById('modal-image').src = ''; }, 300);
         }
 
         // ==========================================
@@ -551,6 +415,7 @@
         const ptrMainContent = document.querySelector('.main-content');
 
         document.addEventListener('touchstart', (e) => {
+            // 🚨 絕對攔截：如果喺 Modal 入面觸摸，直接放棄所有 PTR 邏輯，交返畀原生滾動！
             if (e.target.closest('.modal-overlay.active')) return;
 
             let el = e.target;
@@ -573,6 +438,7 @@
         }, { passive: true });
 
         document.addEventListener('touchmove', (e) => {
+            // 🚨 絕對攔截：如果 Modal 開緊，唔好做任何 e.preventDefault()，保護內部滾動！
             if (e.target.closest('.modal-overlay.active')) return;
             
             if (!isPulling) return;
