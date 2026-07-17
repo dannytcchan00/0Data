@@ -164,18 +164,22 @@
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            overflow: hidden; /* 確保內容不會溢出圓角邊界 */
         }
         
         .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; border-radius: 16px 16px 0 0; flex-shrink: 0;}
         .modal-header h3 { margin: 0; font-size: 1.2rem; color: #fff; }
         .modal-count { font-size: 0.9rem; color: #aaa; background: #222; padding: 3px 8px; border-radius: 12px; }
         
+        /* ✅ 修復 iPad/iPhone 無法滾動嘅關鍵 */
         .modal-body { 
             padding: 15px; 
-            overflow-y: scroll; 
+            overflow-y: auto; /* 改用 auto 允許滾動 */
             -webkit-overflow-scrolling: touch; 
             touch-action: pan-y; 
-            max-height: 70vh; 
+            flex: 1; /* 自動伸展填滿剩餘空間 */
+            min-height: 0; /* 🚨 iOS Safari Flexbox 必須要有呢個先可以生出滾動條 */
+            overscroll-behavior-y: contain; /* 防止碌到底嗰陣觸發底層滾動 */
         }
         
         #bus-detail-body { border-radius: 0 0 16px 16px; }
@@ -357,10 +361,10 @@
             <!-- 第一個為颱風路徑圖片 openImageModal-->
             <div class="menu-icon" onclick="openIframeModal('https://dannytcchan00.github.io/0Data/tp.html', '颱風路徑')" title="颱風路徑">🌀</div>
             <!-- 第二個改為香港天文台雷達圖 -->
-            <div class="menu-icon" onclick="openIframeModal('https://dannytcchan00.github.io/0Data/radar.html', '即時雷達')" title="即時雷達">📡</div>
-            <div class="menu-icon" onclick="openIframeModal('https://', 'xxxx')" title="xxxx">🏛️</div>
-            <div class="menu-icon" onclick="openIframeModal('https://', 'xxxx')" title="xxxx">📊</div>
-            <div class="menu-icon" onclick="openIframeModal('https://', 'xxxx')" title="xxxx">🛠️</div>
+            <div class="menu-icon" onclick="openIframeModal('https://www.hko.gov.hk/tc/wxinfo/radars/radar.htm', '即時雷達圖')" title="即時雷達圖">📡</div>
+            <div class="menu-icon" onclick="openIframeModal('https://www.gov.hk/tc/residents/', '香港政府一站通')" title="政府一站通">🏛️</div>
+            <div class="menu-icon" onclick="openIframeModal('https://data.gov.hk/tc/', '資料一線通')" title="香港數據">📊</div>
+            <div class="menu-icon" onclick="openIframeModal('https://example.com', '測試網頁 (Example)')" title="測試網頁">🛠️</div>
         </div>
     </div>
 
@@ -496,7 +500,7 @@
         </div>
     </div>
 
-    <!-- 🟢 ✅ 徹底修復：網站 Iframe 浮動視窗 (改進了 CSS 類綁定與結構) -->
+    <!-- 網站 Iframe 浮動視窗 -->
     <div id="iframe-modal" class="modal-overlay">
         <div class="modal-content iframe-modal-content">
             <div class="modal-header">
