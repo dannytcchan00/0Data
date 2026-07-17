@@ -42,7 +42,7 @@
 
         /* 左側天氣面板 */
         .left-col { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: scroll; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: scroll; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
         .integrated-weather-panel::-webkit-scrollbar { width: 4px; }
         .integrated-weather-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         
@@ -127,7 +127,7 @@
 
         /* 巴士格仔 */
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 8px; overflow-y: scroll; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 8px; overflow-y: scroll; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
         .bus-grid::-webkit-scrollbar { width: 4px; }
         .bus-grid::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
         .bus-card { min-height: 106px; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.1s; }
@@ -150,41 +150,46 @@
         .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
         .no-service { grid-column: 1 / -1; text-align: center; color: #555; padding: 40px; font-size: 0.95rem; line-height: 1.6;}
 
-        /* Modal UI */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        /* ✅ 徹底重構 iOS 防彈級 Modal 佈局 */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); 
+            display: flex; justify-content: center; align-items: center; 
+            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s; 
+            padding: 20px; /* 確保 Modal 唔會貼住螢幕邊界 */
+        }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
         .modal-content { 
             background: var(--panel-bg); 
             border: 1px solid #333; 
             border-radius: 16px; 
-            width: 90%; 
+            width: 100%; 
             max-width: 500px; 
-            max-height: 85vh; 
+            max-height: 85vh; /* 確保有一個絕對的高度限制 */
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            overflow: hidden; /* 確保內容不會溢出圓角邊界 */
+            overflow: hidden; /* 強制切走超出嘅部分 */
         }
         
-        .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; border-radius: 16px 16px 0 0; flex-shrink: 0;}
+        .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; flex-shrink: 0; /* 唔畀壓縮 */}
         .modal-header h3 { margin: 0; font-size: 1.2rem; color: #fff; }
         .modal-count { font-size: 0.9rem; color: #aaa; background: #222; padding: 3px 8px; border-radius: 12px; }
         
-        /* ✅ 修復 iPad/iPhone 無法滾動嘅關鍵 */
+        /* 🚨 iOS Safari Flexbox 滾動核心修復 */
         .modal-body { 
             padding: 15px; 
-            overflow-y: auto; /* 改用 auto 允許滾動 */
-            -webkit-overflow-scrolling: touch; 
-            touch-action: pan-y; 
-            flex: 1; /* 自動伸展填滿剩餘空間 */
-            min-height: 0; /* 🚨 iOS Safari Flexbox 必須要有呢個先可以生出滾動條 */
-            overscroll-behavior-y: contain; /* 防止碌到底嗰陣觸發底層滾動 */
+            overflow-y: scroll !important; /* 強制開啟滾動 */
+            -webkit-overflow-scrolling: touch !important; 
+            flex: 1 1 0%; /* 呢度嘅 0% 係 iOS 防縮放鎖死嘅關鍵 */
+            min-height: 0; 
+            display: block; /* 防止內部再次 Flex 導致高度計算錯誤 */
+            position: relative; /* 修復 iOS 渲染層 bug */
+            /* 🚫 絕對唔可以加 touch-action: pan-y，會干擾 WebKit */
         }
-        
-        #bus-detail-body { border-radius: 0 0 16px 16px; }
 
-        .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; border-radius: 0 0 16px 16px; flex-shrink: 0;}
+        .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; flex-shrink: 0; /* 唔畀壓縮 */}
         
         .modal-btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;}
         .btn-cancel { background: #333; color: #fff; }
@@ -281,7 +286,7 @@
             border: 1px solid #222; 
             padding: 5px; 
             -webkit-overflow-scrolling: touch; 
-            touch-action: pan-y; 
+            /* 🚫 絕對唔可以加 touch-action: pan-y */
         }
 
         .bus-stop-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 0.95rem; color:#ddd; transition: 0.2s; display:flex; align-items:center; gap:12px; margin:0;}
@@ -292,7 +297,7 @@
         
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
-        /* ✅ 徹底修正：側邊欄 Iframe 彈出視窗專屬樣式 */
+        /* Iframe 彈出視窗專屬樣式 */
         .iframe-modal-content {
             width: 95vw !important;
             max-width: 1200px !important;
@@ -328,11 +333,12 @@
             .bus-section { min-height: 400px; flex: none; }
             .bus-grid { overflow-y: visible; align-content: flex-start; }
             
-            /* 行動端 Iframe 適配 */
+            /* 行動端限制高度，保證 iOS 安全滾動邊界 */
+            .modal-content { max-height: 80vh; }
             .iframe-modal-content {
                 width: 98vw !important;
-                height: 90vh !important;
-                max-height: 90vh !important;
+                height: 80vh !important;
+                max-height: 80vh !important;
             }
         }
     </style>
@@ -487,7 +493,7 @@
         </div>
     </div>
 
-    <!-- 巴士路線詳情 Modal -->
+    <!-- 巴士路線詳情 Modal (呢個就係重點修復嘅對象) -->
     <div id="bus-detail-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -514,17 +520,14 @@
         </div>
     </div>
     
-    <!-- 🔥 圖片專用浮動視窗 (徹底解決縮放問題) -->
+    <!-- 🔥 圖片專用浮動視窗 -->
     <div id="image-modal" class="modal-overlay">
-        <!-- 強制 width: 95vw 同 height: 85vh，確保個框絕對唔會超出螢幕 -->
         <div class="modal-content" style="width: 95vw; height: 85vh; max-width: 800px; display: flex; flex-direction: column;">
             <div class="modal-header" style="flex-shrink: 0;">
                 <h3 id="image-title">圖片</h3>
                 <button onclick="closeImageModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
             </div>
-            <!-- 強制 flex: 1 食盡剩餘空間，overflow: hidden 唔畀佢撐大 -->
-            <div class="modal-body" style="flex: 1; min-height: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 0 0 16px 16px;">
-                <!-- 使用 width: 100% 同 height: 100% 配合 object-fit: contain，保證全圖顯示 -->
+            <div class="modal-body" style="flex: 1 1 0%; min-height: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 0 0 16px 16px;">
                 <img id="modal-image" src="" style="width: 100%; height: 100%; object-fit: contain; display: block;">
             </div>
         </div>
