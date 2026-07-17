@@ -322,8 +322,8 @@
             <span class="side-menu-arrow">◀</span>
         </div>
         <div class="side-menu-content">
-            <!-- 5個預設 Demo -->
-            <div class="menu-icon" onclick="openIframeModal('https://dannytcchan00.github.io/0Data/typhoon.html', '颱風路徑')" title="颱風路徑">🌀</div>
+            <!-- 5個預設 Demo，第一個已改為開啟專用圖片視窗 -->
+            <div class="menu-icon" onclick="openImageModal('https://www.smca.fun/assets/image/TC_Forecast/TRACK_COLLECTION/track_collection.png', '颱風路徑')" title="颱風路徑">🌀</div>
             <div class="menu-icon" onclick="openIframeModal('https://www.hko.gov.hk/tc/index.html', '香港天文台')" title="香港天文台">🌦️</div>
             <div class="menu-icon" onclick="openIframeModal('https://www.gov.hk/tc/residents/', '香港政府一站通')" title="政府一站通">🏛️</div>
             <div class="menu-icon" onclick="openIframeModal('https://data.gov.hk/tc/', '資料一線通')" title="香港數據">📊</div>
@@ -463,23 +463,37 @@
         </div>
     </div>
 
-    <!-- 🆕 網站 Iframe 浮動視窗 -->
+    <!-- 網站 Iframe 浮動視窗 -->
     <div id="iframe-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 95%; width: 1200px; height: 85vh;">
             <div class="modal-header">
                 <h3 id="iframe-title">網站</h3>
                 <button onclick="closeIframeModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
             </div>
-            <div class="modal-body" style="padding: 0; overflow: hidden; background: #fff;">
+            <div class="modal-body" style="padding: 0; overflow: hidden; background: #fff; border-radius: 0 0 16px 16px;">
                 <!-- Iframe 用來載入外部網站 -->
                 <iframe id="site-iframe" src="" style="width:100%; height:100%; border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🆕 圖片專用浮動視窗 -->
+    <div id="image-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 95%; width: auto; height: auto; max-height: 85vh;">
+            <div class="modal-header">
+                <h3 id="image-title">圖片</h3>
+                <button onclick="closeImageModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+            </div>
+            <div class="modal-body" style="padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 0 0 16px 16px;">
+                <!-- 圖片會自動縮放去適應框框大細 -->
+                <img id="modal-image" src="" style="max-width: 100%; max-height: calc(85vh - 60px); object-fit: contain;">
             </div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 🆕 側邊 Menu 及 Iframe 浮動視窗邏輯
+        // 🆕 側邊 Menu, 網頁 iframe 同圖片視窗邏輯
         // ==========================================
         function toggleSideMenu() {
             document.getElementById('side-menu-wrapper').classList.toggle('active');
@@ -502,6 +516,19 @@
         function closeIframeModal() {
             document.getElementById('iframe-modal').classList.remove('active');
             setTimeout(() => { document.getElementById('site-iframe').src = ''; }, 300);
+        }
+        
+        // 🆕 打開獨立嘅圖片視窗
+        function openImageModal(url, title) {
+            document.getElementById('image-title').innerText = title;
+            document.getElementById('modal-image').src = url;
+            document.getElementById('image-modal').classList.add('active');
+            document.getElementById('side-menu-wrapper').classList.remove('active'); 
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').classList.remove('active');
+            setTimeout(() => { document.getElementById('modal-image').src = ''; }, 300);
         }
 
         // ==========================================
@@ -644,7 +671,6 @@
             let mtrHtml = '';
             let isOpHours = checkIsOperatingHours();
             
-            // 🆕 取得現在時間，判斷是否為深夜收車邊緣時段 (23:30 - 05:59)
             let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
             let nowH = now.getHours();
             let nowM = now.getMinutes();
@@ -657,13 +683,10 @@
                 let isAnomaly = false;
                 let isEnded = false;
 
-                // 🆕 如果無數據或者 API 傳回暫停狀態
                 if (s.data.length === 0 || s.suspended) {
-                    // 如果係深夜時段或非營運時間，當作正常收車處理
                     if (isLateNightEdge || !isOpHours) {
                         isEnded = true;
                     } else {
-                        // 日間時間先當作故障
                         isAnomaly = true;
                     }
                 }
@@ -766,7 +789,6 @@
                 ));
 
                 let issues = [];
-                // 🆕 判斷是否處於收車邊緣時間 (23:30 - 05:59)
                 let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
                 let h = now.getHours();
                 let m = now.getMinutes();
@@ -796,7 +818,6 @@
                     if (isDelayed) {
                         issues.push(`🔴 ${lineName} 班次延誤`);
                     } else if (!hasData || Number(d.status) === 0) {
-                        // 🆕 如果唔係深夜收車時段，無數據先至當故障
                         if (!isLateNightEdge) {
                             issues.push(`⚠️ ${lineName} 暫無班次數據 `);
                         }
@@ -1252,9 +1273,12 @@
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 60000); 
             
-            fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 60000); 
+            // 🆕 MTR 狀態走馬燈改為 45秒更新
+            fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 45000); 
             
-            fetchMTR(); setInterval(fetchMTR, 60000); 
+            // 🆕 MTR 班次改為 45秒更新
+            fetchMTR(); setInterval(fetchMTR, 45000); 
+            
             setInterval(fetchRealBusData, 60000);
             initStaticDatabase();
 
