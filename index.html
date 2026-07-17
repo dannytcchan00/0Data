@@ -154,7 +154,6 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
-        /* 🔥 重點修復：絕對移除 overflow: hidden; */
         .modal-content { 
             background: var(--panel-bg); 
             border: 1px solid #333; 
@@ -165,24 +164,20 @@
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            /* 🚫 移除 overflow: hidden，因為佢同 border-radius 會觸發 iOS Webkit 滾動崩潰 Bug */
         }
         
-        /* 將圓角手動分配畀 Header 同 Footer */
         .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; border-radius: 16px 16px 0 0; }
         .modal-header h3 { margin: 0; font-size: 1.2rem; color: #fff; }
         .modal-count { font-size: 0.9rem; color: #aaa; background: #222; padding: 3px 8px; border-radius: 12px; }
         
-        /* 🔥 iOS 終極滑動配置 */
         .modal-body { 
             padding: 15px; 
             overflow-y: scroll; 
             -webkit-overflow-scrolling: touch; 
-            touch-action: pan-y; /* 確保 iOS 識別呢個係上下滑動區域 */
-            max-height: 70vh; /* 強制寫死高度上限，逼 iOS 出現滾動條 */
+            touch-action: pan-y; 
+            max-height: 70vh; 
         }
         
-        /* 巴士路線詳情 Modal 沒有 Footer，所以 Body 底部要有圓角 */
         #bus-detail-body { border-radius: 0 0 16px 16px; }
 
         .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; border-radius: 0 0 16px 16px; }
@@ -204,7 +199,6 @@
             border: 1px solid #222; 
             border-radius: 8px; 
             padding: 5px; 
-            /* 放棄嵌套滾動，交返畀 modal-body 滑動 */
         }
         
         .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid #1a1a1a; color: #ccc; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; line-height: 1.3; }
@@ -275,7 +269,6 @@
         .bus-dir-btn.kmb { border-left: 5px solid var(--warning-red); }
         .bus-dir-btn.ctb { border-left: 5px solid #ffcc00; }
         
-        /* 🔥 iOS 確保搜索車站列表滑動 */
         .bus-stop-list { 
             max-height: 280px; 
             overflow-y: scroll; 
@@ -329,7 +322,7 @@
             <span class="side-menu-arrow">◀</span>
         </div>
         <div class="side-menu-content">
-            <!-- 5個預設 Demo (注意：部分大網如 Google/FB 會封鎖 iframe 嵌入，所以我用支援的網站做 Demo) -->
+            <!-- 5個預設 Demo -->
             <div class="menu-icon" onclick="openIframeModal('https://dannytcchan00.github.io/0Data/typhoon.html', '颱風路徑')" title="颱風路徑">🌀</div>
             <div class="menu-icon" onclick="openIframeModal('https://www.hko.gov.hk/tc/index.html', '香港天文台')" title="香港天文台">🌦️</div>
             <div class="menu-icon" onclick="openIframeModal('https://www.gov.hk/tc/residents/', '香港政府一站通')" title="政府一站通">🏛️</div>
@@ -492,7 +485,6 @@
             document.getElementById('side-menu-wrapper').classList.toggle('active');
         }
 
-        // 點擊畫面其他地方自動收起 Menu (優化觸控體驗)
         document.addEventListener('click', (e) => {
             const menu = document.getElementById('side-menu-wrapper');
             if (menu.classList.contains('active') && !menu.contains(e.target)) {
@@ -504,12 +496,11 @@
             document.getElementById('iframe-title').innerText = title;
             document.getElementById('site-iframe').src = url;
             document.getElementById('iframe-modal').classList.add('active');
-            document.getElementById('side-menu-wrapper').classList.remove('active'); // 打開網頁後自動收起 Menu
+            document.getElementById('side-menu-wrapper').classList.remove('active'); 
         }
 
         function closeIframeModal() {
             document.getElementById('iframe-modal').classList.remove('active');
-            // 等動畫做完 (約300ms) 先清空 src，停止影片播放或背景資源佔用
             setTimeout(() => { document.getElementById('site-iframe').src = ''; }, 300);
         }
 
@@ -598,10 +589,6 @@
             ptrCurrentY = 0;
         });
 
-        // ==========================================
-        // 原有其他邏輯
-        // ==========================================
-
         let deferredPrompt; 
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
         
@@ -657,13 +644,29 @@
             let mtrHtml = '';
             let isOpHours = checkIsOperatingHours();
             
+            // 🆕 取得現在時間，判斷是否為深夜收車邊緣時段 (23:30 - 05:59)
+            let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+            let nowH = now.getHours();
+            let nowM = now.getMinutes();
+            let isLateNightEdge = (nowH === 23 && nowM >= 30) || (nowH >= 0 && nowH <= 5);
+            
             transportTimestamps.mtr.forEach(s => {
                 let lineInfo = MTR_NETWORK[s.line];
                 if(!lineInfo) return;
 
-                let isSuspended = s.suspended;
-                let noDataInOpHours = (s.data.length === 0 && isOpHours);
-                let isAnomaly = isSuspended || noDataInOpHours;
+                let isAnomaly = false;
+                let isEnded = false;
+
+                // 🆕 如果無數據或者 API 傳回暫停狀態
+                if (s.data.length === 0 || s.suspended) {
+                    // 如果係深夜時段或非營運時間，當作正常收車處理
+                    if (isLateNightEdge || !isOpHours) {
+                        isEnded = true;
+                    } else {
+                        // 日間時間先當作故障
+                        isAnomaly = true;
+                    }
+                }
 
                 let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
                 let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
@@ -673,8 +676,8 @@
                     <div class="mtr-data-container">`;
                 
                 if (isAnomaly) {
-                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務延誤 / 訊號故障<br><span style="font-size:0.75rem;">(Service Disrupted / Signal Fault)</span></div>`;
-                } else if (s.data.length === 0 && !isOpHours) {
+                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${lineInfo.name} 服務延誤 / 暫無數據<br><span style="font-size:0.75rem;">(Service Disrupted)</span></div>`;
+                } else if (isEnded) {
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
@@ -763,13 +766,19 @@
                 ));
 
                 let issues = [];
+                // 🆕 判斷是否處於收車邊緣時間 (23:30 - 05:59)
+                let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+                let h = now.getHours();
+                let m = now.getMinutes();
+                let isLateNightEdge = (h === 23 && m >= 30) || (h >= 0 && h <= 5);
+
                 results.forEach((res, i) => {
                     let s = checkStations[i];
                     let lineName = MTR_NETWORK[s.line].name;
                     let key = `${s.line}-${s.sta}`;
 
                     if (res.status === 'rejected') {
-                        issues.push(`⚫ ${lineName} 無法連線`);
+                        if (!isLateNightEdge) issues.push(`⚫ ${lineName} 無法連線`);
                         return;
                     }
 
@@ -782,12 +791,14 @@
                         if (upTrains.length > 0 || downTrains.length > 0) hasData = true;
                     }
 
-                    if (!hasData) {
-                        issues.push(`⚠️ ${lineName} 服務延誤 / 訊號故障 / 冇辦法取得班次數據 `);
-                    } else {
-                        let isDelayed = String(d.isdelay || d.isDelay || d.Isdelay || 'N').toUpperCase() === 'Y';
-                        if (isDelayed) {
-                            issues.push(`🔴 ${lineName} 班次延誤`);
+                    let isDelayed = String(d.isdelay || d.isDelay || d.Isdelay || 'N').toUpperCase() === 'Y';
+                    
+                    if (isDelayed) {
+                        issues.push(`🔴 ${lineName} 班次延誤`);
+                    } else if (!hasData || Number(d.status) === 0) {
+                        // 🆕 如果唔係深夜收車時段，無數據先至當故障
+                        if (!isLateNightEdge) {
+                            issues.push(`⚠️ ${lineName} 暫無班次數據 `);
                         }
                     }
                 });
