@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實時颱風追蹤系統 (暗黑地圖版)</title>
+    <!-- Leaflet 地圖庫 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0; 
+            padding: 0; 
+            height: 100%;
+            font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif;
+            background-color: #121212; /* 整個網站嘅暗黑背景 */
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        /* 地圖容器 - 預設隱藏，有風先打開 */
+        #map {
+            width: 100%; 
+            height: 100vh;
+            display: none; 
+        }
+
+        /* 狀態 1：無颱風時嘅置中浮動框 (暗黑風格) */
+        #no-typhoon-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid #444;
+            z-index: 2000;
+            width: 80%;
+            max-width: 400px;
+            display: none; /* 預設隱藏，由 JS 控制 */
+        }
+        #no-typhoon-center h1 { color: #2ecc71; margin-top: 0; font-size: 26px; }
+        #no-typhoon-center p { color: #bbb; font-size: 15px; }
+
+        /* 載入中提示 */
+        #loading {
+            position: absolute; 
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px; 
+            z-index: 3000;
+            color: #fff;
+        }
+
+        /* 狀態 2：地圖 Popup 彈出框嘅暗黑化設計 */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.9);
+            border: 1px solid #555;
+        }
+        .typhoon-info { font-size: 14px; line-height: 1.6; min-width: 200px; }
+        .typhoon-info h3 { 
+            color: #ff5252; 
+            margin: 0 0 10px 0; 
+            font-size: 18px; 
+            border-bottom: 1px solid #555; 
+            padding-bottom: 8px;
+        }
+        .typhoon-info strong { color: #9bbbdc; }
+        .footer-note { font-size: 11px; color: #777; margin-top: 10px; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <!-- 載入中 -->
+    <div id="loading">📡 正在搜尋全球實時氣象數據...</div>
+
+    <!-- 冇颱風時嘅畫面 -->
+    <div id="no-typhoon-center">
+        <h1>🍃 現時天氣平靜</h1>
+        <p>目前全球並無活躍的熱帶氣旋。</p>
+        <p style="font-size: 12px; margin-top: 25px; color: #666;">系統將於背後每 5 分鐘自動掃描...</p>
+    </div>
+
+    <!-- 有颱風時嘅畫面 (全熒幕地圖) -->
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const now = new Date();
+        
+        // 1. 初始化地圖
+        const map = L.map('map').setView([22.3, 114.1], 4);
+        
+        // 轉用 CartoDB 嘅 Dark Matter (全黑底圖)，配合暗黑主題
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        const typhoonLayer = L.layerGroup().addTo(map);
+        const gdacsApiUrl = 'https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventtypes=TC';
+
+        // 2. 核心邏輯：獲取數據並自動切換 UI
+        async function fetchRealTimeTyphoon() {
+            try {
+                const response = await fetch(gdacsApiUrl);
+                const data = await response.json();
+                typhoonLayer.clearLayers();
+                
+                let activeCount = 0;
+
+                L.geoJSON(data, {
+                    // 極嚴格過濾：只接受過去 48 小時內有更新嘅數據
+                    filter: function(feature) {
+                        const props = feature.properties;
+                        const eventDate = new Date(props.todate || props.fromdate);
+                        const diffHours = (now - eventDate) / (1000 * 60 * 60);
+                        
+                        if (diffHours >= -24 && diffHours <= 48) { 
+                            activeCount++; 
+                            return true; 
+                        }
+                        return false; 
+                    },
+                    // 將颱風圖示畫成紅色圓點
+                    pointToLayer: function (feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 9,
+                            fillColor: "#ff5252",
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9
+                        });
+                    },
+                    // 點擊時顯示嘅詳細資訊框
+                    onEachFeature: function (feature, layer) {
+                        const props = feature.properties;
+                        const name = props.name || "未命名氣旋";
+                        
+                        // 提取各種氣象數據 (若無數據則顯示「請參考官方」)
+                        const severityText = props.severitydata ? props.severitydata.severitytext : "評估中";
+                        const updateTime = new Date(props.fromdate).toLocaleString('zh-HK');
+                        
+                        // 嘗試從 Description 抽風速同氣壓，否則顯示安全預設字句
+                        let speedInfo = props.severitydata && props.severitydata.severity ? props.severitydata.severity + " km/h (估算)" : "以官方公佈為準";
+                        
+                        const popupHtml = `
+                            <div class="typhoon-info">
+                                <h3>🌀 颱風 ${name}</h3>
+                                <p><strong>危險級別：</strong> ${severityText}</p>
+                                <p><strong>中心風力：</strong> ${speedInfo}</p>
+                                <p><strong>中心氣壓：</strong> 詳見官方報告</p>
+                                <p><strong>最後更新：</strong> ${updateTime}</p>
+                                <div class="footer-note">點擊虛線可查看預測路徑</div>
+                            </div>
+                        `;
+                        layer.bindPopup(popupHtml);
+                        
+                        // 獲取該颱風移動路徑
+                        fetchTrack(props.eventid, props.episodeid);
+                    }
+                }).addTo(typhoonLayer);
+
+                // 隱藏載入文字
+                document.getElementById('loading').style.display = 'none';
+
+                // ==========================================
+                // 3. UI 智能切換控制
+                // ==========================================
+                if (activeCount > 0) {
+                    // 有風打：關閉置中框，打開地圖
+                    document.getElementById('no-typhoon-center').style.display = 'none';
+                    document.getElementById('map').style.display = 'block';
+                    map.invalidateSize(); // 確保地圖打開時畫面唔會走位
+                } else {
+                    // 冇風打：關閉地圖，顯示置中框
+                    document.getElementById('map').style.display = 'none';
+                    document.getElementById('no-typhoon-center').style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error("數據連線失敗:", error);
+                document.getElementById('loading').innerText = "⚠️ 氣象伺服器連線失敗，請檢查網絡。";
+            }
+        }
+
+        // 4. 獲取預測移動路徑 (意粉圖過濾)
+        async function fetchTrack(eventId, episodeId) {
+            if (!eventId) return;
+            const trackUrl = `https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=${eventId}&episodeid=${episodeId}`;
+            try {
+                const trackResponse = await fetch(trackUrl);
+                if (!trackResponse.ok) return;
+                const trackData = await trackResponse.json();
+                
+                L.geoJSON(trackData, {
+                    filter: function(feature) {
+                        return feature.geometry.type === "LineString";
+                    },
+                    style: function (feature) {
+                        return { color: '#f39c12', weight: 3, opacity: 0.8, dashArray: '6, 6' };
+                    }
+                }).addTo(typhoonLayer);
+            } catch (error) {
+                console.log(`無法獲取路線圖`);
+            }
+        }
+
+        // 啟動程式
+        fetchRealTimeTyphoon();
+        // 每 5 分鐘自動刷新
+        setInterval(fetchRealTimeTyphoon, 300000);
+
+    </script>
+</body>
+</html>
