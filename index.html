@@ -233,6 +233,63 @@
         
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
 
+        /* ========================================= */
+        /* 右側自動彈出選單 (Side Menu) */
+        /* ========================================= */
+        .side-menu {
+            position: fixed;
+            top: 50%;
+            right: -65px; /* 預設隱藏選單內容，只露出把手 */
+            transform: translateY(-50%);
+            background: rgba(12, 12, 12, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            border-right: none;
+            border-radius: 16px 0 0 16px;
+            display: flex;
+            align-items: center;
+            transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 10000;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.6);
+        }
+
+        /* 桌面版 Hover 自動彈出，手機版靠 Click class 彈出 */
+        .side-menu:hover, .side-menu.active {
+            right: 0;
+        }
+
+        .menu-toggle {
+            padding: 25px 8px;
+            color: #4da6ff;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .menu-items {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 15px 12px;
+            width: 65px;
+            align-items: center;
+        }
+
+        .menu-items a {
+            text-decoration: none;
+            font-size: 1.6rem;
+            transition: transform 0.2s, filter 0.2s;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .menu-items a:hover {
+            transform: scale(1.15);
+        }
+
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
             .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
@@ -385,7 +442,37 @@
         </div>
     </div>
 
+    <!-- 右側自動彈出選單 -->
+    <div id="side-menu" class="side-menu">
+        <div class="menu-toggle" onclick="toggleSideMenu()">
+            <span>◀</span>
+        </div>
+        <div class="menu-items">
+            <!-- 1. 主頁 (重新載入或關閉選單) -->
+            <a href="#" title="主頁" onclick="toggleSideMenu(); event.preventDefault();">🏠</a>
+            <!-- 2. TP 連結 -->
+            <a href="https://dannytcchan00.github.io/0Data/tp.html" title="TP" target="_blank">🗺️</a>
+            <!-- 3. Radar 連結 -->
+            <a href="https://dannytcchan00.github.io/0Data/radar.html" title="雷達圖" target="_blank">📡</a>
+        </div>
+    </div>
+
     <script>
+        // ==========================================
+        // 控制右側選單 (手機點擊彈出)
+        // ==========================================
+        function toggleSideMenu() {
+            document.getElementById('side-menu').classList.toggle('active');
+        }
+
+        // 點擊畫面其他地方自動收起選單
+        document.addEventListener('click', function(event) {
+            const sideMenu = document.getElementById('side-menu');
+            if (sideMenu && sideMenu.classList.contains('active') && !sideMenu.contains(event.target)) {
+                sideMenu.classList.remove('active');
+            }
+        });
+
         // ==========================================
         // 🔒 背景鎖定 (防 iOS 底部滾動)
         // ==========================================
