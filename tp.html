@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港天文台實時颱風地圖 (暗黑版)</title>
-    <!-- Leaflet 地圖庫 CSS -->
+    <title>香港天文台實時颱風地圖 (暗黑修正版)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html {
@@ -15,7 +14,6 @@
             overflow: hidden;
         }
 
-        /* 地圖容器：永遠顯示在底層 */
         #map {
             width: 100%; 
             height: 100vh;
@@ -24,7 +22,6 @@
             z-index: 1;
         }
 
-        /* 冇颱風時嘅置中浮動框 */
         #no-typhoon-center {
             position: absolute;
             top: 50%; left: 50%;
@@ -35,16 +32,15 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 1px solid #444;
-            z-index: 2000; /* 確保浮喺地圖上面 */
+            z-index: 2000;
             width: 80%;
             max-width: 350px;
             backdrop-filter: blur(5px);
-            display: none; /* 預設隱藏 */
+            display: none; 
         }
         #no-typhoon-center h1 { color: #2ecc71; margin: 0 0 10px 0; font-size: 24px; }
         #no-typhoon-center p { color: #bbb; font-size: 15px; margin: 0; }
 
-        /* 載入中提示 */
         #loading {
             position: absolute; 
             top: 20px; left: 50%;
@@ -57,7 +53,6 @@
             color: #fff;
         }
 
-        /* 地圖 Popup 彈出框暗黑化 */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background: #2a2a2a;
             color: #e0e0e0;
@@ -76,13 +71,9 @@
 </head>
 <body>
 
-    <!-- 載入中 -->
     <div id="loading">📡 正在連接香港天文台...</div>
-
-    <!-- 地圖永遠做底 -->
     <div id="map"></div>
 
-    <!-- 冇颱風時嘅浮動框 -->
     <div id="no-typhoon-center">
         <h1>🍃 天氣平靜</h1>
         <p>目前香港天文台並無活躍熱帶氣旋數據。</p>
@@ -90,10 +81,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. 初始化地圖 (置中於香港)
         const map = L.map('map').setView([22.3193, 114.1694], 5);
         
-        // 使用暗黑地圖做底圖
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO',
             subdomains: 'abcd',
@@ -101,39 +90,50 @@
         }).addTo(map);
 
         const typhoonLayer = L.layerGroup().addTo(map);
+        
+        // 採用最穩定嘅香港天文台 Open Data 軌跡 API
+        const hkoTrackApi = 'https://data.weather.gov.hk/weatherAPI/opendata/opendata.php?dataType=tc&lang=tc';
 
-        // 香港天文台熱帶氣旋軌跡 API (JSON 格式)
-        const hkoTrackApi = 'https://data.weather.gov.hk/weatherAPI/tc/tc.json';
-
-        // 2. 獲取並處理天文台數據
         async function fetchHKOTyphoon() {
             try {
                 const response = await fetch(hkoTrackApi);
-                const data = await response.json();
+                
+                // 【核心修正】唔好直接 parse JSON，先攞純文字出嚟檢查
+                const textData = await response.text();
                 
                 typhoonLayer.clearLayers();
                 document.getElementById('loading').style.display = 'none';
 
-                // 檢查天文台 API 是否有包含熱帶氣旋資料陣列 (tc_data)
-                // 如果陣列為空，或者 API 根本冇回傳 tc_data，代表目前無颱風
-                if (!data || !data.tc_data || data.tc_data.length === 0) {
-                    document.getElementById('no-typhoon-center').style.display = 'block';
+                // 如果天文台回傳空值，或者回傳 HTML 錯誤頁，即代表無颱風數據
+                if (!textData || textData.trim() === "" || textData.startsWith("<")) {
+                    showNoTyphoon();
                     return;
                 }
 
-                // 如果有颱風，隱藏「無風」提示框
+                let data;
+                try {
+                    // 嘗試安全地將純文字轉化為 JSON 格式
+                    data = JSON.parse(textData);
+                } catch (e) {
+                    // 如果轉換失敗 (例如天文台俾咗句 plain text 話無風)，直接顯示無颱風框
+                    showNoTyphoon();
+                    return;
+                }
+
+                if (!data || !data.tc_data || data.tc_data.length === 0) {
+                    showNoTyphoon();
+                    return;
+                }
+
+                // 隱藏無風提示框
                 document.getElementById('no-typhoon-center').style.display = 'none';
 
-                // 處理每一個活躍嘅颱風
+                // 畫出所有颱風
                 data.tc_data.forEach(typhoon => {
-                    const nameEn = typhoon.name_en || "未命名";
-                    const nameTc = typhoon.name_tc || "未命名";
-                    
-                    // 獲取所有軌跡點 (過去路徑 + 預測路徑)
+                    const nameTc = typhoon.name_tc || "未命名氣旋";
                     const trackPoints = typhoon.track || [];
                     if (trackPoints.length === 0) return;
 
-                    // 準備畫線用嘅經緯度陣列
                     let lineCoords = [];
 
                     trackPoints.forEach((point, index) => {
@@ -141,13 +141,7 @@
                         const lon = point.lon;
                         lineCoords.push([lat, lon]);
 
-                        // 判斷是否為「最新現在位置」(通常係歷史路徑嘅最後一點，或者預測路徑嘅第一點)
-                        // 天文台資料結構中，is_forecast = "false" 代表已發生/現在
-                        const isLatestCurrentPoint = (!point.is_forecast || point.is_forecast === "false") && 
-                                                     (index === trackPoints.length - 1 || trackPoints[index+1].is_forecast === "true");
-
-                        // 畫點 (如果係最新位置，畫大粒紅點；其他歷史/預測點畫細粒橙點)
-                        const isCurrent = isLatestCurrentPoint || index === trackPoints.length - 1;
+                        const isCurrent = index === trackPoints.length - 1;
                         
                         const marker = L.circleMarker([lat, lon], {
                             radius: isCurrent ? 8 : 4,
@@ -158,7 +152,6 @@
                             fillOpacity: 0.8
                         });
 
-                        // 準備 Popup 內容
                         const timeStr = point.time || "未知時間";
                         const classTc = point.class_tc || "熱帶氣旋";
                         const maxWind = point.max_wind ? point.max_wind + " km/h" : "未提供";
@@ -169,7 +162,7 @@
 
                         const popupHtml = `
                             <div class="typhoon-info">
-                                <h3>🌀 ${nameTc} (${nameEn})</h3>
+                                <h3>🌀 ${nameTc}</h3>
                                 <p style="color:#e67e22; font-weight:bold; margin:5px 0;">${statusText}</p>
                                 <p><strong>級別：</strong> ${classTc}</p>
                                 <p><strong>中心風力：</strong> ${maxWind}</p>
@@ -181,32 +174,38 @@
                         marker.addTo(typhoonLayer);
                     });
 
-                    // 畫出連貫嘅移動路徑線
                     if (lineCoords.length > 1) {
                         L.polyline(lineCoords, {
                             color: '#f39c12',
                             weight: 2,
                             opacity: 0.6,
-                            dashArray: '5, 5' // 統一用虛線表示路徑
+                            dashArray: '5, 5'
                         }).addTo(typhoonLayer);
                     }
                 });
 
             } catch (error) {
-                console.error("無法讀取天文台數據:", error);
-                document.getElementById('loading').innerText = "⚠️ 數據連線失敗";
-                // 發生錯誤時亦顯示置中框
-                document.getElementById('no-typhoon-center').style.display = 'block';
+                console.error("無法連線:", error);
+                document.getElementById('loading').style.display = 'none';
+                // 就算真係斷網，都溫和地顯示置中框
+                showNoTyphoon();
                 document.getElementById('no-typhoon-center').innerHTML = `
-                    <h1 style="color:#e74c3c;">連線錯誤</h1>
-                    <p>無法連接香港天文台伺服器。</p>
+                    <h1 style="color:#e74c3c;">連線中斷</h1>
+                    <p>暫時無法連接香港天文台，系統稍後將自動重試。</p>
                 `;
             }
         }
 
-        // 啟動程式
+        // 簡化顯示「無風」框嘅動作
+        function showNoTyphoon() {
+            document.getElementById('no-typhoon-center').style.display = 'block';
+            document.getElementById('no-typhoon-center').innerHTML = `
+                <h1>🍃 天氣平靜</h1>
+                <p>目前香港天文台並無活躍熱帶氣旋數據。</p>
+            `;
+        }
+
         fetchHKOTyphoon();
-        // 每 5 分鐘自動刷新
         setInterval(fetchHKOTyphoon, 300000);
 
     </script>
