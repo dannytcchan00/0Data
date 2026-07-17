@@ -42,7 +42,7 @@
 
         /* 左側天氣面板 */
         .left-col { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: scroll; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; -webkit-transform: translate3d(0, 0, 0); }
         .integrated-weather-panel::-webkit-scrollbar { width: 4px; }
         .integrated-weather-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         
@@ -150,13 +150,13 @@
         .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
         .no-service { grid-column: 1 / -1; text-align: center; color: #555; padding: 40px; font-size: 0.95rem; line-height: 1.6;}
 
-        /* ✅ 徹底重構 iOS 防彈級 Modal 佈局 */
+        /* ✅ iOS Safari 終極浮動視窗 (Modal) 滾動修復 */
         .modal-overlay { 
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); 
             display: flex; justify-content: center; align-items: center; 
-            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s; 
-            padding: 20px; /* 確保 Modal 唔會貼住螢幕邊界 */
+            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            overscroll-behavior: none; /* 防止底層彈跳 */
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
@@ -164,32 +164,43 @@
             background: var(--panel-bg); 
             border: 1px solid #333; 
             border-radius: 16px; 
-            width: 100%; 
+            width: 90%; 
             max-width: 500px; 
-            max-height: 85vh; /* 確保有一個絕對的高度限制 */
+            /* 捨棄 Flexbox 高度，強制使用絕對高度界限 */
+            max-height: 85vh; 
+            max-height: 85dvh;
             display: flex; 
             flex-direction: column; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            overflow: hidden; /* 強制切走超出嘅部分 */
+            overflow: hidden; 
         }
         
-        .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; flex-shrink: 0; /* 唔畀壓縮 */}
+        .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; border-radius: 16px 16px 0 0; flex-shrink: 0;}
         .modal-header h3 { margin: 0; font-size: 1.2rem; color: #fff; }
         .modal-count { font-size: 0.9rem; color: #aaa; background: #222; padding: 3px 8px; border-radius: 12px; }
         
-        /* 🚨 iOS Safari Flexbox 滾動核心修復 */
+        /* 🚨 iOS 核心修復區 🚨 */
         .modal-body { 
             padding: 15px; 
-            overflow-y: scroll !important; /* 強制開啟滾動 */
+            overflow-y: auto !important; 
             -webkit-overflow-scrolling: touch !important; 
-            flex: 1 1 0%; /* 呢度嘅 0% 係 iOS 防縮放鎖死嘅關鍵 */
-            min-height: 0; 
-            display: block; /* 防止內部再次 Flex 導致高度計算錯誤 */
-            position: relative; /* 修復 iOS 渲染層 bug */
-            /* 🚫 絕對唔可以加 touch-action: pan-y，會干擾 WebKit */
+            flex: 1 1 auto; 
+            min-height: 0;
+            
+            /* 利用 calc 強制計算最大高度，扣除 Header (~60px) 同 Footer (~60px) 嘅空間 */
+            max-height: calc(85vh - 130px);
+            max-height: calc(85dvh - 130px);
+            
+            /* 強制 Safari 啟用 GPU 硬件加速圖層，呢個係碌得郁嘅關鍵！ */
+            -webkit-transform: translate3d(0, 0, 0); 
+            transform: translate3d(0, 0, 0);
+            
+            overscroll-behavior-y: contain; /* 防止滾動到底部時拉扯背景 */
         }
+        
+        #bus-detail-body { border-radius: 0 0 16px 16px; }
 
-        .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; flex-shrink: 0; /* 唔畀壓縮 */}
+        .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; border-radius: 0 0 16px 16px; flex-shrink: 0;}
         
         .modal-btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;}
         .btn-cancel { background: #333; color: #fff; }
@@ -279,14 +290,18 @@
         .bus-dir-btn.ctb { border-left: 5px solid #ffcc00; }
         
         .bus-stop-list { 
-            max-height: 280px; 
-            overflow-y: scroll; 
+            max-height: 250px; 
+            overflow-y: auto !important; 
             background: #0a0a0a; 
             border-radius: 6px; 
             border: 1px solid #222; 
             padding: 5px; 
-            -webkit-overflow-scrolling: touch; 
-            /* 🚫 絕對唔可以加 touch-action: pan-y */
+            
+            /* 🚨 iOS 核心修復 */
+            -webkit-overflow-scrolling: touch !important; 
+            -webkit-transform: translate3d(0, 0, 0); 
+            transform: translate3d(0, 0, 0);
+            overscroll-behavior-y: contain;
         }
 
         .bus-stop-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 0.95rem; color:#ddd; transition: 0.2s; display:flex; align-items:center; gap:12px; margin:0;}
@@ -302,7 +317,7 @@
             width: 95vw !important;
             max-width: 1200px !important;
             height: 85vh !important;
-            max-height: 85vh !important;
+            height: 85dvh !important;
             display: flex !important;
             flex-direction: column !important;
         }
@@ -327,18 +342,15 @@
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
             .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
             .left-col, .right-col { height: auto; overflow: visible; gap: 15px; }
-            .integrated-weather-panel { overflow: visible; }
             .panel { margin-bottom: 0; padding: 15px; flex: none; height: auto; }
             .mtr-section { flex: none; }
             .bus-section { min-height: 400px; flex: none; }
-            .bus-grid { overflow-y: visible; align-content: flex-start; }
             
             /* 行動端限制高度，保證 iOS 安全滾動邊界 */
-            .modal-content { max-height: 80vh; }
+            .modal-content { max-height: 85vh; }
             .iframe-modal-content {
                 width: 98vw !important;
-                height: 80vh !important;
-                max-height: 80vh !important;
+                height: 85vh !important;
             }
         }
     </style>
@@ -493,7 +505,7 @@
         </div>
     </div>
 
-    <!-- 巴士路線詳情 Modal (呢個就係重點修復嘅對象) -->
+    <!-- 巴士路線詳情 Modal -->
     <div id="bus-detail-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -527,7 +539,7 @@
                 <h3 id="image-title">圖片</h3>
                 <button onclick="closeImageModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
             </div>
-            <div class="modal-body" style="flex: 1 1 0%; min-height: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 0 0 16px 16px;">
+            <div class="modal-body" style="flex: 1 1 auto; min-height: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 0 0 16px 16px;">
                 <img id="modal-image" src="" style="width: 100%; height: 100%; object-fit: contain; display: block;">
             </div>
         </div>
@@ -582,6 +594,7 @@
         const ptrMainContent = document.querySelector('.main-content');
 
         document.addEventListener('touchstart', (e) => {
+            // 🚨 強制攔截：只要有浮動視窗打開咗，就絕對禁止下拉更新代碼運行！
             if (document.querySelector('.modal-overlay.active')) return;
 
             let el = e.target;
@@ -604,6 +617,9 @@
         }, { passive: true });
 
         document.addEventListener('touchmove', (e) => {
+            // 🚨 強制攔截：只要有浮動視窗打開咗，就唔好干擾正常滑動！
+            if (document.querySelector('.modal-overlay.active')) return;
+            
             if (!isPulling) return;
             ptrCurrentY = e.touches[0].clientY;
             let distance = ptrCurrentY - ptrStartY;
@@ -627,6 +643,8 @@
         }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
+            if (document.querySelector('.modal-overlay.active')) return;
+            
             if (!isPulling) return;
             isPulling = false;
             
