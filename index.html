@@ -26,6 +26,20 @@
             display: flex; flex-direction: column; overflow: hidden; 
         }
 
+        /* ========================================= */
+        /* Iframe 內嵌頁面樣式 (新增) */
+        /* ========================================= */
+        #app-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 50; /* 高於 main-content，低於 side-menu */
+            background: var(--bg-color);
+        }
+
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; transition: opacity 0.3s; }
         .loading-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #4da6ff; letter-spacing: 2px;}
         .progress-container { width: 80%; max-width: 400px; height: 12px; background: #222; border-radius: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
@@ -314,6 +328,9 @@
 
     <div id="ptr-indicator" class="ptr-indicator">⬇️ 下拉以更新數據</div>
 
+    <!-- Iframe 容器 (新增) -->
+    <iframe id="app-iframe" style="display: none;"></iframe>
+
     <div class="main-content">
         <!-- 左側天氣面板 -->
         <div class="left-col">
@@ -448,12 +465,12 @@
             <span>◀</span>
         </div>
         <div class="menu-items">
-            <!-- 1. 主頁 (重新載入或關閉選單) -->
-            <a href="#" title="主頁" onclick="toggleSideMenu(); event.preventDefault();">🏠</a>
-            <!-- 2. TP 連結 -->
-            <a href="https://dannytcchan00.github.io/0Data/tp.html" title="TP" target="_blank">🗺️</a>
-            <!-- 3. Radar 連結 -->
-            <a href="https://dannytcchan00.github.io/0Data/radar.html" title="雷達圖" target="_blank">📡</a>
+            <!-- 1. 主頁 (隱藏 iframe，顯示原版面) -->
+            <a href="#" title="主頁" onclick="showHome(); event.preventDefault();">🏠</a>
+            <!-- 2. TP 連結 (改為 Iframe 內嵌開啟) -->
+            <a href="#" title="TP" onclick="showIframe('https://dannytcchan00.github.io/0Data/tp.html'); event.preventDefault();">🗺️</a>
+            <!-- 3. Radar 連結 (改為 Iframe 內嵌開啟) -->
+            <a href="#" title="雷達圖" onclick="showIframe('https://dannytcchan00.github.io/0Data/radar.html'); event.preventDefault();">📡</a>
         </div>
     </div>
 
@@ -463,6 +480,27 @@
         // ==========================================
         function toggleSideMenu() {
             document.getElementById('side-menu').classList.toggle('active');
+        }
+
+        // ==========================================
+        // 控制 Iframe 頁面切換 (新增)
+        // ==========================================
+        function showIframe(url) {
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = url;                  // 載入目標網址
+            iframe.style.display = 'block';    // 顯示 iframe 覆蓋主頁
+            
+            // 點擊後自動收起右側 Menu
+            document.getElementById('side-menu').classList.remove('active'); 
+        }
+
+        function showHome() {
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';                   // 清空 iframe 減輕記憶體負擔
+            iframe.style.display = 'none';     // 隱藏 iframe，露出原本的 Dashboard
+            
+            // 點擊後自動收起右側 Menu
+            document.getElementById('side-menu').classList.remove('active'); 
         }
 
         // 點擊畫面其他地方自動收起選單
@@ -504,6 +542,9 @@
         document.addEventListener('touchstart', (e) => {
             // 🚨 絕對攔截：如果喺 Modal 入面觸摸，直接放棄所有 PTR 邏輯，交返畀原生滾動！
             if (e.target.closest('.modal-overlay.active')) return;
+
+            // 🚨 如果正在顯示 iframe，也禁用下拉更新
+            if (document.getElementById('app-iframe').style.display === 'block') return;
 
             let el = e.target;
             let canScrollUp = false;
