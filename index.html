@@ -118,10 +118,14 @@
         .station-card:active { background: rgba(255,255,255,0.05); }
         .station-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 2; position: relative; }
         .line-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; z-index: 2; position: relative; }
+        
+        /* 🚇 修改了的地鐵項目排版，加入月台圓圈對齊 */
         .mtr-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; overflow: hidden; }
         .mtr-item:last-child { border-bottom: none; }
-        .mtr-dest { white-space: nowrap; flex: 0 0 85px; }
-        .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; flex: 1; }
+        .mtr-dest-group { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .mtr-dest { white-space: nowrap; width: 85px; flex-shrink: 0; }
+        .plat-badge { display: flex; justify-content: center; align-items: center; width: 18px; height: 18px; min-width: 18px; border-radius: 50%; color: #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 
         @keyframes mtrErrorPulse { 0% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); } 50% { box-shadow: 0 0 20px var(--line-color); opacity: 1; background-color: rgba(255,255,255,0.15); border-color: var(--line-color); } 100% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); } }
         .mtr-anomaly-box { animation: mtrErrorPulse 1.5s infinite ease-in-out !important; }
@@ -648,8 +652,6 @@
         const customDateMessages = {
             "01-01": "🎆 祝大家元旦快樂 Happy New Year！",
             "02-14": "💖 祝大家情人節快樂 Happy Valentine's Day！",
-            "07-21": "❌️ 8．31｜有人想遺忘，有人選擇記住",
-            "08-31": "❌️ 8．31｜時間過去，疑問仍在。",
             "12-24": "🔔 祝大家平安夜快樂 平平安安！",
             "12-25": "🎄 祝大家聖誕快樂 Merry Christmas！",
             "12-31": "🎉 祝大家除夕快樂 迎接新一年！"
@@ -662,7 +664,7 @@
         const dynamicDateMessages = [
             { month: 5, week: 2, dayOfWeek: 0, message: "👩 祝各位母親節快樂 Happy Mother's Day！" },
             { month: 6, week: 3, dayOfWeek: 0, message: "👨 祝各位父親節快樂 Happy Father's Day！" },
-            { month: 6, week: 2, dayOfWeek: 6, message: "👑 祝英皇壽辰快樂 Happy Birthday His Majesty！" }
+            { month: 6, week: 2, dayOfWeek: 6, message: "👑 祝英皇壽辰快樂 Happy King's Official Birthday！" }
         ];
 
         /* ========================================= */
@@ -780,7 +782,16 @@
                         if (etaInfo.status === 'departing') colorClass = 'departing-text';
                         else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
 
-                        mtrHtml += `<div class="mtr-item"><div class="mtr-dest">往 ${t.dest}</div><div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:#888; font-weight:normal;"' : ''}>${etaInfo.text}</div></div>`;
+                        // ✅ 加入月台圓圈顯示
+                        let platHtml = t.plat ? `<div class="plat-badge" style="background-color: ${lineInfo.color};">${t.plat}</div>` : '';
+
+                        mtrHtml += `<div class="mtr-item">
+                            <div class="mtr-dest-group">
+                                <div class="mtr-dest">往 ${t.dest}</div>
+                                ${platHtml}
+                            </div>
+                            <div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:#888; font-weight:normal;"' : ''}>${etaInfo.text}</div>
+                        </div>`;
                     });
                 }
                 mtrHtml += `</div></div>`;
@@ -821,7 +832,6 @@
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
             
-            // ✅ 讀取今日日期並比對自訂節日字句
             let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
             let mm = String(now.getMonth() + 1).padStart(2, '0');
             let dd = String(now.getDate()).padStart(2, '0');
@@ -829,11 +839,9 @@
             
             let holidayMsg = "";
             
-            // 優先比對固定日子
             if (customDateMessages[todayKey]) {
                 holidayMsg = ` ｜ ${customDateMessages[todayKey]}`;
             } else {
-                // 如果無固定日子，檢查動態日子
                 let currentMonth = now.getMonth() + 1;
                 let currentDayOfWeek = now.getDay();
                 let currentWeekNum = Math.ceil(now.getDate() / 7);
@@ -1007,7 +1015,8 @@
                                             targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000);
                                         }
                                         if (targetTime) {
-                                            trains.push({ dest: MTR_DEST_MAP[validTrain.dest] || validTrain.dest, localTarget: targetTime, dir: dir });
+                                            // ✅ 儲存月台數據 plat
+                                            trains.push({ dest: MTR_DEST_MAP[validTrain.dest] || validTrain.dest, localTarget: targetTime, dir: dir, plat: validTrain.plat || '' });
                                         }
                                     }
                                 }
@@ -1491,13 +1500,13 @@
         }
 
         /* ========================================= */
-        /* ✅ 啟動及定時更新設定 (改為每 30 秒) */
+        /* 啟動及定時更新設定 */
         /* ========================================= */
         async function boot() {
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 60000); 
             fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); 
-            fetchMTR(); setInterval(fetchMTR, 15000); 
+            fetchMTR(); setInterval(fetchMTR, 30000); 
             setInterval(fetchRealBusData, 30000);
             initStaticDatabase();
             setTimeout(() => { window.location.reload(true); }, 3600000);
