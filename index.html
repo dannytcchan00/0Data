@@ -642,9 +642,9 @@
 
         // ==========================================
         // 🗓️ 自訂節日 / 特定日子走馬燈字句設定區
-        // 格式："月-日": "你想顯示嘅字句"
-        // 你可以隨意更改或者加減入面嘅日子
         // ==========================================
+        
+        // 1. 固定日子設定 (格式："月-日": "你想顯示嘅字句")
         const customDateMessages = {
             "01-01": "🎆 祝大家元旦快樂 Happy New Year！",
             "02-14": "💖 祝大家情人節快樂 Happy Valentine's Day！",
@@ -653,7 +653,19 @@
             "12-31": "🎉 祝大家除夕快樂 迎接新一年！"
         };
 
+        // 2. 動態日子設定 (例如：某月嘅第幾個星期幾)
+        // month: 月份 (1-12)
+        // week: 第幾個星期 (1-5)
+        // dayOfWeek: 星期幾 (0 = 星期日，1 = 星期一，...，6 = 星期六)
+        const dynamicDateMessages = [
+            { month: 5, week: 2, dayOfWeek: 0, message: "👩 祝各位母親節快樂 Happy Mother's Day！" },
+            { month: 6, week: 3, dayOfWeek: 0, message: "👨 祝各位父親節快樂 Happy Father's Day！" },
+            { month: 6, week: 2, dayOfWeek: 6, message: "👑 祝英皇壽辰快樂 Happy King's Official Birthday！" }
+        ];
 
+        /* ========================================= */
+        /* 港鐵車站數據 */
+        /* ========================================= */
         const MTR_NETWORK = {
             "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIH": "天后", "FOH": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
             "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWF": "葵芳", "KWH": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
@@ -812,7 +824,25 @@
             let mm = String(now.getMonth() + 1).padStart(2, '0');
             let dd = String(now.getDate()).padStart(2, '0');
             let todayKey = `${mm}-${dd}`;
-            let holidayMsg = customDateMessages[todayKey] ? ` ｜ ${customDateMessages[todayKey]}` : "";
+            
+            let holidayMsg = "";
+            
+            // 優先比對固定日子
+            if (customDateMessages[todayKey]) {
+                holidayMsg = ` ｜ ${customDateMessages[todayKey]}`;
+            } else {
+                // 如果無固定日子，檢查動態日子
+                let currentMonth = now.getMonth() + 1;
+                let currentDayOfWeek = now.getDay();
+                let currentWeekNum = Math.ceil(now.getDate() / 7);
+
+                for (let rule of dynamicDateMessages) {
+                    if (rule.month === currentMonth && rule.week === currentWeekNum && rule.dayOfWeek === currentDayOfWeek) {
+                        holidayMsg = ` ｜ ${rule.message}`;
+                        break;
+                    }
+                }
+            }
 
             if (!isOpHours) {
                 marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 " + holidayMsg;
@@ -1458,6 +1488,9 @@
             } catch(e) {}
         }
 
+        /* ========================================= */
+        /* ✅ 啟動及定時更新設定 (改為每 30 秒) */
+        /* ========================================= */
         async function boot() {
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 60000); 
