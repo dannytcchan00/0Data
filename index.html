@@ -471,7 +471,7 @@
     <div id="weather-detail-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>🌈 天氣預報詳情</h3>
+                <h3>🌈 延展天氣預報詳情</h3>
                 <button onclick="closeWeatherDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
             </div>
             <div id="weather-detail-body" class="modal-body"></div>
@@ -482,7 +482,7 @@
     <div id="mtr-detail-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>🚇 路線詳細資料</h3>
+                <h3>🚇 港鐵路綫與車程分佈</h3>
                 <button onclick="closeMtrDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
             </div>
             <div id="mtr-detail-body" class="modal-body"></div>
@@ -640,12 +640,43 @@
             } 
         }
 
+        /* ========================================= */
+        /* ✅ 修正了全線車站代碼並加入舊記錄自動遷移機制 */
+        /* ========================================= */
+        const MTR_NETWORK = {
+            "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIH": "天后", "FOH": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
+            "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWF": "葵芳", "KWH": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
+            "KTL": { name: "觀塘綫", color: "#00AB4E", terminals: { UP: "調景嶺", DOWN: "黃埔" }, stations: { "WHA": "黃埔", "HOM": "何文田", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SKM": "石硤尾", "KOT": "九龍塘", "LOF": "樂富", "WTS": "黃大仙", "DIH": "鑽石山", "CHH": "彩虹", "KOB": "九龍灣", "NTK": "牛頭角", "KWT": "觀塘", "LAT": "藍田", "YAT": "油塘", "TIK": "調景嶺" } },
+            "TKL": { name: "將軍澳綫", color: "#A3238E", terminals: { UP: "寶琳/康城", DOWN: "北角" }, stations: { "NOP": "北角", "QUB": "鰂魚涌", "YAT": "油塘", "TIK": "調景嶺", "TKO": "將軍澳", "HAH": "坑口", "POA": "寶琳", "LHP": "康城" } },
+            "TML": { name: "屯馬綫", color: "#9A3820", terminals: { UP: "烏溪沙", DOWN: "屯門" }, stations: { "TUM": "屯門", "SIH": "兆康", "TIS": "天水圍", "LOP": "朗屏", "YUL": "元朗", "KSR": "錦上路", "TWW": "荃灣西", "MEF": "美孚", "NAC": "南昌", "AUS": "柯士甸", "ETS": "尖東", "HUH": "紅磡", "HOM": "何文田", "TKW": "土瓜灣", "SUW": "宋皇臺", "KAT": "啟德", "DIH": "鑽石山", "HIK": "顯徑", "TAW": "大圍", "CKT": "車公廟", "STW": "沙田圍", "CIO": "第一城", "SHM": "石門", "TSH": "大水坑", "HEO": "恆安", "MOS": "馬鞍山", "WKS": "烏溪沙" } },
+            "EAL": { name: "東鐵綫", color: "#53B7E8", terminals: { UP: "羅湖/落馬洲", DOWN: "金鐘" }, stations: { "ADM": "金鐘", "EXC": "會展", "HUH": "紅磡", "MKK": "旺角東", "KOT": "九龍塘", "TAW": "大圍", "SHT": "沙田", "FOT": "火炭", "RAC": "馬場", "UNL": "大學", "TAP": "大埔墟", "TWO": "太和", "FAN": "粉嶺", "SHS": "上水", "LOW": "羅湖", "LMC": "落馬洲" } },
+            "TCL": { name: "東涌綫", color: "#F68F26", terminals: { UP: "東涌", DOWN: "香港" }, stations: { "HOK": "香港", "KOW": "九龍", "OLY": "奧運", "NAC": "南昌", "LAK": "荔景", "TSY": "青衣", "SUN": "欣澳", "TUC": "東涌" } },
+            "AEL": { name: "機場快綫", color: "#00888A", terminals: { UP: "博覽館", DOWN: "香港" }, stations: { "HOK": "香港", "KOW": "九龍", "TSY": "青衣", "AIR": "機場", "AWE": "博覽館" } },
+            "SIL": { name: "南港島綫", color: "#B5A879", terminals: { UP: "海怡半島", DOWN: "金鐘" }, stations: { "ADM": "金鐘", "OCP": "海洋公園", "WCH": "黃竹坑", "LET": "利東", "SOH": "海怡半島" } },
+            "DRL": { name: "迪士尼綫", color: "#F550A6", terminals: { UP: "迪士尼", DOWN: "欣澳" }, stations: { "SUN": "欣澳", "DIS": "迪士尼" } }
+        };
+        const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
+        for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
+
         let myBuses = JSON.parse(localStorage.getItem('my_saved_buses')) || [];
+        
         let myMtrStations = JSON.parse(localStorage.getItem('my_saved_mtr')) || [{ line: 'ISL', sta: 'QUB' }];
+        // ✅ 靜默遷移：幫你將舊有錯嘅代碼自動轉做正確代碼，防止白屏死機
+        myMtrStations = myMtrStations.map(s => {
+            if (s.line === 'ISL' && s.sta === 'TIN') return { ...s, sta: 'TIH' };
+            if (s.line === 'ISL' && s.sta === 'FOT') return { ...s, sta: 'FOH' };
+            if (s.line === 'TWL' && s.sta === 'KWH') return { ...s, sta: 'KWF' }; // 舊 KWH 係葵芳
+            if (s.line === 'TWL' && s.sta === 'KWE') return { ...s, sta: 'KWH' }; // 舊 KWE 係葵興
+            if (s.line === 'KTL' && s.sta === 'CHH') return { ...s, sta: 'DIH' }; // 舊 CHH 係鑽石山
+            if (s.line === 'KTL' && s.sta === 'DIH') return { ...s, sta: 'CHH' }; // 舊 DIH 係彩虹
+            return s;
+        });
+        myMtrStations = myMtrStations.filter(s => MTR_NETWORK[s.line] && MTR_NETWORK[s.line].stations[s.sta]);
+        localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations));
+
         let transportTimestamps = { mtr: [], bus: [] };
         let tempMtrSelections = [];
         let weatherForecastArray = []; 
-        
         let busDict = {}; 
         let isBusDataReady = false;
 
@@ -657,15 +688,24 @@
             return true;
         }
 
-        function parseRemaining(targetDate) {
+        /* ========================================= */
+        /* ✅ 倒數時間顯示控制 (地鐵只顯示分鐘) */
+        /* ========================================= */
+        function parseRemaining(targetDate, type = 'bus') {
             if (!targetDate) return { text: "服務已終止", status: "end" };
             const diffSec = Math.floor((targetDate - new Date()) / 1000);
             if (diffSec < -60) return { text: "服務已終止", status: "end" }; 
             if (diffSec <= 0) return { text: "正在開出", status: "departing" }; 
             if (diffSec <= 60) return { text: "即將到達", status: "arriving" }; 
+            
             const m = Math.floor(diffSec / 60); 
             const s = diffSec % 60;
-            return { text: `${m}分${s.toString().padStart(2, '0')}秒`, status: "normal" };
+            
+            if (type === 'mtr') {
+                return { text: `${m} 分鐘`, status: "normal" };
+            } else {
+                return { text: `${m}分${s.toString().padStart(2, '0')}秒`, status: "normal" };
+            }
         }
 
         function updateTick() {
@@ -714,7 +754,7 @@
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
-                        let etaInfo = parseRemaining(t.localTarget);
+                        let etaInfo = parseRemaining(t.localTarget, 'mtr'); // ✅ 地鐵使用 'mtr' 格式
                         let colorClass = '';
                         if (etaInfo.status === 'departing') colorClass = 'departing-text';
                         else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
@@ -731,7 +771,7 @@
                 busHtml = myBuses.length === 0 ? `<div class="no-service">📭 尚未設定任何追蹤，請點擊 ⚙️ 加入</div>` : `<div class="no-service">⏳ 正在讀取巴士實時班次...</div>`;
             } else {
                 transportTimestamps.bus.forEach(b => {
-                    let etaInfo = parseRemaining(b.localTarget);
+                    let etaInfo = parseRemaining(b.localTarget, 'bus'); // ✅ 巴士使用 'bus' 格式
                     
                     let colorClass = '';
                     let pulseClass = '';
@@ -756,24 +796,6 @@
             document.getElementById('bus-data').innerHTML = busHtml;
         }
 
-        const MTR_NETWORK = {
-            "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIN": "天后", "FOT": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
-            "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWH": "葵芳", "KWE": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
-            "KTL": { name: "觀塘綫", color: "#00AB4E", terminals: { UP: "調景嶺", DOWN: "黃埔" }, stations: { "WHA": "黃埔", "HOM": "何文田", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SKM": "石硤尾", "KOT": "九龍塘", "LOF": "樂富", "WTS": "黃大仙", "CHH": "鑽石山", "DIH": "彩虹", "KOB": "九龍灣", "NTK": "牛頭角", "KWT": "觀塘", "LAT": "藍田", "YAT": "油塘", "TIK": "調景嶺" } },
-            "TKL": { name: "將軍澳綫", color: "#A3238E", terminals: { UP: "寶琳/康城", DOWN: "北角" }, stations: { "NOP": "北角", "QUB": "鰂魚涌", "YAT": "油塘", "TIK": "調景嶺", "TKO": "將軍澳", "HAH": "坑口", "POA": "寶琳", "LHP": "康城" } },
-            "TML": { name: "屯馬綫", color: "#9A3820", terminals: { UP: "烏溪沙", DOWN: "屯門" }, stations: { "TUM": "屯門", "SIH": "兆康", "TIS": "天水圍", "LOP": "朗屏", "YUL": "元朗", "KSR": "錦上路", "TWW": "荃灣西", "MEF": "美孚", "NAC": "南昌", "AUS": "柯士甸", "ETS": "尖東", "HUH": "紅磡", "HOM": "何文田", "TKW": "土瓜灣", "SUW": "宋皇臺", "KAT": "啟德", "DIH": "鑽石山", "HIK": "顯徑", "TAW": "大圍", "CKT": "車公廟", "STW": "沙田圍", "CIO": "第一城", "MOS": "馬鞍山", "WKS": "烏溪沙" } },
-            "EAL": { name: "東鐵綫", color: "#53B7E8", terminals: { UP: "羅湖/落馬洲", DOWN: "金鐘" }, stations: { "ADM": "金鐘", "EXC": "會展", "HUH": "紅磡", "MKK": "旺角東", "KOT": "九龍塘", "TAW": "大圍", "SHT": "沙田", "FOT": "火炭", "RAC": "馬場", "UNL": "大學", "TAP": "大埔墟", "TWO": "太和", "FAN": "粉嶺", "SHS": "上水", "LOW": "羅湖", "LMC": "落馬洲" } },
-            "TCL": { name: "東涌綫", color: "#F68F26", terminals: { UP: "東涌", DOWN: "香港" }, stations: { "HOK": "香港", "KOW": "九龍", "OLY": "奧運", "NAC": "南昌", "LAK": "荔景", "TSY": "青衣", "SUN": "欣澳", "TUC": "東涌" } },
-            "AEL": { name: "機場快綫", color: "#00888A", terminals: { UP: "博覽館", DOWN: "香港" }, stations: { "HOK": "香港", "KOW": "九龍", "TSY": "青衣", "AIR": "機場", "AWE": "博覽館" } },
-            "SIL": { name: "南港島綫", color: "#B5A879", terminals: { UP: "海怡半島", DOWN: "金鐘" }, stations: { "ADM": "金鐘", "OCP": "海洋公園", "WCH": "黃竹坑", "LET": "利東", "SOH": "海怡半島" } },
-            "DRL": { name: "迪士尼綫", color: "#F550A6", terminals: { UP: "迪士尼", DOWN: "欣澳" }, stations: { "SUN": "欣澳", "DIS": "迪士尼" } }
-        };
-        const MTR_DEST_MAP = { 'LHP': '康城', 'POA': '寶琳' };
-        for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
-
-        /* ========================================= */
-        /* ✅ 港鐵狀態走馬燈 (已加入打風動態判定) */
-        /* ========================================= */
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
@@ -794,7 +816,6 @@
             try {
                 let ts = Date.now();
                 
-                // --- 讀取即時天氣警告以判斷風球 ---
                 let warnSumRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 let typhoonMsg = '';
                 if (warnSumRes) {
@@ -1144,7 +1165,7 @@
             }));
             let unique = {}; raw.forEach(x => { if(!unique[x.uid]) unique[x.uid] = x; });
             transportTimestamps.bus = Object.values(unique).sort((a,b)=> a.localTarget - b.localTarget);
-            document.getElementById('refresh-status').innerText = '🟢 60s定時更新';
+            document.getElementById('refresh-status').innerText = '🟢 30s定時更新';
             renderUI();
         }
 
@@ -1256,7 +1277,7 @@
 
             body.innerHTML = `
                 <div class="detail-header-card">
-                    <div class="detail-route-title" style="font-size: 1.5rem;">${y}年${m}月${d}日 (${fc.week})</div>
+                    <div class="detail-route-title" style="font-size: 1.5rem;">${y}年${m}月${d}日 (星期${fc.week})</div>
                     <div class="detail-route-desc" style="color: #ffd700; margin-top: 5px;">🌡️ ${fc.forecastMintemp.value}°C ➔ ${fc.forecastMaxtemp.value}°C</div>
                 </div>
                 <div class="detail-stops-container" style="padding: 15px; color: #ddd; font-size: 0.95rem; line-height: 1.6;">
@@ -1275,7 +1296,7 @@
         }
 
         /* ========================================= */
-        /* 港鐵車程動態詳情控制邏輯 (已刪除預計分鐘) */
+        /* 港鐵車程動態詳情控制邏輯 */
         /* ========================================= */
         function openMtrDetail(lineCode, currentStaCode) {
             lockBackgroundScroll();
@@ -1296,7 +1317,6 @@
             let upStopsHtml = '';
             let downStopsHtml = '';
 
-            // 🔼 上行方向 (陣列 index 遞增)
             let upCount = 1;
             for(let i = currentIndex + 1; i < stationCodes.length; i++) {
                 let code = stationCodes[i];
@@ -1310,7 +1330,6 @@
                 upStopsHtml = `<div style="padding: 15px; color: #666; font-size: 0.9rem; text-align: center;">終點站（下游已無車站）</div>`;
             }
 
-            // 🔽 下行方向 (陣列 index 遞減)
             let downCount = 1;
             for(let i = currentIndex - 1; i >= 0; i--) {
                 let code = stationCodes[i];
@@ -1426,12 +1445,15 @@
             } catch(e) {}
         }
 
+        /* ========================================= */
+        /* ✅ 啟動及定時更新設定 (改為每 30 秒) */
+        /* ========================================= */
         async function boot() {
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 60000); 
             fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); 
             fetchMTR(); setInterval(fetchMTR, 30000); 
-            setInterval(fetchRealBusData, 60000);
+            setInterval(fetchRealBusData, 30000);
             initStaticDatabase();
             setTimeout(() => { window.location.reload(true); }, 3600000);
         }
