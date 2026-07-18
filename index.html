@@ -108,8 +108,8 @@
         .refresh-indicator { font-size: 0.75rem; color: #00ff66; font-weight: normal; margin-right: 10px;}
 
         .marquee-container { width: 100%; overflow: hidden; background: #151515; border: 1px solid #333; border-radius: 8px; padding: 10px 0; margin-bottom: 12px; display: flex; white-space: nowrap; position: relative; flex: none; }
-        .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 20s linear infinite; }
-        .marquee-text.has-issue { color: #ffcc00; animation: marqueeScroll 25s linear infinite; }
+        .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 25s linear infinite; }
+        .marquee-text.has-issue { color: #ffcc00; animation: marqueeScroll 30s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
         .mtr-section { flex: 0 0 auto; display: flex; flex-direction: column; }
@@ -119,7 +119,6 @@
         .station-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 2; position: relative; }
         .line-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; z-index: 2; position: relative; }
         
-        /* 🚇 修改了的地鐵項目排版，加入月台圓圈對齊 */
         .mtr-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; overflow: hidden; }
         .mtr-item:last-child { border-bottom: none; }
         .mtr-dest-group { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -854,7 +853,9 @@
             }
 
             if (!isOpHours) {
-                marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 " + holidayMsg;
+                // ✅ 加入各路綫首班車開出時間
+                let firstTrainMsg = "🌅 各綫首班車大約開出時間：港島綫 05:55｜荃灣綫 06:00｜觀塘綫 05:59｜將軍澳綫 06:00｜屯馬綫 05:40｜東鐵綫 05:30｜東涌綫 06:01｜機場快綫 05:50｜南港島綫 06:00｜迪士尼綫 06:15";
+                marqueeEl.innerHTML = "🌙 列車服務經已終止 Train services for today have ended " + holidayMsg + " ｜ " + firstTrainMsg;
                 marqueeEl.className = "marquee-text";
                 return;
             }
@@ -1348,7 +1349,7 @@
         }
 
         /* ========================================= */
-        /* ✅ 港鐵車程動態詳情控制邏輯 (已加入實時月台顯示) */
+        /* 港鐵車程動態詳情控制邏輯 */
         /* ========================================= */
         function openMtrDetail(lineCode, currentStaCode) {
             lockBackgroundScroll();
@@ -1366,7 +1367,6 @@
             const upTerminal = line.terminals?.UP || line.stations[stationCodes[stationCodes.length - 1]];
             const downTerminal = line.terminals?.DOWN || line.stations[stationCodes[0]];
 
-            // 🔍 讀取當前車站的實時月台數據
             let upPlat = '';
             let downPlat = '';
             let stationRealTimeData = transportTimestamps.mtr.find(s => s.line === lineCode && s.sta === currentStaCode);
@@ -1410,7 +1410,6 @@
                 downStopsHtml = `<div style="padding: 15px; color: #666; font-size: 0.9rem; text-align: center;">終點站（下游已無車站）</div>`;
             }
 
-            // 🚇 組合排版，加入月台圓圈
             body.innerHTML = `
                 <div class="detail-header-card" style="border-left: 5px solid ${line.color}; text-align:left; padding-left:20px;">
                     <div class="detail-route-title" style="font-size: 1.6rem; margin:0;">${currentStationName}</div>
