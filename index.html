@@ -640,9 +640,20 @@
             } 
         }
 
-        /* ========================================= */
-        /* ✅ 修正了全線車站代碼並加入舊記錄自動遷移機制 */
-        /* ========================================= */
+        // ==========================================
+        // 🗓️ 自訂節日 / 特定日子走馬燈字句設定區
+        // 格式："月-日": "你想顯示嘅字句"
+        // 你可以隨意更改或者加減入面嘅日子
+        // ==========================================
+        const customDateMessages = {
+            "01-01": "🎆 祝大家元旦快樂 Happy New Year！",
+            "02-14": "💖 祝大家情人節快樂 Happy Valentine's Day！",
+            "12-24": "🔔 祝大家平安夜快樂 平平安安！",
+            "12-25": "🎄 祝大家聖誕快樂 Merry Christmas！",
+            "12-31": "🎉 祝大家除夕快樂 迎接新一年！"
+        };
+
+
         const MTR_NETWORK = {
             "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIH": "天后", "FOH": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
             "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWF": "葵芳", "KWH": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
@@ -661,14 +672,13 @@
         let myBuses = JSON.parse(localStorage.getItem('my_saved_buses')) || [];
         
         let myMtrStations = JSON.parse(localStorage.getItem('my_saved_mtr')) || [{ line: 'ISL', sta: 'QUB' }];
-        // ✅ 靜默遷移：幫你將舊有錯嘅代碼自動轉做正確代碼，防止白屏死機
         myMtrStations = myMtrStations.map(s => {
             if (s.line === 'ISL' && s.sta === 'TIN') return { ...s, sta: 'TIH' };
             if (s.line === 'ISL' && s.sta === 'FOT') return { ...s, sta: 'FOH' };
-            if (s.line === 'TWL' && s.sta === 'KWH') return { ...s, sta: 'KWF' }; // 舊 KWH 係葵芳
-            if (s.line === 'TWL' && s.sta === 'KWE') return { ...s, sta: 'KWH' }; // 舊 KWE 係葵興
-            if (s.line === 'KTL' && s.sta === 'CHH') return { ...s, sta: 'DIH' }; // 舊 CHH 係鑽石山
-            if (s.line === 'KTL' && s.sta === 'DIH') return { ...s, sta: 'CHH' }; // 舊 DIH 係彩虹
+            if (s.line === 'TWL' && s.sta === 'KWH') return { ...s, sta: 'KWF' }; 
+            if (s.line === 'TWL' && s.sta === 'KWE') return { ...s, sta: 'KWH' }; 
+            if (s.line === 'KTL' && s.sta === 'CHH') return { ...s, sta: 'DIH' }; 
+            if (s.line === 'KTL' && s.sta === 'DIH') return { ...s, sta: 'CHH' }; 
             return s;
         });
         myMtrStations = myMtrStations.filter(s => MTR_NETWORK[s.line] && MTR_NETWORK[s.line].stations[s.sta]);
@@ -688,9 +698,6 @@
             return true;
         }
 
-        /* ========================================= */
-        /* ✅ 倒數時間顯示控制 (地鐵只顯示分鐘) */
-        /* ========================================= */
         function parseRemaining(targetDate, type = 'bus') {
             if (!targetDate) return { text: "服務已終止", status: "end" };
             const diffSec = Math.floor((targetDate - new Date()) / 1000);
@@ -754,7 +761,7 @@
                     mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">本日的列車服務經已終止</div>`;
                 } else {
                     s.data.forEach(t => {
-                        let etaInfo = parseRemaining(t.localTarget, 'mtr'); // ✅ 地鐵使用 'mtr' 格式
+                        let etaInfo = parseRemaining(t.localTarget, 'mtr'); 
                         let colorClass = '';
                         if (etaInfo.status === 'departing') colorClass = 'departing-text';
                         else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
@@ -771,7 +778,7 @@
                 busHtml = myBuses.length === 0 ? `<div class="no-service">📭 尚未設定任何追蹤，請點擊 ⚙️ 加入</div>` : `<div class="no-service">⏳ 正在讀取巴士實時班次...</div>`;
             } else {
                 transportTimestamps.bus.forEach(b => {
-                    let etaInfo = parseRemaining(b.localTarget, 'bus'); // ✅ 巴士使用 'bus' 格式
+                    let etaInfo = parseRemaining(b.localTarget, 'bus'); 
                     
                     let colorClass = '';
                     let pulseClass = '';
@@ -799,9 +806,16 @@
         async function fetchMtrStatusMarquee() {
             let marqueeEl = document.getElementById('mtr-marquee-text');
             let isOpHours = checkIsOperatingHours();
+            
+            // ✅ 讀取今日日期並比對自訂節日字句
+            let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+            let mm = String(now.getMonth() + 1).padStart(2, '0');
+            let dd = String(now.getDate()).padStart(2, '0');
+            let todayKey = `${mm}-${dd}`;
+            let holidayMsg = customDateMessages[todayKey] ? ` ｜ ${customDateMessages[todayKey]}` : "";
 
             if (!isOpHours) {
-                marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 ";
+                marqueeEl.innerHTML = "🌙 Train services for today have ended 本日的列車服務經已終止 " + holidayMsg;
                 marqueeEl.className = "marquee-text";
                 return;
             }
@@ -841,7 +855,6 @@
                 ));
 
                 let issues = [];
-                let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
                 let h = now.getHours();
                 let m = now.getMinutes();
                 let isLateNightEdge = (h === 23 && m >= 30) || (h >= 0 && h <= 5);
@@ -877,14 +890,14 @@
                 });
 
                 if (issues.length === 0) {
-                    marqueeEl.innerHTML = " 🟢 All Lines Operating Normally 目前全線皆正常營運 " + (typhoonMsg ? ` ｜ ${typhoonMsg}` : "");
+                    marqueeEl.innerHTML = " 🟢 All Lines Operating Normally 目前全線皆正常營運 " + (typhoonMsg ? ` ｜ ${typhoonMsg}` : "") + holidayMsg;
                     marqueeEl.className = "marquee-text";
                 } else {
-                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + issues.join(" ｜ ") + " ｜ All other lines are operating on schedule 其餘路線皆正常行駛 " + (typhoonMsg ? ` ｜ ${typhoonMsg}` : "");
+                    marqueeEl.innerHTML = "⚠️ Attention 注意 : " + issues.join(" ｜ ") + " ｜ All other lines are operating on schedule 其餘路線皆正常行駛 " + (typhoonMsg ? ` ｜ ${typhoonMsg}` : "") + holidayMsg;
                     marqueeEl.className = "marquee-text has-issue";
                 }
             } catch(e) {
-                marqueeEl.innerHTML = "📡 無法連線至港鐵系統...";
+                marqueeEl.innerHTML = "📡 無法連線至港鐵系統..." + holidayMsg;
                 marqueeEl.className = "marquee-text has-issue";
             }
         }
@@ -1445,9 +1458,6 @@
             } catch(e) {}
         }
 
-        /* ========================================= */
-        /* ✅ 啟動及定時更新設定 (改為每 30 秒) */
-        /* ========================================= */
         async function boot() {
             updateTick(); setInterval(updateTick, 1000); 
             fetchWeather(); setInterval(fetchWeather, 60000); 
