@@ -85,9 +85,11 @@
         
         .warnings-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
         .alert-box { border-radius: 10px; padding: 12px; font-size: 1rem; font-weight: bold; text-align: center; }
-        .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; }
+        .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; cursor: pointer; transition: transform 0.15s; }
+        .alert-active:active { transform: scale(0.97); }
         .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); }
-        .swt-box { border-radius: 10px; padding: 12px; font-size: 0.85rem; line-height: 1.5; text-align: left; border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; margin-top: 4px; }
+        .swt-box { border-radius: 10px; padding: 12px; font-size: 0.85rem; line-height: 1.5; text-align: left; border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; margin-top: 4px; cursor: pointer; transition: transform 0.15s; }
+        .swt-box:active { transform: scale(0.97); }
         .swt-blink { animation: swtBlink 2.5s infinite ease-in-out; }
 
         .forecast-container { display: flex; gap: 6px; margin-top: 5px; margin-bottom: 5px; }
@@ -407,6 +409,17 @@
         </div>
     </div>
 
+    <!-- 天氣警告及特別提示詳情 Modal -->
+    <div id="warning-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="warning-modal-title">⚠️ 天氣警告詳情</h3>
+                <button onclick="closeWarningDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+            </div>
+            <div id="warning-modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
     <!-- 港鐵路線站點及車程 Modal -->
     <div id="mtr-detail-modal" class="modal-overlay">
         <div class="modal-content">
@@ -591,6 +604,31 @@
             { month: 6, week: 2, dayOfWeek: 6, message: "👑 To the Crown, to history, and to cherished memories. Happy King's Birthday. 👑🇬🇧" }
         ];
 
+        // ==========================================
+        // ⛈️ 自訂天氣警告名稱及 Emoji (可隨意修改)
+        // ==========================================
+        const CUSTOM_WARNING_CONFIG = {
+            'WFIREY': { emoji: '🟡🔥', name: '黃色火災危險警告' },
+            'WFIRER': { emoji: '🔴🔥', name: '紅色火災危險警告' },
+            'WRAINA': { emoji: '🟡🌧️', name: '黃色暴雨警告信號' },
+            'WRAINR': { emoji: '🔴🌧️', name: '紅色暴雨警告信號' },
+            'WRAINB': { emoji: '⚫️🌧️', name: '黑色暴雨警告信號' },
+            'WTS':    { emoji: '🌩️',  name: '雷暴警告' },
+            'WCOLD':  { emoji: '🥶',  name: '寒冷天氣警告' },
+            'WHOT':   { emoji: '🥵',  name: '酷熱天氣警告' },
+            'WFNW':   { emoji: '🌊',  name: '強烈季候風信號' },
+            'WL':     { emoji: '⛰️⚠️', name: '山泥傾瀉警告' },
+            'WFROST': { emoji: '❄️',  name: '霜凍警告' },
+            'TC1':    { emoji: '🌀1️⃣', name: '一號戒備信號' },
+            'TC3':    { emoji: '🌀3️⃣', name: '三號強風信號' },
+            'TC8NE':  { emoji: '🌀8️⃣↗️', name: '八號東北烈風或暴風信號' },
+            'TC8NW':  { emoji: '🌀8️⃣↖️', name: '八號西北烈風或暴風信號' },
+            'TC8SE':  { emoji: '🌀8️⃣↘️', name: '八號東南烈風或暴風信號' },
+            'TC8SW':  { emoji: '🌀8️⃣↙️', name: '八號西南烈風或暴風信號' },
+            'TC9':    { emoji: '🌀9️⃣', name: '九號烈風或暴風風力增強信號' },
+            'TC10':   { emoji: '🌀🔟⚠️', name: '十號颶風信號' }
+        };
+
         const MTR_NETWORK = {
             "ISL": { name: "港島綫", color: "#0071CE", terminals: { UP: "柴灣", DOWN: "堅尼地城" }, stations: { "KET": "堅尼地城", "HKU": "香港大學", "SYP": "西營盤", "SHW": "上環", "CEN": "中環", "ADM": "金鐘", "WAC": "灣仔", "CAB": "銅鑼灣", "TIH": "天后", "FOH": "炮台山", "NOP": "北角", "QUB": "鰂魚涌", "TAK": "太古", "SWH": "西灣河", "SKW": "筲箕灣", "HFC": "杏花邨", "CHW": "柴灣" } },
             "TWL": { name: "荃灣綫", color: "#E2231A", terminals: { UP: "荃灣", DOWN: "中環" }, stations: { "CEN": "中環", "ADM": "金鐘", "TST": "尖沙咀", "JOR": "佐敦", "YMT": "油麻地", "MOK": "旺角", "PRE": "太子", "SSP": "深水埗", "CSW": "長沙灣", "LCK": "荔枝角", "MEF": "美孚", "LAK": "荔景", "KWF": "葵芳", "KWH": "葵興", "TWH": "大窩口", "TSW": "荃灣" } },
@@ -624,6 +662,7 @@
         let transportTimestamps = { mtr: [], bus: [] };
         let tempMtrSelections = [];
         let weatherForecastArray = []; 
+        let activeWarningsData = {}; 
         let busDict = {}; 
         let isBusDataReady = false;
         let lineSyncInterval = null; 
@@ -1268,7 +1307,28 @@
         }
 
         /* ========================================= */
-        /* [核心更新] 港鐵車程動態詳情與同步控制 */
+        /* 天氣警告與提示浮動視窗控制邏輯 */
+        /* ========================================= */
+        function openWarningDetailModal(title, contentHtml) {
+            lockBackgroundScroll();
+            document.getElementById('warning-modal-title').innerHTML = title;
+            document.getElementById('warning-modal-body').innerHTML = contentHtml;
+            document.getElementById('warning-detail-modal').classList.add('active');
+        }
+
+        function closeWarningDetailModal() {
+            unlockBackgroundScroll();
+            document.getElementById('warning-detail-modal').classList.remove('active');
+        }
+
+        function showWarningModalDetail(warnId) {
+            if (activeWarningsData[warnId]) {
+                openWarningDetailModal(activeWarningsData[warnId].title, activeWarningsData[warnId].html);
+            }
+        }
+
+        /* ========================================= */
+        /* 港鐵車程動態詳情與同步控制 */
         /* ========================================= */
         function openMtrDetail(lineCode, currentStaCode) {
             lockBackgroundScroll();
@@ -1453,7 +1513,7 @@
         }
 
         // ==========================================
-        // 天氣引擎
+        // 天氣引擎 (更新包含詳細警告及提示資訊)
         // ==========================================
         async function fetchWeather() {
             try {
@@ -1465,22 +1525,65 @@
                 if(res.uvindex?.data?.[0]) document.getElementById('hk-uv').innerHTML = res.uvindex.data[0].value;
 
                 let warnSumRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>({}));
-                const WMAP = {
-                    'WFIREY':'🟡🔥', 'WFIRER':'🔴🔥',
-                    'WRAINA':'🟡🌧️', 'WRAINR':'🔴🌧️', 'WRAINB':'⚫️🌧️',
-                    'WTS':'🌩️', 'WCOLD':'🥶', 'WHOT':'🥵', 'WFNW':'🌊', 'WL':'⛰️⚠️', 'WMSGNL':'💨', 'WFROST':'❄️',
-                    'TC1':'🌀1️⃣', 'TC3':'🌀3️⃣', 'TC8NE':'🌀8️⃣↗️', 'TC8NW':'🌀8️⃣↖️', 'TC8SE':'🌀8️⃣↘️', 'TC8SW':'🌀8️⃣↙️', 'TC9':'🌀9️⃣', 'TC10':'🌀🔟⚠️'
-                };
-                
+                let warnInfoRes = null;
+
+                let hasActiveWarn = false;
+                if (warnSumRes) {
+                    for (const key in warnSumRes) {
+                        if (warnSumRes[key].actionCode && warnSumRes[key].actionCode !== "CANCEL") {
+                            hasActiveWarn = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (hasActiveWarn) {
+                    warnInfoRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
+                }
+
                 const warningsContainer = document.getElementById('warnings-container');
+                activeWarningsData = {};
                 let warningHtml = '';
                 
-                if (warnSumRes) {
+                if (warnSumRes && hasActiveWarn) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
                         if (w.name && w.code && w.actionCode && w.actionCode !== "CANCEL") {
-                            let emoji = WMAP[w.code] || '⚠️';
-                            warningHtml += `<div class="alert-box alert-active">${emoji} ${w.name}</div>`;
+                            
+                            let customCfg = CUSTOM_WARNING_CONFIG[w.code];
+                            let emoji = customCfg ? customCfg.emoji : '⚠️';
+                            let displayName = customCfg ? customCfg.name : w.name;
+                            
+                            let detailTextHtml = `<div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid #4da6ff; margin-bottom:12px;">${emoji} <b>${displayName}</b> 現正生效。請留意最新天氣情況及採取相應預防措施。</div>`;
+                            
+                            if (warnInfoRes && warnInfoRes.details) {
+                                let matchDetail = warnInfoRes.details.find(d => d.warningStatementCode === w.code || d.warningStatementCode === key);
+                                if (matchDetail && matchDetail.contents) {
+                                    detailTextHtml = matchDetail.contents.map((c, idx) => `
+                                        <div style="display: flex; align-items: flex-start; margin-bottom: 12px; padding: 12px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333;">
+                                            <div style="background: #333; color: #fff; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; margin-right: 12px; flex-shrink: 0;">${idx + 1}</div>
+                                            <div style="flex: 1; color: #ddd; line-height: 1.6; font-size: 0.95rem;">${c}</div>
+                                        </div>
+                                    `).join('');
+                                }
+                            }
+
+                            let warnId = `warn_${w.code}`;
+                            activeWarningsData[warnId] = {
+                                title: `${emoji} 天氣警告詳情`,
+                                html: `
+                                    <div class="detail-header-card" style="text-align:center; padding: 20px;">
+                                        <div style="font-size: 3rem; margin-bottom:10px;">${emoji}</div>
+                                        <div class="detail-route-title" style="font-size:1.6rem;">${displayName}</div>
+                                        <div class="detail-route-desc" style="color:#ff4d4d; margin-top:8px;">⚠️ 警告現正生效中</div>
+                                    </div>
+                                    <h4 style="margin: 15px 0 10px 0; color: #aaa; font-size: 0.9rem; padding: 0 15px;">📋 詳細提示事項：</h4>
+                                    <div class="detail-stops-container" style="padding:15px; border:none; background:transparent;">
+                                        ${detailTextHtml}
+                                    </div>`
+                            };
+
+                            warningHtml += `<div class="alert-box alert-active" onclick="showWarningModalDetail('${warnId}')">${emoji} ${displayName} <span style="font-size:0.8rem; font-weight:normal; opacity:0.8; display:block; margin-top:4px;">👉 點擊查看詳情</span></div>`;
                         }
                     }
                 }
@@ -1489,12 +1592,37 @@
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 const swtBox = document.getElementById('swt-box');
                 if (swtData && swtData.swt && swtData.swt.length > 0) {
-                    swtBox.innerHTML = '💡 <b>特別天氣提示：</b><br>' + swtData.swt.map(tip => `• ${tip.desc}`).join('<br>');
+                    swtBox.innerHTML = '💡 <b>特別天氣提示：</b><br>' + swtData.swt.map(tip => `• ${tip.desc}`).join('<br>') + '<div style="font-size:0.75rem; color:#ffd700; margin-top:6px; text-align:right; font-weight:bold;">👉 點擊查看完整提示內容</div>';
                     swtBox.style.display = 'block';
                     swtBox.classList.add('swt-blink');
+                    
+                    swtBox.onclick = function() {
+                        let swtHtml = swtData.swt.map((tip, idx) => `
+                            <div style="display: flex; align-items: flex-start; margin-bottom: 12px; padding: 12px; background: #1a1a1a; border-radius: 8px; border: 1px solid rgba(255,215,0,0.3);">
+                                <div style="background: rgba(255,215,0,0.2); color: #ffd700; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; margin-right: 12px; flex-shrink: 0;">${idx + 1}</div>
+                                <div style="flex: 1;">
+                                    <div style="color:#ddd; line-height:1.6; font-size:0.95rem;">${tip.desc}</div>
+                                    ${tip.updateTime ? `<div style="color:#888; font-size:0.75rem; margin-top:8px; text-align:right;">更新時間：${tip.updateTime.replace('T',' ').substring(0,19)}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        let fullHtml = `
+                            <div class="detail-header-card" style="text-align:center; padding: 20px;">
+                                <div style="font-size: 3rem; margin-bottom:10px;">💡</div>
+                                <div class="detail-route-title" style="font-size:1.6rem; color:#ffd700;">特別天氣提示</div>
+                            </div>
+                            <h4 style="margin: 15px 0 10px 0; color: #aaa; font-size: 0.9rem; padding: 0 15px;">📋 提示內容：</h4>
+                            <div class="detail-stops-container" style="padding:15px; border:none; background:transparent;">
+                                ${swtHtml}
+                            </div>
+                        `;
+                        openWarningDetailModal('💡 特別天氣提示詳情', fullHtml);
+                    };
                 } else {
                     swtBox.style.display = 'none';
                     swtBox.classList.remove('swt-blink');
+                    swtBox.onclick = null;
                 }
 
                 let fnd = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc&_=${ts}`, { cache: 'no-store' }).then(r=>r.json());
