@@ -1,11 +1,13 @@
 name: Auto Update Bus Dictionary
 
 on:
-  # 允許手動執行
   workflow_dispatch:
-  # 設定定時執行 (UTC時間 18:00 = 香港時間凌晨 02:00)
   schedule:
     - cron: '0 18 * * *'
+
+# 1. 強制賦予 GitHub Actions 寫入代碼庫嘅權限 (解決 403 錯誤)
+permissions:
+  contents: write
 
 jobs:
   update-data:
@@ -21,14 +23,16 @@ jobs:
           node-version: '20'
 
       - name: Run JS script to fetch bus data
-        # 注意：如果你的 .js 檔案名稱唔係 update_bus.js，請將下面改返做你嘅檔名
         run: node update_bus.js
 
-      - name: Commit and Push changes
+      - name: Check file existence and commit
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add bus_dict.json
-          # 如果檔案有改動就 Commit，冇改動就唔做嘢避免報錯
+          
+          # 2. 如果有變動先 commit，冇變動就顯示信息
           git commit -m "Auto-update bus_dict.json [skip ci]" || echo "No changes to commit"
-          git push origin main
+          
+          # 3. 自動推送到當前分支，無須硬性規定 main 定 master
+          git push
