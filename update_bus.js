@@ -1,5 +1,6 @@
 const fs = require('fs');
 
+// 負責連線去官方 API 攞數據
 async function fetchAPI(url) {
     const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const json = await response.json();
@@ -7,7 +8,7 @@ async function fetchAPI(url) {
 }
 
 async function main() {
-    console.log("Fetching stops...");
+    console.log("正在獲取所有巴士站資料 (Fetching stops)...");
     const kmbStopsData = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/stop');
     const ctbStopsData = await fetchAPI('https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop');
 
@@ -17,7 +18,7 @@ async function main() {
     const ctbStops = {};
     ctbStopsData.forEach(s => ctbStops[s.stop] = s);
 
-    console.log("Fetching routes...");
+    console.log("正在獲取所有路線資料 (Fetching routes)...");
     const kmbRoutes = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/route/');
     const ctbRoutes = await fetchAPI('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB');
 
@@ -27,7 +28,7 @@ async function main() {
     const ctbRouteDict = {};
     ctbRoutes.forEach(r => ctbRouteDict[r.route] = r);
 
-    console.log("Fetching route-stops...");
+    console.log("正在獲取路線與車站組合 (Fetching route-stops)...");
     const kmbRS = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
     const ctbRS = await fetchAPI('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB');
 
@@ -37,13 +38,14 @@ async function main() {
         if (!busDict[keyName]) {
             busDict[keyName] = [];
         }
+        // 避免重複加入相同嘅路線及車站
         const exists = busDict[keyName].some(x => x.co === item.co && x.route === item.route && x.stopId === item.stopId);
         if (!exists) {
             busDict[keyName].push(item);
         }
     }
 
-    console.log("Processing KMB...");
+    console.log("正在處理九巴數據 (Processing KMB)...");
     kmbRS.forEach(rs => {
         const stopId = rs.stop;
         if (!kmbStops[stopId]) return;
@@ -65,7 +67,7 @@ async function main() {
         addToDict(keyName, item);
     });
 
-    console.log("Processing CTB...");
+    console.log("正在處理城巴數據 (Processing CTB)...");
     ctbRS.forEach(rs => {
         const stopId = rs.stop;
         if (!ctbStops[stopId]) return;
@@ -95,9 +97,10 @@ async function main() {
         addToDict(keyName, item);
     });
 
-    console.log("Saving to bus_dict.json...");
+    console.log("正在儲存至 bus_dict.json (Saving)...");
+    // 覆寫 / 生成 bus_dict.json，確保保留中英文字元
     fs.writeFileSync('bus_dict.json', JSON.stringify(busDict), 'utf-8');
-    console.log("Done!");
+    console.log("更新完成 (Done)!");
 }
 
 main().catch(console.error);
