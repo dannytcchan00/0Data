@@ -1,29 +1,34 @@
-name: Auto Update Bus DB
+name: Auto Update Bus Dictionary
 
 on:
-  schedule:
-    - cron: '0 20 * * *'
+  # 允許手動執行
   workflow_dispatch:
-
-permissions:
-  contents: write
+  # 設定定時執行 (UTC時間 18:00 = 香港時間凌晨 02:00)
+  schedule:
+    - cron: '0 18 * * *'
 
 jobs:
-  build:
+  update-data:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup Node
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - name: Run Scanner
-        run: node build_dict.js
-      - name: Push Changes
+          node-version: '20'
+
+      - name: Run JS script to fetch bus data
+        # 注意：如果你的 .js 檔案名稱唔係 update_bus.js，請將下面改返做你嘅檔名
+        run: node update_bus.js
+
+      - name: Commit and Push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add bus_dict.json
-          git commit -m "Update bus database" || echo "No changes to commit"
-          git push
+          # 如果檔案有改動就 Commit，冇改動就唔做嘢避免報錯
+          git commit -m "Auto-update bus_dict.json [skip ci]" || echo "No changes to commit"
+          git push origin main
