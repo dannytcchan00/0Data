@@ -1,6 +1,5 @@
 const fs = require('fs');
 
-// 負責連線去官方 API 攞數據
 async function fetchAPI(url) {
     const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const json = await response.json();
@@ -32,16 +31,15 @@ async function main() {
     const kmbRS = await fetchAPI('https://data.etabus.gov.hk/v1/transport/kmb/route-stop');
     const ctbRS = await fetchAPI('https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB');
 
-    const busDict = {};
+    const tempDict = {};
 
-    function addToDict(keyName, item) {
-        if (!busDict[keyName]) {
-            busDict[keyName] = [];
+    function addToDict(tcName, item) {
+        if (!tempDict[tcName]) {
+            tempDict[tcName] = [];
         }
-        // 避免重複加入相同嘅路線及車站
-        const exists = busDict[keyName].some(x => x.co === item.co && x.route === item.route && x.stopId === item.stopId);
+        const exists = tempDict[tcName].some(x => x.co === item.co && x.route === item.route && x.stopId === item.stopId);
         if (!exists) {
-            busDict[keyName].push(item);
+            tempDict[tcName].push(item);
         }
     }
 
@@ -63,8 +61,7 @@ async function main() {
             dest_en: rInfo ? rInfo.dest_en : ''
         };
         
-        const keyName = st.name_tc || '未知';
-        addToDict(keyName, item);
+        addToDict(st.name_tc || '未知', item);
     });
 
     console.log("正在處理城巴數據 (Processing CTB)...");
@@ -93,13 +90,22 @@ async function main() {
             dest_en: destEn
         };
 
-        const keyName = st.name_tc || '未知';
-        addToDict(keyName, item);
+        addToDict(st.name_tc || '未知', item);
     });
 
+    console.log("正在整合中英雙語站名目錄...");
+    const finalDict = {};
+    for (let tcName in tempDict) {
+        // 搵出呢個站嘅英文名
+        let firstEn = tempDict[tcName].find(x => x.name_en)?.name_en || '';
+        
+        // 將 JSON 嘅 Key 設定為 "中文名 / English Name"
+        let newKey = firstEn ? `${tcName} / ${firstEn}` : tcName;
+        finalDict[newKey] = tempDict[tcName];
+    }
+
     console.log("正在儲存至 bus_dict.json (Saving)...");
-    // 覆寫 / 生成 bus_dict.json，確保保留中英文字元
-    fs.writeFileSync('bus_dict.json', JSON.stringify(busDict), 'utf-8');
+    fs.writeFileSync('bus_dict.json', JSON.stringify(finalDict), 'utf-8');
     console.log("更新完成 (Done)!");
 }
 
