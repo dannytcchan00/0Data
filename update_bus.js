@@ -1,5 +1,6 @@
 const fs = require('fs');
 
+// 負責連線去官方 API 攞數據
 async function fetchAPI(url) {
     const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const json = await response.json();
@@ -37,6 +38,7 @@ async function main() {
         if (!tempDict[tcName]) {
             tempDict[tcName] = [];
         }
+        // 避免重複加入相同嘅路線及車站
         const exists = tempDict[tcName].some(x => x.co === item.co && x.route === item.route && x.stopId === item.stopId);
         if (!exists) {
             tempDict[tcName].push(item);
@@ -99,12 +101,13 @@ async function main() {
         // 搵出呢個站嘅英文名
         let firstEn = tempDict[tcName].find(x => x.name_en)?.name_en || '';
         
-        // 將 JSON 嘅 Key 設定為 "中文名 / English Name"
+        // 將 JSON 嘅主目錄設定為 "中文名 / English Name" 嘅格式
         let newKey = firstEn ? `${tcName} / ${firstEn}` : tcName;
         finalDict[newKey] = tempDict[tcName];
     }
 
     console.log("正在儲存至 bus_dict.json (Saving)...");
+    // 儲存檔案
     fs.writeFileSync('bus_dict.json', JSON.stringify(finalDict), 'utf-8');
     console.log("更新完成 (Done)!");
 }
