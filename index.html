@@ -84,10 +84,10 @@
         @keyframes swtBlink { 0% { opacity: 0.8; box-shadow: 0 0 5px rgba(255, 215, 0, 0.1); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); background: rgba(255, 215, 0, 0.15); } 100% { opacity: 0.8; box-shadow: 0 0 5px rgba(255, 215, 0, 0.1); } }
         
         .warnings-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-        .alert-box { border-radius: 10px; padding: 12px; font-size: 1rem; font-weight: bold; text-align: center; }
-        .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; cursor: pointer; transition: transform 0.15s; }
-        .alert-active:active { transform: scale(0.97); }
-        .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); }
+        .alert-box { border-radius: 10px; padding: 12px; font-size: 1rem; font-weight: bold; text-align: center; cursor: pointer; transition: transform 0.15s;}
+        .alert-box:active { transform: scale(0.97); }
+        .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; }
+        .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); cursor: default;}
         .swt-box { border-radius: 10px; padding: 12px; font-size: 0.85rem; line-height: 1.5; text-align: left; border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; margin-top: 4px; cursor: pointer; transition: transform 0.15s; }
         .swt-box:active { transform: scale(0.97); }
         .swt-blink { animation: swtBlink 2.5s infinite ease-in-out; }
@@ -103,7 +103,7 @@
         .right-col { display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; }
         h2 { margin: 0 0 12px 0; font-size: 1.05rem; color: var(--text-muted); border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .header-actions { display: flex; align-items: center; gap: 10px; }
-        .refresh-indicator { font-size: 0.75rem; color: #00ff66; font-weight: normal; margin-right: 10px;}
+        .refresh-indicator { font-size: 0.75rem; color: #00ff66; font-weight: normal;}
 
         .marquee-container { width: 100%; overflow: hidden; background: #151515; border: 1px solid #333; border-radius: 8px; padding: 10px 0; margin-bottom: 12px; display: flex; white-space: nowrap; position: relative; flex: none; }
         .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 25s linear infinite; }
@@ -322,7 +322,6 @@
             <div class="panel mtr-section">
                 <h2>
                     <span id="t-mtr-title">🚇 下一班列車 Train Frequency</span>
-                    <!-- 已移除地鐵設定按鈕，移至設定目錄 -->
                 </h2>
                 <div class="marquee-container" id="mtr-marquee-container">
                     <div class="marquee-text" id="mtr-marquee-text">📡 正在連線至港鐵系統 Connecting to MTR...</div>
@@ -335,7 +334,6 @@
                     <span id="t-bus-title">🚌 巴士到站時間 Bus Frequency</span>
                     <div class="header-actions">
                         <span class="refresh-indicator" id="refresh-status">🔄 連線中...</span>
-                        <!-- 已移除巴士設定按鈕，移至設定目錄 -->
                     </div>
                 </h2>
                 <div class="bus-grid" id="bus-data"></div>
@@ -381,9 +379,9 @@
                     </div>
                     <div class="search-engine-box">
                         <h4 style="color:#4da6ff;" id="t-sch-stop">🚏 搜尋車站</h4>
-                        <div style="font-size:0.8rem; color:#888; margin-bottom:8px;" id="t-sch-desc">輸入站名，從你的 GitHub 庫搜尋途經路線。</div>
+                        <div style="font-size:0.8rem; color:#888; margin-bottom:8px;" id="t-sch-desc">輸入站名，支援中英雙語搜尋。</div>
                         <div class="search-flex-bar">
-                            <input type="text" id="stop-name-input" placeholder="例 / Ex: 鰂魚涌" autocomplete="off">
+                            <input type="text" id="stop-name-input" placeholder="例 / Ex: Quarry Bay / 鰂魚涌" autocomplete="off">
                             <button onclick="searchStop()" class="t-btn-sch">搜尋</button>
                         </div>
                     </div>
@@ -483,9 +481,13 @@
 
     <script>
         // ==========================================
-        // 🌐 多語言系統設定
+        // 🌐 多語言系統設定及容錯機制
         // ==========================================
-        let currentLang = localStorage.getItem('app_lang') || 'zh';
+        let currentLang = 'zh';
+        try { 
+            let savedLang = localStorage.getItem('app_lang');
+            if(savedLang === 'en' || savedLang === 'zh') currentLang = savedLang;
+        } catch(e) {}
 
         const i18n = {
             'zh': {
@@ -495,7 +497,7 @@
                 'mtr-title': '🚇 下一班列車 Train Frequency', 'bus-title': '🚌 巴士到站時間 Bus Frequency',
                 'sel-mtr': '選擇地鐵站', 'cancel-1': '取消', 'save-1': '儲存',
                 'sel-bus': '設定巴士追蹤', 'sch-kmb': '🔴 搜尋路線 (九巴)', 'sch-ctb': '🟡 搜尋路線 (城巴)', 'sch-stop': '🚏 搜尋車站',
-                'sch-desc': '輸入站名，從你的 GitHub 庫搜尋途經路線。', 'btn-sch': '搜尋', 'save-2': '完成設定',
+                'sch-desc': '輸入站名，支援中英雙語搜尋。', 'btn-sch': '搜尋', 'save-2': '完成設定',
                 'bus-det': '🚌 路線詳細資料', 'wth-det': '🌈 延展天氣預報詳情', 'mtr-det': '🚇 港鐵路綫與車程分佈',
                 'sys-set': '⚙️ 系統設定 Settings', 'lang-set': '🌐 介面語言 Language', 'donate-title': '☕ 支持開發者 Support Developer', 
                 'donate-desc': '如果你覺得呢個 App 幫到你，可以考慮用 HSBC PayMe 請我飲杯咖啡，支持系統持續營運！',
@@ -513,7 +515,7 @@
                 'mtr-title': '🚇 MTR Train Frequency', 'bus-title': '🚌 Bus ETA',
                 'sel-mtr': 'Select Stations', 'cancel-1': 'Cancel', 'save-1': 'Save',
                 'sel-bus': 'Bus Tracking Settings', 'sch-kmb': '🔴 Search KMB', 'sch-ctb': '🟡 Search CTB', 'sch-stop': '🚏 Search Stops',
-                'sch-desc': 'Enter stop name to search from GitHub DB.', 'btn-sch': 'Search', 'save-2': 'Done',
+                'sch-desc': 'Enter stop name (supports Eng & Chi).', 'btn-sch': 'Search', 'save-2': 'Done',
                 'bus-det': '🚌 Route Details', 'wth-det': '🌈 Extended Forecast', 'mtr-det': '🚇 MTR Route Details',
                 'sys-set': '⚙️ Settings', 'lang-set': '🌐 Interface Language', 'donate-title': '☕ Support Developer', 
                 'donate-desc': 'If you find this App useful, consider buying me a coffee via HSBC PayMe to support the server!',
@@ -527,46 +529,48 @@
         };
 
         function applyLanguage() {
-            const dict = i18n[currentLang];
-            document.getElementById('t-sys-ready').innerText = dict['sys-ready'];
-            document.getElementById('progress-detail').innerText = dict['connecting']; 
-            document.getElementById('t-add-home').innerText = dict['add-home'];
-            document.getElementById('t-pull').innerText = dict['pull'];
-            document.getElementById('t-hum').innerText = dict['hum'];
-            document.getElementById('t-uv').innerText = dict['uv'];
-            document.getElementById('t-rain').innerText = dict['rain'];
-            document.getElementById('t-max').innerText = dict['max'];
-            document.getElementById('t-min').innerText = dict['min'];
-            document.getElementById('t-mtr-title').innerText = dict['mtr-title'];
-            document.getElementById('t-bus-title').innerText = dict['bus-title'];
-            document.getElementById('t-sel-mtr').innerText = dict['sel-mtr'];
-            document.getElementById('t-cancel-1').innerText = dict['cancel-1'];
-            document.getElementById('t-save-1').innerText = dict['save-1'];
-            document.getElementById('t-sel-bus').innerText = dict['sel-bus'];
-            document.getElementById('t-sch-kmb').innerText = dict['sch-kmb'];
-            document.getElementById('t-sch-ctb').innerText = dict['sch-ctb'];
-            document.getElementById('t-sch-stop').innerText = dict['sch-stop'];
-            document.getElementById('t-sch-desc').innerText = dict['sch-desc'];
-            document.querySelectorAll('.t-btn-sch').forEach(el => el.innerText = dict['btn-sch']);
-            document.getElementById('t-save-2').innerText = dict['save-2'];
-            document.getElementById('t-bus-det').innerText = dict['bus-det'];
-            document.getElementById('t-wth-det').innerText = dict['wth-det'];
-            document.getElementById('t-mtr-det').innerText = dict['mtr-det'];
-            document.getElementById('t-sys-set').innerText = dict['sys-set'];
-            document.getElementById('t-ts-set').innerText = dict['ts-set'];
-            document.getElementById('t-btn-mtr-set').innerText = dict['btn-mtr-set'];
-            document.getElementById('t-btn-bus-set').innerText = dict['btn-bus-set'];
-            document.getElementById('t-lang-set').innerText = dict['lang-set'];
-            document.getElementById('t-donate-title').innerText = dict['donate-title'];
-            document.getElementById('t-donate-desc').innerText = dict['donate-desc'];
+            try {
+                const dict = i18n[currentLang];
+                document.getElementById('t-sys-ready').innerText = dict['sys-ready'];
+                document.getElementById('progress-detail').innerText = dict['connecting']; 
+                document.getElementById('t-add-home').innerText = dict['add-home'];
+                document.getElementById('t-pull').innerText = dict['pull'];
+                document.getElementById('t-hum').innerText = dict['hum'];
+                document.getElementById('t-uv').innerText = dict['uv'];
+                document.getElementById('t-rain').innerText = dict['rain'];
+                document.getElementById('t-max').innerText = dict['max'];
+                document.getElementById('t-min').innerText = dict['min'];
+                document.getElementById('t-mtr-title').innerText = dict['mtr-title'];
+                document.getElementById('t-bus-title').innerText = dict['bus-title'];
+                document.getElementById('t-sel-mtr').innerText = dict['sel-mtr'];
+                document.getElementById('t-cancel-1').innerText = dict['cancel-1'];
+                document.getElementById('t-save-1').innerText = dict['save-1'];
+                document.getElementById('t-sel-bus').innerText = dict['sel-bus'];
+                document.getElementById('t-sch-kmb').innerText = dict['sch-kmb'];
+                document.getElementById('t-sch-ctb').innerText = dict['sch-ctb'];
+                document.getElementById('t-sch-stop').innerText = dict['sch-stop'];
+                document.getElementById('t-sch-desc').innerText = dict['sch-desc'];
+                document.querySelectorAll('.t-btn-sch').forEach(el => el.innerText = dict['btn-sch']);
+                document.getElementById('t-save-2').innerText = dict['save-2'];
+                document.getElementById('t-bus-det').innerText = dict['bus-det'];
+                document.getElementById('t-wth-det').innerText = dict['wth-det'];
+                document.getElementById('t-mtr-det').innerText = dict['mtr-det'];
+                document.getElementById('t-sys-set').innerText = dict['sys-set'];
+                document.getElementById('t-ts-set').innerText = dict['ts-set'];
+                document.getElementById('t-btn-mtr-set').innerText = dict['btn-mtr-set'];
+                document.getElementById('t-btn-bus-set').innerText = dict['btn-bus-set'];
+                document.getElementById('t-lang-set').innerText = dict['lang-set'];
+                document.getElementById('t-donate-title').innerText = dict['donate-title'];
+                document.getElementById('t-donate-desc').innerText = dict['donate-desc'];
 
-            document.getElementById('btn-lang-zh').classList.toggle('active', currentLang === 'zh');
-            document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+                document.getElementById('btn-lang-zh').classList.toggle('active', currentLang === 'zh');
+                document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+            } catch(e) { console.warn('Language apply error ignored to prevent crash.'); }
         }
 
         function setLanguage(lang) {
             currentLang = lang;
-            localStorage.setItem('app_lang', lang);
+            try { localStorage.setItem('app_lang', lang); } catch(e){}
             applyLanguage();
             updateTick();
             fetchWeather();
@@ -720,8 +724,21 @@
         const MTR_DEST_MAP = { 'LHP': {zh: '康城', en: 'LOHAS Park'}, 'POA': {zh: '寶琳', en: 'Po Lam'} };
         for (let line in MTR_NETWORK) { for (let code in MTR_NETWORK[line].stations) { MTR_DEST_MAP[code] = MTR_NETWORK[line].stations[code]; } }
 
-        let myBuses = JSON.parse(localStorage.getItem('my_saved_buses')) || [];
-        let myMtrStations = JSON.parse(localStorage.getItem('my_saved_mtr')) || [{ line: 'ISL', sta: 'QUB' }];
+        // ==========================================
+        // 🔒 Bulletproof 本地儲存資料讀取
+        // ==========================================
+        let myBuses = [];
+        try { 
+            let parsed = JSON.parse(localStorage.getItem('my_saved_buses'));
+            if(Array.isArray(parsed)) myBuses = parsed;
+        } catch(e) {}
+        
+        let myMtrStations = [{ line: 'ISL', sta: 'QUB' }];
+        try { 
+            let parsedMtr = JSON.parse(localStorage.getItem('my_saved_mtr'));
+            if(Array.isArray(parsedMtr) && parsedMtr.length > 0) myMtrStations = parsedMtr;
+        } catch(e) {}
+        
         myMtrStations = myMtrStations.map(s => {
             if (s.line === 'ISL' && s.sta === 'TIN') return { ...s, sta: 'TIH' };
             if (s.line === 'ISL' && s.sta === 'FOT') return { ...s, sta: 'FOH' };
@@ -730,9 +747,9 @@
             if (s.line === 'KTL' && s.sta === 'CHH') return { ...s, sta: 'DIH' }; 
             if (s.line === 'KTL' && s.sta === 'DIH') return { ...s, sta: 'CHH' }; 
             return s;
-        });
-        myMtrStations = myMtrStations.filter(s => MTR_NETWORK[s.line] && MTR_NETWORK[s.line].stations[s.sta]);
-        localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations));
+        }).filter(s => MTR_NETWORK[s.line] && MTR_NETWORK[s.line].stations[s.sta]);
+        
+        try { localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations)); } catch(e){}
 
         let transportTimestamps = { mtr: [], bus: [] };
         let tempMtrSelections = [];
@@ -782,100 +799,81 @@
         }
 
         function renderUI() {
-            const dict = i18n[currentLang];
-            let mtrHtml = '';
-            let isOpHours = checkIsOperatingHours();
-            
-            let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
-            let nowH = now.getHours();
-            let nowM = now.getMinutes();
-            let isLateNightEdge = (nowH === 23 && nowM >= 30) || (nowH >= 0 && nowH <= 5);
-            
-            transportTimestamps.mtr.forEach(s => {
-                let lineInfo = MTR_NETWORK[s.line];
-                if(!lineInfo) return;
+            try {
+                const dict = i18n[currentLang];
+                let mtrHtml = '';
+                let isOpHours = checkIsOperatingHours();
+                
+                let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+                let nowH = now.getHours(); let nowM = now.getMinutes(); let isLateNightEdge = (nowH === 23 && nowM >= 30) || (nowH >= 0 && nowH <= 5);
+                
+                transportTimestamps.mtr.forEach(s => {
+                    let lineInfo = MTR_NETWORK[s.line]; if(!lineInfo) return;
+                    let isAnomaly = false; let isEnded = false;
+                    if (s.data.length === 0 || s.suspended) { if (isLateNightEdge || !isOpHours) { isEnded = true; } else { isAnomaly = true; } }
 
-                let isAnomaly = false;
-                let isEnded = false;
+                    let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
+                    let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
+                    let renderLineName = currentLang === 'en' ? lineInfo.name_en : lineInfo.name_zh;
+                    let renderStaName = currentLang === 'en' ? lineInfo.stations[s.sta].en : lineInfo.stations[s.sta].zh;
 
-                if (s.data.length === 0 || s.suspended) {
-                    if (isLateNightEdge || !isOpHours) {
-                        isEnded = true;
+                    mtrHtml += `<div class="${boxClass}" style="${boxStyle} cursor: pointer;" onclick="openMtrDetail('${s.line}', '${s.sta}')">
+                        <div class="station-name">${renderStaName} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
+                        <div class="mtr-data-container">`;
+                    
+                    if (isAnomaly) {
+                        mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${renderLineName} <br><span style="font-size:0.85rem;">${dict['txt-st-delay']} / ${dict['txt-st-nodata']}</span></div>`;
+                    } else if (isEnded) {
+                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">${dict['txt-st-end']}</div>`;
                     } else {
-                        isAnomaly = true;
+                        s.data.forEach(t => {
+                            let etaInfo = parseRemaining(t.localTarget, 'mtr'); 
+                            let colorClass = ''; if (etaInfo.status === 'departing') colorClass = 'departing-text'; else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
+                            let platHtml = t.plat ? `<div class="plat-badge" style="background-color: ${lineInfo.color};">${t.plat}</div>` : '';
+                            let renderDest = currentLang === 'en' ? t.dest.en : t.dest.zh;
+
+                            mtrHtml += `<div class="mtr-item">
+                                <div class="mtr-dest-group"><div class="mtr-dest">${dict['txt-to']}${renderDest}</div>${platHtml}</div>
+                                <div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:#888; font-weight:normal;"' : ''}>${etaInfo.text}</div>
+                            </div>`;
+                        });
                     }
-                }
+                    mtrHtml += `</div></div>`;
+                });
+                document.getElementById('mtr-dynamic-grid').innerHTML = mtrHtml;
 
-                let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
-                let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
-                
-                let renderLineName = currentLang === 'en' ? lineInfo.name_en : lineInfo.name_zh;
-                let renderStaName = currentLang === 'en' ? lineInfo.stations[s.sta].en : lineInfo.stations[s.sta].zh;
-
-                mtrHtml += `<div class="${boxClass}" style="${boxStyle} cursor: pointer;" onclick="openMtrDetail('${s.line}', '${s.sta}')">
-                    <div class="station-name">${renderStaName} <span class="line-badge" style="background:${lineInfo.color};">${s.line}</span></div>
-                    <div class="mtr-data-container">`;
-                
-                if (isAnomaly) {
-                    mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${renderLineName} <br><span style="font-size:0.85rem;">${dict['txt-st-delay']} / ${dict['txt-st-nodata']}</span></div>`;
-                } else if (isEnded) {
-                    mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">${dict['txt-st-end']}</div>`;
+                let busHtml = '';
+                if (transportTimestamps.bus.length === 0) {
+                    let msg = myBuses.length === 0 ? (currentLang==='en'?'📭 No tracking set. Go to ⚙️ to add.':'📭 尚未設定任何追蹤，請到⚙️加入') : (currentLang==='en'?'⏳ Loading Bus ETAs...':'⏳ 正在讀取巴士實時班次...');
+                    busHtml = `<div class="no-service">${msg}</div>`;
                 } else {
-                    s.data.forEach(t => {
-                        let etaInfo = parseRemaining(t.localTarget, 'mtr'); 
-                        let colorClass = '';
-                        if (etaInfo.status === 'departing') colorClass = 'departing-text';
-                        else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
+                    transportTimestamps.bus.forEach(b => {
+                        let etaInfo = parseRemaining(b.localTarget, 'bus'); 
+                        let colorClass = ''; let pulseClass = '';
+                        if (etaInfo.status === 'departing') { colorClass = 'departing-text'; pulseClass = 'arriving-pulse'; }
+                        else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
 
-                        let platHtml = t.plat ? `<div class="plat-badge" style="background-color: ${lineInfo.color};">${t.plat}</div>` : '';
-                        let renderDest = currentLang === 'en' ? t.dest.en : t.dest.zh;
+                        let renderDest = currentLang === 'en' ? (b.dest_en||b.dest_tc||b.dest||'') : (b.dest_tc||b.dest||'');
+                        let renderStop = currentLang === 'en' ? (b.stopName_en||b.stopName_tc||b.stopName||'') : (b.stopName_tc||b.stopName||'');
+                        let safeNo = b.no || '';
 
-                        mtrHtml += `<div class="mtr-item">
-                            <div class="mtr-dest-group">
-                                <div class="mtr-dest">${dict['txt-to']}${renderDest}</div>
-                                ${platHtml}
-                            </div>
-                            <div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:#888; font-weight:normal;"' : ''}>${etaInfo.text}</div>
-                        </div>`;
+                        let moonIcon = safeNo.toUpperCase().startsWith('N') ? '🌙 ' : '';
+                        let planeIcon = (renderDest.includes('機場') || renderDest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
+                        let busNoDisplay = `${moonIcon}${planeIcon}${safeNo}`;
+
+                        busHtml += `
+                            <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${safeNo}', '${b.dest_tc||''}', '${b.stop}', '${b.dir||''}', '${b.service_type || '1'}')">
+                                <div>
+                                    <div class="bus-no">${busNoDisplay}</div>
+                                    <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
+                                    <div style="font-size:0.75rem; color:#888; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
+                                </div>
+                                <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
+                            </div>`;
                     });
                 }
-                mtrHtml += `</div></div>`;
-            });
-            document.getElementById('mtr-dynamic-grid').innerHTML = mtrHtml;
-
-            let busHtml = '';
-            if (transportTimestamps.bus.length === 0) {
-                let msg = myBuses.length === 0 ? (currentLang==='en'?'📭 No tracking set. Click ⚙️ to add.':'📭 尚未設定任何追蹤，請點擊 ⚙️ 加入') : (currentLang==='en'?'⏳ Loading Bus ETAs...':'⏳ 正在讀取巴士實時班次...');
-                busHtml = `<div class="no-service">${msg}</div>`;
-            } else {
-                transportTimestamps.bus.forEach(b => {
-                    let etaInfo = parseRemaining(b.localTarget, 'bus'); 
-                    
-                    let colorClass = '';
-                    let pulseClass = '';
-                    if (etaInfo.status === 'departing') { colorClass = 'departing-text'; pulseClass = 'arriving-pulse'; }
-                    else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
-
-                    let renderDest = currentLang === 'en' ? b.dest_en : b.dest_tc;
-                    let renderStop = currentLang === 'en' ? b.stopName_en : b.stopName_tc;
-
-                    let moonIcon = b.no.toUpperCase().startsWith('N') ? '🌙 ' : '';
-                    let planeIcon = (renderDest.includes('機場') || renderDest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
-                    let busNoDisplay = `${moonIcon}${planeIcon}${b.no}`;
-
-                    // 加入 b.dir 作為參數，準確處理方向
-                    busHtml += `
-                        <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${b.no}', '${b.dest_tc}', '${b.stop}', '${b.dir}')">
-                            <div>
-                                <div class="bus-no">${busNoDisplay}</div>
-                                <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
-                                <div style="font-size:0.75rem; color:#888; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
-                            </div>
-                            <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
-                        </div>`;
-                });
-            }
-            document.getElementById('bus-data').innerHTML = busHtml;
+                document.getElementById('bus-data').innerHTML = busHtml;
+            } catch (e) { console.warn("RenderUI Safe Catch:", e); }
         }
 
         async function fetchMtrStatusMarquee() {
@@ -884,17 +882,14 @@
             let isOpHours = checkIsOperatingHours();
             
             let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
-            let mm = String(now.getMonth() + 1).padStart(2, '0');
-            let dd = String(now.getDate()).padStart(2, '0');
+            let mm = String(now.getMonth() + 1).padStart(2, '0'); let dd = String(now.getDate()).padStart(2, '0');
             let todayKey = `${mm}-${dd}`;
             
             let holidayMsg = "";
             if (customDateMessages[todayKey]) {
                 holidayMsg = ` ｜ ${currentLang==='en'?customDateMessages[todayKey].en:customDateMessages[todayKey].zh}`;
             } else {
-                let currentMonth = now.getMonth() + 1;
-                let currentDayOfWeek = now.getDay();
-                let currentWeekNum = Math.ceil(now.getDate() / 7);
+                let currentMonth = now.getMonth() + 1; let currentDayOfWeek = now.getDay(); let currentWeekNum = Math.ceil(now.getDate() / 7);
                 for (let rule of dynamicDateMessages) {
                     if (rule.month === currentMonth && rule.week === currentWeekNum && rule.dayOfWeek === currentDayOfWeek) {
                         holidayMsg = ` ｜ ${currentLang==='en'?rule.msg.en:rule.msg.zh}`;
@@ -917,8 +912,7 @@
             ];
 
             try {
-                let ts = Date.now();
-                let wLang = currentLang === 'en' ? 'en' : 'tc';
+                let ts = Date.now(); let wLang = currentLang === 'en' ? 'en' : 'tc';
                 let warnSumRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 let typhoonMsg = '';
                 if (warnSumRes) {
@@ -1036,22 +1030,28 @@
 
         function saveMtrSelection() {
             if (tempMtrSelections.length === 0) { alert('You must select at least 1 station! / 最少要選擇 1 個車站！'); return; }
-            myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations));
+            myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); 
+            try { localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations)); } catch(e){}
             closeMtrModal(); fetchMTR();
         }
 
         async function initStaticDatabase() {
             try {
-                document.getElementById('progress-bar').style.width = '50%'; document.getElementById('progress-text').innerText = '50%';
+                document.getElementById('progress-bar').style.width = '30%'; 
+                document.getElementById('progress-text').innerText = '30%';
+                
                 let res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/main/bus_dict.json', { cache: 'no-store' });
                 if (!res.ok) { res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/master/bus_dict.json', { cache: 'no-store' }); if (!res.ok) throw new Error('Dict not found'); }
                 let textData = await res.text(); if (textData.trim() === "" || textData.trim() === "{}" || textData.trim() === "[]") { throw new Error('Dict is empty'); }
                 busDict = JSON.parse(textData);
+
                 document.getElementById('progress-bar').style.width = '100%'; document.getElementById('progress-text').innerText = '100%'; isBusDataReady = true;
+                
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 300);
                 fetchRealBusData();
             } catch(e) {
-                document.getElementById('progress-detail').innerHTML = '⚠️ Dictionary error / 你的 bus_dict.json 是空白的'; document.getElementById('progress-bar').style.background = '#ffcc00'; isBusDataReady = true; 
+                console.warn(e);
+                document.getElementById('progress-detail').innerHTML = '⚠️ Dictionary error / 你的 bus_dict.json 發生錯誤'; document.getElementById('progress-bar').style.background = '#ffcc00'; isBusDataReady = true; 
                 setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300); }, 3000);
             }
         }
@@ -1066,13 +1066,13 @@
             let html = '';
             myBuses.forEach(b => {
                 let coColor = b.co === 'kmb' ? 'var(--warning-red)' : '#ffcc00';
-                let bName = currentLang === 'en' ? (b.name_en || b.name) : (b.name_tc || b.name);
-                let bDest = currentLang === 'en' ? (b.dest_en || b.dest) : (b.dest_tc || b.dest);
+                let bName = currentLang === 'en' ? (b.name_en || b.name_tc || b.name || '') : (b.name_tc || b.name || '');
+                let bDest = currentLang === 'en' ? (b.dest_en || b.dest_tc || b.dest || '') : (b.dest_tc || b.dest || '');
                 html += `<div class="bus-manager-item"><div class="bus-manager-info"><span class="bm-route"><span style="color:${coColor}; font-size:0.8rem; margin-right:5px;">${b.co==='kmb'?(currentLang==='en'?'KMB':'九巴'):(currentLang==='en'?'CTB':'城巴')}</span>${b.route} <span style="font-size:0.85rem; font-weight:normal; color:#aaa;">${dict['txt-to']}${bDest}</span></span><span class="bm-stop">🚏 ${bName}</span></div><button class="bm-delete" onclick="deleteBusTrack('${b.id}')">${currentLang==='en'?'Del':'刪除'}</button></div>`;
             });
             area.innerHTML = html;
         }
-        function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); renderBusManagerList(); fetchRealBusData(); }
+        function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); try{ localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); }catch(e){} renderBusManagerList(); fetchRealBusData(); }
 
         async function searchRoute(co) {
             let inputId = co === 'kmb' ? 'kmb-route-input' : 'ctb-route-input'; let route = document.getElementById(inputId).value.trim().toUpperCase();
@@ -1088,7 +1088,7 @@
                     if (matchedRoutes.length > 0) {
                         found = true; html += `<h4 style="color:#ff6b6b; margin:10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
                         matchedRoutes.forEach(dir => {
-                            let bnd = dir.bound === 'O' ? 'outbound' : 'inbound';
+                            let bnd = (dir.bound === 'O' || String(dir.bound) === '1') ? 'outbound' : 'inbound';
                             let renderDest = currentLang === 'en' ? dir.dest_en : dir.dest_tc;
                             html += `<button class="bus-dir-btn kmb" onclick="loadRouteStops('kmb', '${route}', '${bnd}', '${dir.service_type}', '${dir.dest_tc}', '${dir.dest_en}')"><div><span style="font-weight:900; font-size:1.1rem;">KMB ${route}</span><br><span style="color:#aaa; font-size:0.9rem;">${i18n[currentLang]['txt-to']}${renderDest}</span></div><div style="font-size:0.8rem; color:#888;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
                         });
@@ -1134,17 +1134,53 @@
         }
 
         function searchStop() {
-            let keyword = document.getElementById('stop-name-input').value.trim(); if (!keyword) return;
-            document.getElementById('bus-search-interface').style.display = 'none'; let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
-            if (!isBusDataReady || Object.keys(busDict).length === 0) { resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:#ffcc00;padding:20px;">⚠️ DB not loaded</p>`; return; }
+            let keyword = document.getElementById('stop-name-input').value.trim().toLowerCase(); 
+            if (!keyword) return;
+            
+            document.getElementById('bus-search-interface').style.display = 'none'; 
+            let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
+            
+            if (!isBusDataReady || Object.keys(busDict).length === 0) { 
+                resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:#ffcc00;padding:20px;">⚠️ DB not loaded</p>`; 
+                return; 
+            }
 
-            let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><div class="bus-stop-list">`; let found = 0;
+            let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><div class="bus-stop-list">`; 
+            let found = 0;
+            
             for (let stopName in busDict) {
-                if (stopName.includes(keyword) || stopName.toLowerCase().includes(keyword.toLowerCase())) {
-                    busDict[stopName].forEach(item => {
-                        let color = item.co === 'kmb' ? '#ff6b6b' : '#ffd93d'; let coName = item.co === 'kmb' ? 'KMB' : 'CTB';
-                        let val = encodeURIComponent(JSON.stringify({ co: item.co, route: item.route, stop: item.stopId, name: stopName, name_tc: stopName, name_en: stopName, dest: item.dest, dest_tc: item.dest, dest_en: item.dest }));
-                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:bold;">🚏 ${stopName} <span style="color:${color}; font-size:0.8rem;">(${coName} ${item.route})</span></span><span style="font-size:0.8rem; color:#aaa;">${i18n[currentLang]['txt-to']}${item.dest}</span></div></label>`; found++;
+                let items = busDict[stopName];
+                
+                let matchGroup = stopName.toLowerCase().includes(keyword);
+                let matchingItems = matchGroup ? items : items.filter(item => 
+                    (item.name_en && item.name_en.toLowerCase().includes(keyword)) ||
+                    (item.name_tc && item.name_tc.toLowerCase().includes(keyword)) ||
+                    (item.name && item.name.toLowerCase().includes(keyword))
+                );
+
+                if (matchingItems.length > 0) {
+                    matchingItems.forEach(item => {
+                        let color = item.co === 'kmb' ? '#ff6b6b' : '#ffd93d'; 
+                        let coName = item.co === 'kmb' ? (currentLang==='en'?'KMB':'九巴') : (currentLang==='en'?'CTB':'城巴');
+                        
+                        let nTc = item.name_tc || item.name || stopName || '';
+                        let nEn = item.name_en || item.name || stopName || '';
+                        let dTc = item.dest_tc || item.dest || '';
+                        let dEn = item.dest_en || item.dest || '';
+
+                        let displayStop = currentLang === 'en' ? nEn : nTc;
+                        let displayDest = currentLang === 'en' ? dEn : dTc;
+
+                        let safeStopId = item.stopId || item.stop;
+
+                        let val = encodeURIComponent(JSON.stringify({ 
+                            co: item.co, route: item.route, stop: safeStopId, 
+                            name: stopName, name_tc: nTc, name_en: nEn, 
+                            dest: item.dest, dest_tc: dTc, dest_en: dEn 
+                        }));
+                        
+                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:bold;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${item.route})</span></span><span style="font-size:0.8rem; color:#aaa;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+                        found++;
                     });
                 }
             }
@@ -1160,10 +1196,11 @@
             checked.forEach(cb => {
                 let item = JSON.parse(decodeURIComponent(cb.value));
                 if(!myBuses.some(x => x.co === item.co && x.route === item.route && x.stop === item.stop)) {
-                    myBuses.push({ id: Date.now() + Math.random().toString(36).substring(2,5), co: item.co, route: item.route, stop: item.stop, name: item.name, name_tc: item.name_tc, name_en: item.name_en, dest: item.dest, dest_tc: item.dest_tc, dest_en: item.dest_en });
+                    myBuses.push({ id: Date.now() + Math.random().toString(36).substring(2,5), co: item.co, route: item.route, stop: item.stop, name: item.name||'', name_tc: item.name_tc||'', name_en: item.name_en||'', dest: item.dest||'', dest_tc: item.dest_tc||'', dest_en: item.dest_en||'' });
                 }
             });
-            localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); renderBusManagerList(); resetBusSearchUI(); fetchRealBusData();
+            try { localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); } catch(e){} 
+            renderBusManagerList(); resetBusSearchUI(); fetchRealBusData();
         }
 
         async function fetchRealBusData() {
@@ -1178,7 +1215,7 @@
                     if(json?.data) {
                         json.data.forEach(d => {
                             if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(b.route).toUpperCase()) {
-                                raw.push({ no: d.route, dest_tc: d.dest_tc || b.dest_tc || b.dest, dest_en: d.dest_en || b.dest_en || b.dest, time: d.eta, co: b.co, stop: b.stop, stopName_tc: b.name_tc || b.name, stopName_en: b.name_en || b.name, localTarget: new Date(d.eta), uid: `${b.co}_${b.route}_${d.eta}`, dir: d.dir });
+                                raw.push({ no: d.route, dest_tc: d.dest_tc || b.dest_tc || b.dest || '', dest_en: d.dest_en || b.dest_en || b.dest || '', time: d.eta, co: b.co, stop: b.stop, stopName_tc: b.name_tc || b.name || '', stopName_en: b.name_en || b.name || '', localTarget: new Date(d.eta), uid: `${b.co}_${b.route}_${d.eta}`, dir: d.dir, service_type: d.service_type || '1' });
                             }
                         });
                     }
@@ -1191,7 +1228,7 @@
 
         function closeBusDetailModal() { unlockBackgroundScroll(); document.getElementById('bus-detail-modal').classList.remove('active'); }
 
-        async function openBusDetail(co, route, destTcFallback, currentStopId = null, dir = null) {
+        async function openBusDetail(co, route, destTcFallback, currentStopId = null, dir = null, serviceType = '1') {
             lockBackgroundScroll();
             const modal = document.getElementById('bus-detail-modal'); const body = document.getElementById('bus-detail-body');
             modal.classList.add('active'); body.innerHTML = `<div style="text-align:center; padding: 30px; color:#4da6ff;">⏳ ${i18n[currentLang]['txt-loading']}</div>`;
@@ -1199,25 +1236,24 @@
             try {
                 let companyName = co === 'kmb' ? '九巴 (KMB)' : '城巴 (CTB)'; let stopsHtml = '';
 
-                // API Bound Setup mapping ETA dir 'I'/'O' to API bound string
                 let apiBound = (dir === 'I' || dir === 'inbound') ? 'inbound' : 'outbound';
-                let rawBound = (dir === 'I' || dir === 'inbound') ? 'I' : 'O';
+                let rawBoundO = 'O'; let rawBoundI = 'I';
 
                 if (co === 'kmb') {
                     let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
-                    // Priority match exactly bound to fix direction error
-                    let routeInfo = rRes.data.find(r => r.route === route && r.bound === rawBound);
-                    // Fallback
+                    // 100% Fix Route Direction Mismatch
+                    let routeInfo = rRes.data.find(r => r.route === route && (r.bound === (apiBound==='outbound'?'O':'I') || String(r.bound) === (apiBound==='outbound'?'1':'2')) && String(r.service_type) === String(serviceType));
+                    
                     if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route && r.dest_tc === destTcFallback);
                     if (!routeInfo) routeInfo = rRes.data.find(r => r.route === route);
 
-                    let serviceType = routeInfo ? routeInfo.service_type : '1';
-                    let finalBound = routeInfo ? (routeInfo.bound === 'O' ? 'outbound' : 'inbound') : apiBound;
+                    let finalSvc = routeInfo ? routeInfo.service_type : '1';
+                    let finalBound = routeInfo ? (routeInfo.bound === 'O' || String(routeInfo.bound) === '1' ? 'outbound' : 'inbound') : apiBound;
                     
                     let orig = routeInfo ? (currentLang==='en'?routeInfo.orig_en:routeInfo.orig_tc) : '未知';
                     let actualDest = routeInfo ? (currentLang==='en'?routeInfo.dest_en:routeInfo.dest_tc) : destTcFallback;
 
-                    let sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${finalBound}/${serviceType}`).then(r=>r.json());
+                    let sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${finalBound}/${finalSvc}`).then(r=>r.json());
                     let stops = sRes.data || [];
                     
                     let stopDetails = await Promise.all(stops.map(async (s, idx) => {
@@ -1462,7 +1498,6 @@
                                     </div>`
                             };
 
-                            // 直接點擊框體，無額外提示字
                             warningHtml += `<div class="alert-box alert-active" onclick="showWarningModalDetail('${warnId}')">${emoji} ${displayName}</div>`;
                         }
                     }
@@ -1474,7 +1509,6 @@
                 if (swtData && swtData.swt && swtData.swt.length > 0) {
                     let swtHead = currentLang==='en' ? '💡 <b>Special Weather Tips:</b><br>' : '💡 <b>特別天氣提示：</b><br>';
                     
-                    // 無額外提示字眼
                     swtBox.innerHTML = swtHead + swtData.swt.map(tip => `• ${tip.desc}`).join('<br>');
                     swtBox.style.display = 'block'; swtBox.classList.add('swt-blink');
                     
@@ -1535,12 +1569,22 @@
         }
 
         async function boot() {
-            applyLanguage();
-            updateTick(); setInterval(updateTick, 1000); 
-            fetchWeather(); setInterval(fetchWeather, 60000); 
-            fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); 
-            fetchMTR(); setInterval(fetchMTR, 30000); 
+            // Absolute Fallback for stuck loading screen
+            setTimeout(() => {
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay && overlay.style.display !== 'none') {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                }
+            }, 5000);
+
+            try { applyLanguage(); } catch(e){}
+            try { updateTick(); setInterval(updateTick, 1000); } catch(e){}
+            try { fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
+            try { fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
+            try { fetchMTR(); setInterval(fetchMTR, 30000); } catch(e){}
             setInterval(fetchRealBusData, 30000);
+            
             initStaticDatabase();
             setTimeout(() => { window.location.reload(true); }, 3600000);
         }
