@@ -1,8 +1,11 @@
 const fs = require('fs');
 
-// 負責連線去官方 API 攞數據
+// 負責連線去官方 API 攞數據，加入錯誤捕捉
 async function fetchAPI(url) {
     const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!response.ok) {
+        throw new Error(`連線失敗 HTTP error! status: ${response.status}`);
+    }
     const json = await response.json();
     return json.data;
 }
@@ -38,7 +41,6 @@ async function main() {
         if (!tempDict[tcName]) {
             tempDict[tcName] = [];
         }
-        // 避免重複加入相同嘅路線及車站
         const exists = tempDict[tcName].some(x => x.co === item.co && x.route === item.route && x.stopId === item.stopId);
         if (!exists) {
             tempDict[tcName].push(item);
@@ -98,18 +100,18 @@ async function main() {
     console.log("正在整合中英雙語站名目錄...");
     const finalDict = {};
     for (let tcName in tempDict) {
-        // 搵出呢個站嘅英文名
         let firstEn = tempDict[tcName].find(x => x.name_en)?.name_en || '';
-        
-        // 將 JSON 嘅主目錄設定為 "中文名 / English Name" 嘅格式
         let newKey = firstEn ? `${tcName} / ${firstEn}` : tcName;
         finalDict[newKey] = tempDict[tcName];
     }
 
     console.log("正在儲存至 bus_dict.json (Saving)...");
-    // 儲存檔案
     fs.writeFileSync('bus_dict.json', JSON.stringify(finalDict), 'utf-8');
     console.log("更新完成 (Done)!");
 }
 
-main().catch(console.error);
+// 萬一有錯，強制退出並標記為失敗 (Exit code 1)
+main().catch(err => {
+    console.error("❌ 發生錯誤 (Error):", err);
+    process.exit(1); 
+});
