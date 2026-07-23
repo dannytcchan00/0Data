@@ -1,43 +1,31 @@
-name: Fetch Typhoon XML
-
-on:
-  schedule:
-    - cron: '*/30 * * * *' # 每 30 分鐘執行一次
-  workflow_dispatch: # 允許手動觸發
-
-jobs:
-  fetch_xml:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # 允許寫入 Repo
-      
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Fetch and Parse XML
+- name: Fetch and Parse XML
         run: |
           mkdir -p data
           
           # 1. 下載目錄清單
           curl -s "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
           
-          # 2. 找出真正的路徑檔案名稱 (例如 tc2403.xml)
-          # 使用 grep 提取檔名
-          FILENAME=$(grep -oP '>[^<]+\.xml<' data/tc_list.xml | tr -d '><' || echo "")
+          # 2. 找出清單內的內容 (可能是純檔名，也可能是完整網址)
+          RAW_PATH=$(grep -oP '>[^<]+\.xml<' data/tc_list.xml | tr -d '><' | head -n 1 || echo "")
           
-          # 3. 如果找到檔名，就下載那個詳細的資料檔
-          if [ ! -z "$FILENAME" ]; then
-            echo "找到資料檔: $FILENAME"
-            curl -s "https://www.weather.gov.hk/wxinfo/currwx/$FILENAME" -o "data/$FILENAME"
+          if [ ! -z "$RAW_PATH" ]; then
+            echo "抓取到字串: $RAW_PATH"
+            
+            # 使用 basename 提取最後純淨的檔名 (例如 hko_tctrack_2617.xml)
+            FILENAME=$(basename "$RAW_PATH")
+            
+            # 判斷是否為完整網址，如果是就直接用，如果不是就加上天文台前綴
+            if [[ "$RAW_PATH" == http* ]]; then
+              DOWNLOAD_URL="$RAW_PATH"
+            else
+              DOWNLOAD_URL="https://www.weather.gov.hk/wxinfo/currwx/$RAW_PATH"
+            fi
+            
+            echo "即將下載網址: $DOWNLOAD_URL"
+            echo "將儲存為本地檔案: data/$FILENAME"
+            
+            # 下載實質資料檔並儲存為乾淨的檔名
+            curl -s "$DOWNLOAD_URL" -o "data/$FILENAME"
           else
             echo "目前沒有活躍的颱風資料 (可能無風球)。"
           fi
-
-      - name: Commit and Push changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add data/
-          # 只有在檔案有變動時才 commit，避免洗版
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update typhoon data" && git push)
