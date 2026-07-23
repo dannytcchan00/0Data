@@ -22,16 +22,13 @@ jobs:
           # 1. 下載目錄清單 (加入 -L 防止天文台轉址)
           curl -sL "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
           
-          # 2. 暴力提取清單內的 .xml 檔名或網址 (排除掉 tc_list.xml 自身)
+          # 2. 暴力提取清單內的 .xml 檔名或網址
           RAW_PATH=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' | head -n 1 || echo "")
           
           if [ ! -z "$RAW_PATH" ]; then
-            echo "成功提取到字串: $RAW_PATH"
+            echo "成功提取到路徑: $RAW_PATH"
             
-            # 3. 使用 basename 取出最後乾淨的檔名 (例如 hko_tctrack_2617.xml)
-            FILENAME=$(basename "$RAW_PATH")
-            
-            # 4. 判斷是否為完整網址，如果不是則補上天文台前綴
+            # 3. 判斷是否為完整網址，如果不是則補上天文台前綴
             if [[ "$RAW_PATH" == http* ]]; then
               DOWNLOAD_URL="$RAW_PATH"
             else
@@ -39,12 +36,14 @@ jobs:
             fi
             
             echo "即將下載網址: $DOWNLOAD_URL"
-            echo "將儲存為本地檔案: data/$FILENAME"
             
-            # 5. 下載實質資料檔並儲存為乾淨的檔名
-            curl -sL "$DOWNLOAD_URL" -o "data/$FILENAME"
+            # 4. 【重點改動】強制儲存為統一檔名 current_typhoon.xml
+            curl -sL "$DOWNLOAD_URL" -o "typhoon-map/data/current_typhoon.xml"
+            echo "✅ 已成功儲存為 data/current_typhoon.xml"
           else
             echo "目前沒有發現活躍的颱風資料。"
+            # 如果沒有颱風，自動刪除舊檔案，以免網頁顯示過期資料
+            rm -f data/current_typhoon.xml
           fi
 
       - name: Commit and Push changes
@@ -52,7 +51,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # 將 data 資料夾加入追蹤
+          # 將 data 資料夾加入追蹤，這包含新增或被刪除的檔案
           git add data/
           
           # 檢查是否有檔案變動，有的話才進行 Commit 和 Push
