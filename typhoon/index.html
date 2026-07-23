@@ -1,47 +1,147 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港天文台 - 颱風動態路徑圖</title>
+    <title>HKO - Tropical Cyclone Track</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; }
-        #map { width: 100vw; height: 100vh; }
-        #info-box { 
-            position: absolute; top: 20px; right: 20px; z-index: 1000; 
-            background: rgba(255, 255, 255, 0.95); padding: 15px 20px; 
-            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-            max-width: 320px; max-height: 75vh; overflow-y: auto;
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            background-color: #121212;
+            color: #e0e0e0;
         }
-        #info-box h3 { margin-top: 0; color: #0056b3; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 8px;}
-        ul { padding-left: 20px; margin: 10px 0; font-size: 13px; line-height: 1.6;}
-        .status-msg { font-size: 14px; color: #333; }
-        .popup-title { font-weight: bold; color: #d32f2f; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px;}
+        #map { width: 100vw; height: 100vh; }
+        
+        /* 磨砂玻璃暗黑系資訊面板 (移至左上角) */
+        #info-box { 
+            position: absolute; top: 20px; left: 20px; z-index: 1000; 
+            background: rgba(25, 25, 25, 0.85); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); 
+            width: 320px; 
+            max-height: 80vh; 
+            overflow-y: auto;
+        }
+        
+        #info-box::-webkit-scrollbar { width: 6px; }
+        #info-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        
+        #info-box h3 { margin-top: 0; color: #4fc3f7; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;}
+        
+        .tc-details {
+            font-size: 13px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        .tc-details b { color: #fff; }
+        .tc-name { color: #ff5252; font-size: 18px; font-weight: bold; margin-bottom: 5px; display:block;}
+        
+        .status-msg { font-size: 14px; color: #aaa; }
+        
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip { 
+            background: rgba(40, 40, 40, 0.95); 
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .popup-title { font-weight: bold; color: #ff5252; margin-bottom: 5px; border-bottom: 1px solid #555; padding-bottom: 3px;}
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .typhoon-emoji {
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            animation: spin 1.5s linear infinite; 
+            text-shadow: 0 0 12px rgba(255, 82, 82, 0.8); 
+        }
+
+        .permanent-tooltip {
+            background-color: rgba(20, 20, 20, 0.85);
+            border: 1px solid #ff5252;
+            color: #fff;
+            font-size: 11px;
+            font-family: monospace;
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(255, 82, 82, 0.4);
+            white-space: nowrap;
+            padding: 6px 10px;
+        }
+        .permanent-tooltip .leaflet-tooltip-left::before { border-left-color: rgba(20, 20, 20, 0.85); }
+        .permanent-tooltip .leaflet-tooltip-right::before { border-right-color: rgba(20, 20, 20, 0.85); }
+        
+        /* 圖例樣式 */
+        .legend {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #aaa;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+            padding-top: 10px;
+        }
+        .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+        .color-box { width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
 <body>
     <div id="info-box">
-        <h3>🌀 目前熱帶氣旋資訊</h3>
-        <div id="tc-data" class="status-msg">⏳ 正在讀取數據...</div>
+        <h3>🌀 Live Tropical Cyclone</h3>
+        <div id="tc-data" class="status-msg">⏳ Fetching astronomical data...</div>
     </div>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([20.0, 115.0], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+        // 香港天文台座標
+        const HKO_COORDS = [22.3023, 114.1741];
+        
+        // 初始設定中心點在香港
+        var map = L.map('map').setView(HKO_COORDS, 5);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { 
+            attribution: '© OpenStreetMap & CartoDB',
+            maxZoom: 18 
+        }).addTo(map);
+
+        // 繪製以香港為中心的距離圈 (半徑單位為米)
+        // 1200公里 (外圍)
+        L.circle(HKO_COORDS, {
+            radius: 1200000, color: '#4fc3f7', weight: 1, fillOpacity: 0.05, dashArray: '5, 5'
+        }).addTo(map).bindTooltip('1200 km', {permanent: true, direction: 'top', className: 'circle-label', offset: [0, -10]});
+        
+        // 800公里 (警戒)
+        L.circle(HKO_COORDS, {
+            radius: 800000, color: '#ffd54f', weight: 1, fillOpacity: 0.05, dashArray: '5, 5'
+        }).addTo(map).bindTooltip('800 km', {permanent: true, direction: 'top'});
+        
+        // 300公里 (危險)
+        L.circle(HKO_COORDS, {
+            radius: 300000, color: '#ff5252', weight: 2, fillOpacity: 0.1
+        }).addTo(map).bindTooltip('300 km', {permanent: true, direction: 'top'});
 
         const infoBox = document.getElementById('tc-data');
 
         async function loadTyphoonData() {
             try {
-                // 【重點】：直接讀取永遠固定的檔名 current_typhoon.xml
-                let tcResponse = await fetch('https://dannytcchan00.github.io/0Data/data/current_typhoon.xml', { cache: "no-store" });
+                const targetUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
+                let tcResponse = await fetch(targetUrl + '?t=' + new Date().getTime(), { cache: "no-store" });
                 
-                // 如果找不到檔案 (404)，代表目前沒有颱風
                 if (!tcResponse.ok) {
-                    infoBox.innerHTML = "<span style='color:green;'>✅ 目前沒有活躍的熱帶氣旋，或正在等待系統更新。</span>";
+                    infoBox.innerHTML = "<span style='color:#aed581;'>✅ Clear skies. No active tropical cyclones detected.</span>";
                     return;
                 }
                 
@@ -49,20 +149,18 @@
                 let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
                 
                 let nameNodes = data.querySelectorAll('TropicalCycloneName');
-                let tcName = nameNodes.length > 0 ? nameNodes[0].textContent : "熱帶氣旋";
+                let tcName = nameNodes.length > 0 ? nameNodes[0].textContent : "Tropical Cyclone";
                 
                 let latNodes = data.querySelectorAll('Latitude');
                 let lonNodes = data.querySelectorAll('Longitude');
                 
                 if (latNodes.length > 0 && lonNodes.length > 0) {
                     let latlngs = [];
-                    let tcInfoHTML = `<strong style="color:#d32f2f; font-size:15px;">${tcName}</strong><ul>`;
+                    let latestData = {}; // 儲存最新分析點的資料
                     
                     for (let i = 0; i < latNodes.length; i++) {
-                        let latStr = latNodes[i].textContent.replace('N', '').trim();
-                        let lonStr = lonNodes[i].textContent.replace('E', '').trim();
-                        let lat = parseFloat(latStr);
-                        let lon = parseFloat(lonStr);
+                        let lat = parseFloat(latNodes[i].textContent.replace('N', '').trim());
+                        let lon = parseFloat(lonNodes[i].textContent.replace('E', '').trim());
                         
                         if (!isNaN(lat) && !isNaN(lon)) {
                             latlngs.push([lat, lon]);
@@ -70,42 +168,105 @@
                             let parentNode = latNodes[i].parentNode;
                             let timeNode = parentNode.querySelector('Time');
                             let intensityNode = parentNode.querySelector('Intensity');
+                            let windNode = parentNode.querySelector('MaximumWind');
+                            let pressureNode = parentNode.querySelector('CentralPressure'); // 嘗試抓取氣壓 (如果有的話)
                             
-                            let timeText = timeNode ? new Date(timeNode.textContent).toLocaleString() : '';
-                            let intensityText = intensityNode ? intensityNode.textContent : '';
+                            let rawTime = timeNode ? new Date(timeNode.textContent) : new Date();
+                            let timeText = `${rawTime.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} HKT`;
                             
-                            let markerColor = '#ff9800'; 
-                            let radius = 4;
-                            let nodeTypeLabel = "預測";
+                            let intensityText = intensityNode ? intensityNode.textContent : 'Unknown Intensity';
+                            let windText = windNode ? windNode.textContent : 'N/A';
+                            let pressureText = pressureNode ? pressureNode.textContent : 'N/A';
+                            
+                            let markerColor = '#ffd54f'; 
+                            let radius = 3;
+                            let nodeTypeLabel = "Forecast";
+                            let opacity = 0.6;
 
                             if(parentNode.tagName === 'PastInformation') {
-                                markerColor = '#9e9e9e'; nodeTypeLabel = "過去";
-                            } else if(parentNode.tagName === 'AnalysisInformation') {
-                                markerColor = '#d32f2f'; radius = 7; nodeTypeLabel = "最新";
-                                tcInfoHTML += `<li style="background:#fff3e0; font-weight:bold;">最新位置: ${lat}N, ${lon}E</li>`;
-                            }
+                                markerColor = '#607d8b'; 
+                                nodeTypeLabel = "Past";
+                                opacity = 0.4;
+                            } 
+                            
+                            // 擷取最新分析點 (AnalysisInformation)
+                            if(parentNode.tagName === 'AnalysisInformation') {
+                                latestData = {
+                                    lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText
+                                };
+                                
+                                let spinIcon = L.divIcon({
+                                    html: '<div class="typhoon-emoji">🌀</div>',
+                                    className: '', 
+                                    iconSize: [30, 30],
+                                    iconAnchor: [15, 15] 
+                                });
 
-                            L.circleMarker([lat, lon], { radius: radius, fillColor: markerColor, color: '#000', weight: 1, fillOpacity: 1 })
-                             .bindPopup(`
-                                <div class="popup-title">${tcName} [${nodeTypeLabel}]</div>
-                                <div>強度: ${intensityText}</div>
-                                <div>時間: ${timeText}</div>
-                                <div>位置: ${lat}N, ${lon}E</div>
-                             `).addTo(map);
+                                let currentMarker = L.marker([lat, lon], { icon: spinIcon }).addTo(map);
+                                
+                                currentMarker.bindTooltip(
+                                    `<b>${tcName}</b><br>${intensityText}<br>Max Wind: ${windText}`,
+                                    { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [15, 0] }
+                                );
+                                
+                                currentMarker.bindPopup(`
+                                    <div class="popup-title">${tcName} [Analysis]</div>
+                                    <div>Time: ${timeText}</div>
+                                    <div>Location: ${lat}°N, ${lon}°E</div>
+                                `);
+                                
+                            } else {
+                                L.circleMarker([lat, lon], { 
+                                    radius: radius, fillColor: markerColor, color: markerColor, weight: 1, fillOpacity: opacity, opacity: opacity
+                                })
+                                .bindPopup(`
+                                    <div class="popup-title">${tcName} [${nodeTypeLabel}]</div>
+                                    <div>Intensity: ${intensityText}</div>
+                                    <div>Time: ${timeText}</div>
+                                `).addTo(map);
+                            }
                         }
                     }
-                    tcInfoHTML += "</ul>";
-                    infoBox.innerHTML = tcInfoHTML;
+                    
+                    // 組合左上角資訊框 HTML
+                    let htmlContent = `<span class="tc-name">${tcName}</span>`;
+                    
+                    if(latestData.lat) {
+                        htmlContent += `
+                        <div class="tc-details">
+                            <div><b>Intensity:</b> ${latestData.intensity}</div>
+                            <div><b>Location:</b> ${latestData.lat}°N, ${latestData.lon}°E</div>
+                            <div><b>Max Wind:</b> ${latestData.wind}</div>
+                            <div><b>Pressure:</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
+                            <div style="margin-top: 5px; font-size:11px; color:#aaa;">Update: ${latestData.time}</div>
+                        </div>`;
+                    } else {
+                        htmlContent += `<div class="tc-details">No analysis data available.</div>`;
+                    }
+                    
+                    // 加入圖例
+                    htmlContent += `
+                    <div class="legend">
+                        <div class="legend-item"><span class="color-box" style="background:#ff5252;"></span> HK 300km (Warning)</div>
+                        <div class="legend-item"><span class="color-box" style="background:#ffd54f;"></span> HK 800km (Alert)</div>
+                        <div class="legend-item"><span class="color-box" style="background:#4fc3f7;"></span> HK 1200km (Outer)</div>
+                    </div>`;
+
+                    infoBox.innerHTML = htmlContent;
                     
                     if (latlngs.length > 1) {
-                        var trackLine = L.polyline(latlngs, {color: '#1976d2', weight: 3}).addTo(map);
-                        map.fitBounds(trackLine.getBounds(), { padding: [40, 40] }); 
+                        var trackLine = L.polyline(latlngs, {color: '#4fc3f7', weight: 2, opacity: 0.8, dashArray: '4, 4'}).addTo(map);
+                        
+                        // 計算所有點加上香港坐標的邊界，確保地圖一打開能看到颱風與香港的相對距離
+                        let bounds = L.latLngBounds(latlngs);
+                        bounds.extend(HKO_COORDS);
+                        map.fitBounds(bounds, { padding: [50, 50] }); 
                     }
                 } else {
-                    infoBox.innerHTML = "<span style='color:red;'>❌ XML 解析失敗。</span>";
+                    infoBox.innerHTML = "<span style='color:#ff5252;'>❌ Parse Failed. Check XML structure.</span>";
                 }
             } catch (err) {
-                infoBox.innerHTML = `<span style='color:red; font-weight:bold;'>⚠️ 載入錯誤</span><br><span style="font-size:12px;">${err.message}</span>`;
+                infoBox.innerHTML = `<span style='color:#ff5252; font-weight:bold;'>⚠️ Load Error</span><br><span style="font-size:12px;">${err.message}</span>`;
             }
         }
         
