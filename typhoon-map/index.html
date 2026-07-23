@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港天文台 - 颱風動態路徑圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        #info-box { 
+            position: absolute; top: 20px; right: 20px; z-index: 1000; 
+            background: rgba(255, 255, 255, 0.95); padding: 15px 20px; 
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            max-width: 320px; max-height: 75vh; overflow-y: auto;
+        }
+        #info-box h3 { margin-top: 0; color: #0056b3; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 8px;}
+        ul { padding-left: 20px; margin: 10px 0; font-size: 13px; line-height: 1.6;}
+        .status-msg { font-size: 14px; color: #333; }
+        .popup-title { font-weight: bold; color: #d32f2f; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px;}
+    </style>
+</head>
+<body>
+    <div id="info-box">
+        <h3>🌀 目前熱帶氣旋資訊</h3>
+        <div id="tc-data" class="status-msg">⏳ 正在讀取本地數據...</div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([20.0, 115.0], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+
+        const infoBox = document.getElementById('tc-data');
+
+        async function loadTyphoonData() {
+            try {
+                // 1. 直接讀取同網域下 data/ 資料夾的目錄
+                let listResponse = await fetch('data/tc_list.xml');
+                if (!listResponse.ok) throw new Error("本地尚未下載到颱風資料 (可能剛設定好，等待 Action 執行，或目前無風球)。");
+                
+                let listXmlStr = await listResponse.text();
+                let match = listXmlStr.match(/>([^<>\s]+\.xml)</i);
+                
+                if (!match) {
+                    infoBox.innerHTML = "<span style='color:green;'>✅ 目前沒有活躍的熱帶氣旋資料。</span>";
+                    return;
+                }
+                
+                let targetXmlFile = match[1].trim(); 
+                
+                // 2. 直接讀取同網域下的實質資料檔
+                let tcResponse = await fetch(`data/${targetXmlFile}`);
+                if (!tcResponse.ok) throw new Error(`找不到詳細資料檔: ${targetXmlFile}`);
+                
+                let tcXmlStr = await tcResponse.text();
+                let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
+                
+                let nameNodes = data.querySelectorAll('TropicalCycloneName');
+                let tcName = nameNodes.length > 0 ? nameNodes[0].textContent : "熱帶氣旋";
+                
+                let latNodes = data.querySelectorAll('Latitude');
+                let lonNodes = data.querySelectorAll('Longitude');
+                
+                if (latNodes.length > 0 && lonNodes.length > 0) {
+                    let latlngs = [];
+                    let tcInfoHTML = `<strong style="color:#d32f2f; font-size:15px;">${tcName}</strong><ul>`;
+                    
+                    for (let i = 0; i < latNodes.length; i++) {
+                        let latStr = latNodes[i].textContent.replace('N', '').trim();
+                        let lonStr = lonNodes[i].textContent.replace('E', '').trim();
+                        let lat = parseFloat(latStr);
+                        let lon = parseFloat(lonStr);
+                        
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            latlngs.push([lat, lon]);
+                            
+                            let parentNode = latNodes[i].parentNode;
+                            let timeNode = parentNode.querySelector('Time');
+                            let intensityNode = parentNode.querySelector('Intensity');
+                            
+                            let timeText = timeNode ? new Date(timeNode.textContent).toLocaleString() : '';
+                            let intensityText = intensityNode ? intensityNode.textContent : '';
+                            
+                            let markerColor = '#ff9800'; 
+                            let radius = 4;
+                            let nodeTypeLabel = "預測";
+
+                            if(parentNode.tagName === 'PastInformation') {
+                                markerColor = '#9e9e9e'; nodeTypeLabel = "過去";
+                            } else if(parentNode.tagName === 'AnalysisInformation') {
+                                markerColor = '#d32f2f'; radius = 7; nodeTypeLabel = "最新";
+                                tcInfoHTML += `<li style="background:#fff3e0; font-weight:bold;">最新位置: ${lat}N, ${lon}E</li>`;
+                            }
+
+                            L.circleMarker([lat, lon], { radius: radius, fillColor: markerColor, color: '#000', weight: 1, fillOpacity: 1 })
+                             .bindPopup(`
+                                <div class="popup-title">${tcName} [${nodeTypeLabel}]</div>
+                                <div>強度: ${intensityText}</div>
+                                <div>時間: ${timeText}</div>
+                                <div>位置: ${lat}N, ${lon}E</div>
+                             `).addTo(map);
+                        }
+                    }
+                    tcInfoHTML += "</ul>";
+                    infoBox.innerHTML = tcInfoHTML;
+                    
+                    if (latlngs.length > 1) {
+                        var trackLine = L.polyline(latlngs, {color: '#1976d2', weight: 3}).addTo(map);
+                        map.fitBounds(trackLine.getBounds(), { padding: [40, 40] }); 
+                    }
+                } else {
+                    infoBox.innerHTML = "<span style='color:red;'>❌ 解析失敗。</span>";
+                }
+            } catch (err) {
+                infoBox.innerHTML = `<span style='color:red; font-weight:bold;'>⚠️ 載入提示</span><br><span style="font-size:12px;">${err.message}</span>`;
+            }
+        }
+        
+        loadTyphoonData();
+    </script>
+</body>
+</html>
