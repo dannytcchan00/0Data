@@ -1,20 +1,37 @@
-- name: Fetch and Parse XML
+name: Fetch Typhoon XML
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # 每 30 分鐘執行一次
+  workflow_dispatch: # 允許手動觸發
+
+jobs:
+  fetch_xml:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 允許 GitHub Action 寫入你的 Repo
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch and Parse XML
         run: |
           mkdir -p data
           
-          # 1. 下載目錄清單
-          curl -s "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
+          # 1. 下載目錄清單 (加入 -L 防止天文台轉址)
+          curl -sL "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
           
-          # 2. 找出清單內的內容 (可能是純檔名，也可能是完整網址)
-          RAW_PATH=$(grep -oP '>[^<]+\.xml<' data/tc_list.xml | tr -d '><' | head -n 1 || echo "")
+          # 2. 暴力提取清單內的 .xml 檔名或網址 (排除掉 tc_list.xml 自身)
+          RAW_PATH=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' | head -n 1 || echo "")
           
           if [ ! -z "$RAW_PATH" ]; then
-            echo "抓取到字串: $RAW_PATH"
+            echo "成功提取到字串: $RAW_PATH"
             
-            # 使用 basename 提取最後純淨的檔名 (例如 hko_tctrack_2617.xml)
+            # 3. 使用 basename 取出最後乾淨的檔名 (例如 hko_tctrack_2617.xml)
             FILENAME=$(basename "$RAW_PATH")
             
-            # 判斷是否為完整網址，如果是就直接用，如果不是就加上天文台前綴
+            # 4. 判斷是否為完整網址，如果不是則補上天文台前綴
             if [[ "$RAW_PATH" == http* ]]; then
               DOWNLOAD_URL="$RAW_PATH"
             else
@@ -24,8 +41,25 @@
             echo "即將下載網址: $DOWNLOAD_URL"
             echo "將儲存為本地檔案: data/$FILENAME"
             
-            # 下載實質資料檔並儲存為乾淨的檔名
-            curl -s "$DOWNLOAD_URL" -o "data/$FILENAME"
+            # 5. 下載實質資料檔並儲存為乾淨的檔名
+            curl -sL "$DOWNLOAD_URL" -o "data/$FILENAME"
           else
-            echo "目前沒有活躍的颱風資料 (可能無風球)。"
+            echo "目前沒有發現活躍的颱風資料。"
+          fi
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 將 data 資料夾加入追蹤
+          git add data/
+          
+          # 檢查是否有檔案變動，有的話才進行 Commit 和 Push
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto update typhoon data: $(date +'%Y-%m-%d %H:%M')"
+            git push
+            echo "✅ 數據已更新並推送到 GitHub！"
+          else
+            echo "⏸️ 數據與上次相同，無需更新。"
           fi
