@@ -3,211 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港天文台實時颱風地圖</title>
-    <!-- Leaflet 地圖庫 CSS -->
+    <title>香港天文台 - 颱風動態路徑圖</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            overflow: hidden;
+        body { margin: 0; padding: 0; font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        #info-box { 
+            position: absolute; top: 20px; right: 20px; z-index: 1000; 
+            background: rgba(255, 255, 255, 0.95); padding: 15px 20px; 
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            max-width: 320px; max-height: 75vh; overflow-y: auto;
         }
-
-        /* 地圖容器：永遠顯示在底層 */
-        #map {
-            width: 100%; 
-            height: 100vh;
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 1;
-        }
-
-        /* 冇颱風時嘅置中浮動框 */
-        #no-typhoon-center {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(30, 30, 30, 0.85);
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border: 1px solid #444;
-            z-index: 2000;
-            width: 80%;
-            max-width: 350px;
-            backdrop-filter: blur(5px);
-            display: none; 
-        }
-        #no-typhoon-center h1 { color: #2ecc71; margin: 0 0 10px 0; font-size: 24px; }
-        #no-typhoon-center p { color: #bbb; font-size: 15px; margin: 0; }
-
-        /* 載入中提示 */
-        #loading {
-            position: absolute; 
-            top: 20px; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px; 
-            z-index: 3000;
-            color: #fff;
-        }
-
-        /* 地圖 Popup 彈出框暗黑化 */
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background: #2a2a2a;
-            color: #e0e0e0;
-            border: 1px solid #555;
-        }
-        .typhoon-info { font-size: 14px; line-height: 1.6; min-width: 220px; }
-        .typhoon-info h3 { 
-            color: #ff5252; 
-            margin: 0 0 10px 0; 
-            font-size: 18px; 
-            border-bottom: 1px solid #555; 
-            padding-bottom: 8px;
-        }
-        .typhoon-info strong { color: #9bbbdc; }
+        #info-box h3 { margin-top: 0; color: #0056b3; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 8px;}
+        ul { padding-left: 20px; margin: 10px 0; font-size: 13px; line-height: 1.6;}
+        .status-msg { font-size: 14px; color: #333; }
+        .error-msg { color: red; font-size: 12px; word-break: break-all; margin-top: 5px; }
+        .popup-title { font-weight: bold; color: #d32f2f; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px;}
     </style>
 </head>
 <body>
-
-    <!-- 載入中 -->
-    <div id="loading">📡 正在連接香港天文台...</div>
-
-    <!-- 地圖永遠做底板 -->
-    <div id="map"></div>
-
-    <!-- 冇颱風時嘅浮動框 -->
-    <div id="no-typhoon-center">
-        <h1>無熱帶氣旋警告生效</h1>
-        <p>現時本港附近未有熱帶氣旋構成威脅</p>
+    <div id="info-box">
+        <h3>🌀 目前熱帶氣旋資訊</h3>
+        <div id="tc-data" class="status-msg">⏳ 步驟 1: 正在連線至天文台...</div>
     </div>
+    <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. 初始化暗黑地圖
-        const map = L.map('map').setView([22.3193, 114.1694], 5);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        var map = L.map('map').setView([20.0, 115.0], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
 
-        const typhoonLayer = L.layerGroup().addTo(map);
+        const infoBox = document.getElementById('tc-data');
 
-        // 天文台即時熱帶氣旋 API (如無颱風，此檔案通常會被天文台隱藏)
-        const hkoTrackApi = 'https://data.weather.gov.hk/weatherAPI/tc/tc.json';
-
-        // 簡化顯示「無風」框嘅動作
-        function showNoTyphoon() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('no-typhoon-center').style.display = 'block';
-            document.getElementById('no-typhoon-center').innerHTML = `
-                <h1>無熱帶氣旋警告生效</h1>
-                <p>現時本港附近未有熱帶氣旋構成威脅</p>
-            `;
-        }
-
-        // 2. 獲取並處理數據
-        async function fetchHKOTyphoon() {
+        async function loadTyphoonData() {
             try {
-                const response = await fetch(hkoTrackApi);
+                // 1. 透過本地 Python 伺服器獲取目錄
+                infoBox.innerHTML = `⏳ 步驟 1: 正在讀取目錄...`;
+                let listResponse = await fetch('/api/tc_list');
                 
-                // 如果 API 回傳 404 搵唔到檔案，直接當作無颱風處理
-                if (!response.ok) {
-                    showNoTyphoon();
+                if (!listResponse.ok) throw new Error("無法讀取目錄清單");
+                let listXmlStr = await listResponse.text();
+                
+                let match = listXmlStr.match(/>([^<>\s]+\.xml)</i);
+                if (!match) {
+                    infoBox.innerHTML = "<span style='color:green;'>✅ 目前沒有活躍的熱帶氣旋資料。</span>";
                     return;
                 }
+                
+                let targetXmlFile = match[1].trim(); 
+                infoBox.innerHTML = `✅ 找到資料檔: <b>${targetXmlFile}</b><br>⏳ 步驟 2: 正在下載路徑...`;
 
-                const data = await response.json();
-                typhoonLayer.clearLayers();
-                document.getElementById('loading').style.display = 'none';
-
-                // 如果 JSON 內無熱帶氣旋資料，亦當作無颱風
-                if (!data || !data.tc_data || data.tc_data.length === 0) {
-                    showNoTyphoon();
-                    return;
-                }
-
-                // 成功獲取颱風數據：隱藏無風提示框
-                document.getElementById('no-typhoon-center').style.display = 'none';
-
-                // 畫出路徑同埋資訊點
-                data.tc_data.forEach(typhoon => {
-                    const nameTc = typhoon.name_tc || "未命名";
-                    const trackPoints = typhoon.track || [];
-                    if (trackPoints.length === 0) return;
-
-                    let lineCoords = [];
-
-                    trackPoints.forEach((point, index) => {
-                        const lat = point.lat;
-                        const lon = point.lon;
-                        lineCoords.push([lat, lon]);
-
-                        const isCurrent = index === trackPoints.length - 1;
+                // 2. 透過本地 Python 伺服器獲取具體路徑檔
+                let tcResponse = await fetch(`/api/tc_data?file=${targetXmlFile}`);
+                if (!tcResponse.ok) throw new Error("無法讀取路徑資料");
+                let tcXmlStr = await tcResponse.text();
+                
+                let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
+                let nameNodes = data.querySelectorAll('TropicalCycloneName');
+                let tcName = nameNodes.length > 0 ? nameNodes[0].textContent : "熱帶氣旋";
+                
+                let latNodes = data.querySelectorAll('Latitude');
+                let lonNodes = data.querySelectorAll('Longitude');
+                
+                if (latNodes.length > 0 && lonNodes.length > 0) {
+                    let latlngs = [];
+                    let tcInfoHTML = `<strong style="color:#d32f2f; font-size:15px;">${tcName}</strong><ul>`;
+                    
+                    for (let i = 0; i < latNodes.length; i++) {
+                        let latStr = latNodes[i].textContent.replace('N', '').trim();
+                        let lonStr = lonNodes[i].textContent.replace('E', '').trim();
+                        let lat = parseFloat(latStr);
+                        let lon = parseFloat(lonStr);
                         
-                        const marker = L.circleMarker([lat, lon], {
-                            radius: isCurrent ? 8 : 4,
-                            fillColor: isCurrent ? "#ff5252" : (point.is_forecast === "true" ? "#f1c40f" : "#e67e22"),
-                            color: "#fff",
-                            weight: isCurrent ? 2 : 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            latlngs.push([lat, lon]);
+                            
+                            let parentNode = latNodes[i].parentNode;
+                            let timeNode = parentNode.querySelector('Time');
+                            let intensityNode = parentNode.querySelector('Intensity');
+                            
+                            let timeText = timeNode ? new Date(timeNode.textContent).toLocaleString() : '';
+                            let intensityText = intensityNode ? intensityNode.textContent : '';
+                            
+                            let markerColor = '#ff9800'; // 預設橙色
+                            let radius = 4;
+                            let nodeTypeLabel = "預測";
 
-                        const timeStr = point.time || "未知時間";
-                        const classTc = point.class_tc || "熱帶氣旋";
-                        const maxWind = point.max_wind ? point.max_wind + " km/h" : "未提供";
-                        const pressure = point.min_pressure ? point.min_pressure + " hPa" : "未提供";
-                        
-                        let statusText = point.is_forecast === "true" ? "【預測位置】" : "【實際位置】";
-                        if (isCurrent) statusText = "【當前最新位置】";
+                            if(parentNode.tagName === 'PastInformation') {
+                                markerColor = '#9e9e9e'; nodeTypeLabel = "過去";
+                            } else if(parentNode.tagName === 'AnalysisInformation') {
+                                markerColor = '#d32f2f'; radius = 7; nodeTypeLabel = "最新";
+                                tcInfoHTML += `<li style="background:#fff3e0; font-weight:bold;">最新位置: ${lat}N, ${lon}E</li>`;
+                            }
 
-                        const popupHtml = `
-                            <div class="typhoon-info">
-                                <h3>🌀 ${nameTc}</h3>
-                                <p style="color:#e67e22; font-weight:bold; margin:5px 0;">${statusText}</p>
-                                <p><strong>級別：</strong> ${classTc}</p>
-                                <p><strong>中心風力：</strong> ${maxWind}</p>
-                                <p><strong>中心氣壓：</strong> ${pressure}</p>
-                                <p><strong>時間：</strong> ${timeStr}</p>
-                            </div>
-                        `;
-                        marker.bindPopup(popupHtml);
-                        marker.addTo(typhoonLayer);
-                    });
-
-                    // 畫線
-                    if (lineCoords.length > 1) {
-                        L.polyline(lineCoords, {
-                            color: '#f39c12',
-                            weight: 2,
-                            opacity: 0.6,
-                            dashArray: '5, 5'
-                        }).addTo(typhoonLayer);
+                            L.circleMarker([lat, lon], { radius: radius, fillColor: markerColor, color: '#000', weight: 1, fillOpacity: 1 })
+                             .bindPopup(`
+                                <div class="popup-title">${tcName} [${nodeTypeLabel}]</div>
+                                <div>強度: ${intensityText}</div>
+                                <div>時間: ${timeText}</div>
+                                <div>位置: ${lat}N, ${lon}E</div>
+                             `).addTo(map);
+                        }
                     }
-                });
-
-            } catch (error) {
-                // 【核心改動】：發生任何錯誤 (包括 CORS 阻截、斷網、檔案下架)，
-                // 一律將錯就錯，判定為「目前無颱風」，只顯示置中框。
-                console.log("天文台數據不存在或無法連線，判定為無颱風狀態。");
-                showNoTyphoon();
+                    tcInfoHTML += "</ul>";
+                    infoBox.innerHTML = tcInfoHTML;
+                    
+                    if (latlngs.length > 1) {
+                        var trackLine = L.polyline(latlngs, {color: '#1976d2', weight: 3}).addTo(map);
+                        map.fitBounds(trackLine.getBounds(), { padding: [40, 40] }); 
+                    }
+                } else {
+                    infoBox.innerHTML = "<span style='color:red;'>❌ 解析失敗。</span>";
+                }
+            } catch (err) {
+                infoBox.innerHTML = `<span style='color:red; font-weight:bold;'>⚠️ 錯誤: ${err.message}</span>`;
             }
         }
-
-        // 啟動程式
-        fetchHKOTyphoon();
-        // 每 5 分鐘自動刷新
-        setInterval(fetchHKOTyphoon, 300000);
-
+        loadTyphoonData();
     </script>
 </body>
 </html>
