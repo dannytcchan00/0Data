@@ -15,7 +15,6 @@
         }
         #map { width: 100vw; height: 100vh; }
         
-        /* 磨砂玻璃暗黑系資訊面板 (移至左上角) */
         #info-box { 
             position: absolute; top: 20px; left: 20px; z-index: 1000; 
             background: rgba(25, 25, 25, 0.85); 
@@ -85,7 +84,6 @@
         .permanent-tooltip .leaflet-tooltip-left::before { border-left-color: rgba(20, 20, 20, 0.85); }
         .permanent-tooltip .leaflet-tooltip-right::before { border-right-color: rgba(20, 20, 20, 0.85); }
         
-        /* 圖例樣式 */
         .legend {
             margin-top: 15px;
             font-size: 11px;
@@ -93,8 +91,10 @@
             border-top: 1px dashed rgba(255,255,255,0.1);
             padding-top: 10px;
         }
-        .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
-        .color-box { width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; display: inline-block; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .color-box { width: 12px; height: 12px; margin-right: 8px; display: inline-block; }
+        .circle-box { border-radius: 50%; }
+        .dashed-line { border-bottom: 2px dashed #ff5252; height: 0; width: 12px; margin-right: 8px;}
     </style>
 </head>
 <body>
@@ -106,10 +106,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 香港天文台座標
         const HKO_COORDS = [22.3023, 114.1741];
-        
-        // 初始設定中心點在香港
         var map = L.map('map').setView(HKO_COORDS, 5);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { 
@@ -117,21 +114,10 @@
             maxZoom: 18 
         }).addTo(map);
 
-        // 繪製以香港為中心的距離圈 (半徑單位為米)
-        // 1200公里 (外圍)
-        L.circle(HKO_COORDS, {
-            radius: 1200000, color: '#4fc3f7', weight: 1, fillOpacity: 0.05, dashArray: '5, 5'
-        }).addTo(map).bindTooltip('1200 km', {permanent: true, direction: 'top', className: 'circle-label', offset: [0, -10]});
-        
-        // 800公里 (警戒)
-        L.circle(HKO_COORDS, {
-            radius: 800000, color: '#ffd54f', weight: 1, fillOpacity: 0.05, dashArray: '5, 5'
-        }).addTo(map).bindTooltip('800 km', {permanent: true, direction: 'top'});
-        
-        // 300公里 (危險)
-        L.circle(HKO_COORDS, {
-            radius: 300000, color: '#ff5252', weight: 2, fillOpacity: 0.1
-        }).addTo(map).bindTooltip('300 km', {permanent: true, direction: 'top'});
+        // 香港距離圈
+        L.circle(HKO_COORDS, { radius: 1200000, color: '#4fc3f7', weight: 1, fillOpacity: 0.05, dashArray: '5, 5' }).addTo(map).bindTooltip('1200 km', {permanent: true, direction: 'top'});
+        L.circle(HKO_COORDS, { radius: 800000, color: '#ffd54f', weight: 1, fillOpacity: 0.05, dashArray: '5, 5' }).addTo(map).bindTooltip('800 km', {permanent: true, direction: 'top'});
+        L.circle(HKO_COORDS, { radius: 300000, color: '#ff5252', weight: 2, fillOpacity: 0.1 }).addTo(map).bindTooltip('300 km', {permanent: true, direction: 'top'});
 
         const infoBox = document.getElementById('tc-data');
 
@@ -155,21 +141,21 @@
                 let lonNodes = data.querySelectorAll('Longitude');
                 
                 if (latNodes.length > 0 && lonNodes.length > 0) {
-                    let latlngs = [];
-                    let latestData = {}; // 儲存最新分析點的資料
+                    let pastLatLngs = [];
+                    let forecastLatLngs = [];
+                    let forecastStepCounter = 0; // 用於計算誤差圓錐擴大範圍
+                    let latestData = {}; 
                     
                     for (let i = 0; i < latNodes.length; i++) {
                         let lat = parseFloat(latNodes[i].textContent.replace('N', '').trim());
                         let lon = parseFloat(lonNodes[i].textContent.replace('E', '').trim());
                         
                         if (!isNaN(lat) && !isNaN(lon)) {
-                            latlngs.push([lat, lon]);
-                            
                             let parentNode = latNodes[i].parentNode;
                             let timeNode = parentNode.querySelector('Time');
                             let intensityNode = parentNode.querySelector('Intensity');
                             let windNode = parentNode.querySelector('MaximumWind');
-                            let pressureNode = parentNode.querySelector('CentralPressure'); // 嘗試抓取氣壓 (如果有的話)
+                            let pressureNode = parentNode.querySelector('CentralPressure');
                             
                             let rawTime = timeNode ? new Date(timeNode.textContent) : new Date();
                             let timeText = `${rawTime.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} HKT`;
@@ -178,54 +164,62 @@
                             let windText = windNode ? windNode.textContent : 'N/A';
                             let pressureText = pressureNode ? pressureNode.textContent : 'N/A';
                             
-                            let markerColor = '#ffd54f'; 
-                            let radius = 3;
-                            let nodeTypeLabel = "Forecast";
-                            let opacity = 0.6;
-
+                            // ==== 處理過去路線 ====
                             if(parentNode.tagName === 'PastInformation') {
-                                markerColor = '#607d8b'; 
-                                nodeTypeLabel = "Past";
-                                opacity = 0.4;
+                                pastLatLngs.push([lat, lon]);
+                                L.circleMarker([lat, lon], { radius: 3, fillColor: '#607d8b', color: '#607d8b', weight: 1, fillOpacity: 0.4, opacity: 0.4 })
+                                .bindPopup(`<div class="popup-title">${tcName} [Past]</div><div>Intensity: ${intensityText}</div><div>Time: ${timeText}</div>`).addTo(map);
                             } 
                             
-                            // 擷取最新分析點 (AnalysisInformation)
-                            if(parentNode.tagName === 'AnalysisInformation') {
-                                latestData = {
-                                    lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText
-                                };
+                            // ==== 處理最新位置 ====
+                            else if(parentNode.tagName === 'AnalysisInformation') {
+                                pastLatLngs.push([lat, lon]);
+                                forecastLatLngs.push([lat, lon]); // 連接點
                                 
-                                let spinIcon = L.divIcon({
-                                    html: '<div class="typhoon-emoji">🌀</div>',
-                                    className: '', 
-                                    iconSize: [30, 30],
-                                    iconAnchor: [15, 15] 
-                                });
+                                latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText };
+                                
+                                // 1. 繪製環流圈 (Circulation Area)
+                                let windSpeed = parseInt(windText) || 60;
+                                let circulationRadius = windSpeed > 118 ? 250000 : (windSpeed > 88 ? 200000 : 150000); // 根據風速動態調整半徑
+                                L.circle([lat, lon], {
+                                    radius: circulationRadius, color: '#00e5ff', weight: 1.5, fillColor: '#00e5ff', fillOpacity: 0.1, dashArray: '4, 4'
+                                }).addTo(map).bindTooltip('Circulation Area', {sticky: true});
 
+                                // 2. 繪製動態 🌀 圖標
+                                let spinIcon = L.divIcon({ html: '<div class="typhoon-emoji">🌀</div>', className: '', iconSize: [30, 30], iconAnchor: [15, 15] });
                                 let currentMarker = L.marker([lat, lon], { icon: spinIcon }).addTo(map);
                                 
                                 currentMarker.bindTooltip(
                                     `<b>${tcName}</b><br>${intensityText}<br>Max Wind: ${windText}`,
                                     { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [15, 0] }
                                 );
+                            } 
+                            
+                            // ==== 處理未來預測路線 ====
+                            else if (parentNode.tagName === 'ForecastInformation') {
+                                forecastLatLngs.push([lat, lon]);
+                                forecastStepCounter++;
                                 
-                                currentMarker.bindPopup(`
-                                    <div class="popup-title">${tcName} [Analysis]</div>
-                                    <div>Time: ${timeText}</div>
-                                    <div>Location: ${lat}°N, ${lon}°E</div>
-                                `);
-                                
-                            } else {
-                                L.circleMarker([lat, lon], { 
-                                    radius: radius, fillColor: markerColor, color: markerColor, weight: 1, fillOpacity: opacity, opacity: opacity
-                                })
-                                .bindPopup(`
-                                    <div class="popup-title">${tcName} [${nodeTypeLabel}]</div>
-                                    <div>Intensity: ${intensityText}</div>
-                                    <div>Time: ${timeText}</div>
-                                `).addTo(map);
+                                // 繪製潛在影響區域 (Error Cone)
+                                // 隨著預測時間推移，半徑每步擴大約 4000 米，形成擴散圓錐
+                                let coneRadius = 30000 + (forecastStepCounter * 4000); 
+                                L.circle([lat, lon], {
+                                    radius: coneRadius, stroke: false, fillColor: '#ff5252', fillOpacity: 0.02 // 疊加透明度形成漸變圓錐
+                                }).addTo(map);
+
+                                // 繪製預測點
+                                L.circleMarker([lat, lon], { radius: 3, fillColor: '#ff5252', color: '#ff5252', weight: 1, fillOpacity: 0.8 })
+                                .bindPopup(`<div class="popup-title">${tcName} [Forecast]</div><div>Intensity: ${intensityText}</div><div>Time: ${timeText}</div>`).addTo(map);
                             }
                         }
+                    }
+                    
+                    // 繪製線段 (過去：藍色實線 / 未來：紅色虛線)
+                    if (pastLatLngs.length > 1) {
+                        L.polyline(pastLatLngs, {color: '#4fc3f7', weight: 2, opacity: 0.8}).addTo(map);
+                    }
+                    if (forecastLatLngs.length > 1) {
+                        L.polyline(forecastLatLngs, {color: '#ff5252', weight: 2, opacity: 0.9, dashArray: '6, 6'}).addTo(map);
                     }
                     
                     // 組合左上角資訊框 HTML
@@ -240,28 +234,27 @@
                             <div><b>Pressure:</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                             <div style="margin-top: 5px; font-size:11px; color:#aaa;">Update: ${latestData.time}</div>
                         </div>`;
-                    } else {
-                        htmlContent += `<div class="tc-details">No analysis data available.</div>`;
                     }
                     
-                    // 加入圖例
+                    // 加入詳細圖例
                     htmlContent += `
                     <div class="legend">
-                        <div class="legend-item"><span class="color-box" style="background:#ff5252;"></span> HK 300km (Warning)</div>
-                        <div class="legend-item"><span class="color-box" style="background:#ffd54f;"></span> HK 800km (Alert)</div>
-                        <div class="legend-item"><span class="color-box" style="background:#4fc3f7;"></span> HK 1200km (Outer)</div>
+                        <div class="legend-item"><div class="dashed-line"></div> Forecast Track</div>
+                        <div class="legend-item"><span class="color-box circle-box" style="border:1.5px dashed #00e5ff; background:rgba(0,229,255,0.2);"></span> Circulation Area</div>
+                        <div class="legend-item"><span class="color-box circle-box" style="background:rgba(255,82,82,0.3);"></span> Potential Track Area</div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1);"></div>
+                        <div class="legend-item"><span class="color-box circle-box" style="background:#ff5252;"></span> HK 300km (Warning)</div>
+                        <div class="legend-item"><span class="color-box circle-box" style="background:#ffd54f;"></span> HK 800km (Alert)</div>
                     </div>`;
 
                     infoBox.innerHTML = htmlContent;
                     
-                    if (latlngs.length > 1) {
-                        var trackLine = L.polyline(latlngs, {color: '#4fc3f7', weight: 2, opacity: 0.8, dashArray: '4, 4'}).addTo(map);
-                        
-                        // 計算所有點加上香港坐標的邊界，確保地圖一打開能看到颱風與香港的相對距離
-                        let bounds = L.latLngBounds(latlngs);
-                        bounds.extend(HKO_COORDS);
-                        map.fitBounds(bounds, { padding: [50, 50] }); 
-                    }
+                    // 自動縮放地圖涵蓋所有軌跡與香港
+                    let allLatLngs = pastLatLngs.concat(forecastLatLngs);
+                    let bounds = L.latLngBounds(allLatLngs);
+                    bounds.extend(HKO_COORDS);
+                    map.fitBounds(bounds, { padding: [50, 50] }); 
+                    
                 } else {
                     infoBox.innerHTML = "<span style='color:#ff5252;'>❌ Parse Failed. Check XML structure.</span>";
                 }
