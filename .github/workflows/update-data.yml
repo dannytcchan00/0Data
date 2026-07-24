@@ -1,13 +1,12 @@
-name: Fetch HKO Wind Data
+name: Fetch HKO Weather Data
 
 # 設定觸發條件
 on:
   schedule:
-    # 每 10 分鐘執行一次 (配合天文台 10 分鐘數據更新)
+    # 每 10 分鐘執行一次
     - cron: '*/10 * * * *'
-  workflow_dispatch: # 容許手動喺 GitHub 介面撳掣執行
+  workflow_dispatch: # 容許手動執行
 
-# 賦予 GitHub Actions 寫入權限，等佢可以 Push 檔案上 Repo
 permissions:
   contents: write
 
@@ -22,18 +21,23 @@ jobs:
       - name: Create data directory
         run: mkdir -p data
 
-      - name: Download CSV from HKO
+      - name: Download Wind CSV from HKO
         run: |
           curl -sL https://data.weather.gov.hk/weatherAPI/hko_data/regional-weather/latest_10min_wind_uc.csv -o data/latest_10min_wind_uc.csv
 
+      - name: Download Temperature CSV from HKO
+        run: |
+          curl -sL https://data.weather.gov.hk/weatherAPI/hko_data/regional-weather/latest_1min_temperature_uc.csv -o data/latest_1min_temperature_uc.csv
+
       - name: Commit and Push changes
         run: |
-          # 設定 Git 使用者 (Bot)
+          # 設定 Git 使用者
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 將下載嘅 CSV 加入 Git
+          # 將兩份 CSV 都加入 Git
           git add data/latest_10min_wind_uc.csv
+          git add data/latest_1min_temperature_uc.csv
           
-          # 如果數據有更新，就 Commit 同 Push；如果無更新，就略過，唔會報錯
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update HKO wind data" && git push)
+          # 如果數據有更新，就 Commit 同 Push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update HKO wind and temperature data" && git push)
