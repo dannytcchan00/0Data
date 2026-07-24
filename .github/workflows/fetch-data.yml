@@ -2,7 +2,8 @@ name: Fetch Typhoon XML
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每 30 分鐘執行一次
+    # 這裡改成 */10 代表每 10 分鐘執行一次
+    - cron: '*/10 * * * *' 
   workflow_dispatch: # 允許手動觸發
 
 jobs:
@@ -37,29 +38,23 @@ jobs:
             
             echo "即將下載網址: $DOWNLOAD_URL"
             
-            # 4. 【重點改動】強制儲存為統一檔名 current_typhoon.xml
+            # 4. 強制儲存為統一檔名 current_typhoon.xml
             curl -sL "$DOWNLOAD_URL" -o "data/current_typhoon.xml"
             echo "✅ 已成功儲存為 data/current_typhoon.xml"
           else
             echo "目前沒有發現活躍的颱風資料。"
-            # 如果沒有颱風，自動刪除舊檔案，以免網頁顯示過期資料
+            # 如果沒有颱風，自動刪除舊檔案
             rm -f data/current_typhoon.xml
           fi
 
-      - name: Commit and Push changes
+      - name: Commit and Push changes (Force Update)
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # 將 data 資料夾加入追蹤，這包含新增或被刪除的檔案
           git add data/
           
-          # 檢查是否有檔案變動，有的話才進行 Commit 和 Push
-          if ! git diff --staged --quiet; then
-            git commit -m "Auto update typhoon data: $(date +'%Y-%m-%d %H:%M')"
-            git push
-            echo "✅ 數據已更新並推送到 GitHub！"
-          else
-            echo "⏸️ 數據與上次相同，無需更新。"
-          fi
-          # wake up cron
+          # 使用 --allow-empty 允許強制 Commit，就算檔案沒有改變也會強行推上 GitHub
+          git commit --allow-empty -m "Auto update typhoon data: $(date +'%Y-%m-%d %H:%M')"
+          git push
+          echo "✅ 已強制推送到 GitHub，確保快取刷新！"
