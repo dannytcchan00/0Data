@@ -130,17 +130,15 @@
     </div>
 
     <!-- 動態圖例 (Legend) -->
-    <div class="legend-panel" id="legend-panel" style="display: none;">
-        <!-- JS 會根據選單自動載入對應內容 -->
-    </div>
+    <div class="legend-panel" id="legend-panel" style="display: none;"></div>
 
     <div class="bottom-menu">
         <button class="menu-btn active" id="btn-wind-dir" onclick="switchData('wind-dir')" title="Wind Direction">🧭</button>
         <button class="menu-btn" id="btn-wind-speed" onclick="switchData('wind-speed')" title="Mean Wind Speed">💨</button>
         <button class="menu-btn" id="btn-gust" onclick="switchData('gust')" title="Maximum Gust">🌪️</button>
         <button class="menu-btn" id="btn-temp" onclick="switchData('temp')" title="Air Temperature">🌡️</button>
-        <button class="menu-btn" id="btn-max-temp" onclick="switchData('max-temp')" title="Maximum Temperature">🔺</button>
-        <button class="menu-btn" id="btn-min-temp" onclick="switchData('min-temp')" title="Minimum Temperature">🔻</button>
+        <button class="menu-btn" id="btn-max-temp" onclick="switchData('max-temp')" title="Maximum Temperature">🔥</button>
+        <button class="menu-btn" id="btn-min-temp" onclick="switchData('min-temp')" title="Minimum Temperature">❄️</button>
         <button class="menu-btn" id="btn-rain" onclick="switchData('rain')" title="Rainfall">🌧️</button>
         <button class="menu-btn" id="btn-vis" onclick="switchData('vis')" title="Visibility">👁️</button>
         <button class="menu-btn" id="btn-pres" onclick="switchData('pres')" title="Sea Level Pressure">🌀</button>
@@ -152,7 +150,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 🚨 移除了預設的縮放按鈕 (+/-) 和版權資訊，確保畫面極度乾淨
+        // 初始化地圖，隱藏多餘操控組件
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.35, 114.15], 11);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             subdomains: 'abcd', maxZoom: 19
@@ -190,7 +188,6 @@
             "大澳": { en: "Tai O", coords: [22.257, 113.860] }
         };
 
-        // 🚨 更新：將所有中文「無定向」及「微弱」風精準翻譯為英文簡寫
         const dirMap = {
             "北": { text: "N", deg: 0 }, "東北": { text: "NE", deg: 45 },
             "東": { text: "E", deg: 90 }, "東南": { text: "SE", deg: 135 },
@@ -258,7 +255,6 @@
             marker.bindTooltip(tooltipText, { className: 'dark-tooltip', direction: 'top', offset: [0, -24] });
         }
 
-        // --- 動態更新圖例 (Legend) ---
         function updateLegend(type) {
             const legend = document.getElementById('legend-panel');
             let html = '';
@@ -305,7 +301,7 @@
                 legend.style.display = 'flex';
                 legend.innerHTML = html;
             } else {
-                legend.style.display = 'none'; // 風向、潮汐等無需 Legend 則隱藏
+                legend.style.display = 'none';
             }
         }
 
@@ -407,9 +403,8 @@
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1] ? cols[1].trim() : "";
                 
-                // 🚨 更新：完美解決雨量 0 的顯示問題
                 let rainStr = cols[2] ? cols[2].trim() : "0";
-                if (rainStr === "-" || rainStr === "N/A" || rainStr === "") rainStr = "0"; // 將無資料強制當作 0 處理
+                if (rainStr === "-" || rainStr === "N/A" || rainStr === "") rainStr = "0"; 
                 const rain = parseFloat(rainStr);
                 
                 const stn = stnDict[name];
@@ -503,6 +498,15 @@
 
         // 初始化載入
         loadWindDirData();
+
+        // --- 全新加入：每 5 分鐘 (300,000 毫秒) 自動刷新數據 ---
+        setInterval(() => {
+            const activeBtn = document.querySelector('.menu-btn.active');
+            if (activeBtn) {
+                activeBtn.click();
+            }
+        }, 300000); 
+
     </script>
 </body>
 </html>
