@@ -8,18 +8,39 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        body { margin: 0; padding: 0; background-color: #121212; color: #ffffff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
+        body { 
+            margin: 0; padding: 0; 
+            background-color: #121212; color: #ffffff; 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            overflow: hidden; 
+        }
         #map { width: 100vw; height: 100vh; }
 
+        /* 左上角標題面板 */
         .dashboard-panel {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
             background: rgba(20, 20, 20, 0.85); padding: 15px 25px;
             border-radius: 12px; border: 1px solid #333;
-            backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); pointer-events: none;
+            backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); 
+            pointer-events: none;
         }
         .dashboard-panel h1 { margin: 0 0 5px 0; font-size: 20px; letter-spacing: 1px; color: #ffffff; font-weight: 600; }
         .dashboard-panel p { margin: 0; font-size: 13px; color: #aaaaaa; }
 
+        /* 左下角動態圖例 (Legend) */
+        .legend-panel {
+            position: absolute; bottom: 25px; left: 20px; z-index: 1000;
+            background: rgba(20, 20, 20, 0.85); padding: 12px 18px;
+            border-radius: 12px; border: 1px solid #333;
+            backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); 
+            pointer-events: none; display: flex; flex-direction: column; gap: 6px;
+            font-size: 12px; color: #ddd;
+        }
+        .legend-panel .legend-title { font-weight: bold; margin-bottom: 4px; color: #fff; font-size: 13px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #666; }
+
+        /* 橢圓形底部選單 */
         .bottom-menu {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: rgba(20, 20, 20, 0.85); padding: 10px 20px;
@@ -36,26 +57,64 @@
             cursor: pointer; transition: all 0.3s ease; 
         }
         .menu-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-3px); }
-        .menu-btn.active { background: #333333; box-shadow: 0 0 12px rgba(0,0,0,0.6); border: 1px solid #777; transform: scale(1.1); }
+        .menu-btn.active { 
+            background: #333333; box-shadow: 0 0 12px rgba(0,0,0,0.6); 
+            border: 1px solid #777; transform: scale(1.1); 
+        }
+
+        /* ----------------------------------
+           地圖標記設計
+           ---------------------------------- */
+        .custom-div-icon { background: none; border: none; }
+        
+        .marker-wrapper {
+            position: relative; width: 48px; height: 48px;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s ease;
+        }
+        .marker-wrapper:hover { transform: scale(1.15); z-index: 9999 !important; }
 
         .circle-marker {
-            width: 44px; height: 44px; border-radius: 50%;
-            background: rgba(15, 15, 15, 0.9); border: 2px solid;
+            width: 100%; height: 100%; border-radius: 50%;
+            background: rgba(15, 15, 15, 0.95); border: 2.5px solid;
             display: flex; align-items: center; justify-content: center;
-            font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; 
-            box-shadow: 0 0 15px rgba(0,0,0,0.8); transition: transform 0.2s ease, background 0.2s ease;
+            font-family: 'Courier New', Courier, monospace; font-weight: bold; 
+            box-shadow: 0 0 12px rgba(0,0,0,0.8);
+            position: relative; z-index: 2; 
             box-sizing: border-box; letter-spacing: -0.5px;
+            transition: background 0.2s ease;
         }
-        .circle-marker:hover { transform: scale(1.2); background: rgba(40, 40, 40, 0.95); z-index: 9999 !important; }
-        .custom-div-icon { background: none; border: none; }
+        .marker-wrapper:hover .circle-marker { background: rgba(35, 35, 35, 1); }
 
+        .circle-content {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            line-height: 1; margin-top: 1px;
+        }
+        .circle-content .unit-text-map {
+            font-size: 9px; font-weight: normal; margin-top: 2px;
+            font-family: 'Helvetica Neue', Arial, sans-serif; opacity: 0.85; letter-spacing: 0;
+        }
+
+        .arrow-container { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; }
+        .arrow {
+            position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 7px solid transparent; border-right: 7px solid transparent; 
+            border-bottom: 9px solid; 
+            filter: drop-shadow(0 0 3px rgba(0,0,0,0.5));
+        }
+
+        /* ----------------------------------
+           Dark Tooltip
+           ---------------------------------- */
         .leaflet-tooltip.dark-tooltip {
             background: rgba(20, 20, 20, 0.95); border: 1px solid #555; color: #eeeeee;
             border-radius: 8px; padding: 10px 15px; font-family: 'Helvetica Neue', sans-serif;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8); font-size: 13px; line-height: 1.5; backdrop-filter: blur(4px);
         }
         .leaflet-tooltip.dark-tooltip b {
-            color: #ffffff; font-size: 15px; border-bottom: 1px solid #444; padding-bottom: 4px; margin-bottom: 4px; display: block; letter-spacing: 1px;
+            color: #ffffff; font-size: 15px; border-bottom: 1px solid #444;
+            padding-bottom: 4px; margin-bottom: 4px; display: block; letter-spacing: 1px;
         }
         .leaflet-tooltip-top:before { border-top-color: rgba(20, 20, 20, 0.95); }
         .leaflet-tooltip-bottom:before { border-bottom-color: rgba(20, 20, 20, 0.95); }
@@ -70,7 +129,11 @@
         <p id="update-time">Loading data...</p>
     </div>
 
-    <!-- 11 Emoji Buttons -->
+    <!-- 動態圖例 (Legend) -->
+    <div class="legend-panel" id="legend-panel" style="display: none;">
+        <!-- JS 會根據選單自動載入對應內容 -->
+    </div>
+
     <div class="bottom-menu">
         <button class="menu-btn active" id="btn-wind-dir" onclick="switchData('wind-dir')" title="Wind Direction">🧭</button>
         <button class="menu-btn" id="btn-wind-speed" onclick="switchData('wind-speed')" title="Mean Wind Speed">💨</button>
@@ -89,81 +152,56 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map').setView([22.35, 114.15], 11);
+        // 🚨 移除了預設的縮放按鈕 (+/-) 和版權資訊，確保畫面極度乾淨
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.35, 114.15], 11);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap | Data: HKO', subdomains: 'abcd', maxZoom: 19
+            subdomains: 'abcd', maxZoom: 19
         }).addTo(map);
 
         let markerLayer = L.layerGroup().addTo(map);
 
-        // 中文站名 -> 英文站名及坐標翻譯字典
         const stnDict = {
-            "京士柏": { en: "King's Park", coords: [22.311, 114.173] },
-            "天星碼頭": { en: "Star Ferry", coords: [22.293, 114.166] },
-            "中環碼頭": { en: "Central Pier", coords: [22.287, 114.161] },
-            "黃竹坑": { en: "Wong Chuk Hang", coords: [22.247, 114.173] },
-            "打鼓嶺": { en: "Ta Kwu Ling", coords: [22.528, 114.156] },
-            "流浮山": { en: "Lau Fau Shan", coords: [22.469, 113.983] },
-            "大埔": { en: "Tai Po", coords: [22.441, 114.184] },
-            "大埔滘": { en: "Tai Po Kau", coords: [22.433, 114.188] },
-            "沙田": { en: "Sha Tin", coords: [22.402, 114.210] },
-            "屯門": { en: "Tuen Mun", coords: [22.385, 113.964] },
-            "將軍澳": { en: "Tseung Kwan O", coords: [22.315, 114.259] },
-            "西貢": { en: "Sai Kung", coords: [22.375, 114.274] },
-            "長洲": { en: "Cheung Chau", coords: [22.201, 114.026] },
-            "長洲泳灘": { en: "Cheung Chau Beach", coords: [22.208, 114.031] },
-            "赤鱲角": { en: "Chek Lap Kok", coords: [22.305, 113.927] },
-            "香港國際機場": { en: "HK Int'l Airport", coords: [22.305, 113.927] },
-            "青衣": { en: "Tsing Yi", coords: [22.344, 114.105] },
-            "石崗": { en: "Shek Kong", coords: [22.436, 114.084] },
-            "荃灣城門谷": { en: "Shing Mun Valley", coords: [22.381, 114.124] },
-            "香港公園": { en: "Hong Kong Park", coords: [22.277, 114.162] },
-            "筲箕灣": { en: "Shau Kei Wan", coords: [22.281, 114.236] },
-            "九龍城": { en: "Kowloon City", coords: [22.333, 114.181] },
-            "跑馬地": { en: "Happy Valley", coords: [22.270, 114.183] },
-            "黃大仙": { en: "Wong Tai Sin", coords: [22.339, 114.205] },
-            "赤柱": { en: "Stanley", coords: [22.214, 114.218] },
-            "觀塘": { en: "Kwun Tong", coords: [22.319, 114.224] },
-            "深水埗": { en: "Sham Shui Po", coords: [22.336, 114.156] },
-            "啟德": { en: "Kai Tak", coords: [22.310, 114.216] },
-            "大美督": { en: "Tai Mei Tuk", coords: [22.475, 114.237] },
-            "大尾篤": { en: "Tai Mei Tuk", coords: [22.475, 114.237] },
-            "大老山": { en: "Tate's Cairn", coords: [22.357, 114.218] },
-            "昂坪": { en: "Ngong Ping", coords: [22.255, 113.908] },
-            "塔門": { en: "Tap Mun", coords: [22.471, 114.360] },
-            "橫瀾島": { en: "Waglan Island", coords: [22.183, 114.300] },
-            "大帽山": { en: "Tai Mo Shan", coords: [22.410, 114.107] },
-            "青洲": { en: "Green Island", coords: [22.289, 114.113] },
-            "沙洲": { en: "Sha Chau", coords: [22.342, 113.890] },
-            "濕地公園": { en: "Wetland Park", coords: [22.468, 114.008] },
-            "坪洲": { en: "Peng Chau", coords: [22.285, 114.038] },
-            "南丫島": { en: "Lamma Island", coords: [22.213, 114.120] },
-            "元朗公園": { en: "Yuen Long Park", coords: [22.441, 114.018] },
-            "北角": { en: "North Point", coords: [22.293, 114.202] },
-            "香港天文台": { en: "HK Observatory", coords: [22.302, 114.174] },
-            "西灣河": { en: "Sai Wan Ho", coords: [22.282, 114.222] },
-            "昂船洲": { en: "Stonecutters Island", coords: [22.318, 114.135] },
-            "滘西洲": { en: "Kau Sai Chau", coords: [22.366, 114.312] },
-            "鰂魚涌": { en: "Quarry Bay", coords: [22.288, 114.213] },
-            "石壁": { en: "Shek Pik", coords: [22.218, 113.896] },
-            "大廟灣": { en: "Tai Miu Wan", coords: [22.260, 114.288] },
-            "尖鼻咀": { en: "Tsim Bei Tsui", coords: [22.489, 114.012] },
-            "馬灣": { en: "Ma Wan", coords: [22.346, 114.057] },
-            "葵涌": { en: "Kwai Chung", coords: [22.340, 114.126] },
+            "京士柏": { en: "King's Park", coords: [22.311, 114.173] }, "天星碼頭": { en: "Star Ferry", coords: [22.293, 114.166] },
+            "中環碼頭": { en: "Central Pier", coords: [22.287, 114.161] }, "黃竹坑": { en: "Wong Chuk Hang", coords: [22.247, 114.173] },
+            "打鼓嶺": { en: "Ta Kwu Ling", coords: [22.528, 114.156] }, "流浮山": { en: "Lau Fau Shan", coords: [22.469, 113.983] },
+            "大埔": { en: "Tai Po", coords: [22.441, 114.184] }, "大埔滘": { en: "Tai Po Kau", coords: [22.433, 114.188] },
+            "沙田": { en: "Sha Tin", coords: [22.402, 114.210] }, "屯門": { en: "Tuen Mun", coords: [22.385, 113.964] },
+            "將軍澳": { en: "Tseung Kwan O", coords: [22.315, 114.259] }, "西貢": { en: "Sai Kung", coords: [22.375, 114.274] },
+            "長洲": { en: "Cheung Chau", coords: [22.201, 114.026] }, "長洲泳灘": { en: "Cheung Chau Beach", coords: [22.208, 114.031] },
+            "赤鱲角": { en: "Chek Lap Kok", coords: [22.305, 113.927] }, "香港國際機場": { en: "HK Int'l Airport", coords: [22.305, 113.927] },
+            "青衣": { en: "Tsing Yi", coords: [22.344, 114.105] }, "石崗": { en: "Shek Kong", coords: [22.436, 114.084] },
+            "荃灣城門谷": { en: "Shing Mun Valley", coords: [22.381, 114.124] }, "香港公園": { en: "Hong Kong Park", coords: [22.277, 114.162] },
+            "筲箕灣": { en: "Shau Kei Wan", coords: [22.281, 114.236] }, "九龍城": { en: "Kowloon City", coords: [22.333, 114.181] },
+            "跑馬地": { en: "Happy Valley", coords: [22.270, 114.183] }, "黃大仙": { en: "Wong Tai Sin", coords: [22.339, 114.205] },
+            "赤柱": { en: "Stanley", coords: [22.214, 114.218] }, "觀塘": { en: "Kwun Tong", coords: [22.319, 114.224] },
+            "深水埗": { en: "Sham Shui Po", coords: [22.336, 114.156] }, "啟德": { en: "Kai Tak", coords: [22.310, 114.216] },
+            "大美督": { en: "Tai Mei Tuk", coords: [22.475, 114.237] }, "大尾篤": { en: "Tai Mei Tuk", coords: [22.475, 114.237] },
+            "大老山": { en: "Tate's Cairn", coords: [22.357, 114.218] }, "昂坪": { en: "Ngong Ping", coords: [22.255, 113.908] },
+            "塔門": { en: "Tap Mun", coords: [22.471, 114.360] }, "橫瀾島": { en: "Waglan Island", coords: [22.183, 114.300] },
+            "大帽山": { en: "Tai Mo Shan", coords: [22.410, 114.107] }, "青洲": { en: "Green Island", coords: [22.289, 114.113] },
+            "沙洲": { en: "Sha Chau", coords: [22.342, 113.890] }, "濕地公園": { en: "Wetland Park", coords: [22.468, 114.008] },
+            "坪洲": { en: "Peng Chau", coords: [22.285, 114.038] }, "南丫島": { en: "Lamma Island", coords: [22.213, 114.120] },
+            "元朗公園": { en: "Yuen Long Park", coords: [22.441, 114.018] }, "北角": { en: "North Point", coords: [22.293, 114.202] },
+            "香港天文台": { en: "HK Observatory", coords: [22.302, 114.174] }, "西灣河": { en: "Sai Wan Ho", coords: [22.282, 114.222] },
+            "昂船洲": { en: "Stonecutters Island", coords: [22.318, 114.135] }, "滘西洲": { en: "Kau Sai Chau", coords: [22.366, 114.312] },
+            "鰂魚涌": { en: "Quarry Bay", coords: [22.288, 114.213] }, "石壁": { en: "Shek Pik", coords: [22.218, 113.896] },
+            "大廟灣": { en: "Tai Miu Wan", coords: [22.260, 114.288] }, "尖鼻咀": { en: "Tsim Bei Tsui", coords: [22.489, 114.012] },
+            "馬灣": { en: "Ma Wan", coords: [22.346, 114.057] }, "葵涌": { en: "Kwai Chung", coords: [22.340, 114.126] },
             "大澳": { en: "Tai O", coords: [22.257, 113.860] }
         };
 
-        // 中文風向 -> 英文縮寫翻譯字典
+        // 🚨 更新：將所有中文「無定向」及「微弱」風精準翻譯為英文簡寫
         const dirMap = {
-            "北": "N", "東北": "NE", "東": "E", "東南": "SE",
-            "南": "S", "西南": "SW", "西": "W", "西北": "NW",
-            "無定向": "VRB", "微弱": "C"
+            "北": { text: "N", deg: 0 }, "東北": { text: "NE", deg: 45 },
+            "東": { text: "E", deg: 90 }, "東南": { text: "SE", deg: 135 },
+            "南": { text: "S", deg: 180 }, "西南": { text: "SW", deg: 225 },
+            "西": { text: "W", deg: 270 }, "西北": { text: "NW", deg: 315 },
+            "無定向": { text: "VRB", deg: null }, "無定向風": { text: "VRB", deg: null },
+            "微弱": { text: "C", deg: null }, "VRB": { text: "VRB", deg: null }, "C": { text: "C", deg: null }
         };
 
-        // 直接讀取功能
         function fetchExactUrlData(fullUrl, processRow, timeExtractor) {
             const urlWithCacheBuster = fullUrl + '?t=' + new Date().getTime();
-            
             fetch(urlWithCacheBuster)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -173,11 +211,9 @@
                     markerLayer.clearLayers();
                     const rows = csvText.trim().split(/\r?\n/);
                     let timeUpdated = false;
-                    
                     for (let i = 1; i < rows.length; i++) {
                         const cols = rows[i].replace(/"/g, '').split(',');
                         if (cols.length < 2) continue;
-                        
                         if (!timeUpdated && timeExtractor) {
                             const timeText = timeExtractor(cols);
                             if (timeText && timeText.trim() !== "N/A" && timeText.trim() !== "") {
@@ -188,36 +224,111 @@
                         processRow(cols);
                     }
                 }).catch(err => {
-                    console.error("Fetch Error:", err);
                     document.getElementById('update-time').innerText = `🔴 Failed to load data`;
                 });
         }
 
-        function createCircleMarker(coords, value, color, tooltipText, customFontSize = "14px") {
-            const html = `<div class="circle-marker" style="border-color: ${color}; color: ${color}; font-size: ${customFontSize};">${value}</div>`;
-            const icon = L.divIcon({ className: 'custom-div-icon', html: html, iconSize: [44, 44], iconAnchor: [22, 22] });
+        function createCircleMarker(coords, value, unit, color, tooltipText, customFontSize = "15px") {
+            const html = `
+                <div class="marker-wrapper">
+                    <div class="circle-marker" style="border-color: ${color}; color: ${color}; font-size: ${customFontSize};">
+                        <div class="circle-content">
+                            <span class="val">${value}</span>
+                            ${unit ? `<span class="unit-text-map">${unit}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            const icon = L.divIcon({ className: 'custom-div-icon', html: html, iconSize: [48, 48], iconAnchor: [24, 24] });
             const marker = L.marker(coords, { icon: icon }).addTo(markerLayer);
-            marker.bindTooltip(tooltipText, { className: 'dark-tooltip', direction: 'top', offset: [0, -22] });
+            marker.bindTooltip(tooltipText, { className: 'dark-tooltip', direction: 'top', offset: [0, -24] });
         }
 
-        // --- 每一項功能都寫死完整連結 ---
+        function createWindDirMarker(coords, dirInfo, color, tooltipText) {
+            const html = `
+                <div class="marker-wrapper">
+                    ${dirInfo.deg !== null ? `<div class="arrow-container" style="transform: rotate(${dirInfo.deg}deg);"><div class="arrow" style="border-bottom-color: ${color};"></div></div>` : ''}
+                    <div class="circle-marker" style="border-color: ${color}; color: ${color}; font-size: 15px;">
+                        <div class="circle-content">
+                            <span class="val">${dirInfo.text}</span>
+                        </div>
+                    </div>
+                </div>`;
+            const icon = L.divIcon({ className: 'custom-div-icon', html: html, iconSize: [48, 48], iconAnchor: [24, 24] });
+            const marker = L.marker(coords, { icon: icon }).addTo(markerLayer);
+            marker.bindTooltip(tooltipText, { className: 'dark-tooltip', direction: 'top', offset: [0, -24] });
+        }
+
+        // --- 動態更新圖例 (Legend) ---
+        function updateLegend(type) {
+            const legend = document.getElementById('legend-panel');
+            let html = '';
+            
+            if (type === 'wind-speed' || type === 'gust') {
+                html = `
+                    <div class="legend-title">Wind Speed (km/h)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff3344; border-color:#ff3344;"></div> ≥ 41 (Strong)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ffcc00; border-color:#ffcc00;"></div> 20 - 40 (Moderate)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#00ffcc; border-color:#00ffcc;"></div> < 20 (Light)</div>
+                `;
+            } else if (type === 'temp' || type === 'max-temp' || type === 'min-temp') {
+                html = `
+                    <div class="legend-title">Temperature (°C)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff3344; border-color:#ff3344;"></div> ≥ 33 (Very Hot)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff8800; border-color:#ff8800;"></div> 28 - 32 (Hot)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ffcc00; border-color:#ffcc00;"></div> 22 - 27 (Warm)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#00aaff; border-color:#00aaff;"></div> < 22 (Cool)</div>
+                `;
+            } else if (type === 'rain') {
+                html = `
+                    <div class="legend-title">Rainfall (mm)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff3344; border-color:#ff3344;"></div> ≥ 30 (Heavy)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#6688ff; border-color:#6688ff;"></div> 10 - 29 (Moderate)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#00ddff; border-color:#00ddff;"></div> 0.1 - 9.9 (Light)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#888888; border-color:#888888;"></div> 0 (None)</div>
+                `;
+            } else if (type === 'vis') {
+                html = `
+                    <div class="legend-title">Visibility</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#00ffcc; border-color:#00ffcc;"></div> ≥ 5 km (Good)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ffcc00; border-color:#ffcc00;"></div> 2 - 4.9 km (Moderate)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff3344; border-color:#ff3344;"></div> < 2 km (Poor)</div>
+                `;
+            } else if (type === 'solar') {
+                html = `
+                    <div class="legend-title">Solar (W/m²)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ffcc00; border-color:#ffcc00;"></div> ≥ 500 (High)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff9933; border-color:#ff9933;"></div> < 500 (Low)</div>
+                `;
+            }
+            
+            if (html) {
+                legend.style.display = 'flex';
+                legend.innerHTML = html;
+            } else {
+                legend.style.display = 'none'; // 風向、潮汐等無需 Legend 則隱藏
+            }
+        }
+
+        // --- 資料讀取及渲染 ---
 
         function loadWindDirData() {
             document.getElementById('panel-title').innerText = "🧭 Wind Direction";
+            updateLegend('wind-dir');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/wind_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), dir = cols[2].trim();
                 const stn = stnDict[name];
                 if (stn && dir !== "N/A" && dir !== "") {
-                    let displayDir = dirMap[dir] || dir;
-                    let tooltip = `<b>${stn.en}</b>Direction: <span style="color:#00ffcc;">${displayDir}</span>`;
-                    createCircleMarker(stn.coords, displayDir, "#00ffcc", tooltip, "12px");
+                    let dirInfo = dirMap[dir] || { text: dir, deg: null };
+                    let tooltip = `<b>${stn.en}</b>Direction: <span style="color:#00ffcc;">${dirInfo.text}</span>`;
+                    createWindDirMarker(stn.coords, dirInfo, "#00ffcc", tooltip);
                 }
             }, cols => cols[0]);
         }
 
         function loadWindSpeedData() {
             document.getElementById('panel-title').innerText = "💨 Mean Wind Speed";
+            updateLegend('wind-speed');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/wind_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), speed = parseFloat(cols[3].trim());
@@ -225,13 +336,14 @@
                 if (stn && !isNaN(speed)) {
                     let color = speed >= 41 ? "#ff3344" : speed >= 20 ? "#ffcc00" : "#00ffcc";
                     let tooltip = `<b>${stn.en}</b>Speed: <span style="color:${color};">${speed} km/h</span>`;
-                    createCircleMarker(stn.coords, speed, color, tooltip);
+                    createCircleMarker(stn.coords, speed, "km/h", color, tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadGustData() {
             document.getElementById('panel-title').innerText = "🌪️ Maximum Gust";
+            updateLegend('gust');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/wind_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), gustStr = cols[4] ? cols[4].trim() : "N/A";
@@ -240,13 +352,14 @@
                 if (stn && gustStr !== "N/A" && !isNaN(gust)) {
                     let color = gust >= 41 ? "#ff3344" : gust >= 20 ? "#ffcc00" : "#00ffcc";
                     let tooltip = `<b>${stn.en}</b>Max Gust: <span style="color:${color};">${gust} km/h</span>`;
-                    createCircleMarker(stn.coords, gust, color, tooltip);
+                    createCircleMarker(stn.coords, gust, "km/h", color, tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadTempData() {
             document.getElementById('panel-title').innerText = "🌡️ Air Temperature";
+            updateLegend('temp');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/temp_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), temp = parseFloat(cols[2].trim());
@@ -254,54 +367,63 @@
                 if (stn && !isNaN(temp)) {
                     let color = temp >= 33 ? "#ff3344" : temp >= 28 ? "#ff8800" : temp >= 22 ? "#ffcc00" : "#00aaff"; 
                     let tooltip = `<b>${stn.en}</b>Temp: <span style="color:${color};">${temp} °C</span>`;
-                    createCircleMarker(stn.coords, temp, color, tooltip);
+                    createCircleMarker(stn.coords, temp, "°C", color, tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadMaxTempData() {
             document.getElementById('panel-title').innerText = "🔥 Maximum Temperature";
+            updateLegend('max-temp');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/maxmin_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), maxTemp = parseFloat(cols[2].trim());
                 const stn = stnDict[name];
                 if (stn && !isNaN(maxTemp)) {
                     let tooltip = `<b>${stn.en}</b>Max Temp: <span style="color:#ff5555;">${maxTemp} °C</span>`;
-                    createCircleMarker(stn.coords, maxTemp, "#ff5555", tooltip);
+                    createCircleMarker(stn.coords, maxTemp, "°C", "#ff5555", tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadMinTempData() {
             document.getElementById('panel-title').innerText = "❄️ Minimum Temperature";
+            updateLegend('min-temp');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/maxmin_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), minTemp = parseFloat(cols[3].trim());
                 const stn = stnDict[name];
                 if (stn && !isNaN(minTemp)) {
                     let tooltip = `<b>${stn.en}</b>Min Temp: <span style="color:#55aaff;">${minTemp} °C</span>`;
-                    createCircleMarker(stn.coords, minTemp, "#55aaff", tooltip);
+                    createCircleMarker(stn.coords, minTemp, "°C", "#55aaff", tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadRainfallData() {
             document.getElementById('panel-title').innerText = "🌧️ Past Hour Rainfall";
+            updateLegend('rain');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/rain_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1] ? cols[1].trim() : "";
-                const rain = cols[2] ? parseFloat(cols[2].trim()) : NaN;
+                
+                // 🚨 更新：完美解決雨量 0 的顯示問題
+                let rainStr = cols[2] ? cols[2].trim() : "0";
+                if (rainStr === "-" || rainStr === "N/A" || rainStr === "") rainStr = "0"; // 將無資料強制當作 0 處理
+                const rain = parseFloat(rainStr);
+                
                 const stn = stnDict[name];
                 if (stn && !isNaN(rain)) {
                     let color = rain >= 30 ? "#ff3344" : rain >= 10 ? "#6688ff" : rain > 0 ? "#00ddff" : "#888888"; 
                     let tooltip = `<b>${stn.en}</b>Rainfall: <span style="color:${color};">${rain} mm</span>`;
-                    createCircleMarker(stn.coords, rain, color, tooltip);
+                    createCircleMarker(stn.coords, rain, "mm", color, tooltip, "15px");
                 }
             }, cols => cols[0]);
         }
 
         function loadVisibilityData() {
             document.getElementById('panel-title').innerText = "👁️ Visibility";
+            updateLegend('vis');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/visibility_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), vis = parseFloat(cols[2].trim());
@@ -309,28 +431,31 @@
                 if (stn && !isNaN(vis)) {
                     let color = vis >= 5000 ? "#00ffcc" : vis >= 2000 ? "#ffcc00" : "#ff3344";
                     let circleValue = vis >= 1000 ? (vis/1000).toFixed(1) : vis;
-                    let displayVis = vis >= 1000 ? (vis/1000).toFixed(1) + ' km' : vis + ' m';
+                    let displayUnit = vis >= 1000 ? "km" : "m";
+                    let displayVis = circleValue + ' ' + displayUnit;
                     let tooltip = `<b>${stn.en}</b>Visibility: <span style="color:${color};">${displayVis}</span>`;
-                    createCircleMarker(stn.coords, circleValue, color, tooltip);
+                    createCircleMarker(stn.coords, circleValue, displayUnit, color, tooltip, "14px");
                 }
             }, cols => cols[0]);
         }
 
         function loadPressureData() {
             document.getElementById('panel-title').innerText = "🌀 Sea Level Pressure";
+            updateLegend('pres');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/pressure_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), pres = parseFloat(cols[2].trim());
                 const stn = stnDict[name];
                 if (stn && !isNaN(pres)) {
                     let tooltip = `<b>${stn.en}</b>Pressure: <span style="color:#bbaaff;">${pres} hPa</span>`;
-                    createCircleMarker(stn.coords, pres, "#bbaaff", tooltip, "11px");
+                    createCircleMarker(stn.coords, pres, "hPa", "#bbaaff", tooltip, "11px");
                 }
             }, cols => cols[0]);
         }
 
         function loadSolarData() {
             document.getElementById('panel-title').innerText = "☀️ Solar Radiation";
+            updateLegend('solar');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/solar_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[1].trim(), solar = parseFloat(cols[2].trim());
@@ -338,13 +463,14 @@
                 if (stn && !isNaN(solar)) {
                     let color = solar >= 500 ? "#ffcc00" : "#ff9933";
                     let tooltip = `<b>${stn.en}</b>Solar Radiation: <span style="color:${color};">${solar} W/m²</span>`;
-                    createCircleMarker(stn.coords, solar, color, tooltip, "12px");
+                    createCircleMarker(stn.coords, solar, "W/m²", color, tooltip, "12px");
                 }
             }, cols => cols[0]);
         }
 
         function loadTideData() {
             document.getElementById('panel-title').innerText = "🌊 Tide Level";
+            updateLegend('tide');
             const exactUrl = 'https://dannytcchan00.github.io/0Data/data/tide_data.csv';
             fetchExactUrlData(exactUrl, cols => {
                 const name = cols[0] ? cols[0].trim() : "";
@@ -352,7 +478,7 @@
                 const stn = stnDict[name];
                 if (stn && !isNaN(tide)) {
                     let tooltip = `<b>${stn.en}</b>Tide Level: <span style="color:#00ccff;">${tide} m</span>`;
-                    createCircleMarker(stn.coords, tide, "#00ccff", tooltip);
+                    createCircleMarker(stn.coords, tide, "m", "#00ccff", tooltip, "15px");
                 }
             }, cols => (cols[1] && cols[2]) ? (cols[1].trim() + ' ' + cols[2].trim()) : "");
         }
