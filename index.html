@@ -28,6 +28,7 @@
             margin: 0; 
             height: 100vh; height: 100dvh; min-height: -webkit-fill-available; 
             display: flex; flex-direction: column; overflow: hidden; 
+            overscroll-behavior-y: none;
         }
 
         #app-iframe {
@@ -608,7 +609,16 @@
             if (e.target.closest('.modal-overlay.active')) return;
             if (document.getElementById('app-iframe').style.display === 'block') return;
             let el = e.target; let canScrollUp = false;
-            while(el && el !== document.body && el !== document.documentElement) { if (el.scrollTop > 0) { canScrollUp = true; break; } el = el.parentElement; }
+            
+            if (window.scrollY > 0 || document.documentElement.scrollTop > 0) {
+                canScrollUp = true;
+            } else {
+                while(el && el !== document.body && el !== document.documentElement) { 
+                    if (el.scrollTop > 0) { canScrollUp = true; break; } 
+                    el = el.parentElement; 
+                }
+            }
+
             if (!canScrollUp) { ptrStartY = e.touches[0].clientY; isPulling = true; ptrMainContent.style.transition = 'none'; ptrIndicator.style.transition = 'none'; }
         }, { passive: true });
 
