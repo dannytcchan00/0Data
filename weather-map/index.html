@@ -1,1 +1,369 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hong Kong Live Weather Dashboard</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { 
+            margin: 0; padding: 0; 
+            background-color: #121212; color: #ffffff; 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            overflow: hidden; 
+        }
+        #map { width: 100vw; height: 100vh; }
 
+        /* Top Left Panel */
+        .dashboard-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: rgba(20, 20, 20, 0.85); padding: 15px 25px;
+            border-radius: 12px; border: 1px solid #333;
+            backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); 
+            pointer-events: none;
+        }
+        .dashboard-panel h1 { margin: 0 0 5px 0; font-size: 20px; letter-spacing: 1px; color: #ffffff; font-weight: 600; }
+        .dashboard-panel p { margin: 0; font-size: 13px; color: #aaaaaa; }
+
+        /* Floating Ellipse Menu */
+        .bottom-menu {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; 
+            background: rgba(20, 20, 20, 0.85); 
+            padding: 10px 20px;
+            border-radius: 50px; 
+            border: 1px solid #444;
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+            backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            width: max-content; max-width: 95vw;
+        }
+        
+        /* Circle Emoji Buttons */
+        .menu-btn {
+            background: rgba(255,255,255,0.05); color: #ffffff; 
+            border: 1px solid transparent;
+            width: 42px; height: 42px; 
+            border-radius: 50%; 
+            font-size: 20px; 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s ease; 
+        }
+        .menu-btn:hover { 
+            background: rgba(255,255,255,0.15); 
+            transform: translateY(-3px); 
+        }
+        .menu-btn.active { 
+            background: #333333; 
+            box-shadow: 0 0 12px rgba(0,0,0,0.6); 
+            border: 1px solid #777; 
+            transform: scale(1.1); 
+        }
+
+        /* ----------------------------------
+           Circle Markers
+           ---------------------------------- */
+        .circle-marker {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: rgba(15, 15, 15, 0.9);
+            border: 2px solid;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px; font-weight: bold;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            transition: transform 0.2s ease, background 0.2s ease;
+            box-sizing: border-box; letter-spacing: -0.5px;
+        }
+        .circle-marker:hover {
+            transform: scale(1.2);
+            background: rgba(40, 40, 40, 0.95);
+            z-index: 9999 !important;
+        }
+        .custom-div-icon { background: none; border: none; }
+
+        /* ----------------------------------
+           Dark Tooltip
+           ---------------------------------- */
+        .leaflet-tooltip.dark-tooltip {
+            background: rgba(20, 20, 20, 0.95); border: 1px solid #555; color: #eeeeee;
+            border-radius: 8px; padding: 10px 15px; font-family: 'Helvetica Neue', sans-serif;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8); font-size: 13px; line-height: 1.5;
+            backdrop-filter: blur(4px);
+        }
+        .leaflet-tooltip.dark-tooltip b {
+            color: #ffffff; font-size: 15px; border-bottom: 1px solid #444;
+            padding-bottom: 4px; margin-bottom: 4px; display: block; letter-spacing: 1px;
+        }
+        .leaflet-tooltip-top:before { border-top-color: rgba(20, 20, 20, 0.95); }
+        .leaflet-tooltip-bottom:before { border-bottom-color: rgba(20, 20, 20, 0.95); }
+        .leaflet-tooltip-left:before { border-left-color: rgba(20, 20, 20, 0.95); }
+        .leaflet-tooltip-right:before { border-right-color: rgba(20, 20, 20, 0.95); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-panel">
+        <h1 id="panel-title">Live Weather</h1>
+        <p id="update-time">Loading data...</p>
+    </div>
+
+    <!-- 11 Emoji Buttons with English Titles -->
+    <div class="bottom-menu">
+        <button class="menu-btn active" id="btn-wind-dir" onclick="switchData('wind-dir')" title="Wind Direction">🧭</button>
+        <button class="menu-btn" id="btn-wind-speed" onclick="switchData('wind-speed')" title="Mean Wind Speed">💨</button>
+        <button class="menu-btn" id="btn-gust" onclick="switchData('gust')" title="Maximum Gust">🌪️</button>
+        <button class="menu-btn" id="btn-temp" onclick="switchData('temp')" title="Air Temperature">🌡️</button>
+        <button class="menu-btn" id="btn-max-temp" onclick="switchData('max-temp')" title="Maximum Temperature">🔥</button>
+        <button class="menu-btn" id="btn-min-temp" onclick="switchData('min-temp')" title="Minimum Temperature">❄️</button>
+        <button class="menu-btn" id="btn-rain" onclick="switchData('rain')" title="Rainfall">🌧️</button>
+        <button class="menu-btn" id="btn-vis" onclick="switchData('vis')" title="Visibility">👁️</button>
+        <button class="menu-btn" id="btn-pres" onclick="switchData('pres')" title="Sea Level Pressure">🌀</button>
+        <button class="menu-btn" id="btn-solar" onclick="switchData('solar')" title="Solar Radiation">☀️</button>
+        <button class="menu-btn" id="btn-tide" onclick="switchData('tide')" title="Tide Level">🌊</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([22.35, 114.15], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap | Data: HKO',
+            subdomains: 'abcd', maxZoom: 19
+        }).addTo(map);
+
+        let markerLayer = L.layerGroup().addTo(map);
+        const baseUrl = 'https://dannytcchan00.github.io/0Data/data/';
+
+        // English Station Coordinates (Including Tide & Solar Stations)
+        const stationCoords = {
+            "King's Park": [22.311, 114.173], "Star Ferry": [22.293, 114.166], "Central Pier": [22.287, 114.161], "Wong Chuk Hang": [22.247, 114.173],
+            "Ta Kwu Ling": [22.528, 114.156], "Lau Fau Shan": [22.469, 113.983], "Tai Po": [22.441, 114.184], "Tai Po Kau": [22.433, 114.188],
+            "Sha Tin": [22.402, 114.210], "Tuen Mun": [22.385, 113.964], "Tseung Kwan O": [22.315, 114.259], "Sai Kung": [22.375, 114.274],
+            "Cheung Chau": [22.201, 114.026], "Cheung Chau Beach": [22.208, 114.031], "Chek Lap Kok": [22.305, 113.927], "Hong Kong International Airport": [22.305, 113.927],
+            "Tsing Yi": [22.344, 114.105], "Shek Kong": [22.436, 114.084], "Tsuen Wan Shing Mun Valley": [22.381, 114.124], "Hong Kong Park": [22.277, 114.162],
+            "Shau Kei Wan": [22.281, 114.236], "Kowloon City": [22.333, 114.181], "Happy Valley": [22.270, 114.183], "Wong Tai Sin": [22.339, 114.205],
+            "Stanley": [22.214, 114.218], "Kwun Tong": [22.319, 114.224], "Sham Shui Po": [22.336, 114.156], "Kai Tak": [22.310, 114.216],
+            "Tai Mei Tuk": [22.475, 114.237], "Tate's Cairn": [22.357, 114.218], "Ngong Ping": [22.255, 113.908], "Tap Mun": [22.471, 114.360],
+            "Waglan Island": [22.183, 114.300], "Tai Mo Shan": [22.410, 114.107], "Green Island": [22.289, 114.113], "Sha Chau": [22.342, 113.890],
+            "Wetland Park": [22.468, 114.008], "Peng Chau": [22.285, 114.038], "Lamma Island": [22.213, 114.120], "Yuen Long Park": [22.441, 114.018],
+            "North Point": [22.293, 114.202], "Hong Kong Observatory": [22.302, 114.174], "Sai Wan Ho": [22.282, 114.222], "Stonecutters Island": [22.318, 114.135],
+            "Kau Sai Chau": [22.366, 114.312], "Quarry Bay": [22.288, 114.213], "Shek Pik": [22.218, 113.896], "Tai Miu Wan": [22.260, 114.288],
+            "Tsim Bei Tsui": [22.489, 114.012], "Ma Wan": [22.346, 114.057], "Kwai Chung": [22.340, 114.126], "Tai O": [22.257, 113.860]
+        };
+
+        // Improved Fetch Function supporting custom time extractors
+        function fetchData(fileName, processRow, timeExtractor) {
+            const url = baseUrl + fileName + '?t=' + new Date().getTime();
+            fetch(url)
+                .then(res => { if (!res.ok) throw new Error(); return res.text(); })
+                .then(csvText => {
+                    markerLayer.clearLayers();
+                    const rows = csvText.trim().replace(/"/g, '').split('\n');
+                    let timeUpdated = false;
+                    for (let i = 1; i < rows.length; i++) {
+                        const cols = rows[i].split(',');
+                        if (cols.length < 2) continue;
+                        
+                        if (!timeUpdated && timeExtractor) {
+                            const timeText = timeExtractor(cols);
+                            if (timeText) {
+                                document.getElementById('update-time').innerText = `Last Updated: ${timeText}`;
+                                timeUpdated = true;
+                            }
+                        }
+                        processRow(cols);
+                    }
+                }).catch(err => {
+                    document.getElementById('update-time').innerText = "🔴 Data Load Failed";
+                });
+        }
+
+        // Shared function for rendering
+        function createCircleMarker(coords, value, color, tooltipText, customFontSize = "14px") {
+            const html = `<div class="circle-marker" style="border-color: ${color}; color: ${color}; font-size: ${customFontSize};">${value}</div>`;
+            const icon = L.divIcon({ className: 'custom-div-icon', html: html, iconSize: [44, 44], iconAnchor: [22, 22] });
+            const marker = L.marker(coords, { icon: icon }).addTo(markerLayer);
+            marker.bindTooltip(tooltipText, { className: 'dark-tooltip', direction: 'top', offset: [0, -22] });
+        }
+
+        // --- Data Logic (English Edition) ---
+
+        // Helper to abbreviate Wind Directions for circle UI
+        const dirMap = {
+            "North": "N", "North East": "NE", "East": "E", "South East": "SE",
+            "South": "S", "South West": "SW", "West": "W", "North West": "NW",
+            "Variable": "VRB", "Calm": "C"
+        };
+
+        function loadWindDirData() {
+            document.getElementById('panel-title').innerText = "🧭 Wind Direction";
+            fetchData('wind_en.csv', cols => {
+                const name = cols[1].trim(), dir = cols[2].trim();
+                const coords = stationCoords[name];
+                if (coords && dir !== "N/A" && dir !== "") {
+                    let displayDir = dirMap[dir] || dir;
+                    let tooltip = `<b>${name}</b>Direction: <span style="color:#00ffcc;">${dir}</span>`;
+                    createCircleMarker(coords, displayDir, "#00ffcc", tooltip, "12px");
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadWindSpeedData() {
+            document.getElementById('panel-title').innerText = "💨 Mean Wind Speed";
+            fetchData('wind_en.csv', cols => {
+                const name = cols[1].trim(), speed = parseFloat(cols[3].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(speed)) {
+                    let color = speed >= 41 ? "#ff3344" : speed >= 20 ? "#ffcc00" : "#00ffcc";
+                    let tooltip = `<b>${name}</b>Speed: <span style="color:${color};">${speed} km/h</span>`;
+                    createCircleMarker(coords, speed, color, tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadGustData() {
+            document.getElementById('panel-title').innerText = "🌪️ Maximum Gust";
+            fetchData('wind_en.csv', cols => {
+                const name = cols[1].trim(), gustStr = cols[4] ? cols[4].trim() : "N/A";
+                const gust = parseFloat(gustStr);
+                const coords = stationCoords[name];
+                if (coords && gustStr !== "N/A" && !isNaN(gust)) {
+                    let color = gust >= 41 ? "#ff3344" : gust >= 20 ? "#ffcc00" : "#00ffcc";
+                    let tooltip = `<b>${name}</b>Max Gust: <span style="color:${color};">${gust} km/h</span>`;
+                    createCircleMarker(coords, gust, color, tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadTempData() {
+            document.getElementById('panel-title').innerText = "🌡️ Air Temperature";
+            fetchData('temp_en.csv', cols => {
+                const name = cols[1].trim(), temp = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(temp)) {
+                    let color = temp >= 33 ? "#ff3344" : temp >= 28 ? "#ff8800" : temp >= 22 ? "#ffcc00" : "#00aaff"; 
+                    let tooltip = `<b>${name}</b>Temp: <span style="color:${color};">${temp} °C</span>`;
+                    createCircleMarker(coords, temp, color, tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadMaxTempData() {
+            document.getElementById('panel-title').innerText = "🔥 Maximum Temperature";
+            fetchData('maxmin_en.csv', cols => {
+                const name = cols[1].trim(), maxTemp = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(maxTemp)) {
+                    let tooltip = `<b>${name}</b>Max Temp: <span style="color:#ff5555;">${maxTemp} °C</span>`;
+                    createCircleMarker(coords, maxTemp, "#ff5555", tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadMinTempData() {
+            document.getElementById('panel-title').innerText = "❄️ Minimum Temperature";
+            fetchData('maxmin_en.csv', cols => {
+                const name = cols[1].trim(), minTemp = parseFloat(cols[3].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(minTemp)) {
+                    let tooltip = `<b>${name}</b>Min Temp: <span style="color:#55aaff;">${minTemp} °C</span>`;
+                    createCircleMarker(coords, minTemp, "#55aaff", tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadRainfallData() {
+            document.getElementById('panel-title').innerText = "🌧️ Past Hour Rainfall";
+            fetchData('rain_en.csv', cols => {
+                const name = cols[1].trim(), rain = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(rain)) {
+                    let color = rain >= 30 ? "#ff3344" : rain >= 10 ? "#6688ff" : rain > 0 ? "#00ddff" : "#888888"; 
+                    let tooltip = `<b>${name}</b>Rainfall: <span style="color:${color};">${rain} mm</span>`;
+                    createCircleMarker(coords, rain, color, tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadVisibilityData() {
+            document.getElementById('panel-title').innerText = "👁️ Visibility";
+            fetchData('visibility_en.csv', cols => {
+                const name = cols[1].trim(), vis = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(vis)) {
+                    let color = vis >= 5000 ? "#00ffcc" : vis >= 2000 ? "#ffcc00" : "#ff3344";
+                    let circleValue = vis >= 1000 ? (vis/1000).toFixed(1) : vis;
+                    let displayVis = vis >= 1000 ? (vis/1000).toFixed(1) + ' km' : vis + ' m';
+                    let tooltip = `<b>${name}</b>Visibility: <span style="color:${color};">${displayVis}</span>`;
+                    createCircleMarker(coords, circleValue, color, tooltip);
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadPressureData() {
+            document.getElementById('panel-title').innerText = "🌀 Sea Level Pressure";
+            fetchData('pressure_en.csv', cols => {
+                const name = cols[1].trim(), pres = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(pres)) {
+                    let color = "#bbaaff";
+                    let tooltip = `<b>${name}</b>Pressure: <span style="color:#bbaaff;">${pres} hPa</span>`;
+                    createCircleMarker(coords, pres, color, tooltip, "11px");
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadSolarData() {
+            document.getElementById('panel-title').innerText = "☀️ Solar Radiation";
+            fetchData('solar_en.csv', cols => {
+                const name = cols[1].trim(), solar = parseFloat(cols[2].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(solar)) {
+                    let color = solar >= 500 ? "#ffcc00" : "#ff9933";
+                    let tooltip = `<b>${name}</b>Solar Radiation: <span style="color:${color};">${solar} W/m²</span>`;
+                    // Shrink font for larger numbers like 800+
+                    createCircleMarker(coords, solar, color, tooltip, "12px");
+                }
+            }, cols => cols[0].trim());
+        }
+
+        function loadTideData() {
+            document.getElementById('panel-title').innerText = "🌊 Tide Level";
+            fetchData('tide_en.csv', cols => {
+                const name = cols[0].trim(), tide = parseFloat(cols[3].trim());
+                const coords = stationCoords[name];
+                if (coords && !isNaN(tide)) {
+                    let color = "#00ccff";
+                    let tooltip = `<b>${name}</b>Tide Level: <span style="color:${color};">${tide} m</span>`;
+                    createCircleMarker(coords, tide, color, tooltip);
+                }
+            }, cols => cols[1].trim() + ' ' + cols[2].trim()); // Tide data has Date at col 1 and Time at col 2
+        }
+
+        // Menu Switch Logic
+        function switchData(type) {
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + type).classList.add('active');
+            document.getElementById('update-time').innerText = "Loading data...";
+            
+            if (type === 'wind-dir') loadWindDirData();
+            else if (type === 'wind-speed') loadWindSpeedData();
+            else if (type === 'gust') loadGustData();
+            else if (type === 'temp') loadTempData();
+            else if (type === 'max-temp') loadMaxTempData();
+            else if (type === 'min-temp') loadMinTempData();
+            else if (type === 'rain') loadRainfallData();
+            else if (type === 'vis') loadVisibilityData();
+            else if (type === 'pres') loadPressureData();
+            else if (type === 'solar') loadSolarData();
+            else if (type === 'tide') loadTideData();
+        }
+
+        // Initialize with Wind Direction
+        loadWindDirData();
+    </script>
+</body>
+</html>
