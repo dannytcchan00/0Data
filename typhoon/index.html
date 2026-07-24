@@ -122,23 +122,15 @@
         .permanent-tooltip .leaflet-tooltip-left::before { border-left-color: rgba(20, 20, 20, 0.85); }
         .permanent-tooltip .leaflet-tooltip-right::before { border-right-color: rgba(20, 20, 20, 0.85); }
         
-        /* 最接近點的提示框樣式 */
         .closest-tooltip {
             background-color: rgba(212, 175, 55, 0.9);
-            border: 1px solid #fff;
-            color: #000;
-            font-weight: bold;
-            font-size: 10px;
-            border-radius: 4px;
+            border: 1px solid #fff; color: #000; font-weight: bold; font-size: 10px; border-radius: 4px;
         }
         .closest-tooltip .leaflet-tooltip-top::before { border-top-color: rgba(212, 175, 55, 0.9); }
         
         .legend {
-            margin-top: 15px;
-            font-size: 11px;
-            color: #aaa;
-            border-top: 1px dashed rgba(255,255,255,0.1);
-            padding-top: 10px;
+            margin-top: 15px; font-size: 11px; color: #aaa;
+            border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
         }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
         .color-box { width: 12px; height: 12px; margin-right: 8px; display: inline-block; }
@@ -147,6 +139,19 @@
         .l-legend-icon {
             background-color: #607d8b; color: #fff; display: flex; align-items: center; justify-content: center; 
             font-size: 9px; font-weight: bold; width: 12px; height: 12px; margin-right: 8px; border-radius: 50%;
+        }
+
+        /* ============================
+           自動更新進度條樣式
+           ============================ */
+        #update-progress-container {
+            width: 100%; height: 3px; background: rgba(255,255,255,0.1); margin-top: 10px; border-radius: 2px; overflow: hidden;
+        }
+        #update-progress-bar {
+            height: 100%; width: 0%; background: #4fc3f7; transition: width 1s linear;
+        }
+        .refresh-text {
+            font-size: 10px; color: #777; text-align: right; margin-top: 3px;
         }
     </style>
 </head>
@@ -158,6 +163,12 @@
         </div>
         <div id="info-content">
             <div id="tc-data" class="status-msg">⏳ Fetching astronomical data...</div>
+            
+            <!-- 自動更新進度條 -->
+            <div id="update-progress-container">
+                <div id="update-progress-bar"></div>
+            </div>
+            <div class="refresh-text">Auto-refresh in <span id="countdown">300</span>s</div>
         </div>
     </div>
     <div id="map"></div>
@@ -192,11 +203,20 @@
         `);
 
         const tcDataContainer = document.getElementById('tc-data');
+        
+        // 用來記錄地圖上的颱風路徑圖層，方便下次刷新時清除舊圖層
+        let tcLayerGroup = L.layerGroup().addTo(map);
+        
+        // 記錄第一次載入，用來判斷要不要自動縮放地圖
+        let isFirstLoad = true;
 
         async function loadTyphoonData() {
             try {
                 const targetUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
                 let tcResponse = await fetch(targetUrl + '?t=' + new Date().getTime(), { cache: "no-store" });
+                
+                // 每次載入前，清除地圖上的舊颱風圖層
+                tcLayerGroup.clearLayers();
                 
                 if (!tcResponse.ok) {
                     tcDataContainer.innerHTML = "<span style='color:#aed581;'>✅ Clear skies. No active tropical cyclones detected.</span>";
@@ -218,7 +238,6 @@
                     let forecastStepCounter = 0; 
                     let latestData = {}; 
                     
-                    // 用來計算最接近香港的點 (Closest Point of Approach)
                     let minDistance = Infinity;
                     let closestPoint = null;
                     
@@ -240,101 +259,89 @@
                             let windText = windNode ? windNode.textContent : 'N/A';
                             let pressureText = pressureNode ? pressureNode.textContent : 'N/A';
                             
-                            // 判斷是否減弱為低壓區
                             let isLowPressure = intensityText.includes('Low Pressure');
                             let marker;
-                            
                             let lIcon = L.divIcon({ html: '<div class="low-pressure-icon">L</div>', className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
                             
-                            // ==== 計算與香港的距離 (公里) ====
                             let distToHK = map.distance(HKO_COORDS, [lat, lon]) / 1000;
                             
                             let nodeTypeStr = "Forecast";
                             if(parentNode.tagName === 'PastInformation') nodeTypeStr = "Past";
                             else if(parentNode.tagName === 'AnalysisInformation') nodeTypeStr = "Current";
 
-                            // 更新最接近點的數據
                             if (distToHK < minDistance) {
                                 minDistance = distToHK;
                                 closestPoint = { lat: lat, lon: lon, dist: distToHK, time: timeText, status: nodeTypeStr };
                             }
 
-                            // ==== 過去位置 ====
                             if(parentNode.tagName === 'PastInformation') {
                                 pastLatLngs.push([lat, lon]);
-                                if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon }).addTo(map);
-                                else marker = L.circleMarker([lat, lon], { radius: 3, fillColor: '#607d8b', color: '#607d8b', weight: 1, fillOpacity: 0.4, opacity: 0.4 }).addTo(map);
+                                if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
+                                else marker = L.circleMarker([lat, lon], { radius: 3, fillColor: '#607d8b', color: '#607d8b', weight: 1, fillOpacity: 0.4, opacity: 0.4 });
                                 marker.bindPopup(`<div class="popup-title">${tcName} [Past]</div><div>Intensity: ${intensityText}</div><div>Time: ${timeText}</div><div>Dist. to HK: ~${Math.round(distToHK)} km</div>`);
+                                tcLayerGroup.addLayer(marker);
                             } 
-                            // ==== 最新位置 ====
                             else if(parentNode.tagName === 'AnalysisInformation') {
                                 pastLatLngs.push([lat, lon]);
                                 forecastLatLngs.push([lat, lon]); 
                                 latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK };
                                 
                                 if (isLowPressure) {
-                                    marker = L.marker([lat, lon], { icon: lIcon }).addTo(map);
+                                    marker = L.marker([lat, lon], { icon: lIcon });
                                     marker.bindTooltip(`<b>${tcName}</b><br>${intensityText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [15, 0] });
                                 } else {
                                     let windSpeed = parseInt(windText) || 60;
                                     let circulationRadius = windSpeed > 118 ? 250000 : (windSpeed > 88 ? 200000 : 150000); 
-                                    L.circle([lat, lon], { radius: circulationRadius, color: '#00e5ff', weight: 1.5, fillColor: '#00e5ff', fillOpacity: 0.1, dashArray: '4, 4' }).addTo(map); 
+                                    let circCircle = L.circle([lat, lon], { radius: circulationRadius, color: '#00e5ff', weight: 1.5, fillColor: '#00e5ff', fillOpacity: 0.1, dashArray: '4, 4' });
+                                    tcLayerGroup.addLayer(circCircle);
 
                                     let spinIcon = L.divIcon({ html: '<div class="typhoon-flash"><div class="typhoon-emoji">🌀</div></div>', className: '', iconSize: [60, 60], iconAnchor: [30, 30] });
-                                    marker = L.marker([lat, lon], { icon: spinIcon }).addTo(map);
+                                    marker = L.marker([lat, lon], { icon: spinIcon });
                                     marker.bindTooltip(`<b>${tcName}</b><br>${intensityText}<br>Max Wind: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
                                 }
                                 marker.bindPopup(`<div class="popup-title">${tcName} [Current]</div><div>Time: ${timeText}</div><div>Location: ${lat}°N, ${lon}°E</div><div>Dist. to HK: ~${Math.round(distToHK)} km</div>`);
+                                tcLayerGroup.addLayer(marker);
                             } 
-                            // ==== 未來預測 ====
                             else if (parentNode.tagName === 'ForecastInformation') {
                                 forecastLatLngs.push([lat, lon]);
                                 forecastStepCounter++;
                                 
                                 if (isLowPressure) {
-                                    marker = L.marker([lat, lon], { icon: lIcon }).addTo(map);
+                                    marker = L.marker([lat, lon], { icon: lIcon });
                                 } else {
                                     let coneRadius = 30000 + (forecastStepCounter * 4000); 
-                                    L.circle([lat, lon], { radius: coneRadius, stroke: false, fillColor: '#ff5252', fillOpacity: 0.02 }).addTo(map);
-                                    marker = L.circleMarker([lat, lon], { radius: 3, fillColor: '#ff5252', color: '#ff5252', weight: 1, fillOpacity: 0.8 }).addTo(map);
+                                    let coneCircle = L.circle([lat, lon], { radius: coneRadius, stroke: false, fillColor: '#ff5252', fillOpacity: 0.02 });
+                                    tcLayerGroup.addLayer(coneCircle);
+                                    marker = L.circleMarker([lat, lon], { radius: 3, fillColor: '#ff5252', color: '#ff5252', weight: 1, fillOpacity: 0.8 });
                                 }
                                 marker.bindPopup(`<div class="popup-title">${tcName} [Forecast]</div><div>Intensity: ${intensityText}</div><div>Time: ${timeText}</div><div>Dist. to HK: ~${Math.round(distToHK)} km</div>`);
+                                tcLayerGroup.addLayer(marker);
                             }
                         }
                     }
                     
-                    // 繪製線段
-                    if (pastLatLngs.length > 1) L.polyline(pastLatLngs, {color: '#4fc3f7', weight: 2, opacity: 0.8}).addTo(map);
-                    if (forecastLatLngs.length > 1) L.polyline(forecastLatLngs, {color: '#ff5252', weight: 2, opacity: 0.9, dashArray: '6, 6'}).addTo(map);
+                    if (pastLatLngs.length > 1) {
+                        tcLayerGroup.addLayer(L.polyline(pastLatLngs, {color: '#4fc3f7', weight: 2, opacity: 0.8}));
+                    }
+                    if (forecastLatLngs.length > 1) {
+                        tcLayerGroup.addLayer(L.polyline(forecastLatLngs, {color: '#ff5252', weight: 2, opacity: 0.9, dashArray: '6, 6'}));
+                    }
                     
-                    // ==========================================
-                    // 繪製「最接近香港點」的輔助線與標記
-                    // ==========================================
                     if (closestPoint) {
-                        // 從香港畫一條金色虛線連接到最接近的點
-                        L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], {
-                            color: '#d4af37', weight: 1.5, dashArray: '4, 6', opacity: 0.6
-                        }).addTo(map);
+                        let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#d4af37', weight: 1.5, dashArray: '4, 6', opacity: 0.6 });
+                        tcLayerGroup.addLayer(dashLine);
                         
-                        // 在最接近的點上加上標記 (如果它不是現在的位置)
                         if (closestPoint.status !== "Current") {
-                            L.circleMarker([closestPoint.lat, closestPoint.lon], { 
-                                radius: 5, color: '#d4af37', fillColor: '#121212', weight: 2, fillOpacity: 1 
-                            }).addTo(map).bindTooltip(`Closest: ~${Math.round(closestPoint.dist)}km`, {
-                                permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -5]
-                            });
+                            let closestMarker = L.circleMarker([closestPoint.lat, closestPoint.lon], { radius: 5, color: '#d4af37', fillColor: '#121212', weight: 2, fillOpacity: 1 })
+                            .bindTooltip(`Closest: ~${Math.round(closestPoint.dist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -5] });
+                            tcLayerGroup.addLayer(closestMarker);
                         }
                     }
 
-                    // ==========================================
-                    // 更新左上角資訊框 (加入距離與最接近數據)
-                    // ==========================================
                     let htmlContent = `<span class="tc-name">${tcName}</span>`;
                     
                     if(latestData.lat) {
-                        // 判斷距離顏色的警戒級別
                         let distColor = latestData.distToHK <= 300 ? '#ff5252' : (latestData.distToHK <= 800 ? '#ffd54f' : '#4fc3f7');
-                        
                         htmlContent += `
                         <div class="tc-details">
                             <div><b>Intensity:</b> ${latestData.intensity}</div>
@@ -343,14 +350,13 @@
                             <div><b>Max Wind:</b> ${latestData.wind}</div>
                             <div><b>Pressure:</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                             
-                            <!-- 最接近香港資訊區塊 -->
                             <div style="margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.2);">
                                 <div style="color:#d4af37; font-weight:bold; font-size:12px;">📍 Closest Approach:</div>
                                 <div><b>~${Math.round(closestPoint.dist)} km</b> <span style="color:#aaa; font-size:11px;">(${closestPoint.status})</span></div>
                                 <div style="font-size:11px; color:#aaa;">Time: ${closestPoint.time}</div>
                             </div>
-
-                            <div style="margin-top: 10px; font-size:11px; color:#777; text-align:right;">Update: ${latestData.time}</div>
+                            
+                            <div style="margin-top: 10px; font-size:11px; color:#777; text-align:right;">Data Update: ${latestData.time}</div>
                         </div>`;
                     }
                     
@@ -367,10 +373,14 @@
 
                     tcDataContainer.innerHTML = htmlContent;
                     
-                    let allLatLngs = pastLatLngs.concat(forecastLatLngs);
-                    let bounds = L.latLngBounds(allLatLngs);
-                    bounds.extend(HKO_COORDS);
-                    map.fitBounds(bounds, { padding: [50, 50] }); 
+                    // 只在第一次載入時自動縮放，避免使用者在拖曳地圖時突然被拉走
+                    if (isFirstLoad) {
+                        let allLatLngs = pastLatLngs.concat(forecastLatLngs);
+                        let bounds = L.latLngBounds(allLatLngs);
+                        bounds.extend(HKO_COORDS);
+                        map.fitBounds(bounds, { padding: [50, 50] }); 
+                        isFirstLoad = false;
+                    }
                     
                 } else {
                     tcDataContainer.innerHTML = "<span style='color:#ff5252;'>❌ Parse Failed. Check XML structure.</span>";
@@ -380,7 +390,33 @@
             }
         }
         
+        // ==========================================
+        // 5 分鐘自動刷新機制 (包含進度條倒數)
+        // ==========================================
+        const REFRESH_INTERVAL_SECONDS = 300; // 5分鐘 = 300秒
+        let timeLeft = REFRESH_INTERVAL_SECONDS;
+        const progressBar = document.getElementById('update-progress-bar');
+        const countdownText = document.getElementById('countdown');
+
+        function startAutoRefresh() {
+            // 每秒鐘更新進度條與數字
+            setInterval(() => {
+                timeLeft--;
+                if (timeLeft < 0) {
+                    timeLeft = REFRESH_INTERVAL_SECONDS; // 重置時間
+                    loadTyphoonData(); // 執行背景資料更新
+                }
+                // 更新數字
+                countdownText.innerText = timeLeft;
+                // 更新進度條長度 (0 到 100%)
+                let percentage = ((REFRESH_INTERVAL_SECONDS - timeLeft) / REFRESH_INTERVAL_SECONDS) * 100;
+                progressBar.style.width = percentage + '%';
+            }, 1000);
+        }
+        
+        // 首次啟動
         loadTyphoonData();
+        startAutoRefresh();
     </script>
 </body>
 </html>
