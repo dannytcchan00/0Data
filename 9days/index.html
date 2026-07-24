@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>綜合天氣預報 - HK Dashboard</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>九天天氣預報 - HK Dashboard</title>
     
     <style>
         :root {
@@ -20,14 +22,31 @@
         
         * { box-sizing: border-box; }
         
-        body { 
+        html, body { 
             background: var(--bg-color); 
             color: var(--text-main); 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             margin: 0; 
-            padding: 15px;
-            min-height: 100vh;
+            padding: 12px;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
+
+        /* 專為 iPad / iframe 設計嘅全屏捲動容器 */
+        .weather-scroll-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 2px;
+        }
+        .weather-scroll-container::-webkit-scrollbar { width: 4px; }
+        .weather-scroll-container::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
         .panel { 
             background: var(--panel-bg); 
@@ -36,10 +55,7 @@
             padding: 15px; 
             display: flex; 
             flex-direction: column; 
-            margin-bottom: 15px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
+            flex-shrink: 0;
         }
 
         /* 頂部：實時天氣與時間 */
@@ -86,7 +102,6 @@
             border-top: none; 
             border-radius: 0 0 12px 12px; 
             padding: 8px; 
-            margin-bottom: 20px;
         }
         .w-item { text-align: center; display: flex; flex-direction: column; justify-content: center; }
         .w-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; white-space: nowrap;}
@@ -111,7 +126,7 @@
             border: 1px solid rgba(255,255,255,0.05);
             border-radius: 12px;
             padding: 12px 15px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             font-size: 0.95rem;
             line-height: 1.6;
             color: #ddd;
@@ -156,46 +171,52 @@
 </head>
 <body>
 
-    <div class="panel">
-        <div class="top-info-bar">
-            <div class="date-container">
-                <div class="date-display" id="current-date">📅 --年--月--日</div>
-            </div>
-        </div>
-        
-        <div>
-            <div class="weather-time-main">
-                <div class="time-block">
-                    <div class="time-display" id="hk-time">--:--</div>
-                    <div class="utc-display" id="utc-time">--:-- UTC</div>
+    <div class="weather-scroll-container">
+        <!-- 頂部：實時天氣與時間面板 -->
+        <div class="panel" style="margin-bottom: 0;">
+            <div class="top-info-bar">
+                <div class="date-container">
+                    <div class="date-display" id="current-date">📅 --年--月--日</div>
                 </div>
-                <div class="weather-block">
-                    <div class="weather-current-stats">
-                        <div class="current-temp" id="hk-temp">--°C</div>
-                        <div class="current-hum">相對濕度 <span id="hk-hum">--%</span></div>
+            </div>
+            
+            <div>
+                <div class="weather-time-main">
+                    <div class="time-block">
+                        <div class="time-display" id="hk-time">--:--</div>
+                        <div class="utc-display" id="utc-time">--:-- UTC</div>
                     </div>
-                    <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
+                    <div class="weather-block">
+                        <div class="weather-current-stats">
+                            <div class="current-temp" id="hk-temp">--°C</div>
+                            <div class="current-hum">相對濕度 <span id="hk-hum">--%</span></div>
+                        </div>
+                        <img class="weather-status-icon" id="weather-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Weather Icon">
+                    </div>
+                </div>
+                <div class="weather-grid-inline">
+                    <div class="w-item"><div class="w-label">UV指數</div><div class="w-val" id="hk-uv">--</div></div>
+                    <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val" id="hk-psr">--</div></div>
+                    <div class="w-item"><div class="w-label">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
+                    <div class="w-item"><div class="w-label">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
                 </div>
             </div>
-            <div class="weather-grid-inline">
-                <div class="w-item"><div class="w-label">UV指數</div><div class="w-val" id="hk-uv">--</div></div>
-                <div class="w-item"><div class="w-label">降雨概率</div><div class="w-val" id="hk-psr">--</div></div>
-                <div class="w-item"><div class="w-label">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
-                <div class="w-item"><div class="w-label">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
+        </div>
+
+        <!-- 下方：九天天氣預報面板 -->
+        <div class="panel" style="margin-bottom: 0;">
+            <h2>
+                <span>🌈 九天天氣預報 Extended Forecast</span>
+                <span class="refresh-indicator" id="refresh-status">🔄 更新中...</span>
+            </h2>
+            
+            <div class="situation-box" id="general-situation">
+                載入天氣概況中...
             </div>
-        </div>
 
-        <h2>
-            <span>🌈 九天天氣預報 Extended Forecast</span>
-            <span class="refresh-indicator" id="refresh-status">🔄 更新中...</span>
-        </h2>
-        
-        <div class="situation-box" id="general-situation">
-            載入天氣概況中...
-        </div>
-
-        <div class="forecast-grid" id="forecast-container">
-            <div id="loading-text" style="grid-column: 1/-1;">🔄 正在連接香港天文台數據庫...</div>
+            <div class="forecast-grid" id="forecast-container">
+                <div id="loading-text" style="grid-column: 1/-1;">🔄 正在連接香港天文台數據庫...</div>
+            </div>
         </div>
     </div>
 
