@@ -1,34 +1,8 @@
-name: Fetch HKO Radar Image
-
-on:
-  schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
-
-jobs:
-  update-radar:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: pip install requests
-
-      - name: Download Latest Radar
-        run: python update_radar.py
-
-      - name: Force commit and push
+- name: Force commit and push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          # 檢查檔案是否存在，存在才執行 add，避免 Git 報錯
           if [ -f "radar/imag/latest_radar.png" ]; then
             git add radar/imag/latest_radar.png
             echo "已加入最新雷達圖"
@@ -36,6 +10,8 @@ jobs:
             echo "找不到圖片，略過 git add 步驟"
           fi
           
-          # 強制 commit 與 push，維持排程更新不中斷
           git commit -m "Auto-update HKO radar image" --allow-empty
+          
+          # 關鍵新增：先拉取遠端最新版本並重新整理歷史紀錄，避免衝突
+          git pull --rebase origin main
           git push
