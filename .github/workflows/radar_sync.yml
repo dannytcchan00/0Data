@@ -2,8 +2,8 @@ name: Fetch HKO Radar Image
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *' # 每 10 分鐘自動執行一次
+  workflow_dispatch: # 允許手動在 Action 頁面觸發
 
 jobs:
   update-radar:
@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 確保拉取完整的 git 歷史紀錄，方便稍後 rebase
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,6 +23,7 @@ jobs:
         run: pip install requests
 
       - name: Download Latest Radar
+        # 執行根目錄下的 Python 腳本抓圖
         run: python update_radar.py
 
       - name: Force commit and push
@@ -28,7 +31,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          # 檢查檔案是否存在，存在才執行 add，避免 Git 報錯
+          # 檢查指定路徑下圖片是否成功生成，避免路徑報錯 (Exit code 128)
           if [ -f "radar/imag/latest_radar.png" ]; then
             git add radar/imag/latest_radar.png
             echo "已加入最新雷達圖"
@@ -36,24 +39,11 @@ jobs:
             echo "找不到圖片，略過 git add 步驟"
           fi
           
-          # 強制 commit 與 push，維持排程更新不中斷
-          git commit -m "Auto-update HKO radar image" --allow-empty
-          git push
-
-- name: Force commit and push
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          
-          if [ -f "radar/imag/latest_radar.png" ]; then
-            git add radar/imag/latest_radar.png
-            echo "已加入最新雷達圖"
-          else
-            echo "找不到圖片，略過 git add 步驟"
-          fi
-          
+          # 強制 commit，確保就算檔案內容無變更都會執行更新紀錄
           git commit -m "Auto-update HKO radar image" --allow-empty
           
-          # 關鍵新增：先拉取遠端最新版本並重新整理歷史紀錄，避免衝突
+          # 關鍵修正：先拉取遠端最新版本並重新整理歷史，解決 push 被 rejected 的衝突 (Exit code 1)
           git pull --rebase origin main
+          
+          # 推送回 GitHub
           git push
