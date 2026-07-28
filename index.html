@@ -86,7 +86,7 @@
         .date-container { display: flex; align-items: center; gap: 8px; }
         .date-display { font-size: 1.15rem; font-weight: 900; color: var(--text-main); }
         
-        /* 修正 3：輕微縮細天氣面板元件，防止 Icon 被推出去 */
+        /* 修正：輕微縮細天氣面板元件，防止 Icon 被推出去 */
         .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; gap: 6px; }
         .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
         .time-display { font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -137,7 +137,7 @@
 
         .marquee-container { width: 100%; overflow: hidden; background: #fff; border: 3px solid #111; padding: 12px 0; margin-bottom: 15px; display: flex; white-space: nowrap; position: relative; flex: none; box-shadow: 4px 4px 0px 0px #111; }
         
-        /* 修正 1：加 flex-shrink: 0 避免跑馬燈行到一半斷開 */
+        /* 修正：加 flex-shrink: 0 避免跑馬燈行到一半斷開 */
         .marquee-text { display: inline-block; padding-left: 100%; font-size: 1.05rem; font-weight: 900; color: #111; animation: marqueeScroll 25s linear infinite; flex-shrink: 0; }
         .marquee-text.has-issue { color: #ff3333; animation: marqueeScroll 30s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
@@ -940,7 +940,13 @@
                                         else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') { targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000); }
                                         
                                         let mappedDest = MTR_DEST_MAP[validTrain.dest] || { zh: validTrain.dest, en: validTrain.dest };
-                                        if (targetTime) { trains.push({ dest: mappedDest, localTarget: targetTime, dir: dir, plat: validTrain.plat || '' }); }
+                                        if (targetTime) {
+                                            /* 修正：加入 30 分鐘防呆過濾機制 */
+                                            let diffMins = (targetTime.getTime() - Date.now()) / 60000;
+                                            if (diffMins <= 30) {
+                                                trains.push({ dest: mappedDest, localTarget: targetTime, dir: dir, plat: validTrain.plat || '' });
+                                            }
+                                        }
                                     }
                                 }
                             });
@@ -1312,7 +1318,6 @@
                 if(!res.json || res.json.status === 0 || !res.json.data) return;
                 let key = `${lineCode}-${res.staCode}`; let data = res.json.data[key]; if(!data) return;
                 
-                /* 修正 2：移除外層 if 判斷，確保冇 data 時可以傳 undefined 入去洗空預設介面 */
                 updateTrainStatusDOM('up', res.staCode, data.UP, res.json.curr_time);
                 if (res.staCode === currentStaCode && data.UP && data.UP.length > 0 && data.UP[0].plat) {
                     let platBadge = document.getElementById('plat-up'); if (platBadge) { platBadge.innerText = data.UP[0].plat; platBadge.style.display = 'inline-flex'; }
@@ -1344,6 +1349,15 @@
 
             if (targetTime) {
                 const diffSec = Math.floor((targetTime - new Date()) / 1000);
+                
+                /* 修正：加入 30 分鐘防呆過濾機制 */
+                if (diffSec > 1800) {
+                    el.innerHTML = `--`;
+                    el.className = 'mtr-eta';
+                    el.style.color = 'var(--text-muted)';
+                    return; 
+                }
+
                 if (diffSec <= 0) { el.className = `mtr-eta departing-text`; el.innerHTML = dict['txt-departed']; el.style.color = '#111'; } 
                 else { const m = Math.floor(diffSec / 60); el.className = `mtr-eta`; el.innerHTML = `${dict['txt-arrive-cd']}${m}${dict['txt-min']}`; el.style.color = '#ff3333'; }
             }
