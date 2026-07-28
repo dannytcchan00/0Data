@@ -86,18 +86,19 @@
         .date-container { display: flex; align-items: center; gap: 8px; }
         .date-display { font-size: 1.15rem; font-weight: 900; color: var(--text-main); }
         
-        .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 18px 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; gap: 10px; }
-        .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-        .time-display { font-size: 2.5rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
-        .utc-display { font-size: 1rem; font-weight: 900; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        /* 修正 3：輕微縮細天氣面板元件，防止 Icon 被推出去 */
+        .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; gap: 6px; }
+        .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+        .time-display { font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .utc-display { font-size: 0.9rem; font-weight: 900; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .weather-block { display: flex; align-items: center; gap: 12px; border-left: 3px solid #111; padding-left: 12px; }
-        .weather-status-icon { width: 60px; height: 60px; min-width: 60px; object-fit: contain; display: block; }
+        .weather-block { display: flex; align-items: center; gap: 8px; border-left: 3px solid #111; padding-left: 8px; flex: 0 0 auto; }
+        .weather-status-icon { width: 50px; height: 50px; min-width: 50px; object-fit: contain; display: block; flex-shrink: 0; }
         
         .weather-current-stats { display: flex; flex-direction: column; align-items: flex-end; }
-        .current-temp { font-size: 2.2rem; font-weight: 900; line-height: 1; margin-bottom: 4px; letter-spacing: -1px; }
-        .current-hum { font-size: 0.85rem; color: var(--text-muted); font-weight: 900; letter-spacing: 0.5px; }
-        .current-hum span { color: #005ea8; font-weight: 900; font-size: 1rem; }
+        .current-temp { font-size: 1.9rem; font-weight: 900; line-height: 1; margin-bottom: 4px; letter-spacing: -1px; white-space: nowrap; }
+        .current-hum { font-size: 0.75rem; color: var(--text-muted); font-weight: 900; letter-spacing: 0; white-space: nowrap; }
+        .current-hum span { color: #005ea8; font-weight: 900; font-size: 0.9rem; }
         
         .weather-grid-inline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
         .w-item { text-align: center; display: flex; flex-direction: column; justify-content: center; background: #fff; border: 3px solid #111; box-shadow: 3px 3px 0px 0px #111; padding: 8px 4px; }
@@ -135,7 +136,9 @@
         .refresh-indicator { font-size: 0.8rem; color: #fff; font-weight: 900; background: #111; padding: 4px 8px; border: 2px solid #fff;}
 
         .marquee-container { width: 100%; overflow: hidden; background: #fff; border: 3px solid #111; padding: 12px 0; margin-bottom: 15px; display: flex; white-space: nowrap; position: relative; flex: none; box-shadow: 4px 4px 0px 0px #111; }
-        .marquee-text { display: inline-block; padding-left: 100%; font-size: 1.05rem; font-weight: 900; color: #111; animation: marqueeScroll 25s linear infinite; }
+        
+        /* 修正 1：加 flex-shrink: 0 避免跑馬燈行到一半斷開 */
+        .marquee-text { display: inline-block; padding-left: 100%; font-size: 1.05rem; font-weight: 900; color: #111; animation: marqueeScroll 25s linear infinite; flex-shrink: 0; }
         .marquee-text.has-issue { color: #ff3333; animation: marqueeScroll 30s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
@@ -949,13 +952,6 @@
             transportTimestamps.mtr = await Promise.all(promises); renderUI();
         }
 
-        function saveMtrSelection() {
-            if (tempMtrSelections.length === 0) { alert('You must select at least 1 station! / 最少要選擇 1 個車站！'); return; }
-            myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); 
-            try { localStorage.setItem('my_saved_mtr', JSON.stringify(myMtrStations)); } catch(e){}
-            closeMtrModal(); fetchMTR();
-        }
-
         async function initStaticDatabase() {
             try {
                 document.getElementById('progress-bar').style.width = '30%'; 
@@ -1315,17 +1311,16 @@
             results.forEach(res => {
                 if(!res.json || res.json.status === 0 || !res.json.data) return;
                 let key = `${lineCode}-${res.staCode}`; let data = res.json.data[key]; if(!data) return;
-                if (data.UP) {
-                    updateTrainStatusDOM('up', res.staCode, data.UP, res.json.curr_time);
-                    if (res.staCode === currentStaCode && data.UP.length > 0 && data.UP[0].plat) {
-                        let platBadge = document.getElementById('plat-up'); if (platBadge) { platBadge.innerText = data.UP[0].plat; platBadge.style.display = 'inline-flex'; }
-                    }
+                
+                /* 修正 2：移除外層 if 判斷，確保冇 data 時可以傳 undefined 入去洗空預設介面 */
+                updateTrainStatusDOM('up', res.staCode, data.UP, res.json.curr_time);
+                if (res.staCode === currentStaCode && data.UP && data.UP.length > 0 && data.UP[0].plat) {
+                    let platBadge = document.getElementById('plat-up'); if (platBadge) { platBadge.innerText = data.UP[0].plat; platBadge.style.display = 'inline-flex'; }
                 }
-                if (data.DOWN) {
-                    updateTrainStatusDOM('down', res.staCode, data.DOWN, res.json.curr_time);
-                    if (res.staCode === currentStaCode && data.DOWN.length > 0 && data.DOWN[0].plat) {
-                        let platBadge = document.getElementById('plat-down'); if (platBadge) { platBadge.innerText = data.DOWN[0].plat; platBadge.style.display = 'inline-flex'; }
-                    }
+                
+                updateTrainStatusDOM('down', res.staCode, data.DOWN, res.json.curr_time);
+                if (res.staCode === currentStaCode && data.DOWN && data.DOWN.length > 0 && data.DOWN[0].plat) {
+                    let platBadge = document.getElementById('plat-down'); if (platBadge) { platBadge.innerText = data.DOWN[0].plat; platBadge.style.display = 'inline-flex'; }
                 }
             });
         }
