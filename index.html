@@ -508,7 +508,7 @@
                 'txt-to': '往 ', 'txt-eta-arr': '即將到達', 'txt-eta-dep': '正在開出', 'txt-eta-end': '服務已終止', 'txt-min': ' 分鐘', 'txt-sec': '秒',
                 'txt-arrive-cd': '到達倒數: ', 'txt-departed': '🚆 已經開出', 'txt-loading': '🔄 載入中...',
                 'txt-st-op': '🟢 目前全線地鐵/火車皆正常營運', 'txt-st-attn': '⚠️ 注意：', 'txt-st-norm': '其餘路線皆正常行駛',
-                'txt-st-fail': '無法連線', 'txt-st-delay': '班次延誤', 'txt-st-nodata': '暫無班次數據', 'txt-st-end': '🌙 列車服務經已終止',
+                'txt-st-fail': '無法連線', 'txt-st-delay': '班次延誤', 'txt-st-nodata': '暫無班次數據', 'txt-st-end': '🌙 列車服務經已終止', 'txt-st-longwait': '(候車時間較長)',
                 'txt-st-first': '🌅 各綫首班車大約開出時間：港島綫 05:55｜荃灣綫 06:00｜觀塘綫 05:59｜將軍澳綫 06:00｜屯馬綫 05:40｜東鐵綫 05:30｜東涌綫 06:01｜機場快綫 05:50｜南港島綫 06:00｜迪士尼綫 06:15'
             },
             'en': {
@@ -526,7 +526,7 @@
                 'txt-to': 'To ', 'txt-eta-arr': 'Arriving', 'txt-eta-dep': 'Departing', 'txt-eta-end': 'Service Ended', 'txt-min': ' min ', 'txt-sec': 's',
                 'txt-arrive-cd': 'ETA: ', 'txt-departed': '🚆 Departed', 'txt-loading': '🔄 Loading...',
                 'txt-st-op': '🟢 All Rapid Transit System Operating Normally', 'txt-st-attn': '⚠️ Attention:', 'txt-st-norm': 'All other lines are operating on schedule',
-                'txt-st-fail': 'Connection Failed', 'txt-st-delay': 'Delayed', 'txt-st-nodata': 'No Data Available', 'txt-st-end': '🌙 Train services for today have ended',
+                'txt-st-fail': 'Connection Failed', 'txt-st-delay': 'Delayed', 'txt-st-nodata': 'No Data Available', 'txt-st-end': '🌙 Train services for today have ended', 'txt-st-longwait': '(Longer wait times)',
                 'txt-st-first': '🌅 First train departures: Island Line 05:55 | Tsuen Wan Line 06:00 | Kwun Tong Line 05:59 | Tseung Kwan O Line 06:00 | Tuen Ma Line 05:40 | East Rail Line 05:30 | Tung Chung Line 06:01 | Airport Express 05:50 | South Island Line 06:00 | Disneyland Resort Line 06:15'
             }
         };
@@ -916,10 +916,30 @@
                 return;
             }
 
+            // 新增自帶重試機制的 fetch，防止單次 timeout 引致的誤判
+            async function fetchWithRetry(url, retries = 2) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        let res = await fetch(url, { cache: 'no-store' });
+                        if (res.ok) return await res.json();
+                    } catch (err) {
+                        if (i === retries - 1) throw err;
+                    }
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+
+            // 加強抽查點：多選取幾個重要站點來互相補足，以免單一車站未能及時反映整條綫的延誤
             const checkStations = [
-                {line: 'ISL', sta: 'ADM'}, {line: 'TWL', sta: 'ADM'}, {line: 'KTL', sta: 'YMT'},
-                {line: 'TKL', sta: 'TKO'}, {line: 'TML', sta: 'TAW'}, {line: 'EAL', sta: 'KOT'},
-                {line: 'TCL', sta: 'NAC'}, {line: 'AEL', sta: 'KOW'}, {line: 'SIL', sta: 'OCP'},
+                {line: 'ISL', sta: 'ADM'}, {line: 'ISL', sta: 'QUB'},
+                {line: 'TWL', sta: 'ADM'}, {line: 'TWL', sta: 'MEF'}, 
+                {line: 'KTL', sta: 'YMT'}, {line: 'KTL', sta: 'KOT'},
+                {line: 'TKL', sta: 'TKO'}, {line: 'TKL', sta: 'NOP'}, 
+                {line: 'TML', sta: 'TAW'}, {line: 'TML', sta: 'MEF'}, 
+                {line: 'EAL', sta: 'KOT'}, {line: 'EAL', sta: 'TAP'},
+                {line: 'TCL', sta: 'NAC'}, {line: 'TCL', sta: 'TSY'}, 
+                {line: 'AEL', sta: 'KOW'}, {line: 'AEL', sta: 'TSY'}, 
+                {line: 'SIL', sta: 'OCP'},
                 {line: 'DRL', sta: 'SUN'}
             ];
 
@@ -936,12 +956,13 @@
                     else if (tcCode === 'TC10' || tcCode === 'WTC10') { typhoonMsg = currentLang==='en'?"| 🌀 Hurricane Signal No.10 is in force. Open-air sections suspended. Limited service in tunnels.| Bus services are suspended under Tropical Cyclone Warning Signal No.10 ":"| 🌀 而家係10號風球，露天段列車會即時暫停，隧道段會維持有限度服務。 | 10號熱帶氣旋警告信號生效，巴士服務暫停。 "; }
                 }
 
+                // 使用重試機制並發獲取，取代原有的一 failure 就當錯誤
                 let results = await Promise.allSettled(checkStations.map(s =>
-                    fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, { cache: 'no-store' })
-                    .then(r => { if (!r.ok) throw new Error("HTTP Error"); return r.json(); })
+                    fetchWithRetry(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${s.line}&sta=${s.sta}&_=${ts}`, 2)
                 ));
 
                 let issues = [];
+                let lineIssueMap = new Map(); // 使用 Map 來去重及覆蓋，確保每條綫最多顯示一個最嚴重的狀態
                 let h = now.getHours(); let m = now.getMinutes(); let isLateNightEdge = (h === 23 && m >= 30) || (h >= 0 && h <= 5);
 
                 results.forEach((res, i) => {
@@ -949,17 +970,50 @@
                     let lineName = currentLang === 'en' ? MTR_NETWORK[s.line].name_en : MTR_NETWORK[s.line].name_zh;
                     let key = `${s.line}-${s.sta}`;
 
-                    if (res.status === 'rejected') { if (!isLateNightEdge) issues.push(`⚫ ${lineName} ${dict['txt-st-fail']}`); return; }
-                    let d = res.value; let hasData = false;
+                    // 如果經過重試仍然失敗，我們選擇默默跳過，不當作故障報警，以避免手機網絡差導致跑馬燈常報錯
+                    if (res.status === 'rejected') return; 
+
+                    let d = res.value; 
+                    let hasData = false; 
+                    let dirHasLongWait = false; // 新邏輯：主動根據等待時間推算異常
+
                     if (d && d.data && d.data[key]) {
-                        let upTrains = d.data[key].UP || []; let downTrains = d.data[key].DOWN || [];
+                        let upTrains = d.data[key].UP || []; 
+                        let downTrains = d.data[key].DOWN || [];
                         if (upTrains.length > 0 || downTrains.length > 0) hasData = true;
+                        
+                        // 如果有數據，檢查任何一個方向的下一班車是否要等大於 15 分鐘
+                        if (upTrains.length > 0) {
+                            let firstUp = parseInt(upTrains[0].ttnt);
+                            if (!isNaN(firstUp) && firstUp > 15) dirHasLongWait = true;
+                        }
+                        if (downTrains.length > 0) {
+                            let firstDown = parseInt(downTrains[0].ttnt);
+                            if (!isNaN(firstDown) && firstDown > 15) dirHasLongWait = true;
+                        }
                     }
 
                     let isDelayed = String(d.isdelay || d.isDelay || d.Isdelay || 'N').toUpperCase() === 'Y';
-                    if (isDelayed) { issues.push(`🔴 ${lineName} ${dict['txt-st-delay']}`); } 
-                    else if (!hasData || Number(d.status) === 0) { if (!isLateNightEdge) { issues.push(`⚠️ ${lineName} ${dict['txt-st-nodata']}`); } }
+                    
+                    if (!lineIssueMap.has(s.line)) {
+                        if (isDelayed) { 
+                            lineIssueMap.set(s.line, `🔴 ${lineName} ${dict['txt-st-delay']}`); 
+                        } else if (!hasData || Number(d.status) === 0) { 
+                            if (!isLateNightEdge) lineIssueMap.set(s.line, `⚠️ ${lineName} ${dict['txt-st-nodata']}`); 
+                        } else if (hasData && dirHasLongWait && !isLateNightEdge) {
+                            // 主動介入：官方無標記，但數據反映候車時間異常長
+                            lineIssueMap.set(s.line, `🔴 ${lineName} ${dict['txt-st-delay']} ${dict['txt-st-longwait']}`);
+                        }
+                    } else {
+                        // 確保官方 delay 標記優先級最高
+                        let currentIssue = lineIssueMap.get(s.line);
+                        if (!currentIssue.includes('🔴') && isDelayed) {
+                            lineIssueMap.set(s.line, `🔴 ${lineName} ${dict['txt-st-delay']}`); 
+                        }
+                    }
                 });
+                
+                issues = Array.from(lineIssueMap.values());
 
                 if (issues.length === 0) {
                     marqueeEl.innerHTML = dict['txt-st-op'] + (typhoonMsg ? ` ｜ ${typhoonMsg}` : "") + holidayMsg;
@@ -969,7 +1023,8 @@
                     marqueeEl.className = "marquee-text has-issue";
                 }
             } catch(e) {
-                marqueeEl.innerHTML = "📡 " + dict['txt-st-fail'] + holidayMsg;
+                // 這個 catch 只會在所有代碼連線全部死掉時觸發（如完全無上網）
+                marqueeEl.innerHTML = "📡 " + (currentLang==='en'?'System connection unstable.':'系統連線不穩定，請稍後再試。') + holidayMsg;
                 marqueeEl.className = "marquee-text has-issue";
             }
         }
