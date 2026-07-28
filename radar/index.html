@@ -46,23 +46,26 @@
         .radar-container {
             background-color: #00E5FF;
             border: 4px solid #000000;
-            padding: 15px;
+            /* 移除原本的 padding: 15px，消除內部留白 */
+            padding: 0;
             box-shadow: 8px 8px 0px #000000;
             margin-bottom: 20px;
             position: relative;
-            /* 固定比例避免圖片切換時閃爍變形 */
-            aspect-ratio: 1 / 1; 
+            /* 讓圖片填滿容器，移除 aspect-ratio 限制 */
             display: flex;
             justify-content: center;
             align-items: center;
+            /* 可選：若圖片本身有透明背景，可保留底色；否則圖片會完全覆蓋 */
         }
 
         .radar-img {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border: 3px solid #000000;
-            background-color: #FFF;
+            height: auto; /* 保持圖片原始比例，高度自動適應 */
+            display: block; /* 移除圖片底部的預設空白間隙 */
+            /* 移除圖片本身的 border: 3px solid #000000，因為外框已有黑邊 */
+            border: none;
+            background-color: transparent; /* 若圖片有透明部分，會顯示外框的青色背景 */
+            object-fit: cover; /* 確保圖片填滿容器，必要時裁切邊緣以消滅空白 */
         }
 
         .status-badge {
@@ -98,32 +101,24 @@
         let currentFrame = 0;
         const radarImage = document.getElementById('radar-image');
         
-        // 獲取當前時間戳，確保同一批次的 20 張圖都用同一個參數，避開快取
         const timestamp = new Date().getTime(); 
 
-        // 預先準備好 20 張圖的 GitHub Pages 絕對路徑網址
         for (let i = 0; i < totalFrames; i++) {
-            // padStart 會將數字轉成 00, 01, 02... 格式
             const frameNumber = i.toString().padStart(2, '0');
             const imgUrl = `https://dannytcchan00.github.io/0Data/radar/imag/frame_${frameNumber}.png?t=${timestamp}`;
             frames.push(imgUrl);
             
-            // 隱藏在背景預載圖片，避免切換時出現空白閃爍
             const preloadImg = new Image();
             preloadImg.src = imgUrl;
         }
 
         function playAnimation() {
-            // 更改 img 標籤的 src 來切換圖片
             radarImage.src = frames[currentFrame];
-            // 循環計數器 (0 到 19，然後回到 0)
             currentFrame = (currentFrame + 1) % totalFrames;
         }
 
-        // 每 500 毫秒 (0.5秒) 切換一張圖，製造動畫效果
         setInterval(playAnimation, 500);
 
-        // 每 10 分鐘自動重新載入整個網頁，確保獲取到下一批最新的 20 張圖
         setInterval(() => {
             window.location.reload();
         }, 600000);
