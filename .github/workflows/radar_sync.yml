@@ -28,9 +28,14 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          # 更新為新的圖片路徑
-          git add radar/imag/latest_radar.png
+          # 檢查檔案是否存在，存在才執行 add，避免 Git 報錯
+          if [ -f "radar/imag/latest_radar.png" ]; then
+            git add radar/imag/latest_radar.png
+            echo "已加入最新雷達圖"
+          else
+            echo "找不到圖片，略過 git add 步驟"
+          fi
           
-          # 強制 commit，無論檔案內容是否改變
+          # 強制 commit 與 push，維持排程更新不中斷
           git commit -m "Auto-update HKO radar image" --allow-empty
           git push
