@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>即時天氣雷達 | Neo-brutalism</title>
+    <title>即時天氣雷達動畫 | Neo-brutalism</title>
     <style>
-        /* Neo-brutalism 核心風格設定 */
         body {
-            /* 鮮豔的底色，常見於新粗野主義 */
             background-color: #FFE600; 
             font-family: 'Helvetica Neue', Arial, sans-serif;
             display: flex;
@@ -21,7 +19,6 @@
 
         .brutal-card {
             background-color: #FFFFFF;
-            /* 粗黑邊框與無漸層硬陰影 */
             border: 4px solid #000000;
             box-shadow: 12px 12px 0px #000000;
             padding: 30px;
@@ -32,36 +29,39 @@
         }
 
         .signage-title {
-            /* 帶有復古排版與傳統字體韻味的標題設計 */
             font-family: "PMingLiU", "MingLiU", "DFKai-SB", serif;
             font-size: 2.5rem;
             font-weight: 900;
             letter-spacing: 4px;
             background-color: #FF0055;
             color: #FFFFFF;
-            /* 標題本身的粗野主義方塊設計 */
             border: 4px solid #000000;
             box-shadow: 6px 6px 0px #000000;
             padding: 10px 24px;
-            margin-top: -50px; /* 故意凸出卡片的設計 */
+            margin-top: -50px; 
             margin-bottom: 24px;
             display: inline-block;
         }
 
         .radar-container {
-            /* 圖片外框設定 */
             background-color: #00E5FF;
             border: 4px solid #000000;
             padding: 15px;
             box-shadow: 8px 8px 0px #000000;
             margin-bottom: 20px;
+            position: relative;
+            /* 固定比例避免圖片切換時閃爍變形 */
+            aspect-ratio: 1 / 1; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .radar-img {
             width: 100%;
-            max-width: 100%;
+            height: 100%;
+            object-fit: contain;
             border: 3px solid #000000;
-            display: block;
             background-color: #FFF;
         }
 
@@ -69,10 +69,10 @@
             font-size: 1rem;
             font-weight: bold;
             background-color: #000000;
-            color: #39FF14; /* 螢光綠文字 */
+            color: #39FF14; 
             padding: 8px 16px;
             border: 3px solid #000000;
-            box-shadow: 4px 4px 0px #FFFFFF, 8px 8px 0px #000000; /* 雙層陰影 */
+            box-shadow: 4px 4px 0px #FFFFFF, 8px 8px 0px #000000; 
             display: inline-block;
             text-transform: uppercase;
         }
@@ -81,28 +81,52 @@
 <body>
 
     <div class="brutal-card">
-        <!-- 結合舊字體排版美學的標題 -->
-        <div class="signage-title">即時天氣雷達</div>
+        <div class="signage-title">氣象雷達觀測</div>
         
         <div class="radar-container">
-            <!-- 直接使用你指定的 GitHub Pages 絕對路徑 -->
-            <img id="radar-image" class="radar-img" src="https://dannytcchan00.github.io/0Data/radar/imag/latest_radar.png" alt="香港天文台雷達圖" onerror="this.src='https://via.placeholder.com/500x500.png?text=載入中...'" />
+            <img id="radar-image" class="radar-img" src="https://via.placeholder.com/500x500.png?text=載入中..." alt="香港天文台雷達圖" />
         </div>
 
         <div class="status-badge">
-            ● 系統自動同步中 (10MIN)
+            ● 實時動畫播放中 (LIVE)
         </div>
     </div>
 
     <script>
-        function refreshRadar() {
-            const radarImg = document.getElementById('radar-image');
-            // 將 JavaScript 裡的更新路徑換成絕對網址，並保留時間戳強制清除快取
-            radarImg.src = 'https://dannytcchan00.github.io/0Data/radar/imag/latest_radar.png?t=' + new Date().getTime();
+        const totalFrames = 20;
+        const frames = [];
+        let currentFrame = 0;
+        const radarImage = document.getElementById('radar-image');
+        
+        // 獲取當前時間戳，確保同一批次的 20 張圖都用同一個參數，避開快取
+        const timestamp = new Date().getTime(); 
+
+        // 預先準備好 20 張圖的 GitHub Pages 絕對路徑網址
+        for (let i = 0; i < totalFrames; i++) {
+            // padStart 會將數字轉成 00, 01, 02... 格式
+            const frameNumber = i.toString().padStart(2, '0');
+            const imgUrl = `https://dannytcchan00.github.io/0Data/radar/imag/frame_${frameNumber}.png?t=${timestamp}`;
+            frames.push(imgUrl);
+            
+            // 隱藏在背景預載圖片，避免切換時出現空白閃爍
+            const preloadImg = new Image();
+            preloadImg.src = imgUrl;
         }
 
-        // 每 10 分鐘 (600000 毫秒) 自動在前端重新載入一次圖片
-        setInterval(refreshRadar, 600000);
+        function playAnimation() {
+            // 更改 img 標籤的 src 來切換圖片
+            radarImage.src = frames[currentFrame];
+            // 循環計數器 (0 到 19，然後回到 0)
+            currentFrame = (currentFrame + 1) % totalFrames;
+        }
+
+        // 每 500 毫秒 (0.5秒) 切換一張圖，製造動畫效果
+        setInterval(playAnimation, 500);
+
+        // 每 10 分鐘自動重新載入整個網頁，確保獲取到下一批最新的 20 張圖
+        setInterval(() => {
+            window.location.reload();
+        }, 600000);
     </script>
 
 </body>
