@@ -13,253 +13,266 @@
 
     <style>
         :root {
-            --bg-color: #000000; --panel-bg: #0c0c0c; --panel-border: #1a1a1a;
-            --text-main: #ffffff; --text-muted: #666666; --warning-red: #ff4d4d;
-            --normal-bg: rgba(255, 255, 255, 0.02);
-            --kmb-bg: #140202; --kmb-border: #991414;
-            --ctb-bg: #141100; --ctb-border: #a38200;
+            /* Neo-brutalism 顏色變數 */
+            --bg-color: #f4f4f4; 
+            --panel-bg: #ffffff; 
+            --panel-border: #111111;
+            --text-main: #111111; 
+            --text-muted: #444444; 
+            --warning-red: #ff3333;
+            --accent-green: #7A8B76;
+            --kmb-bg: #ff4d4d; 
+            --ctb-bg: #ffd700;
         }
         * { box-sizing: border-box; }
         
         html { height: -webkit-fill-available; }
         body { 
-            background: var(--bg-color); color: var(--text-main); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang HK", "Microsoft JhengHei", sans-serif; 
             margin: 0; 
             height: 100vh; height: 100dvh; min-height: -webkit-fill-available; 
             display: flex; flex-direction: column; overflow: hidden; 
             overscroll-behavior-y: none;
+            /* 網格背景 */
+            background-image: 
+                linear-gradient(to right, #ccc 1px, transparent 1px),
+                linear-gradient(to bottom, #ccc 1px, transparent 1px);
+            background-size: 20px 20px;
         }
 
         #app-iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            z-index: 50; 
-            background: var(--bg-color);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: none; z-index: 50; background: var(--bg-color);
         }
 
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; transition: opacity 0.3s; }
-        .loading-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #4da6ff; letter-spacing: 2px;}
-        .progress-container { width: 80%; max-width: 400px; height: 12px; background: #222; border-radius: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
-        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #0071CE, #00ff66); transition: width 0.2s ease-out; }
-        #progress-text { margin-top: 15px; font-size: 1.1rem; font-weight: bold; font-variant-numeric: tabular-nums; }
-        #progress-detail { margin-top: 5px; font-size: 0.85rem; color: #888; text-align: center; padding: 0 20px; line-height: 1.4;}
+        /* 載入畫面 */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffd700; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #111; transition: opacity 0.3s; }
+        .loading-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 20px; color: #111; letter-spacing: 2px; text-shadow: 2px 2px 0px #fff; }
+        .progress-container { width: 80%; max-width: 400px; height: 16px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: var(--accent-green); transition: width 0.2s ease-out; border-right: 3px solid #111; }
+        #progress-text { margin-top: 15px; font-size: 1.2rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+        #progress-detail { margin-top: 5px; font-size: 0.95rem; color: #111; font-weight: bold; text-align: center; padding: 0 20px; line-height: 1.4;}
 
-        .ptr-indicator { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; color: #4da6ff; font-weight: bold; font-size: 0.95rem; z-index: 1000; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .ptr-indicator { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; color: #111; font-weight: 900; font-size: 0.95rem; z-index: 1000; text-shadow: 1px 1px 0px #fff; }
 
-        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 15px; padding: 15px; flex: 1; overflow: hidden; position: relative; z-index: 2; background: var(--bg-color); }
-        .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; }
-
-        .left-col { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
-        .integrated-weather-panel::-webkit-scrollbar { width: 4px; }
-        .integrated-weather-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; position: relative; z-index: 2; }
         
-        .top-info-bar { display: flex; justify-content: flex-start; align-items: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; }
+        /* 核心組件：粗邊框、無圓角、硬陰影 */
+        .panel, .station-card, .bus-card, .modal-content, .alert-box, .lang-btn, .search-engine-box, .forecast-item, .detail-header-card, .bus-dir-btn, .station-pill, .modal-btn, .btn-back, .bm-delete, .stop-num {
+            background: var(--panel-bg); 
+            border: 3px solid var(--panel-border); 
+            border-radius: 0; 
+            box-shadow: 6px 6px 0px 0px var(--panel-border); 
+            color: var(--text-main);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .panel { box-shadow: 8px 8px 0px 0px var(--panel-border); display: flex; flex-direction: column; padding: 15px; }
+        
+        /* 按下狀態物理回饋 */
+        .station-card:active, .bus-card:active, .lang-btn:active, .modal-btn:active, .bus-dir-btn:active, .alert-box:active, .station-pill:active, .btn-back:active, .bm-delete:active {
+            transform: translate(4px, 4px); 
+            box-shadow: 2px 2px 0px 0px var(--panel-border);
+        }
+
+        .left-col { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; -webkit-overflow-scrolling: touch; }
+        .integrated-weather-panel::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
+        .integrated-weather-panel::-webkit-scrollbar-thumb { background: #111; }
+        
+        .top-info-bar { display: flex; justify-content: flex-start; align-items: center; border-bottom: 3px solid var(--panel-border); padding-bottom: 12px; margin-bottom: 5px; }
         .date-container { display: flex; align-items: center; gap: 8px; }
-        .date-display { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .date-display { font-size: 1.15rem; font-weight: 900; color: var(--text-main); }
         
-        .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); border-radius: 12px 12px 0 0; border: 1px solid rgba(255,255,255,0.05); border-bottom: none; gap: 10px; }
+        .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 18px 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; gap: 10px; }
         .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-        .time-display { font-size: 2.4rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .utc-display { font-size: 1rem; font-weight: 500; color: #888; font-variant-numeric: tabular-nums; }
+        .time-display { font-size: 2.5rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+        .utc-display { font-size: 1rem; font-weight: 900; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-        .weather-block { display: flex; align-items: center; gap: 12px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 12px; }
-        .weather-status-icon { width: 70px; height: 70px; min-width: 70px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
+        .weather-block { display: flex; align-items: center; gap: 12px; border-left: 3px solid #111; padding-left: 12px; }
+        .weather-status-icon { width: 60px; height: 60px; min-width: 60px; object-fit: contain; display: block; }
         
         .weather-current-stats { display: flex; flex-direction: column; align-items: flex-end; }
-        .current-temp { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: -1px; }
-        .current-hum { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; }
-        .current-hum span { color: #4da6ff; font-weight: 700; font-size: 1rem; }
+        .current-temp { font-size: 2.2rem; font-weight: 900; line-height: 1; margin-bottom: 4px; letter-spacing: -1px; }
+        .current-hum { font-size: 0.85rem; color: var(--text-muted); font-weight: 900; letter-spacing: 0.5px; }
+        .current-hum span { color: #005ea8; font-weight: 900; font-size: 1rem; }
         
-        .weather-grid-inline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 12px 12px; padding: 8px; }
-        .w-item { text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .w-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; white-space: nowrap;}
-        .w-val { font-size: 0.95rem; font-weight: 700; color: #ddd; }
+        .weather-grid-inline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
+        .w-item { text-align: center; display: flex; flex-direction: column; justify-content: center; background: #fff; border: 3px solid #111; box-shadow: 3px 3px 0px 0px #111; padding: 8px 4px; }
+        .w-label { font-size: 0.7rem; color: var(--text-main); font-weight: 900; margin-bottom: 4px; white-space: nowrap;}
+        .w-val { font-size: 1.05rem; font-weight: 900; color: var(--text-main); }
 
-        @keyframes alertBlink { 0% { opacity: 0.6; } 50% { opacity: 1; border-color: #ff4d4d; } 100% { opacity: 0.6; } }
-        @keyframes swtBlink { 0% { opacity: 0.8; box-shadow: 0 0 5px rgba(255, 215, 0, 0.1); } 50% { opacity: 1; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); background: rgba(255, 215, 0, 0.15); } 100% { opacity: 0.8; box-shadow: 0 0 5px rgba(255, 215, 0, 0.1); } }
+        .warnings-container { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+        .alert-box { padding: 12px; font-size: 1.1rem; font-weight: 900; text-align: center; cursor: pointer; }
+        @keyframes brutalAlert { 0% { background: #ff4d4d; color: #fff; } 50% { background: #fff; color: #ff4d4d; } 100% { background: #ff4d4d; color: #fff; } }
+        .alert-active { animation: brutalAlert 2s infinite steps(1); border: 3px solid #111; }
+        .alert-none { background: #fff; color: var(--text-main); cursor: default; }
         
-        .warnings-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-        .alert-box { border-radius: 10px; padding: 12px; font-size: 1rem; font-weight: bold; text-align: center; cursor: pointer; transition: transform 0.15s;}
-        .alert-box:active { transform: scale(0.97); }
-        .alert-active { background: rgba(255, 77, 77, 0.15); border: 2px solid rgba(255, 77, 77, 0.6); color: #ff4d4d; animation: alertBlink 2s infinite ease-in-out; }
-        .alert-none { background: var(--normal-bg); border: 1px solid var(--panel-border); color: var(--text-muted); cursor: default;}
-        .swt-box { border-radius: 10px; padding: 12px; font-size: 0.85rem; line-height: 1.5; text-align: left; border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; margin-top: 4px; cursor: pointer; transition: transform 0.15s; }
-        .swt-box:active { transform: scale(0.97); }
-        .swt-blink { animation: swtBlink 2.5s infinite ease-in-out; }
+        .swt-box { background: #fff; border: 3px solid #111; padding: 12px; font-size: 0.9rem; line-height: 1.5; font-weight: bold; text-align: left; color: #111; box-shadow: 4px 4px 0px 0px #111; cursor: pointer; transition: transform 0.15s; margin-top: 5px; }
+        .swt-box:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0px 0px #111; }
+        @keyframes swtBrutalBlink { 0% { background: #ffd700; } 50% { background: #fff; } 100% { background: #ffd700; } }
+        .swt-blink { animation: swtBrutalBlink 1.5s infinite steps(1); }
 
-        .forecast-container { display: flex; gap: 6px; margin-top: 5px; margin-bottom: 5px; }
-        .forecast-item { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 3px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: background 0.2s; }
-        .forecast-item:active { background: rgba(255,255,255,0.1); }
-        .fc-date { font-size: 0.72rem; color: #ccc; font-weight: bold; }
-        .fc-icon { width: 35px; height: 35px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));}
-        .fc-temp { font-size: 0.8rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;}
-        .fc-psr { font-size: 0.68rem; font-weight: 600; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.3);}
+        .forecast-container { display: flex; gap: 12px; margin-top: 5px; margin-bottom: 5px; }
+        .forecast-item { flex: 1; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+        .fc-date { font-size: 0.75rem; color: var(--text-main); font-weight: 900; }
+        .fc-icon { width: 40px; height: 40px; object-fit: contain; }
+        .fc-temp { font-size: 0.9rem; font-weight: 900; color: var(--text-main); letter-spacing: -0.5px;}
+        .fc-psr { font-size: 0.75rem; font-weight: 900; padding: 2px 6px; background: #111; color: #fff; border: 2px solid #111; }
 
-        .right-col { display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden; }
-        h2 { margin: 0 0 12px 0; font-size: 1.05rem; color: var(--text-muted); border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .right-col { display: flex; flex-direction: column; gap: 20px; height: 100%; overflow: hidden; }
+        
+        /* 標題設計 */
+        h2 { 
+            background: var(--accent-green); color: white; padding: 12px 15px; 
+            border: 3px solid var(--panel-border); box-shadow: 4px 4px 0px 0px var(--panel-border); 
+            text-transform: uppercase; font-weight: 900; margin: 0 0 15px 0; 
+            display: flex; justify-content: space-between; align-items: center; font-size: 1.15rem;
+        }
         .header-actions { display: flex; align-items: center; gap: 10px; }
-        .refresh-indicator { font-size: 0.75rem; color: #00ff66; font-weight: normal;}
+        .refresh-indicator { font-size: 0.8rem; color: #fff; font-weight: 900; background: #111; padding: 4px 8px; border: 2px solid #fff;}
 
-        .marquee-container { width: 100%; overflow: hidden; background: #151515; border: 1px solid #333; border-radius: 8px; padding: 10px 0; margin-bottom: 12px; display: flex; white-space: nowrap; position: relative; flex: none; }
-        .marquee-text { display: inline-block; padding-left: 100%; font-size: 0.95rem; font-weight: bold; color: #00ff66; animation: marqueeScroll 25s linear infinite; }
-        .marquee-text.has-issue { color: #ffcc00; animation: marqueeScroll 30s linear infinite; }
+        .marquee-container { width: 100%; overflow: hidden; background: #fff; border: 3px solid #111; padding: 12px 0; margin-bottom: 15px; display: flex; white-space: nowrap; position: relative; flex: none; box-shadow: 4px 4px 0px 0px #111; }
+        .marquee-text { display: inline-block; padding-left: 100%; font-size: 1.05rem; font-weight: 900; color: #111; animation: marqueeScroll 25s linear infinite; }
+        .marquee-text.has-issue { color: #ff3333; animation: marqueeScroll 30s linear infinite; }
         @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
         .mtr-section { flex: 0 0 auto; display: flex; flex-direction: column; }
-        .mtr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-        .station-card { border-radius: 12px; padding: 12px; background: #111; border: 1px solid #333; position: relative; overflow: hidden; transition: background 0.2s; }
-        .station-card:active { background: rgba(255,255,255,0.05); }
-        .station-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 2; position: relative; }
-        .line-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; z-index: 2; position: relative; }
+        .mtr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
         
-        .mtr-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; overflow: hidden; }
+        .station-card { padding: 12px; position: relative; overflow: hidden; border-top-width: 8px; }
+        .station-name { font-size: 1.05rem; font-weight: 900; margin-bottom: 10px; color: #111; display: flex; justify-content: space-between; align-items: center; z-index: 2; position: relative; }
+        .line-badge { font-size: 0.7rem; padding: 3px 6px; font-weight: 900; letter-spacing: 0.5px; z-index: 2; position: relative; border: 2px solid #111; box-shadow: 2px 2px 0px 0px #111; color: #fff; }
+        
+        .mtr-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 2px solid #111; font-size: 0.95rem; overflow: hidden; font-weight: bold; }
         .mtr-item:last-child { border-bottom: none; }
         .mtr-dest-group { display: flex; align-items: center; gap: 8px; flex: 1; }
         .mtr-dest { white-space: nowrap; width: 85px; flex-shrink: 0; text-overflow: ellipsis; overflow: hidden;}
-        .plat-badge { display: flex; justify-content: center; align-items: center; width: 18px; height: 18px; min-width: 18px; border-radius: 50%; color: #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
-        .mtr-eta { font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+        .plat-badge { display: flex; justify-content: center; align-items: center; width: 20px; height: 20px; min-width: 20px; border: 2px solid #111; color: #111; background: #fff; font-size: 0.75rem; font-weight: 900; }
+        .mtr-eta { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; color: #111; }
 
-        @keyframes mtrErrorPulse { 0% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); } 50% { box-shadow: 0 0 20px var(--line-color); opacity: 1; background-color: rgba(255,255,255,0.15); border-color: var(--line-color); } 100% { box-shadow: 0 0 5px var(--line-color); opacity: 0.8; background-color: rgba(255,255,255,0.05); } }
-        .mtr-anomaly-box { animation: mtrErrorPulse 1.5s infinite ease-in-out !important; }
-        .mtr-anomaly-text { color: var(--line-color); font-weight: bold; text-align: center; padding: 15px 0; text-shadow: 0 0 8px var(--line-color); }
+        .mtr-anomaly-box { background: #ffcc00 !important; color: #111; border-color: #111 !important; border-width: 3px !important; }
+        .mtr-anomaly-text { color: #111; font-weight: 900; text-align: center; padding: 15px 0; }
 
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 8px; overflow-y: auto; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
-        .bus-grid::-webkit-scrollbar { width: 4px; }
-        .bus-grid::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
-        .bus-card { min-height: 106px; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.1s; }
-        .bus-card:active { transform: scale(0.96); } 
-        .bus-card.kmb { background: var(--kmb-bg); border: 1px solid var(--kmb-border); }
-        .bus-card.ctb { background: var(--ctb-bg); border: 1px solid var(--ctb-border); }
-        .bus-no { font-size: 1.45rem; font-weight: 900; line-height: 1; }
-        .bus-dest { font-size: 0.85rem; color: #4da6ff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
-        .bus-eta { font-size: 0.95rem; font-weight: bold; text-align: right; font-variant-numeric: tabular-nums; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px; margin-top: auto; }
+        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; overflow-y: auto; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
+        .bus-grid::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
+        .bus-grid::-webkit-scrollbar-thumb { background: #111; }
         
-        @keyframes textBlinkArriving { 0% { opacity: 0.4; color: #ff3b30; } 50% { opacity: 1; color: #ff3b30; text-shadow: 0 0 10px rgba(255, 59, 48, 0.6); } 100% { opacity: 0.4; color: #ff3b30; } }
-        @keyframes textBlinkDeparting { 0% { opacity: 0.4; color: #00ff66; } 50% { opacity: 1; color: #00ff66; text-shadow: 0 0 10px rgba(0, 255, 102, 0.6); } 100% { opacity: 0.4; color: #00ff66; } }
-        @keyframes kmbPulse { 0% { background-color: #140202; border-color: #991414; } 50% { background-color: #3b0a0a; border-color: #ff3333; box-shadow: 0 0 8px rgba(255, 51, 51, 0.4); } 100% { background-color: #140202; border-color: #991414; } }
-        @keyframes ctbPulse { 0% { background-color: #141100; border-color: #a38200; } 50% { background-color: #382d00; border-color: #ffcc00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.4); } 100% { background-color: #141100; border-color: #a38200; } }
+        .bus-card { min-height: 110px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
+        .bus-card.kmb { background: var(--kmb-bg); color: #111; }
+        .bus-card.ctb { background: var(--ctb-bg); color: #111; }
+        .bus-no { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+        .bus-dest { font-size: 0.9rem; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 5px; letter-spacing: 0.5px; }
+        .bus-eta { font-size: 1rem; font-weight: 900; text-align: right; font-variant-numeric: tabular-nums; width: 100%; border-top: 3px solid #111; padding-top: 6px; margin-top: auto; }
+        
+        @keyframes brutalBlink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .arriving-text { color: #111 !important; animation: brutalBlink 1s infinite steps(2); font-weight: 900; }
+        .departing-text { color: #111 !important; text-decoration: underline; font-weight: 900; }
+        
+        .no-service { grid-column: 1 / -1; text-align: center; color: #111; font-weight: bold; padding: 40px; font-size: 1.05rem; line-height: 1.6; border: 3px dashed #111; background: #fff;}
 
-        .arriving-text { color: #ff3b30 !important; animation: textBlinkArriving 1.2s infinite ease-in-out; font-weight: 900; }
-        .departing-text { color: #00ff66 !important; animation: textBlinkDeparting 1.2s infinite ease-in-out; font-weight: 900; }
-        .arriving-pulse.kmb { animation: kmbPulse 1.6s infinite ease-in-out; }
-        .arriving-pulse.ctb { animation: ctbPulse 1.6s infinite ease-in-out; }
-        .no-service { grid-column: 1 / -1; text-align: center; color: #555; padding: 40px; font-size: 0.95rem; line-height: 1.6;}
-
+        /* Modals */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); 
+            background: rgba(255, 255, 255, 0.9); 
             display: flex; justify-content: center; align-items: center; 
             z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
         .modal-content { 
-            background: var(--panel-bg); 
-            border: 1px solid #333; 
-            border-radius: 16px; 
-            width: 90%; 
-            max-width: 500px; 
-            max-height: 85vh; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            overflow: hidden; 
+            width: 90%; max-width: 500px; max-height: 85vh; 
+            display: flex; flex-direction: column; 
+            box-shadow: 12px 12px 0px 0px #111;
         }
         
-        .modal-header { padding: 15px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #111; flex: 0 0 auto;}
-        .modal-header h3 { margin: 0; font-size: 1.2rem; color: #fff; }
-        .modal-count { font-size: 0.9rem; color: #aaa; background: #222; padding: 3px 8px; border-radius: 12px; }
+        .modal-header { padding: 15px 20px; border-bottom: 3px solid #111; display: flex; justify-content: space-between; align-items: center; background: #fff; flex: 0 0 auto;}
+        .modal-header h3 { margin: 0; font-size: 1.3rem; color: #111; font-weight: 900; text-transform: uppercase; }
+        .modal-count { font-size: 1rem; color: #111; background: #fff; padding: 4px 10px; border: 2px solid #111; font-weight: 900; box-shadow: 2px 2px 0px 0px #111;}
         
-        .modal-body { 
-            padding: 15px; 
-            flex: 1 1 auto; 
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; 
-        }
+        .modal-body { padding: 20px; flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #f4f4f4; }
+        .modal-body::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
+        .modal-body::-webkit-scrollbar-thumb { background: #111; }
 
-        .modal-footer { padding: 15px; border-top: 1px solid var(--panel-border); display: flex; justify-content: flex-end; gap: 10px; background: #111; flex: 0 0 auto;}
+        .modal-footer { padding: 15px 20px; border-top: 3px solid #111; display: flex; justify-content: flex-end; gap: 15px; background: #fff; flex: 0 0 auto;}
         
-        .modal-btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;}
-        .btn-cancel { background: #333; color: #fff; }
-        .btn-save { background: #0071CE; color: #fff; }
-        .btn-back { background: #444; color: #fff; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;}
+        .modal-btn { padding: 10px 20px; font-weight: 900; font-size: 1.05rem; cursor: pointer; text-transform: uppercase; }
+        .btn-cancel { background: #fff; }
+        .btn-save { background: var(--accent-green); color: #fff; }
+        .btn-back { padding: 8px 15px; cursor: pointer; margin-bottom: 15px; font-weight: 900; display: inline-block; }
 
-        .detail-header-card { background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; text-align: center; }
-        .detail-route-title { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 5px; }
-        .detail-route-desc { font-size: 1.1rem; font-weight: bold; color: #4da6ff; margin-bottom: 10px; }
+        .detail-header-card { padding: 20px; margin-bottom: 15px; text-align: center; }
+        .detail-route-title { font-size: 2.2rem; font-weight: 900; color: #111; margin-bottom: 5px; }
+        .detail-route-desc { font-size: 1.2rem; font-weight: 900; color: #111; margin-bottom: 12px; }
         .detail-route-meta { display: flex; justify-content: center; gap: 10px; }
-        .meta-badge { background: #333; color: #ddd; padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; }
+        .meta-badge { background: #111; color: #fff; padding: 5px 12px; font-size: 0.9rem; font-weight: 900; border: 2px solid #111; }
         
-        .detail-stops-container { background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 5px; }
-        .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid #1a1a1a; color: #ccc; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; line-height: 1.3; }
+        .detail-stops-container { padding: 5px; margin-bottom: 15px; }
+        .detail-stop-item { padding: 12px 15px; border-bottom: 2px solid #111; font-size: 1rem; font-weight: bold; display: flex; align-items: center; gap: 12px; line-height: 1.3; }
         .detail-stop-item:last-child { border-bottom: none; }
-        .stop-num { background: #222; color: #888; min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.75rem; font-weight: bold; }
+        .stop-num { min-width: 30px; height: 30px; display: inline-flex; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 900; }
         
-        .current-stop-highlight { background: rgba(77, 166, 255, 0.15); border-left: 4px solid #4da6ff !important; color: #fff !important; font-weight: bold; }
-        .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #4da6ff; color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 900; }
+        .current-stop-highlight { background: #111 !important; color: #fff !important; }
+        .current-stop-highlight .stop-num { background: #111; color: #fff; border-color: #fff; box-shadow: 2px 2px 0px 0px #fff; }
+        .current-stop-badge { margin-left: auto; font-size: 0.8rem; background: #fff; color: #111; padding: 3px 10px; border: 2px solid #111; font-weight: 900; box-shadow: 2px 2px 0px 0px #111; }
 
-        .line-group { margin-bottom: 15px; }
-        .line-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; padding-left: 5px; display: flex; align-items: center; gap: 6px; }
-        .line-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-        .station-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-        .station-pill { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; user-select: none; }
-        .station-pill.selected { color: #fff; border-color: currentColor; box-shadow: 0 0 8px currentColor; }
-        .station-pill.disabled { opacity: 0.4; cursor: not-allowed; }
+        .line-group { margin-bottom: 20px; }
+        .line-title { font-size: 1.05rem; font-weight: 900; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; color: #111; }
+        .line-dot { width: 14px; height: 14px; display: inline-block; border: 2px solid #111; }
+        .station-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+        .station-pill { padding: 8px 15px; font-size: 0.95rem; font-weight: bold; cursor: pointer; user-select: none; }
+        .station-pill.selected { background: #111 !important; color: #fff !important; }
+        .station-pill.disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        .bus-manager-list { display:flex; flex-direction:column; gap:8px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;}
-        .bus-manager-item { display:flex; justify-content:space-between; align-items:center; background: #1a1a1a; padding: 10px 12px; border-radius: 8px; border: 1px solid #333;}
-        .bus-manager-info { display:flex; flex-direction:column; gap: 2px;}
-        .bm-route { font-weight:bold; font-size: 1.05rem;}
-        .bm-stop { font-size: 0.85rem; color:#aaa;}
-        .bm-delete { background:#ff4d4d20; color:#ff4d4d; border:1px solid #ff4d4d50; border-radius:6px; padding:6px 10px; cursor:pointer;}
+        .bus-manager-list { display:flex; flex-direction:column; gap:12px; margin-bottom: 25px; border-bottom: 3px solid #111; padding-bottom: 20px;}
+        .bus-manager-item { padding: 15px; }
+        .bus-manager-info { display:flex; flex-direction:column; gap: 4px; flex: 1; margin-right: 10px;}
+        .bm-route { font-weight:900; font-size: 1.15rem;}
+        .bm-stop { font-size: 0.95rem; font-weight: bold; color:#444;}
         
-        .search-engine-box { background: #151515; padding: 12px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
-        .search-engine-box h4 { margin: 0 0 10px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;}
-        .search-flex-bar { display:flex; gap: 8px; }
-        .search-flex-bar input { flex:1; padding: 8px 12px; border-radius: 6px; border:1px solid #444; background: #000; color:#fff; font-size:1rem;}
-        .search-flex-bar button { padding: 8px 15px; background:#444; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition: background 0.2s;}
+        .search-engine-box { padding: 15px; margin-bottom: 15px; }
+        .search-engine-box h4 { margin: 0 0 12px 0; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;}
+        .search-flex-bar { display:flex; gap: 10px; }
+        .search-flex-bar input { flex:1; padding: 10px 15px; font-size:1.05rem; font-weight: bold; outline: none; }
+        .search-flex-bar button { padding: 10px 20px; cursor:pointer; font-weight:900; font-size: 1.05rem; }
         
-        .bus-dir-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; cursor: pointer; text-align: left; font-size:0.95rem; display:flex; justify-content:space-between; align-items:center;}
-        .bus-dir-btn.kmb { border-left: 5px solid var(--warning-red); }
-        .bus-dir-btn.ctb { border-left: 5px solid #ffcc00; }
+        .bus-dir-btn { width: 100%; padding: 15px; margin-bottom: 12px; cursor: pointer; text-align: left; font-size: 1rem; display:flex; justify-content:space-between; align-items:center; }
+        .bus-dir-btn.kmb { border-left-width: 10px; border-left-color: var(--warning-red); }
+        .bus-dir-btn.ctb { border-left-width: 10px; border-left-color: var(--ctb-bg); }
         
-        .bus-stop-list { max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #0a0a0a; border-radius: 6px; border: 1px solid #222; padding: 5px; }
-        .bus-stop-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 0.95rem; color:#ddd; transition: 0.2s; display:flex; align-items:center; gap:12px; margin:0;}
-        .bus-stop-item:hover { background: #1a1a1a; color:#fff;}
-        .bus-stop-item input[type="checkbox"] { transform: scale(1.4); cursor: pointer; accent-color: #0071CE;}
+        .bus-stop-list { max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; }
+        .bus-stop-list::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
+        .bus-stop-list::-webkit-scrollbar-thumb { background: #111; }
+        .bus-stop-item { padding: 15px; cursor: pointer; font-size: 1rem; font-weight: bold; display:flex; align-items:center; gap:15px; margin:0;}
+        .bus-stop-item input[type="checkbox"] { transform: scale(1.6); cursor: pointer; accent-color: #111; border: 2px solid #111;}
         
-        .multi-add-bar { position: sticky; bottom: -15px; background: #111; padding: 15px 10px; border-top: 1px solid #333; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .multi-add-bar { position: sticky; bottom: -20px; background: #fff; padding: 15px 20px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: none; border-left: none; border-right: none; }
         
-        .install-btn { position: fixed; bottom: 20px; right: 20px; background: #0071CE; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9000; display: none; border: 1px solid #005ea8; align-items: center; gap: 8px; }
+        .install-btn { position: fixed; bottom: 20px; right: 20px; background: var(--accent-green); color: #fff; padding: 12px 20px; font-size: 1.05rem; font-weight: 900; cursor: pointer; z-index: 9000; display: none; align-items: center; gap: 8px; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 0; text-transform: uppercase; transition: transform 0.1s, box-shadow 0.1s;}
+        .install-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px 0px #111; }
 
-        .side-menu { position: fixed; top: 50%; right: -55px; transform: translateY(-50%); background: rgba(12, 12, 12, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid #333; border-right: none; border-radius: 16px 0 0 16px; display: flex; align-items: center; transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 10000; box-shadow: -4px 0 15px rgba(0,0,0,0.6); }
+        .side-menu { position: fixed; top: 50%; right: -65px; transform: translateY(-50%); background: #fff; display: flex; align-items: center; transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 10000; border: 3px solid #111; border-right: none; box-shadow: -6px 6px 0px 0px #111; border-radius: 0; }
         .side-menu:hover, .side-menu.active { right: 0; }
-        .menu-toggle { padding: 20px 6px; color: #4da6ff; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); }
-        .menu-items { display: flex; flex-direction: column; gap: 15px; padding: 15px 8px; width: 55px; align-items: center; }
-        .menu-items a { text-decoration: none; font-size: 1.2rem; width: 38px; height: 38px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: transform 0.2s, background 0.2s; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-        .menu-items a:hover { transform: scale(1.15); background: rgba(255, 255, 255, 0.2); }
+        .menu-toggle { padding: 25px 8px; color: #111; cursor: pointer; font-size: 1rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border-right: 3px solid #111; }
+        .menu-items { display: flex; flex-direction: column; gap: 15px; padding: 15px 10px; width: 65px; align-items: center; }
+        .menu-items a { text-decoration: none; font-size: 1.3rem; width: 42px; height: 42px; display: flex; justify-content: center; align-items: center; }
 
-        /* 設定版面專用樣式 */
-        .lang-btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .lang-btn { flex: 1; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
-        .lang-btn.active { background: #0071CE; border-color: #0071CE; box-shadow: 0 0 10px rgba(0, 113, 206, 0.5); }
-        .donation-box { background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333; text-align: center; margin-top: 10px; }
-        .donation-box h4 { margin: 0 0 10px 0; color: #e60012; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 8px;}
-        .donation-box p { color: #ccc; font-size: 0.9rem; line-height: 1.5; margin: 0 0 15px 0; }
-        .donation-box img { max-width: 200px; width: 100%; border-radius: 12px; border: 2px solid #e60012; padding: 5px; background: #fff;}
+        .lang-btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
+        .lang-btn { flex: 1; padding: 12px; cursor: pointer; font-weight: 900; font-size: 1.05rem; text-align: center; }
+        .lang-btn.active { background: #111; color: #fff; box-shadow: 2px 2px 0px 0px #111; transform: translate(2px, 2px);}
+        .donation-box { padding: 25px; text-align: center; margin-top: 15px; }
+        .donation-box h4 { margin: 0 0 15px 0; color: var(--warning-red); font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px;}
+        .donation-box p { color: #111; font-size: 1rem; line-height: 1.6; margin: 0 0 20px 0; font-weight: bold; }
+        .donation-box img { max-width: 220px; width: 100%; border: 3px solid #111; padding: 0; box-shadow: 4px 4px 0px 0px #111;}
 
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-            .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; gap: 15px; }
-            .left-col, .right-col { height: auto; overflow: visible; gap: 15px; }
-            .panel { margin-bottom: 0; padding: 15px; flex: none; height: auto; }
+            .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 15px; gap: 20px; }
+            .left-col, .right-col { height: auto; overflow: visible; gap: 20px; }
+            .panel { margin-bottom: 0; flex: none; height: auto; }
             .mtr-section { flex: none; }
             .bus-section { min-height: 400px; flex: none; }
         }
@@ -365,29 +378,29 @@
                 <div id="bus-manager-area" class="bus-manager-list"></div>
                 <div id="bus-search-interface">
                     <div class="search-engine-box">
-                        <h4 style="color:#ff6b6b;" id="t-sch-kmb">🔴 搜尋路線 (九巴)</h4>
+                        <h4 style="color:#ff3333;" id="t-sch-kmb">🔴 搜尋路線 (九巴)</h4>
                         <div class="search-flex-bar">
                             <input type="text" id="kmb-route-input" placeholder="例 / Ex: 112" autocomplete="off">
                             <button onclick="searchRoute('kmb')" class="t-btn-sch">搜尋</button>
                         </div>
                     </div>
                     <div class="search-engine-box">
-                        <h4 style="color:#ffd93d;" id="t-sch-ctb">🟡 搜尋路線 (城巴)</h4>
+                        <h4 style="color:#d4b200;" id="t-sch-ctb">🟡 搜尋路線 (城巴)</h4>
                         <div class="search-flex-bar">
                             <input type="text" id="ctb-route-input" placeholder="例 / Ex: 2A" autocomplete="off">
                             <button onclick="searchRoute('ctb')" class="t-btn-sch">搜尋</button>
                         </div>
                     </div>
                     <div class="search-engine-box">
-                        <h4 style="color:#4da6ff;" id="t-sch-stop">🚏 搜尋車站</h4>
-                        <div style="font-size:0.8rem; color:#888; margin-bottom:8px;" id="t-sch-desc">輸入站名，支援中英雙語搜尋。</div>
+                        <h4 style="color:#005ea8;" id="t-sch-stop">🚏 搜尋車站</h4>
+                        <div style="font-size:0.85rem; color:#444; font-weight:bold; margin-bottom:10px;" id="t-sch-desc">輸入站名，支援中英雙語搜尋。</div>
                         <div class="search-flex-bar">
                             <input type="text" id="stop-name-input" placeholder="例 / Ex: Quarry Bay / 鰂魚涌" autocomplete="off">
                             <button onclick="searchStop()" class="t-btn-sch">搜尋</button>
                         </div>
                     </div>
                 </div>
-                <div id="bus-search-results" style="display: none; margin-top: 10px;"></div>
+                <div id="bus-search-results" style="display: none; margin-top: 15px;"></div>
             </div>
             <div class="modal-footer"><button class="modal-btn btn-save" onclick="closeBusModal()" id="t-save-2">完成設定</button></div>
         </div>
@@ -398,7 +411,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="t-bus-det">🚌 路線詳細資料</h3>
-                <button onclick="closeBusDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+                <button onclick="closeBusDetailModal()" style="background:none;border:none;color:#111;font-size:1.8rem;font-weight:900;cursor:pointer;">✖</button>
             </div>
             <div id="bus-detail-body" class="modal-body"></div>
         </div>
@@ -409,7 +422,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="t-wth-det">🌈 延展天氣預報詳情</h3>
-                <button onclick="closeWeatherDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+                <button onclick="closeWeatherDetailModal()" style="background:none;border:none;color:#111;font-size:1.8rem;font-weight:900;cursor:pointer;">✖</button>
             </div>
             <div id="weather-detail-body" class="modal-body"></div>
         </div>
@@ -420,7 +433,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="warning-modal-title">⚠️ 天氣警告詳情</h3>
-                <button onclick="closeWarningDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+                <button onclick="closeWarningDetailModal()" style="background:none;border:none;color:#111;font-size:1.8rem;font-weight:900;cursor:pointer;">✖</button>
             </div>
             <div id="warning-modal-body" class="modal-body"></div>
         </div>
@@ -431,7 +444,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="t-mtr-det">🚇 港鐵路綫與車程分佈</h3>
-                <button onclick="closeMtrDetailModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+                <button onclick="closeMtrDetailModal()" style="background:none;border:none;color:#111;font-size:1.8rem;font-weight:900;cursor:pointer;">✖</button>
             </div>
             <div id="mtr-detail-body" class="modal-body"></div>
         </div>
@@ -442,17 +455,17 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="t-sys-set">⚙️ 系統設定 Settings</h3>
-                <button onclick="closeSettingsModal()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✖</button>
+                <button onclick="closeSettingsModal()" style="background:none;border:none;color:#111;font-size:1.8rem;font-weight:900;cursor:pointer;">✖</button>
             </div>
             <div class="modal-body">
                 
-                <h4 style="margin: 0 0 10px 0; color: #aaa;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
+                <h4 style="margin: 0 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
                 <div class="lang-btn-group">
                     <button class="lang-btn" onclick="closeSettingsModal(); openMtrModal();" id="t-btn-mtr-set">🚇 設定地鐵站</button>
                     <button class="lang-btn" onclick="closeSettingsModal(); openBusModal();" id="t-btn-bus-set">🚌 設定巴士線</button>
                 </div>
 
-                <h4 style="margin: 10px 0 10px 0; color: #aaa;" id="t-lang-set">🌐 介面語言 Language</h4>
+                <h4 style="margin: 15px 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-lang-set">🌐 介面語言 Language</h4>
                 <div class="lang-btn-group">
                     <button id="btn-lang-zh" class="lang-btn active" onclick="setLanguage('zh')">繁體中文</button>
                     <button id="btn-lang-en" class="lang-btn" onclick="setLanguage('en')">English</button>
@@ -580,7 +593,7 @@
             applyLanguage();
             updateTick();
             fetchWeather();
-            fetchMtrStatusMarquee();
+            if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee();
             renderUI();
             if(document.getElementById('mtr-modal').classList.contains('active')) renderMtrModalBody();
             if(document.getElementById('bus-modal').classList.contains('active')) renderBusManagerList();
@@ -642,7 +655,7 @@
             ptrMainContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'; ptrIndicator.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
             if (distance * 0.4 > 55) {
                 ptrMainContent.style.transform = `translateY(50px)`; ptrIndicator.style.transform = `translateY(50px)`;
-                fetchWeather(); fetchMtrStatusMarquee(); fetchMTR(); fetchRealBusData();
+                fetchWeather(); if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); fetchMTR(); fetchRealBusData();
                 setTimeout(() => { ptrMainContent.style.transform = `translateY(0)`; ptrIndicator.style.transform = `translateY(0)`; }, 1200);
             } else { ptrMainContent.style.transform = `translateY(0)`; ptrIndicator.style.transform = `translateY(0)`; }
             ptrStartY = 0; ptrCurrentY = 0;
@@ -806,7 +819,7 @@
                     if (s.data.length === 0 || s.suspended) { if (isLateNightEdge || !isOpHours) { isEnded = true; } else { isAnomaly = true; } }
 
                     let boxClass = isAnomaly ? "station-card mtr-anomaly-box" : "station-card";
-                    let boxStyle = `--line-color: ${lineInfo.color}; ` + (isAnomaly ? "" : `background:${lineInfo.color}15; border:1px solid ${lineInfo.color}80;`);
+                    let boxStyle = isAnomaly ? "" : `border-top-color: ${lineInfo.color}; border-top-width: 8px;`;
                     let renderLineName = currentLang === 'en' ? lineInfo.name_en : lineInfo.name_zh;
                     let renderStaName = currentLang === 'en' ? lineInfo.stations[s.sta].en : lineInfo.stations[s.sta].zh;
 
@@ -817,17 +830,17 @@
                     if (isAnomaly) {
                         mtrHtml += `<div class="mtr-anomaly-text">⚠️ ${renderLineName} <br><span style="font-size:0.85rem;">${dict['txt-st-delay']} / ${dict['txt-st-nodata']}</span></div>`;
                     } else if (isEnded) {
-                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:#888; padding: 15px 0;">${dict['txt-st-end']}</div>`;
+                        mtrHtml += `<div class="mtr-item" style="justify-content:center; color:var(--text-muted); padding: 15px 0;">${dict['txt-st-end']}</div>`;
                     } else {
                         s.data.forEach(t => {
                             let etaInfo = parseRemaining(t.localTarget, 'mtr'); 
                             let colorClass = ''; if (etaInfo.status === 'departing') colorClass = 'departing-text'; else if (etaInfo.status === 'arriving') colorClass = 'arriving-text';
-                            let platHtml = t.plat ? `<div class="plat-badge" style="background-color: ${lineInfo.color};">${t.plat}</div>` : '';
+                            let platHtml = t.plat ? `<div class="plat-badge">${t.plat}</div>` : '';
                             let renderDest = currentLang === 'en' ? t.dest.en : t.dest.zh;
 
                             mtrHtml += `<div class="mtr-item">
                                 <div class="mtr-dest-group"><div class="mtr-dest">${dict['txt-to']}${renderDest}</div>${platHtml}</div>
-                                <div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:#888; font-weight:normal;"' : ''}>${etaInfo.text}</div>
+                                <div class="mtr-eta ${colorClass}" ${etaInfo.status === 'end' ? 'style="color:var(--text-muted); font-weight:normal;"' : ''}>${etaInfo.text}</div>
                             </div>`;
                         });
                     }
@@ -843,8 +856,8 @@
                     transportTimestamps.bus.forEach(b => {
                         let etaInfo = parseRemaining(b.localTarget, 'bus'); 
                         let colorClass = ''; let pulseClass = '';
-                        if (etaInfo.status === 'departing') { colorClass = 'departing-text'; pulseClass = 'arriving-pulse'; }
-                        else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
+                        if (etaInfo.status === 'departing') { colorClass = 'departing-text'; }
+                        else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; }
 
                         let renderDest = currentLang === 'en' ? (b.dest_en||b.dest_tc||b.dest||'') : (b.dest_tc||b.dest||'');
                         let renderStop = currentLang === 'en' ? (b.stopName_en||b.stopName_tc||b.stopName||'') : (b.stopName_tc||b.stopName||'');
@@ -855,11 +868,11 @@
                         let busNoDisplay = `${moonIcon}${planeIcon}${safeNo}`;
 
                         busHtml += `
-                            <div class="bus-card ${b.co} ${pulseClass}" style="cursor: pointer;" onclick="openBusDetail('${b.co}', '${safeNo}', '${b.dest_tc||''}', '${b.stop}', '${b.dir||''}', '${b.service_type || '1'}')">
+                            <div class="bus-card ${b.co} ${pulseClass}" onclick="openBusDetail('${b.co}', '${safeNo}', '${b.dest_tc||''}', '${b.stop}', '${b.dir||''}', '${b.service_type || '1'}')">
                                 <div>
                                     <div class="bus-no">${busNoDisplay}</div>
                                     <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
-                                    <div style="font-size:0.75rem; color:#888; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-main); opacity:0.8; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
                                 </div>
                                 <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
                             </div>`;
@@ -889,7 +902,7 @@
                     let sName = currentLang === 'en' ? line.stations[staCode].en : line.stations[staCode].zh;
                     const isSel = tempMtrSelections.some(s => s.line === lineCode && s.sta === staCode);
                     const isDis = (!isSel && tempMtrSelections.length >= 6);
-                    html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" style="${isSel ? `background-color:${line.color}; border-color:${line.color};` : ''}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
+                    html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
                 }
                 html += `</div></div>`;
             }
@@ -970,13 +983,13 @@
         
         function renderBusManagerList() {
             const dict = i18n[currentLang]; const area = document.getElementById('bus-manager-area'); document.getElementById('bus-select-count').innerText = myBuses.length;
-            if (myBuses.length === 0) { area.innerHTML = `<div style="text-align:center; color:#666; padding:10px;">${currentLang==='en'?'No trackings added yet.':'尚未加入任何巴士追蹤'}</div>`; return; }
+            if (myBuses.length === 0) { area.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px; font-weight:bold;">${currentLang==='en'?'No trackings added yet.':'尚未加入任何巴士追蹤'}</div>`; return; }
             let html = '';
             myBuses.forEach(b => {
-                let coColor = b.co === 'kmb' ? 'var(--warning-red)' : '#ffcc00';
+                let coColor = b.co === 'kmb' ? 'var(--warning-red)' : '#d4b200';
                 let bName = currentLang === 'en' ? (b.name_en || b.name_tc || b.name || '') : (b.name_tc || b.name || '');
                 let bDest = currentLang === 'en' ? (b.dest_en || b.dest_tc || b.dest || '') : (b.dest_tc || b.dest || '');
-                html += `<div class="bus-manager-item"><div class="bus-manager-info"><span class="bm-route"><span style="color:${coColor}; font-size:0.8rem; margin-right:5px;">${b.co==='kmb'?(currentLang==='en'?'KMB':'九巴'):(currentLang==='en'?'CTB':'城巴')}</span>${b.route} <span style="font-size:0.85rem; font-weight:normal; color:#aaa;">${dict['txt-to']}${bDest}</span></span><span class="bm-stop">🚏 ${bName}</span></div><button class="bm-delete" onclick="deleteBusTrack('${b.id}')">${currentLang==='en'?'Del':'刪除'}</button></div>`;
+                html += `<div class="bus-manager-item"><div class="bus-manager-info"><span class="bm-route"><span style="color:${coColor}; font-size:0.85rem; margin-right:5px;">${b.co==='kmb'?(currentLang==='en'?'KMB':'九巴'):(currentLang==='en'?'CTB':'城巴')}</span>${b.route} <span style="font-size:0.9rem; font-weight:bold; color:var(--text-muted);">${dict['txt-to']}${bDest}</span></span><span class="bm-stop">🚏 ${bName}</span></div><button class="bm-delete" onclick="deleteBusTrack('${b.id}')">${currentLang==='en'?'Del':'刪除'}</button></div>`;
             });
             area.innerHTML = html;
         }
@@ -986,7 +999,7 @@
             let inputId = co === 'kmb' ? 'kmb-route-input' : 'ctb-route-input'; let route = document.getElementById(inputId).value.trim().toUpperCase();
             if (!route) return;
             document.getElementById('bus-search-interface').style.display = 'none'; let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
-            resDiv.innerHTML = `<div style="text-align:center; color:#888; padding: 20px;">🔍 ${currentLang==='en'?'Searching...':'搜尋緊路線資料...'}</div>`;
+            resDiv.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-weight:bold; padding: 20px;">🔍 ${currentLang==='en'?'Searching...':'搜尋緊路線資料...'}</div>`;
             let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回搜尋頁'}</button>`; let found = false;
 
             try {
@@ -994,32 +1007,32 @@
                     let d = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
                     let matchedRoutes = d?.data ? d.data.filter(r => r.route === route) : [];
                     if (matchedRoutes.length > 0) {
-                        found = true; html += `<h4 style="color:#ff6b6b; margin:10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
+                        found = true; html += `<h4 style="color:var(--text-main); border-bottom: 3px solid #111; padding-bottom: 5px; margin:15px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
                         matchedRoutes.forEach(dir => {
                             let bnd = (dir.bound === 'O' || String(dir.bound) === '1') ? 'outbound' : 'inbound';
                             let renderDest = currentLang === 'en' ? dir.dest_en : dir.dest_tc;
-                            html += `<button class="bus-dir-btn kmb" onclick="loadRouteStops('kmb', '${route}', '${bnd}', '${dir.service_type}', '${dir.dest_tc}', '${dir.dest_en}')"><div><span style="font-weight:900; font-size:1.1rem;">KMB ${route}</span><br><span style="color:#aaa; font-size:0.9rem;">${i18n[currentLang]['txt-to']}${renderDest}</span></div><div style="font-size:0.8rem; color:#888;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
+                            html += `<button class="bus-dir-btn kmb" onclick="loadRouteStops('kmb', '${route}', '${bnd}', '${dir.service_type}', '${dir.dest_tc}', '${dir.dest_en}')"><div><span style="font-weight:900; font-size:1.2rem;">KMB ${route}</span><br><span style="color:var(--text-muted); font-size:0.95rem; font-weight:bold;">${i18n[currentLang]['txt-to']}${renderDest}</span></div><div style="font-size:0.9rem; color:var(--text-main); font-weight:bold;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
                         });
                     }
                 } else {
                     let d = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB/${route}`).then(r=>r.json());
                     if (d && d.data) {
-                        found = true; html += `<h4 style="color:#ffd93d; margin:10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
+                        found = true; html += `<h4 style="color:var(--text-main); border-bottom: 3px solid #111; padding-bottom: 5px; margin:15px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
                         let d1 = currentLang === 'en' ? d.data.dest_en : d.data.dest_tc;
                         let o1 = currentLang === 'en' ? d.data.orig_en : d.data.orig_tc;
-                        html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'outbound', '1', '${d.data.dest_tc}', '${d.data.dest_en}')"><div><span style="font-weight:900; font-size:1.1rem;">CTB ${route}</span><br><span style="color:#aaa; font-size:0.9rem;">${i18n[currentLang]['txt-to']}${d1}</span></div><div style="font-size:0.8rem; color:#888;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
-                        html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'inbound', '1', '${d.data.orig_tc}', '${d.data.orig_en}')"><div><span style="font-weight:900; font-size:1.1rem;">CTB ${route}</span><br><span style="color:#aaa; font-size:0.9rem;">${i18n[currentLang]['txt-to']}${o1}</span></div><div style="font-size:0.8rem; color:#888;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
+                        html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'outbound', '1', '${d.data.dest_tc}', '${d.data.dest_en}')"><div><span style="font-weight:900; font-size:1.2rem;">CTB ${route}</span><br><span style="color:var(--text-muted); font-size:0.95rem; font-weight:bold;">${i18n[currentLang]['txt-to']}${d1}</span></div><div style="font-size:0.9rem; color:var(--text-main); font-weight:bold;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
+                        html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'inbound', '1', '${d.data.orig_tc}', '${d.data.orig_en}')"><div><span style="font-weight:900; font-size:1.2rem;">CTB ${route}</span><br><span style="color:var(--text-muted); font-size:0.95rem; font-weight:bold;">${i18n[currentLang]['txt-to']}${o1}</span></div><div style="font-size:0.9rem; color:var(--text-main); font-weight:bold;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
                     }
                 }
             } catch(e) {}
-            if (!found) html += `<div style="text-align:center; color:#ff4d4d; padding: 20px;">${currentLang==='en'?'Route Not Found':'搵唔到路線'}「${route}」</div>`; resDiv.innerHTML = html;
+            if (!found) html += `<div style="text-align:center; color:#ff3333; font-weight:bold; padding: 20px;">${currentLang==='en'?'Route Not Found':'搵唔到路線'}「${route}」</div>`; resDiv.innerHTML = html;
         }
 
         async function loadRouteStops(co, route, bound, service_type, destNameTc, destNameEn) {
-            let resDiv = document.getElementById('bus-search-results'); resDiv.innerHTML = `<div style="text-align:center; color:#888; padding: 20px;">⏳ ${currentLang==='en'?'Loading Stops...':'讀取緊沿途車站...'}</div>`;
+            let resDiv = document.getElementById('bus-search-results'); resDiv.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-weight:bold; padding: 20px;">⏳ ${currentLang==='en'?'Loading Stops...':'讀取緊沿途車站...'}</div>`;
             try {
                 let rName = currentLang === 'en' ? destNameEn : destNameTc;
-                let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; padding-bottom:8px; margin-bottom:10px;"><span style="color:#aaa; font-size:0.9rem;">${i18n[currentLang]['txt-to']}${rName} <span style="color:#00ff66;">(${currentLang==='en'?'Multi-select':'可打剔多選'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
+                let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #111; padding-bottom:12px; margin-bottom:15px;"><span style="color:var(--text-main); font-size:1.05rem; font-weight:900;">${i18n[currentLang]['txt-to']}${rName} <br><span style="color:var(--accent-green); font-size:0.85rem;">(${currentLang==='en'?'Multi-select':'可打剔多選'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
                 if (co === 'kmb') {
                     let d = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${service_type}`).then(r=>r.json());
                     for (let s of d.data) {
@@ -1037,8 +1050,8 @@
                         html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><span>🚏 ${currentLang==='en'?nameEn:nameTc}</span></label>`;
                     }
                 }
-                html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:bold; color:#aaa;">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`; resDiv.innerHTML = html;
-            } catch(e) { resDiv.innerHTML = `<div style="color:red; text-align:center;">Failed to load</div><button class="btn-back" onclick="resetBusSearchUI()">Back</button>`; }
+                html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:900; color:#111;">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`; resDiv.innerHTML = html;
+            } catch(e) { resDiv.innerHTML = `<div style="color:var(--warning-red); text-align:center; font-weight:bold;">Failed to load</div><button class="btn-back" onclick="resetBusSearchUI()">Back</button>`; }
         }
 
         function searchStop() {
@@ -1049,7 +1062,7 @@
             let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
             
             if (!isBusDataReady || Object.keys(busDict).length === 0) { 
-                resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:#ffcc00;padding:20px;">⚠️ DB not loaded</p>`; 
+                resDiv.innerHTML = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:var(--warning-red);padding:20px;font-weight:bold;">⚠️ DB not loaded</p>`; 
                 return; 
             }
 
@@ -1068,7 +1081,7 @@
 
                 if (matchingItems.length > 0) {
                     matchingItems.forEach(item => {
-                        let color = item.co === 'kmb' ? '#ff6b6b' : '#ffd93d'; 
+                        let color = item.co === 'kmb' ? '#ff3333' : '#d4b200'; 
                         let coName = item.co === 'kmb' ? (currentLang==='en'?'KMB':'九巴') : (currentLang==='en'?'CTB':'城巴');
                         
                         let nTc = item.name_tc || item.name || stopName || '';
@@ -1087,13 +1100,13 @@
                             dest: item.dest, dest_tc: dTc, dest_en: dEn 
                         }));
                         
-                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:bold;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${item.route})</span></span><span style="font-size:0.8rem; color:#aaa;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:900;">🚏 ${displayStop} <span style="color:${color}; font-size:0.85rem;">(${coName} ${item.route})</span></span><span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted); margin-top:4px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
                         found++;
                     });
                 }
             }
-            html += `</div><div class="multi-add-bar"><span id="selected-count">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`;
-            resDiv.innerHTML = found > 0 ? html : `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:red;padding:20px;">Stop not found</p>`;
+            html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:900;">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`;
+            resDiv.innerHTML = found > 0 ? html : `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:var(--warning-red);font-weight:bold;padding:20px;">Stop not found</p>`;
         }
 
         function updateSelectedCount() { let count = document.querySelectorAll('.stop-cb:checked').length; document.getElementById('selected-count').innerText = currentLang === 'en' ? `${count} Selected` : `已選擇 ${count} 項`; }
@@ -1139,7 +1152,7 @@
         async function openBusDetail(co, route, destTcFallback, currentStopId = null, dir = null, serviceType = '1') {
             lockBackgroundScroll();
             const modal = document.getElementById('bus-detail-modal'); const body = document.getElementById('bus-detail-body');
-            modal.classList.add('active'); body.innerHTML = `<div style="text-align:center; padding: 30px; color:#4da6ff;">⏳ ${i18n[currentLang]['txt-loading']}</div>`;
+            modal.classList.add('active'); body.innerHTML = `<div style="text-align:center; padding: 30px; color:var(--text-main); font-weight:900; font-size:1.2rem;">⏳ ${i18n[currentLang]['txt-loading']}</div>`;
 
             try {
                 let companyName = co === 'kmb' ? '九巴 (KMB)' : '城巴 (CTB)'; let stopsHtml = '';
@@ -1195,7 +1208,7 @@
                     }));
                     stopsHtml = stopDetails.join(''); renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml);
                 }
-            } catch (e) { body.innerHTML = `<div style="text-align:center; padding: 30px; color: #ff4d4d;">❌ ${currentLang==='en'?'Error Loading Data':'無法載入路線資料或網絡超時'}</div>`; }
+            } catch (e) { body.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--warning-red); font-weight:900;">❌ ${currentLang==='en'?'Error Loading Data':'無法載入路線資料或網絡超時'}</div>`; }
         }
 
         function renderDetailModalBody(coName, route, orig, dest, stopsHtml) {
@@ -1205,7 +1218,7 @@
                     <div class="detail-route-desc">${orig} ➔ ${dest}</div>
                     <div class="detail-route-meta"><span class="meta-badge">${coName}</span></div>
                 </div>
-                <h4 style="margin:15px 0 10px 0; color:#aaa; font-size:0.9rem;">${currentLang==='en'?'All Stops:':'所有沿途停靠車站：'}</h4>
+                <h4 style="margin:15px 0 10px 0; color:var(--text-main); font-size:1rem; font-weight:900; border-bottom: 3px solid #111; padding-bottom: 8px;">${currentLang==='en'?'All Stops:':'所有沿途停靠車站：'}</h4>
                 <div class="detail-stops-container">${stopsHtml}</div>
             `;
             setTimeout(() => { let currentStopElement = document.querySelector('.current-stop-highlight'); if (currentStopElement) { currentStopElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
@@ -1219,14 +1232,14 @@
 
             body.innerHTML = `
                 <div class="detail-header-card">
-                    <div class="detail-route-title" style="font-size: 1.5rem;">${y}/${m}/${d} (${fc.week})</div>
-                    <div class="detail-route-desc" style="color: #ffd700; margin-top: 5px;">🌡️ ${fc.forecastMintemp.value}°C ➔ ${fc.forecastMaxtemp.value}°C</div>
+                    <div class="detail-route-title" style="font-size: 1.8rem;">${y}/${m}/${d} (${fc.week})</div>
+                    <div class="detail-route-desc" style="color: var(--warning-red); margin-top: 5px; font-weight: 900;">🌡️ ${fc.forecastMintemp.value}°C ➔ ${fc.forecastMaxtemp.value}°C</div>
                 </div>
-                <div class="detail-stops-container" style="padding: 15px; color: #ddd; font-size: 0.95rem; line-height: 1.6;">
-                    <p style="margin: 0 0 10px 0;">💧 <b>${i18n[currentLang]['hum']}：</b>${fc.forecastMinrh.value}% - ${fc.forecastMaxrh.value}%</p>
-                    <p style="margin: 0 0 10px 0;">🌧️ <b>${i18n[currentLang]['rain']} (PSR)：</b>${fc.PSR}</p>
-                    <p style="margin: 0 0 10px 0;">💨 <b>Wind：</b><br><span style="color:#4da6ff;">${fc.forecastWind}</span></p>
-                    <p style="margin: 0;">🌤️ <b>Weather：</b><br><span style="color:#ccc;">${fc.forecastWeather}</span></p>
+                <div class="detail-stops-container" style="padding: 20px; color: #111; font-size: 1rem; line-height: 1.8; font-weight:bold; background: #fff;">
+                    <p style="margin: 0 0 15px 0;">💧 <b>${i18n[currentLang]['hum']}：</b>${fc.forecastMinrh.value}% - ${fc.forecastMaxrh.value}%</p>
+                    <p style="margin: 0 0 15px 0;">🌧️ <b>${i18n[currentLang]['rain']} (PSR)：</b>${fc.PSR}</p>
+                    <p style="margin: 0 0 15px 0;">💨 <b>Wind：</b><br><span style="color:#005ea8;">${fc.forecastWind}</span></p>
+                    <p style="margin: 0;">🌤️ <b>Weather：</b><br><span style="color:var(--text-muted);">${fc.forecastWeather}</span></p>
                 </div>
             `;
             modal.classList.add('active');
@@ -1253,9 +1266,9 @@
             for(let i = currentIndex + 1; i < stationCodes.length; i++) {
                 let code = stationCodes[i]; let name = currentLang === 'en' ? line.stations[code].en : line.stations[code].zh;
                 upStopsHtml += `
-                <div class="mtr-item" style="padding: 10px 12px; border-bottom: 1px solid #1a1a1a;">
-                    <div class="mtr-dest-group" style="gap:10px;"><span class="stop-num">${upCount++}</span><span style="color:#fff; font-weight:bold;">${name}</span></div>
-                    <div class="mtr-eta" id="eta-up-${code}" style="color:#888; font-weight:normal;">🔄</div>
+                <div class="mtr-item" style="padding: 12px 15px; border-bottom: 2px solid #111;">
+                    <div class="mtr-dest-group" style="gap:12px;"><span class="stop-num">${upCount++}</span><span style="color:#111; font-weight:900;">${name}</span></div>
+                    <div class="mtr-eta" id="eta-up-${code}" style="color:var(--text-muted); font-weight:bold;">🔄</div>
                 </div>`;
             }
 
@@ -1263,25 +1276,25 @@
             for(let i = currentIndex - 1; i >= 0; i--) {
                 let code = stationCodes[i]; let name = currentLang === 'en' ? line.stations[code].en : line.stations[code].zh;
                 downStopsHtml += `
-                <div class="mtr-item" style="padding: 10px 12px; border-bottom: 1px solid #1a1a1a;">
-                    <div class="mtr-dest-group" style="gap:10px;"><span class="stop-num">${downCount++}</span><span style="color:#fff; font-weight:bold;">${name}</span></div>
-                    <div class="mtr-eta" id="eta-down-${code}" style="color:#888; font-weight:normal;">🔄</div>
+                <div class="mtr-item" style="padding: 12px 15px; border-bottom: 2px solid #111;">
+                    <div class="mtr-dest-group" style="gap:12px;"><span class="stop-num">${downCount++}</span><span style="color:#111; font-weight:900;">${name}</span></div>
+                    <div class="mtr-eta" id="eta-down-${code}" style="color:var(--text-muted); font-weight:bold;">🔄</div>
                 </div>`;
             }
 
             let html = `
-                <div class="detail-header-card" style="border-left: 5px solid ${line.color}; text-align:left; padding-left:20px; position:relative; overflow:hidden;">
-                    <div class="detail-route-title" style="font-size: 1.6rem; margin:0;">${currentStationName}</div>
-                    <div class="detail-route-desc" style="color: ${line.color}; font-size: 1rem; margin: 4px 0 8px 0;">${lineName} (${lineCode})</div>
+                <div class="detail-header-card" style="border-left: 10px solid ${line.color}; text-align:left; padding-left:20px; position:relative; overflow:hidden;">
+                    <div class="detail-route-title" style="font-size: 1.8rem; margin:0;">${currentStationName}</div>
+                    <div class="detail-route-desc" style="color: ${line.color}; font-size: 1.1rem; margin: 8px 0 12px 0;">${lineName} (${lineCode})</div>
                     <div><span class="current-stop-badge" style="background:${line.color}; color:#fff; margin:0;">📍 ${currentLang==='en'?'Current Stop':'現在位置'}</span></div>
                 </div>
             `;
 
             if (upStopsHtml !== '') {
-                html += `<h4 style="margin: 15px 0 8px 0; color: #ff4d4d; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;"><span>🔼 ${currentLang==='en'?'Upbound to':'上行方向 (開往'} ${upTerminal}${currentLang==='en'?'':')'}</span><span id="plat-up" class="plat-badge" style="background-color: ${line.color}; display: none;"></span></h4><div class="detail-stops-container" style="margin-bottom: 15px; padding:0;">${upStopsHtml}</div>`;
+                html += `<h4 style="margin: 20px 0 10px 0; color: var(--warning-red); font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;"><span>🔼 ${currentLang==='en'?'Upbound to':'上行方向 (開往'} ${upTerminal}${currentLang==='en'?'':')'}</span><span id="plat-up" class="plat-badge" style="display: none;"></span></h4><div class="detail-stops-container" style="padding:0;">${upStopsHtml}</div>`;
             }
             if (downStopsHtml !== '') {
-                html += `<h4 style="margin: 15px 0 8px 0; color: #4da6ff; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;"><span>🔽 ${currentLang==='en'?'Downbound to':'下行方向 (開往'} ${downTerminal}${currentLang==='en'?'':')'}</span><span id="plat-down" class="plat-badge" style="background-color: ${line.color}; display: none;"></span></h4><div class="detail-stops-container" style="padding:0;">${downStopsHtml}</div>`;
+                html += `<h4 style="margin: 20px 0 10px 0; color: #005ea8; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;"><span>🔽 ${currentLang==='en'?'Downbound to':'下行方向 (開往'} ${downTerminal}${currentLang==='en'?'':')'}</span><span id="plat-down" class="plat-badge" style="display: none;"></span></h4><div class="detail-stops-container" style="padding:0;">${downStopsHtml}</div>`;
             }
 
             body.innerHTML = html;
@@ -1319,7 +1332,7 @@
 
         function updateTrainStatusDOM(dir, staCode, trainList, sysTimeStr) {
             const dict = i18n[currentLang]; let el = document.getElementById(`eta-${dir}-${staCode}`); if(!el) return;
-            if (!trainList || trainList.length === 0) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = '#888'; el.style.fontWeight = 'normal'; return; }
+            if (!trainList || trainList.length === 0) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
 
             let apiTime = new Date(sysTimeStr.replace(' ','T')+'+08:00').getTime();
             let validTrain = trainList.find(d => {
@@ -1328,7 +1341,7 @@
                 return false;
             });
 
-            if (!validTrain) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = '#888'; el.style.fontWeight = 'normal'; return; }
+            if (!validTrain) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
 
             let targetTime = null;
             if (validTrain.time && validTrain.time !== '-') { targetTime = new Date(Date.now() + (new Date(validTrain.time.replace(' ','T')+'+08:00').getTime() - apiTime)); } 
@@ -1336,8 +1349,8 @@
 
             if (targetTime) {
                 const diffSec = Math.floor((targetTime - new Date()) / 1000);
-                if (diffSec <= 0) { el.className = `mtr-eta departing-text`; el.innerHTML = dict['txt-departed']; } 
-                else { const m = Math.floor(diffSec / 60); el.className = `mtr-eta`; el.innerHTML = `${dict['txt-arrive-cd']}${m}${dict['txt-min']}`; el.style.color = '#ffcc00'; }
+                if (diffSec <= 0) { el.className = `mtr-eta departing-text`; el.innerHTML = dict['txt-departed']; el.style.color = '#111'; } 
+                else { const m = Math.floor(diffSec / 60); el.className = `mtr-eta`; el.innerHTML = `${dict['txt-arrive-cd']}${m}${dict['txt-min']}`; el.style.color = '#ff3333'; }
             }
         }
 
@@ -1374,15 +1387,15 @@
                             let displayName = customCfg ? (currentLang === 'en' ? customCfg.name_en : customCfg.name_zh) : w.name;
                             
                             let introStr = currentLang === 'en' ? 'is in force. Please take precautions.' : '現正生效。請留意最新天氣情況及採取相應預防措施。';
-                            let detailTextHtml = `<div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid #4da6ff; margin-bottom:12px;">${emoji} <b>${displayName}</b> ${introStr}</div>`;
+                            let detailTextHtml = `<div style="padding: 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; margin-bottom:15px; font-weight:bold;">${emoji} <b>${displayName}</b> ${introStr}</div>`;
                             
                             if (warnInfoRes && warnInfoRes.details) {
                                 let matchDetail = warnInfoRes.details.find(d => d.warningStatementCode === w.code || d.warningStatementCode === key);
                                 if (matchDetail && matchDetail.contents) {
                                     detailTextHtml = matchDetail.contents.map((c, idx) => `
-                                        <div style="display: flex; align-items: flex-start; margin-bottom: 12px; padding: 12px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333;">
-                                            <div style="background: #333; color: #fff; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; margin-right: 12px; flex-shrink: 0;">${idx + 1}</div>
-                                            <div style="flex: 1; color: #ddd; line-height: 1.6; font-size: 0.95rem;">${c}</div>
+                                        <div style="display: flex; align-items: flex-start; margin-bottom: 15px; padding: 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111;">
+                                            <div style="background: #111; color: #fff; width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; border-radius: 0; font-size: 0.9rem; font-weight: 900; margin-right: 15px; flex-shrink: 0; border: 2px solid #111;">${idx + 1}</div>
+                                            <div style="flex: 1; color: #111; line-height: 1.6; font-size: 1rem; font-weight: bold;">${c}</div>
                                         </div>
                                     `).join('');
                                 }
@@ -1395,13 +1408,13 @@
                             activeWarningsData[warnId] = {
                                 title: `${emoji} ${currentLang==='en'?'Warning Details':'天氣警告詳情'}`,
                                 html: `
-                                    <div class="detail-header-card" style="text-align:center; padding: 20px;">
-                                        <div style="font-size: 3rem; margin-bottom:10px;">${emoji}</div>
-                                        <div class="detail-route-title" style="font-size:1.6rem;">${displayName}</div>
-                                        <div class="detail-route-desc" style="color:#ff4d4d; margin-top:8px;">${activeTxt}</div>
+                                    <div class="detail-header-card" style="text-align:center; padding: 25px;">
+                                        <div style="font-size: 4rem; margin-bottom:15px; text-shadow: 4px 4px 0px rgba(0,0,0,0.1);">${emoji}</div>
+                                        <div class="detail-route-title" style="font-size:1.8rem;">${displayName}</div>
+                                        <div class="detail-route-desc" style="color:var(--warning-red); margin-top:10px; font-weight:900;">${activeTxt}</div>
                                     </div>
-                                    <h4 style="margin: 15px 0 10px 0; color: #aaa; font-size: 0.9rem; padding: 0 15px;">${detailTitle}</h4>
-                                    <div class="detail-stops-container" style="padding:15px; border:none; background:transparent;">
+                                    <h4 style="margin: 20px 0 15px 0; color: #111; font-size: 1.1rem; font-weight: 900; padding: 0 5px; border-bottom: 3px solid #111; padding-bottom: 8px;">${detailTitle}</h4>
+                                    <div class="detail-stops-container" style="padding:5px; border:none; background:transparent; box-shadow:none;">
                                         ${detailTextHtml}
                                     </div>`
                             };
@@ -1423,11 +1436,11 @@
                     swtBox.onclick = function() {
                         let updateTxt = currentLang==='en' ? 'Updated:' : '更新時間：';
                         let swtHtml = swtData.swt.map((tip, idx) => `
-                            <div style="display: flex; align-items: flex-start; margin-bottom: 12px; padding: 12px; background: #1a1a1a; border-radius: 8px; border: 1px solid rgba(255,215,0,0.3);">
-                                <div style="background: rgba(255,215,0,0.2); color: #ffd700; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: bold; margin-right: 12px; flex-shrink: 0;">${idx + 1}</div>
+                            <div style="display: flex; align-items: flex-start; margin-bottom: 15px; padding: 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111;">
+                                <div style="background: var(--accent-green); color: #fff; width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; border: 2px solid #111; font-size: 0.9rem; font-weight: 900; margin-right: 15px; flex-shrink: 0;">${idx + 1}</div>
                                 <div style="flex: 1;">
-                                    <div style="color:#ddd; line-height:1.6; font-size:0.95rem;">${tip.desc}</div>
-                                    ${tip.updateTime ? `<div style="color:#888; font-size:0.75rem; margin-top:8px; text-align:right;">${updateTxt} ${tip.updateTime.replace('T',' ').substring(0,19)}</div>` : ''}
+                                    <div style="color:#111; line-height:1.6; font-size:1rem; font-weight:bold;">${tip.desc}</div>
+                                    ${tip.updateTime ? `<div style="color:var(--text-muted); font-size:0.85rem; font-weight:bold; margin-top:10px; text-align:right;">${updateTxt} ${tip.updateTime.replace('T',' ').substring(0,19)}</div>` : ''}
                                 </div>
                             </div>
                         `).join('');
@@ -1436,12 +1449,12 @@
                         let mainTitle = currentLang==='en' ? 'Special Weather Tips' : '特別天氣提示';
 
                         let fullHtml = `
-                            <div class="detail-header-card" style="text-align:center; padding: 20px;">
-                                <div style="font-size: 3rem; margin-bottom:10px;">💡</div>
-                                <div class="detail-route-title" style="font-size:1.6rem; color:#ffd700;">${mainTitle}</div>
+                            <div class="detail-header-card" style="text-align:center; padding: 25px;">
+                                <div style="font-size: 4rem; margin-bottom:15px; text-shadow: 4px 4px 0px rgba(0,0,0,0.1);">💡</div>
+                                <div class="detail-route-title" style="font-size:1.8rem; color:var(--text-main);">${mainTitle}</div>
                             </div>
-                            <h4 style="margin: 15px 0 10px 0; color: #aaa; font-size: 0.9rem; padding: 0 15px;">${tipContentHead}</h4>
-                            <div class="detail-stops-container" style="padding:15px; border:none; background:transparent;">
+                            <h4 style="margin: 20px 0 15px 0; color: #111; font-size: 1.1rem; font-weight: 900; padding: 0 5px; border-bottom: 3px solid #111; padding-bottom: 8px;">${tipContentHead}</h4>
+                            <div class="detail-stops-container" style="padding:5px; border:none; background:transparent; box-shadow:none;">
                                 ${swtHtml}
                             </div>
                         `;
@@ -1465,11 +1478,9 @@
                     weatherForecastArray = futureForecasts;
                     futureForecasts.forEach((fc, idx) => {
                         let dayInt = parseInt(fc.forecastDate.substring(6,8), 10);
-                        let psrClass = fc.PSR.includes('High') || fc.PSR.includes('高') ? "psr-high" : (fc.PSR.includes('Medium') || fc.PSR.includes('中') ? "psr-mid" : "psr-low");
-                        let psrIcon = fc.PSR.includes('High') || fc.PSR.includes('高') ? "🌧️" : (fc.PSR.includes('Medium') || fc.PSR.includes('中') ? "☁️" : "☀️");
                         let dayText = currentLang === 'en' ? dayInt : `${dayInt}日`;
 
-                        html += `<div class="forecast-item" style="cursor: pointer;" onclick="openWeatherDetail(${idx})"><div class="fc-date">${dayText} ${fc.week}</div><img class="fc-icon" src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon}.png"><div class="fc-temp">${fc.forecastMintemp.value}°-${fc.forecastMaxtemp.value}°</div><div class="fc-psr ${psrClass}">${psrIcon} ${fc.PSR}</div></div>`;
+                        html += `<div class="forecast-item" onclick="openWeatherDetail(${idx})"><div class="fc-date">${dayText} ${fc.week}</div><img class="fc-icon" src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon}.png"><div class="fc-temp">${fc.forecastMintemp.value}°-${fc.forecastMaxtemp.value}°</div><div class="fc-psr">${fc.PSR}</div></div>`;
                     });
                     document.getElementById('forecast-container').innerHTML = html;
                 }
@@ -1477,7 +1488,6 @@
         }
 
         async function boot() {
-            // Absolute Fallback for stuck loading screen
             setTimeout(() => {
                 const overlay = document.getElementById('loading-overlay');
                 if (overlay && overlay.style.display !== 'none') {
@@ -1489,7 +1499,7 @@
             try { applyLanguage(); } catch(e){}
             try { updateTick(); setInterval(updateTick, 1000); } catch(e){}
             try { fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
-            try { fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
+            try { if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
             try { fetchMTR(); setInterval(fetchMTR, 30000); } catch(e){}
             setInterval(fetchRealBusData, 30000);
             
