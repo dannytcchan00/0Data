@@ -94,7 +94,7 @@
         .tm-header { background:var(--border-dark); color:#fff; font-weight:900; padding:6px; font-size:12px; text-transform:uppercase; text-align:center; }
         .tm-row { display:flex; justify-content:space-between; align-items:center; border-top:var(--border-thin); padding:6px; background:#fff;}
         .tm-label { font-weight:900; padding:2px 6px; border:2px solid var(--border-dark); font-size:11px; }
-        .tm-data { font-weight:700; font-size:12px; }
+        .tm-data { font-weight:900; font-size:14px; font-family:'Space Mono', monospace; }
 
         .legend { margin-top: 20px; font-size: 11px; font-weight: 700; border-top: var(--border-thick); padding-top: 15px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; line-height:1.2; text-transform:uppercase; }
@@ -117,11 +117,6 @@
             box-shadow: 4px 4px 0px var(--border-dark); white-space: nowrap; padding: 6px 10px;
         }
         .permanent-tooltip .leaflet-tooltip-left::before, .permanent-tooltip .leaflet-tooltip-right::before, .permanent-tooltip .leaflet-tooltip-top::before { display: none; }
-        
-        .closest-tooltip {
-            background-color: #fff; border: var(--border-thin); box-shadow: 3px 3px 0px var(--border-dark);
-            color: var(--border-dark); font-weight: 900; font-size: 10px; border-radius: 0; padding: 4px 6px;
-        }
 
         @keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
         @keyframes brutalBounce { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -3px); } }
@@ -189,7 +184,7 @@
         }
 
         // ==========================================
-        // 定義全局變數與座標 (正名各國氣象廳全稱)
+        // 定義全局變數與座標
         // ==========================================
         const HKO_COORDS = [22.3023, 114.1741];
 
@@ -214,16 +209,12 @@
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        // 畫香港專屬距離圈
         L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
         L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
         L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
 
-        // ==========================================
-        // 建立四大氣象廳的固定地標，並儲存在 hqMarkers
-        // ==========================================
         const hqMarkers = {};
         for (let key in REGIONS) {
             let r = REGIONS[key];
@@ -232,7 +223,6 @@
                 className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
             });
             hqMarkers[key] = L.marker([r.lat, r.lon], { icon: rIcon }).addTo(map);
-            // 預設無威脅時的 Popup 內容 (包含各國全名)
             hqMarkers[key].bindPopup(`
                 <div class="popup-title" style="background:${r.color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
                 <div style="text-align:center; padding: 5px; max-width: 200px; margin: 0 auto;">
@@ -264,12 +254,14 @@
                 let allMapBoundsLatLngs = []; 
                 let tcName = "UNNAMED SYSTEM"; 
                 let latestData = {};
+                let fallbackUsed = false;
                 
+                // 數據庫只記錄最新即時距離 (currDist)
                 let regionStats = {
-                    'HKO': { currDist: '--', minDist: Infinity, cpaPoint: null },
-                    'CWA': { currDist: '--', minDist: Infinity, cpaPoint: null },
-                    'JMA': { currDist: '--', minDist: Infinity, cpaPoint: null },
-                    'KMA': { currDist: '--', minDist: Infinity, cpaPoint: null }
+                    'HKO': { currDist: '--' },
+                    'CWA': { currDist: '--' },
+                    'JMA': { currDist: '--' },
+                    'KMA': { currDist: '--' }
                 };
 
                 // ==========================================
@@ -319,16 +311,11 @@
                                 if(parentNode.tagName === 'PastInformation') { nodeTypeStr = "PAST"; isPast = true; }
                                 else if(parentNode.tagName === 'AnalysisInformation') { nodeTypeStr = "LIVE"; isPast = true; } 
 
-                                // 計算四個城市的距離
-                                for (let key in REGIONS) {
-                                    let dist = map.distance([REGIONS[key].lat, REGIONS[key].lon], [lat, lon]) / 1000;
-                                    
-                                    if (nodeTypeStr === "LIVE") {
+                                // 只在節點為 LIVE (即時位置) 時計算距離
+                                if (nodeTypeStr === "LIVE") {
+                                    for (let key in REGIONS) {
+                                        let dist = map.distance([REGIONS[key].lat, REGIONS[key].lon], [lat, lon]) / 1000;
                                         regionStats[key].currDist = Math.round(dist);
-                                    }
-                                    if (dist < regionStats[key].minDist) {
-                                        regionStats[key].minDist = dist;
-                                        regionStats[key].cpaPoint = { lat: lat, lon: lon, dist: dist, time: timeText, status: nodeTypeStr };
                                     }
                                 }
 
@@ -387,50 +374,6 @@
                                 tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: lineColor, weight: 5, opacity: 1, dashArray: '10, 8', lineJoin: 'square'}));
                             }
                         }
-                        
-                        // 【重點新增】更新各氣象廳地標的 Popup 內容 (帶有全名與即時數據) 與畫虛線
-                        for (let key in REGIONS) {
-                            let stats = regionStats[key];
-                            
-                            // 更新 Popup
-                            let currDistText = stats.currDist !== '--' ? stats.currDist + ' km' : '-- km';
-                            let cpaDistText = stats.minDist !== Infinity ? Math.round(stats.minDist) + ' km' : '-- km';
-                            
-                            let popupHtml = `
-                                <div class="popup-title" style="background:${REGIONS[key].color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
-                                <div style="text-align:center; padding: 5px; max-width: 220px; margin: 0 auto;">
-                                    <b style="font-size:13px; line-height:1.3; display:block;">${REGIONS[key].name}</b>
-                                    <div style="margin-top:8px; padding-top:6px; border-top:2px dashed #121212; text-align:left; font-size:11px; font-weight:900;">
-                                        <div style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                                            <span style="background:#121212;color:#fff;padding:2px 4px;">NOW</span> 
-                                            <span>${currDistText}</span>
-                                        </div>
-                                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                                            <span style="background:var(--main-yellow);color:#121212;padding:2px 4px;border:1px solid #121212;">CPA</span> 
-                                            <span>${cpaDistText}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                            hqMarkers[key].setPopupContent(popupHtml);
-
-                            // 畫 CPA 虛線
-                            if (stats.cpaPoint) {
-                                tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
-                                    color: '#121212', weight: 4, dashArray: '5, 5', opacity: 0.5 
-                                }));
-                                tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
-                                    color: REGIONS[key].color, weight: 2, dashArray: '5, 5', opacity: 1 
-                                }));
-                                
-                                if (stats.cpaPoint.status !== "LIVE") {
-                                    let closestIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${REGIONS[key].color};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
-                                    let closestMarker = L.marker([stats.cpaPoint.lat, stats.cpaPoint.lon], { icon: closestIcon })
-                                    .bindTooltip(`<b>${key} CPA:</b> ${Math.round(stats.minDist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -5] });
-                                    tcLayerGroup.addLayer(closestMarker);
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -466,6 +409,33 @@
                                     agencyLatLngs = latlngs; 
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: agencyColor, weight: 3, opacity: 1, dashArray: '6, 6'}));
+                                    
+                                    // 【主動備援機制】如果香港天文台沒有數據，強行徵用第一條找到的國外路徑作為「即時位置」計算基準
+                                    if (!latestData.lat && !fallbackUsed) {
+                                        fallbackUsed = true; 
+                                        tcName = `[${agencyNameRaw}] TRACKING`; 
+                                        latestData = {
+                                            lat: latlngs[0][0], 
+                                            lon: latlngs[0][1],
+                                            time: "FOREIGN DATA SYNC",
+                                            intensity: "Tracking",
+                                            wind: "N/A",
+                                            pressure: "N/A",
+                                            color: agencyColor
+                                        };
+                                        
+                                        // 只提取這條線的「第一點 (idx === 0)」，計算它距離各大城市的 NOW 距離
+                                        latlngs.forEach((coord, idx) => {
+                                            if(idx === 0) {
+                                                let fLat = coord[0];
+                                                let fLon = coord[1];
+                                                for (let key in REGIONS) {
+                                                    let dist = map.distance([REGIONS[key].lat, REGIONS[key].lon], [fLat, fLon]) / 1000;
+                                                    regionStats[key].currDist = Math.round(dist);
+                                                }
+                                            }
+                                        });
+                                    }
                                 }
                             }
                             
@@ -507,10 +477,34 @@
                     });
                 }
 
+                // ==========================================
+                // 3. 更新各大氣象廳地標的 Popup (只顯示即時距離)
+                // ==========================================
+                for (let key in REGIONS) {
+                    let stats = regionStats[key];
+                    let currDistText = stats.currDist !== '--' ? stats.currDist + ' km' : '-- km';
+                    
+                    let popupHtml = `
+                        <div class="popup-title" style="background:${REGIONS[key].color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
+                        <div style="text-align:center; padding: 5px; max-width: 220px; margin: 0 auto;">
+                            <b style="font-size:13px; line-height:1.3; display:block;">${REGIONS[key].name}</b>
+                            <div style="margin-top:8px; padding-top:6px; border-top:2px dashed #121212; text-align:left; font-size:11px; font-weight:900;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="background:#121212;color:#fff;padding:2px 4px;">LIVE DISTANCE</span> 
+                                    <span style="font-size: 13px;">${currDistText}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    hqMarkers[key].setPopupContent(popupHtml);
+                }
+
+                // ==========================================
+                // 4. 更新左方 UI 面板
+                // ==========================================
                 if (!latestData.lat && allMapBoundsLatLngs.length === 0) {
                     tcDataContainer.innerHTML = "<div style='background:#00bf63; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYSTEM NORMAL. NO ACTIVE THREATS.</div>";
                     
-                    // 如果沒有颱風，把地標的 popup 重置為無威脅狀態
                     for (let key in REGIONS) {
                         let r = REGIONS[key];
                         hqMarkers[key].setPopupContent(`
@@ -537,23 +531,23 @@
                         <div><b>PRS</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                         
                         <div class="threat-matrix">
-                            <div class="tm-header">AGENCY THREAT DISTANCE</div>
+                            <div class="tm-header">LIVE DISTANCE TO HQ</div>
                             
                             <div class="tm-row">
                                 <span class="tm-label" style="background:var(--main-red); color:#fff;">HKO</span>
-                                <span class="tm-data">NOW: ${regionStats['HKO'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['HKO'].minDist)}km</span>
+                                <span class="tm-data">${regionStats['HKO'].currDist} km</span>
                             </div>
                             <div class="tm-row">
                                 <span class="tm-label" style="background:var(--agency-cwa); color:#121212;">CWA</span>
-                                <span class="tm-data">NOW: ${regionStats['CWA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['CWA'].minDist)}km</span>
+                                <span class="tm-data">${regionStats['CWA'].currDist} km</span>
                             </div>
                             <div class="tm-row">
                                 <span class="tm-label" style="background:var(--agency-jma); color:#fff;">JMA</span>
-                                <span class="tm-data">NOW: ${regionStats['JMA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['JMA'].minDist)}km</span>
+                                <span class="tm-data">${regionStats['JMA'].currDist} km</span>
                             </div>
                             <div class="tm-row">
                                 <span class="tm-label" style="background:var(--agency-kma); color:#121212;">KMA</span>
-                                <span class="tm-data">NOW: ${regionStats['KMA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['KMA'].minDist)}km</span>
+                                <span class="tm-data">${regionStats['KMA'].currDist} km</span>
                             </div>
                         </div>
                         
@@ -561,7 +555,6 @@
                     </div>`;
                 }
                 
-                // 【重點更新】左下角的圖例區域全部改為正式全名
                 htmlContent += `
                 <div class="legend">
                     <div style="margin-bottom:10px; font-weight:900;">HKO TRACK:</div>
