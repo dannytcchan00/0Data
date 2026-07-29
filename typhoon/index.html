@@ -97,9 +97,9 @@
         .tm-data { font-weight:700; font-size:12px; }
 
         .legend { margin-top: 20px; font-size: 11px; font-weight: 700; border-top: var(--border-thick); padding-top: 15px; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
-        .color-box { width: 14px; height: 14px; margin-right: 10px; border: var(--border-thin); display: inline-block; }
-        .dashed-line { border-bottom: 3px dashed var(--border-dark); height: 0; width: 16px; margin-right: 10px;}
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; line-height:1.2; text-transform:uppercase; }
+        .color-box { width: 14px; height: 14px; margin-right: 10px; border: var(--border-thin); display: inline-block; flex-shrink: 0; }
+        .dashed-line { border-bottom: 3px dashed var(--border-dark); height: 0; width: 16px; margin-right: 10px; flex-shrink: 0;}
         
         .leaflet-popup-content-wrapper { 
             background: #fff; color: var(--border-dark); border: var(--border-thick); border-radius: 0;
@@ -189,23 +189,23 @@
         }
 
         // ==========================================
-        // 定義全局變數與座標
+        // 定義全局變數與座標 (正名各國氣象廳全稱)
         // ==========================================
         const HKO_COORDS = [22.3023, 114.1741];
 
         const REGIONS = {
-            'HKO': { name: 'HONG KONG (HKO)', lat: 22.3023, lon: 114.1741, color: '#ff3131' },
-            'CWA': { name: 'TAIWAN (CWA)', lat: 25.0375, lon: 121.5173, color: '#ff8c00' },
-            'JMA': { name: 'JAPAN (JMA)', lat: 35.6670, lon: 139.7450, color: '#ff00ff' },
-            'KMA': { name: 'KOREA (KMA)', lat: 37.4938, lon: 126.9144, color: '#ccff00' }
+            'HKO': { name: 'Royal Hong Kong Observatory', lat: 22.3023, lon: 114.1741, color: '#ff3131' },
+            'CWA': { name: 'Republic of China Central Weather Administration', lat: 25.0375, lon: 121.5173, color: '#ff8c00' },
+            'JMA': { name: 'Japan Meteorological Agency', lat: 35.6670, lon: 139.7450, color: '#ff00ff' },
+            'KMA': { name: 'Korea Meteorological Administration', lat: 37.4938, lon: 126.9144, color: '#ccff00' }
         };
 
         const agencyConfig = {
             'JTWC': { color: '#00e5ff', name: 'USA (JTWC)' },     
-            'JMA':  { color: '#ff00ff', name: 'JAPAN (JMA)' },    
+            'JMA':  { color: '#ff00ff', name: 'Japan Meteorological Agency (JMA)' },    
             'NMC':  { color: '#9d00ff', name: 'CHINA (NMC)' },    
-            'CWA':  { color: '#ff8c00', name: 'TAIWAN (CWA)' },   
-            'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     
+            'CWA':  { color: '#ff8c00', name: 'Republic of China Central Weather Administration (CWA)' },   
+            'KMA':  { color: '#ccff00', name: 'Korea Meteorological Administration (KMA)' }     
         };
 
         var map = L.map('map').setView(HKO_COORDS, 5);
@@ -232,11 +232,11 @@
                 className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
             });
             hqMarkers[key] = L.marker([r.lat, r.lon], { icon: rIcon }).addTo(map);
-            // 預設無威脅時的 Popup 內容
+            // 預設無威脅時的 Popup 內容 (包含各國全名)
             hqMarkers[key].bindPopup(`
                 <div class="popup-title" style="background:${r.color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
-                <div style="text-align:center; padding: 5px;">
-                    <b style="font-size:14px;">${r.name}</b>
+                <div style="text-align:center; padding: 5px; max-width: 200px; margin: 0 auto;">
+                    <b style="font-size:13px; line-height:1.3; display:block;">${r.name}</b>
                     <div style="margin-top:8px; padding-top:6px; border-top:2px dashed #121212; text-align:center; font-size:11px; font-weight:900; color:var(--main-green);">
                         NO ACTIVE THREAT
                     </div>
@@ -388,7 +388,7 @@
                             }
                         }
                         
-                        // 【重點新增】更新各氣象廳地標的 Popup 內容與畫虛線
+                        // 【重點新增】更新各氣象廳地標的 Popup 內容 (帶有全名與即時數據) 與畫虛線
                         for (let key in REGIONS) {
                             let stats = regionStats[key];
                             
@@ -398,14 +398,14 @@
                             
                             let popupHtml = `
                                 <div class="popup-title" style="background:${REGIONS[key].color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
-                                <div style="text-align:center; padding: 5px;">
-                                    <b style="font-size:14px;">${REGIONS[key].name}</b>
+                                <div style="text-align:center; padding: 5px; max-width: 220px; margin: 0 auto;">
+                                    <b style="font-size:13px; line-height:1.3; display:block;">${REGIONS[key].name}</b>
                                     <div style="margin-top:8px; padding-top:6px; border-top:2px dashed #121212; text-align:left; font-size:11px; font-weight:900;">
-                                        <div style="margin-bottom:4px; display:flex; justify-content:space-between;">
+                                        <div style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                                             <span style="background:#121212;color:#fff;padding:2px 4px;">NOW</span> 
                                             <span>${currDistText}</span>
                                         </div>
-                                        <div style="display:flex; justify-content:space-between;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
                                             <span style="background:var(--main-yellow);color:#121212;padding:2px 4px;border:1px solid #121212;">CPA</span> 
                                             <span>${cpaDistText}</span>
                                         </div>
@@ -515,8 +515,8 @@
                         let r = REGIONS[key];
                         hqMarkers[key].setPopupContent(`
                             <div class="popup-title" style="background:${r.color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
-                            <div style="text-align:center; padding: 5px;">
-                                <b style="font-size:14px;">${r.name}</b>
+                            <div style="text-align:center; padding: 5px; max-width: 200px; margin: 0 auto;">
+                                <b style="font-size:13px; line-height:1.3; display:block;">${r.name}</b>
                                 <div style="margin-top:8px; padding-top:6px; border-top:2px dashed #121212; text-align:center; font-size:11px; font-weight:900; color:var(--main-green);">
                                     NO ACTIVE THREAT
                                 </div>
@@ -561,17 +561,18 @@
                     </div>`;
                 }
                 
+                // 【重點更新】左下角的圖例區域全部改為正式全名
                 htmlContent += `
                 <div class="legend">
                     <div style="margin-bottom:10px; font-weight:900;">HKO TRACK:</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#121212;"></div> HKO FORECAST</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#121212;"></div> ROYAL HONG KONG OBSERVATORY</div>
                     
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">MULTI-AGENCY FORECASTS:</div>
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-jtwc);"></div> USA (JTWC)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-jma);"></div> JAPAN (JMA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-jma);"></div> JAPAN METEOROLOGICAL AGENCY</div>
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-nmc);"></div> CHINA (NMC)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-cwa);"></div> TAIWAN (CWA)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-kma);"></div> KOREA (KMA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-cwa);"></div> ROC CENTRAL WEATHER ADMINISTRATION</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-kma);"></div> KOREA METEOROLOGICAL ADMINISTRATION</div>
                     
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">INTENSITY COLORS:</div>
                     <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
