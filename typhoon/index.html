@@ -15,7 +15,7 @@
             --main-red: #ff3131;
             --main-green: #00bf63;
             --main-orange: #ff914d;
-            --main-purple: #c13584; /* NCDR 專用色 */
+            --main-purple: #c13584; 
             --border-dark: #121212;
             --shadow-solid: 6px 6px 0px var(--border-dark);
             --border-thick: 4px solid var(--border-dark);
@@ -190,7 +190,6 @@
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        // 距離圈
         L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
@@ -212,28 +211,26 @@
 
         async function loadTyphoonData() {
             try {
-                // HKO 網址
+                // HKO and NCDR data URLs pointing to the dashboard repo
                 const hkoUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
-                // NCDR 網址
                 const ncdrUrl = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
                 
                 let cacheBuster = '?t=' + new Date().getTime();
                 
-                // 平行下載兩個檔案
                 let [hkoRes, ncdrRes] = await Promise.all([
                     fetch(hkoUrl + cacheBuster, { cache: "no-store" }).catch(() => null),
                     fetch(ncdrUrl + cacheBuster, { cache: "no-store" }).catch(() => null)
                 ]);
                 
                 tcLayerGroup.clearLayers();
-                let allMapBoundsLatLngs = []; // 儲存所有點用來對焦地圖
+                let allMapBoundsLatLngs = []; 
                 let tcName = "TC_UNKNOWN";
                 let latestData = {};
                 let closestPoint = null;
                 let minDistance = Infinity;
 
                 // ==========================================
-                // 處理 HKO XML 資料
+                // Parse HKO XML Data
                 // ==========================================
                 if (hkoRes && hkoRes.ok) {
                     let tcXmlStr = await hkoRes.text();
@@ -329,7 +326,6 @@
                             }
                         }
                         
-                        // 畫 HKO 線段
                         for (let i = 0; i < pathData.length - 1; i++) {
                             let p1 = pathData[i]; let p2 = pathData[i+1];
                             let lineColor = p2.colorHex; 
@@ -341,7 +337,6 @@
                             }
                         }
                         
-                        // 最接近點連線
                         if (closestPoint) {
                             let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
                             tcLayerGroup.addLayer(dashLine);
@@ -355,7 +350,7 @@
                 }
 
                 // ==========================================
-                // 處理台灣 NCDR KML 資料 (紫紅色軌跡)
+                // Parse Taiwan NCDR KML Data
                 // ==========================================
                 if (ncdrRes && ncdrRes.ok) {
                     let kmlText = await ncdrRes.text();
@@ -363,7 +358,6 @@
                     let placemarks = kmlData.querySelectorAll("Placemark");
                     
                     placemarks.forEach(pm => {
-                        // 畫 NCDR 線條
                         let lineString = pm.querySelector("LineString coordinates");
                         if (lineString) {
                             let coords = lineString.textContent.trim().split(/\s+/);
@@ -374,13 +368,11 @@
                             
                             if (latlngs.length > 0) {
                                 allMapBoundsLatLngs.push(...latlngs);
-                                // 黑底 + 紫紅虛線
                                 tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
                                 tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#c13584', weight: 3, opacity: 1, dashArray: '8, 8'}));
                             }
                         }
                         
-                        // 畫 NCDR 節點
                         let point = pm.querySelector("Point coordinates");
                         if (point) {
                             let pts = point.textContent.trim().split(',');
@@ -397,9 +389,6 @@
                     });
                 }
 
-                // ==========================================
-                // 更新左方 UI 面板
-                // ==========================================
                 if (!latestData.lat && allMapBoundsLatLngs.length === 0) {
                     tcDataContainer.innerHTML = "<div style='background:#00bf63; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYSTEM NORMAL. NO ACTIVE THREATS.</div>";
                     return;
