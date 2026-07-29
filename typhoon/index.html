@@ -165,7 +165,7 @@
             this.innerText = infoBox.classList.contains('collapsed') ? 'O' : 'X';
         });
 
-        // HKO 強度顏色判定
+        // 颱風強度顏色判定
         function getIntensityColor(intensityStr) {
             let s = intensityStr.toLowerCase();
             if (s.includes('low pressure') || s.includes('tropical depression')) return 'var(--main-green)';
@@ -204,12 +204,14 @@
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
+        // 繪製距離圈 (50, 100, 300, 800, 1200)
         L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map);
+        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); // Critical
+        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); // Imminent
 
+        // 皇家香港天文台標記
         let hkoIcon = L.divIcon({ 
             html: '<div style="width:14px;height:14px;background:#121212;border:2px solid #fff;box-shadow:3px 3px 0px #121212;"></div>', 
             className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
@@ -225,11 +227,13 @@
 
         async function loadTyphoonData() {
             try {
+                // 資料來源網址
                 const hkoUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
                 const ncdrUrl = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
                 
                 let cacheBuster = '?t=' + new Date().getTime();
                 
+                // 並行抓取兩份資料
                 let [hkoRes, ncdrRes] = await Promise.all([
                     fetch(hkoUrl + cacheBuster, { cache: "no-store" }).catch(() => null),
                     fetch(ncdrUrl + cacheBuster, { cache: "no-store" }).catch(() => null)
@@ -237,20 +241,23 @@
                 
                 tcLayerGroup.clearLayers();
                 let allMapBoundsLatLngs = []; 
-                let tcName = "TC_UNKNOWN";
+                let tcName = "UNNAMED SYSTEM"; // 預設名稱防呆機制
                 let latestData = {};
                 let closestPoint = null;
                 let minDistance = Infinity;
 
                 // ==========================================
-                // 1. 處理 HKO XML 資料 (香港)
+                // 1. 處理 HKO XML 資料 (香港天文台)
                 // ==========================================
                 if (hkoRes && hkoRes.ok) {
                     let tcXmlStr = await hkoRes.text();
                     let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
                     
+                    // 【重點更新】智慧名稱判斷：如果名字是空的，自動改用 UNNAMED SYSTEM
                     let nameNodes = data.querySelectorAll('TropicalCycloneName');
-                    if(nameNodes.length > 0) tcName = nameNodes[0].textContent;
+                    if (nameNodes.length > 0 && nameNodes[0].textContent.trim() !== "") {
+                        tcName = nameNodes[0].textContent.trim();
+                    }
                     
                     let latNodes = data.querySelectorAll('Latitude');
                     let lonNodes = data.querySelectorAll('Longitude');
@@ -297,12 +304,14 @@
                                 pathData.push({ lat: lat, lon: lon, colorHex: pointColorHex, isPast: isPast });
                                 let marker;
                                 
+                                // ==== 過去點 ====
                                 if(parentNode.tagName === 'PastInformation') {
                                     if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
                                     else marker = L.circleMarker([lat, lon], { radius: 6, fillColor: pointColorHex, color: '#121212', weight: 3, fillOpacity: 1 });
                                     marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
+                                // ==== 最新點 ====
                                 else if(parentNode.tagName === 'AnalysisInformation') {
                                     latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
                                     
@@ -321,6 +330,7 @@
                                     marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO LIVE</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div><div>D: ${Math.round(distToHK)}km</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
+                                // ==== 預測點 ====
                                 else if (parentNode.tagName === 'ForecastInformation') {
                                     forecastStepCounter++;
                                     if (isLowPressure) {
@@ -339,6 +349,7 @@
                             }
                         }
                         
+                        // 畫連線 (因應強度變色)
                         for (let i = 0; i < pathData.length - 1; i++) {
                             let p1 = pathData[i]; let p2 = pathData[i+1];
                             let lineColor = p2.colorHex; 
@@ -350,6 +361,7 @@
                             }
                         }
                         
+                        // 畫最接近點的引導線
                         if (closestPoint) {
                             let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
                             tcLayerGroup.addLayer(dashLine);
@@ -369,22 +381,20 @@
                     let kmlText = await ncdrRes.text();
                     let kmlData = new DOMParser().parseFromString(kmlText, "text/xml");
                     
-                    // 根據 Folder 拆解不同國家
                     let folders = kmlData.querySelectorAll("Folder");
                     
                     folders.forEach(folder => {
                         let agencyNameRaw = folder.querySelector("name") ? folder.querySelector("name").textContent.trim() : "UNKNOWN";
                         
-                        // 取得對應國家的顏色與全名，如果找不到就用黑色
+                        // 根據字典檔尋找各國顏色
                         let agencyDetails = agencyConfig[agencyNameRaw] || { color: '#000000', name: agencyNameRaw };
                         let agencyColor = agencyDetails.color;
                         let agencyFullName = agencyDetails.name;
                         
                         let placemarks = folder.querySelectorAll("Placemark");
-                        let agencyLatLngs = []; // 儲存該國家的路徑以標示文字
+                        let agencyLatLngs = []; 
 
                         placemarks.forEach(pm => {
-                            // 畫各國線條
                             let lineString = pm.querySelector("LineString coordinates");
                             if (lineString) {
                                 let coords = lineString.textContent.trim().split(/\s+/);
@@ -395,14 +405,13 @@
                                 
                                 if (latlngs.length > 0) {
                                     allMapBoundsLatLngs.push(...latlngs);
-                                    agencyLatLngs = latlngs; // 記錄下來
-                                    // 黑底 + 國家專屬顏色的虛線
+                                    agencyLatLngs = latlngs; 
+                                    // 畫專屬國家顏色的路線
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: agencyColor, weight: 3, opacity: 1, dashArray: '6, 6'}));
                                 }
                             }
                             
-                            // 畫各國節點
                             let point = pm.querySelector("Point coordinates");
                             if (point) {
                                 let pts = point.textContent.trim().split(',');
@@ -418,14 +427,14 @@
                             }
                         });
 
-                        // 在該國預測路徑的「最後一點」加上國家標籤
+                        // 在路徑最後加上該國機構標籤
                         if (agencyLatLngs.length > 0) {
                             let lastPoint = agencyLatLngs[agencyLatLngs.length - 1];
                             let labelIcon = L.divIcon({
                                 className: 'agency-label-icon',
                                 html: `<div style="background:${agencyColor}; color:#121212; border:2px solid #121212; font-family:'Work Sans',sans-serif; font-weight:900; font-size:10px; padding:2px 4px; box-shadow: 2px 2px 0px #121212; white-space:nowrap; margin-top:8px;">[${agencyNameRaw}]</div>`,
                                 iconSize: [null, null],
-                                iconAnchor: [15, 0] // 稍微偏移避免擋住點
+                                iconAnchor: [15, 0] 
                             });
                             tcLayerGroup.addLayer(L.marker(lastPoint, { icon: labelIcon, interactive: false }));
                         }
@@ -475,6 +484,13 @@
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ff8c00;"></div> TAIWAN (CWA)</div>
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ccff00;"></div> KOREA (KMA)</div>
                     
+                    <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">INTENSITY COLORS:</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-blue);"></span> TS (TROPICAL STORM)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> STS (SEVERE TROPICAL STORM)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-orange);"></span> TYPHOON</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> SUPER / SEVERE TYPHOON</div>
+                    
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">HK DISTANCE:</div>
                     <div class="legend-item"><span class="color-box" style="background:#121212;"></span> 50km (IMMINENT)</div>
                     <div class="legend-item"><span class="color-box" style="background:#c13584;"></span> 100km (CRITICAL)</div>
@@ -484,6 +500,7 @@
 
                 tcDataContainer.innerHTML = htmlContent;
                 
+                // 自動置中到地圖範圍
                 if (isFirstLoad && allMapBoundsLatLngs.length > 0) {
                     let bounds = L.latLngBounds(allMapBoundsLatLngs);
                     bounds.extend(HKO_COORDS);
@@ -496,6 +513,9 @@
             }
         }
         
+        // ==========================================
+        // 自動刷新機制 (5分鐘 / 300秒)
+        // ==========================================
         const REFRESH_INTERVAL_SECONDS = 300; 
         let timeLeft = REFRESH_INTERVAL_SECONDS;
         const progressBar = document.getElementById('update-progress-bar');
