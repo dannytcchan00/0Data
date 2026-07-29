@@ -19,6 +19,13 @@
             --shadow-solid: 6px 6px 0px var(--border-dark);
             --border-thick: 4px solid var(--border-dark);
             --border-thin: 2px solid var(--border-dark);
+            
+            /* 各國專屬顏色 */
+            --agency-jtwc: #00e5ff;
+            --agency-jma: #ff00ff;
+            --agency-nmc: #9d00ff;
+            --agency-cwa: #ff8c00;
+            --agency-kma: #ccff00;
         }
 
         body { 
@@ -82,19 +89,16 @@
             box-shadow: 2px 2px 0px var(--border-dark); color: var(--border-dark); display: inline-block;
         }
         
-        .closest-box {
-            margin-top: 15px; padding: 10px; border: var(--border-thin);
-            background-color: var(--main-yellow); position: relative;
-        }
-        .closest-box::before {
-            content: 'ALERT'; position: absolute; top: -12px; left: -2px;
-            background: var(--main-red); color: white; font-size: 10px; font-weight: 900; padding: 2px 6px; border: var(--border-thin);
-        }
+        /* 威脅矩陣樣式 */
+        .threat-matrix { margin-top:15px; border:var(--border-thick); background:#fff; box-shadow:var(--shadow-solid); }
+        .tm-header { background:var(--border-dark); color:#fff; font-weight:900; padding:6px; font-size:12px; text-transform:uppercase; text-align:center; }
+        .tm-row { display:flex; justify-content:space-between; align-items:center; border-top:var(--border-thin); padding:6px; background:#fff;}
+        .tm-label { font-weight:900; padding:2px 6px; border:2px solid var(--border-dark); font-size:11px; }
+        .tm-data { font-weight:700; font-size:12px; }
 
         .legend { margin-top: 20px; font-size: 11px; font-weight: 700; border-top: var(--border-thick); padding-top: 15px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
         .color-box { width: 14px; height: 14px; margin-right: 10px; border: var(--border-thin); display: inline-block; }
-        .circle-box { border-radius: 50%; }
         .dashed-line { border-bottom: 3px dashed var(--border-dark); height: 0; width: 16px; margin-right: 10px;}
         
         .leaflet-popup-content-wrapper { 
@@ -115,17 +119,11 @@
         .permanent-tooltip .leaflet-tooltip-left::before, .permanent-tooltip .leaflet-tooltip-right::before, .permanent-tooltip .leaflet-tooltip-top::before { display: none; }
         
         .closest-tooltip {
-            background-color: var(--main-yellow); border: var(--border-thin); box-shadow: 3px 3px 0px var(--border-dark);
-            color: var(--border-dark); font-weight: 900; font-size: 12px; border-radius: 0;
+            background-color: #fff; border: var(--border-thin); box-shadow: 3px 3px 0px var(--border-dark);
+            color: var(--border-dark); font-weight: 900; font-size: 10px; border-radius: 0; padding: 4px 6px;
         }
 
-        /* ============================
-           動畫區：逆時針旋轉
-           ============================ */
-        @keyframes spin-ccw { 
-            from { transform: rotate(0deg); } 
-            to { transform: rotate(-360deg); } 
-        }
+        @keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
         @keyframes brutalBounce { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -3px); } }
         
         .typhoon-emoji {
@@ -190,6 +188,16 @@
             return '#121212';
         }
 
+        // ==========================================
+        // 定義四大重點城市/氣象廳座標與顏色
+        // ==========================================
+        const REGIONS = {
+            'HKO': { name: 'HONG KONG (HKO)', lat: 22.3023, lon: 114.1741, color: '#ff3131' },
+            'CWA': { name: 'TAIWAN (CWA)', lat: 25.0375, lon: 121.5173, color: '#ff8c00' },
+            'JMA': { name: 'JAPAN (JMA)', lat: 35.6670, lon: 139.7450, color: '#ff00ff' },
+            'KMA': { name: 'KOREA (KMA)', lat: 37.4938, lon: 126.9144, color: '#ccff00' }
+        };
+
         const agencyConfig = {
             'JTWC': { color: '#00e5ff', name: 'USA (JTWC)' },     
             'JMA':  { color: '#ff00ff', name: 'JAPAN (JMA)' },    
@@ -198,27 +206,32 @@
             'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     
         };
 
-        const HKO_COORDS = [22.3023, 114.1741];
-        var map = L.map('map').setView(HKO_COORDS, 5);
+        var map = L.map('map').setView([REGIONS['HKO'].lat, REGIONS['HKO'].lon], 5);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
-        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
+        // 只在香港畫距離圈
+        let hkoCoords = [REGIONS['HKO'].lat, REGIONS['HKO'].lon];
+        L.circle(hkoCoords, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
+        L.circle(hkoCoords, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
+        L.circle(hkoCoords, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
+        L.circle(hkoCoords, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
+        L.circle(hkoCoords, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
 
-        let hkoIcon = L.divIcon({ 
-            html: '<div style="width:14px;height:14px;background:#121212;border:2px solid #fff;box-shadow:3px 3px 0px #121212;"></div>', 
-            className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
-        });
-        L.marker(HKO_COORDS, { icon: hkoIcon }).addTo(map).bindPopup(`
-            <div class="popup-title" style="background:#ff3131;">R.H.K.O.</div>
-            <div style="text-align:center; padding: 5px;"><b style="font-size:15px;">皇家香港天文台</b><br><span style="font-size:11px;">Royal Hong Kong Observatory</span></div>
-        `);
+        // 標示四大氣象廳位置
+        for (let key in REGIONS) {
+            let r = REGIONS[key];
+            let rIcon = L.divIcon({ 
+                html: `<div style="width:14px;height:14px;background:#121212;border:2px solid ${r.color};box-shadow:3px 3px 0px #121212;"></div>`, 
+                className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
+            });
+            L.marker([r.lat, r.lon], { icon: rIcon }).addTo(map).bindPopup(`
+                <div class="popup-title" style="background:${r.color}; color:${key==='HKO'?'#fff':'#121212'};">${key} HQ</div>
+                <div style="text-align:center; padding: 5px;"><b style="font-size:14px;">${r.name}</b></div>
+            `);
+        }
 
         const tcDataContainer = document.getElementById('tc-data');
         let tcLayerGroup = L.layerGroup().addTo(map);
@@ -240,8 +253,14 @@
                 let allMapBoundsLatLngs = []; 
                 let tcName = "UNNAMED SYSTEM"; 
                 let latestData = {};
-                let closestPoint = null;
-                let minDistance = Infinity;
+                
+                // 用來計算四大城市的距離
+                let regionStats = {
+                    'HKO': { currDist: '--', minDist: Infinity, cpaPoint: null },
+                    'CWA': { currDist: '--', minDist: Infinity, cpaPoint: null },
+                    'JMA': { currDist: '--', minDist: Infinity, cpaPoint: null },
+                    'KMA': { currDist: '--', minDist: Infinity, cpaPoint: null }
+                };
 
                 // ==========================================
                 // 1. 處理 HKO XML 資料 
@@ -284,17 +303,23 @@
                                 let pointColorHex = getIntensityHex(intensityText);
                                 let isLowPressure = intensityText.includes('Low Pressure');
                                 let lIcon = L.divIcon({ html: '<div class="low-pressure-icon">L</div>', className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
-                                let distToHK = map.distance(HKO_COORDS, [lat, lon]) / 1000;
                                 
                                 let nodeTypeStr = "FCST";
                                 let isPast = false;
-                                
                                 if(parentNode.tagName === 'PastInformation') { nodeTypeStr = "PAST"; isPast = true; }
                                 else if(parentNode.tagName === 'AnalysisInformation') { nodeTypeStr = "LIVE"; isPast = true; } 
 
-                                if (distToHK < minDistance) {
-                                    minDistance = distToHK;
-                                    closestPoint = { lat: lat, lon: lon, dist: distToHK, time: timeText, status: nodeTypeStr };
+                                // 計算四個城市的距離
+                                for (let key in REGIONS) {
+                                    let dist = map.distance([REGIONS[key].lat, REGIONS[key].lon], [lat, lon]) / 1000;
+                                    
+                                    if (nodeTypeStr === "LIVE") {
+                                        regionStats[key].currDist = Math.round(dist);
+                                    }
+                                    if (dist < regionStats[key].minDist) {
+                                        regionStats[key].minDist = dist;
+                                        regionStats[key].cpaPoint = { lat: lat, lon: lon, dist: dist, time: timeText, status: nodeTypeStr };
+                                    }
                                 }
 
                                 pathData.push({ lat: lat, lon: lon, colorHex: pointColorHex, isPast: isPast });
@@ -303,11 +328,11 @@
                                 if(parentNode.tagName === 'PastInformation') {
                                     if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
                                     else marker = L.circleMarker([lat, lon], { radius: 6, fillColor: pointColorHex, color: '#121212', weight: 3, fillOpacity: 1 });
-                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
                                 else if(parentNode.tagName === 'AnalysisInformation') {
-                                    latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
+                                    latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, color: getIntensityColor(intensityText) };
                                     
                                     if (isLowPressure) {
                                         marker = L.marker([lat, lon], { icon: lIcon });
@@ -321,7 +346,7 @@
                                         marker = L.marker([lat, lon], { icon: spinIcon });
                                         marker.bindTooltip(`<div style="background:${latestData.color}; margin:-8px -12px; padding:4px 8px; border-bottom:2px solid #121212; text-transform:uppercase;"><b>[ ${tcName} ]</b></div><br>INT: ${intensityText}<br>WND: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
                                     }
-                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO LIVE</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO LIVE</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
                                 else if (parentNode.tagName === 'ForecastInformation') {
@@ -336,7 +361,7 @@
                                         let squareIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${pointColorHex};border:2px solid #121212;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
                                         marker = L.marker([lat, lon], { icon: squareIcon });
                                     }
-                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO FCST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO FCST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 }
                             }
@@ -353,13 +378,26 @@
                             }
                         }
                         
-                        if (closestPoint) {
-                            let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
-                            tcLayerGroup.addLayer(dashLine);
-                            if (closestPoint.status !== "LIVE") {
-                                let closestIcon = L.divIcon({ html: '<div style="width:12px;height:12px;background:#ffde59;border:3px solid #121212;border-radius:50%;"></div>', className: '', iconSize: [18, 18], iconAnchor: [9, 9] });
-                                let closestMarker = L.marker([closestPoint.lat, closestPoint.lon], { icon: closestIcon }).bindTooltip(`CPA: ${Math.round(closestPoint.dist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -10] });
-                                tcLayerGroup.addLayer(closestMarker);
+                        // 畫四大城市的 CPA 虛線與標記
+                        for (let key in REGIONS) {
+                            let stats = regionStats[key];
+                            if (stats.cpaPoint) {
+                                // 陰影黑線
+                                tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
+                                    color: '#121212', weight: 4, dashArray: '5, 5', opacity: 0.5 
+                                }));
+                                // 彩色實線疊加
+                                tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
+                                    color: REGIONS[key].color, weight: 2, dashArray: '5, 5', opacity: 1 
+                                }));
+                                
+                                // 若最接近點不是現在位置，則標示出來
+                                if (stats.cpaPoint.status !== "LIVE") {
+                                    let closestIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${REGIONS[key].color};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+                                    let closestMarker = L.marker([stats.cpaPoint.lat, stats.cpaPoint.lon], { icon: closestIcon })
+                                    .bindTooltip(`<b>${key} CPA:</b> ${Math.round(stats.minDist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -5] });
+                                    tcLayerGroup.addLayer(closestMarker);
+                                }
                             }
                         }
                     }
@@ -376,15 +414,11 @@
                     
                     folders.forEach(folder => {
                         let agencyNameRaw = folder.querySelector("name") ? folder.querySelector("name").textContent.trim() : "UNKNOWN";
-                        
                         let agencyDetails = agencyConfig[agencyNameRaw] || { color: '#000000', name: agencyNameRaw };
                         let agencyColor = agencyDetails.color;
                         let agencyFullName = agencyDetails.name;
-                        
                         let placemarks = folder.querySelectorAll("Placemark");
                         let agencyLatLngs = []; 
-                        
-                        // 用來計算這是該機構的第幾個點 (0 = 最新位置)
                         let pointIndex = 0; 
 
                         placemarks.forEach(pm => {
@@ -412,24 +446,19 @@
                                     let name = pm.querySelector("name") ? pm.querySelector("name").textContent : `${agencyNameRaw} Point`;
                                     
                                     let markerIcon;
-                                    
-                                    // 【核心修改】判斷是否為台灣 CWA，且是路徑的第一點（最新位置）
                                     if (agencyNameRaw === 'CWA' && pointIndex === 0) {
                                         markerIcon = L.divIcon({ 
-                                            // 尺寸縮小為 40px，並將陰影改為 CWA 的亮橘色
                                             html: `<div class="typhoon-bounce"><div class="typhoon-emoji" style="font-size:40px; filter: drop-shadow(3px 3px 0px ${agencyColor});">🌀</div></div>`, 
                                             className: '', iconSize: [46, 46], iconAnchor: [23, 23] 
                                         });
                                     } else {
-                                        // 其他普通點
                                         markerIcon = L.divIcon({ html: `<div style="width:8px;height:8px;background:${agencyColor};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [12, 12], iconAnchor: [6, 6] });
                                     }
                                     
                                     let marker = L.marker([lat, lon], { icon: markerIcon });
                                     marker.bindPopup(`<div class="popup-title" style="background:${agencyColor}; color:#121212;">${agencyFullName}</div><div>${name}</div>`);
                                     tcLayerGroup.addLayer(marker);
-                                    
-                                    pointIndex++; // 增加點數計數器
+                                    pointIndex++; 
                                 }
                             }
                         });
@@ -455,20 +484,33 @@
                 let htmlContent = `<span class="tc-name">${tcName}</span>`;
                 
                 if(latestData.lat) {
-                    let distColor = latestData.distToHK <= 50 ? '#121212' : (latestData.distToHK <= 100 ? 'var(--main-purple)' : (latestData.distToHK <= 300 ? 'var(--main-red)' : (latestData.distToHK <= 800 ? 'var(--main-yellow)' : 'var(--main-blue)')));
-                    let distText = latestData.distToHK <= 300 ? '#fff' : 'var(--border-dark)';
-                    
                     htmlContent += `
                     <div class="tc-details">
                         <div style="margin-bottom:8px;"><b>INT</b> <span class="intensity-badge" style="background:${latestData.color};">${latestData.intensity}</span></div>
                         <div><b>LOC</b> ${latestData.lat}°N, ${latestData.lon}°E</div>
-                        <div><b>DST</b> <span style="background:${distColor}; color:${distText}; padding:0 4px; border:2px solid var(--border-dark); box-shadow:2px 2px 0px var(--border-dark); display:inline-block; margin:2px 0;">${Math.round(latestData.distToHK)} km</span></div>
                         <div><b>WND</b> ${latestData.wind}</div>
                         <div><b>PRS</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                         
-                        <div class="closest-box">
-                            <div><b>CPA</b> ${Math.round(closestPoint.dist)} km <span style="font-size:10px;">[${closestPoint.status}]</span></div>
-                            <div style="font-size:11px; margin-top:4px;">T: ${closestPoint.time}</div>
+                        <!-- 全新設計的威脅矩陣 (Threat Matrix) -->
+                        <div class="threat-matrix">
+                            <div class="tm-header">AGENCY THREAT DISTANCE</div>
+                            
+                            <div class="tm-row">
+                                <span class="tm-label" style="background:var(--main-red); color:#fff;">HKO</span>
+                                <span class="tm-data">NOW: ${regionStats['HKO'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['HKO'].minDist)}km</span>
+                            </div>
+                            <div class="tm-row">
+                                <span class="tm-label" style="background:var(--main-orange); color:#121212;">CWA</span>
+                                <span class="tm-data">NOW: ${regionStats['CWA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['CWA'].minDist)}km</span>
+                            </div>
+                            <div class="tm-row">
+                                <span class="tm-label" style="background:var(--agency-jma); color:#fff;">JMA</span>
+                                <span class="tm-data">NOW: ${regionStats['JMA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['JMA'].minDist)}km</span>
+                            </div>
+                            <div class="tm-row">
+                                <span class="tm-label" style="background:var(--agency-kma); color:#121212;">KMA</span>
+                                <span class="tm-data">NOW: ${regionStats['KMA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['KMA'].minDist)}km</span>
+                            </div>
                         </div>
                         
                         <div style="margin-top: 15px; font-size:10px; text-align:right; border-top:var(--border-thin); padding-top:5px;">UPD: ${latestData.time}</div>
@@ -481,11 +523,11 @@
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#121212;"></div> HKO FORECAST</div>
                     
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">MULTI-AGENCY FORECASTS:</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#00e5ff;"></div> USA (JTWC)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ff00ff;"></div> JAPAN (JMA)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#9d00ff;"></div> CHINA (NMC)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ff8c00;"></div> TAIWAN (CWA)</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ccff00;"></div> KOREA (KMA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-jtwc);"></div> USA (JTWC)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-jma);"></div> JAPAN (JMA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-nmc);"></div> CHINA (NMC)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-cwa);"></div> TAIWAN (CWA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--agency-kma);"></div> KOREA (KMA)</div>
                     
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">INTENSITY COLORS:</div>
                     <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
@@ -503,6 +545,7 @@
 
                 tcDataContainer.innerHTML = htmlContent;
                 
+                // 自動置中到地圖範圍
                 if (isFirstLoad && allMapBoundsLatLngs.length > 0) {
                     let bounds = L.latLngBounds(allMapBoundsLatLngs);
                     bounds.extend(HKO_COORDS);
