@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>即時天氣雷達動畫 | Neo-brutalism</title>
+    <title>Live Weather Radar | Neo-brutalism</title>
     <style>
         body {
             background-color: #FFE600; 
@@ -29,10 +29,11 @@
         }
 
         .signage-title {
-            font-family: "PMingLiU", "MingLiU", "DFKai-SB", serif;
+            /* 轉做英文後，用粗體無襯線字體會更有力量感 */
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
             font-size: 2.5rem;
             font-weight: 900;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
             background-color: #FF0055;
             color: #FFFFFF;
             border: 4px solid #000000;
@@ -41,31 +42,35 @@
             margin-top: -50px; 
             margin-bottom: 24px;
             display: inline-block;
+            text-transform: uppercase;
         }
 
         .radar-container {
             background-color: #00E5FF;
             border: 4px solid #000000;
-            /* 移除原本的 padding: 15px，消除內部留白 */
-            padding: 0;
+            padding: 0; /* 保持冇留白 */
             box-shadow: 8px 8px 0px #000000;
             margin-bottom: 20px;
             position: relative;
-            /* 讓圖片填滿容器，移除 aspect-ratio 限制 */
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 可選：若圖片本身有透明背景，可保留底色；否則圖片會完全覆蓋 */
         }
 
         .radar-img {
             width: 100%;
-            height: auto; /* 保持圖片原始比例，高度自動適應 */
-            display: block; /* 移除圖片底部的預設空白間隙 */
-            /* 移除圖片本身的 border: 3px solid #000000，因為外框已有黑邊 */
+            height: auto; 
+            display: block; 
             border: none;
-            background-color: transparent; /* 若圖片有透明部分，會顯示外框的青色背景 */
-            object-fit: cover; /* 確保圖片填滿容器，必要時裁切邊緣以消滅空白 */
+            background-color: transparent; 
+            object-fit: cover; 
+            cursor: pointer; /* 加入鼠標提示，話俾使用者知可以點擊 */
+            transition: opacity 0.1s;
+        }
+
+        /* 點擊時會有少少暗落去嘅視覺回饋 */
+        .radar-img:active {
+            opacity: 0.8; 
         }
 
         .status-badge {
@@ -84,14 +89,15 @@
 <body>
 
     <div class="brutal-card">
-        <div class="signage-title">氣象雷達觀測</div>
+        <div class="signage-title">WEATHER RADAR</div>
         
         <div class="radar-container">
-            <img id="radar-image" class="radar-img" src="https://via.placeholder.com/500x500.png?text=載入中..." alt="香港天文台雷達圖" />
+            <img id="radar-image" class="radar-img" src="https://via.placeholder.com/500x500.png?text=Loading..." alt="HKO Weather Radar" title="Click to replay" />
         </div>
 
-        <div class="status-badge">
-            ● 實時動畫播放中 (LIVE)
+        <!-- 加上 ID 方便用 JavaScript 控制文字轉變 -->
+        <div id="status-badge" class="status-badge">
+            ● LIVE ANIMATION
         </div>
     </div>
 
@@ -99,10 +105,14 @@
         const totalFrames = 20;
         const frames = [];
         let currentFrame = 0;
+        let animationInterval; // 宣告一個變數用來儲存及控制計時器
+        
         const radarImage = document.getElementById('radar-image');
+        const statusBadge = document.getElementById('status-badge');
         
         const timestamp = new Date().getTime(); 
 
+        // 預載 20 張圖片
         for (let i = 0; i < totalFrames; i++) {
             const frameNumber = i.toString().padStart(2, '0');
             const imgUrl = `https://dannytcchan00.github.io/0Data/radar/imag/frame_${frameNumber}.png?t=${timestamp}`;
@@ -112,13 +122,45 @@
             preloadImg.src = imgUrl;
         }
 
+        // 動畫播放邏輯
         function playAnimation() {
             radarImage.src = frames[currentFrame];
-            currentFrame = (currentFrame + 1) % totalFrames;
+            
+            // 如果未播到最後一張，就繼續加 1
+            if (currentFrame < totalFrames - 1) {
+                currentFrame++;
+            } else {
+                // 如果播到最後一張，就停止計時器
+                clearInterval(animationInterval);
+                
+                // 改變徽章文字同顏色提示可以點擊
+                statusBadge.innerText = "● CLICK TO REPLAY";
+                statusBadge.style.color = "#FFE600"; // 變成黃色
+            }
         }
 
-        setInterval(playAnimation, 500);
+        // 點擊圖片重新播放
+        function restartAnimation() {
+            // 只有當動畫停咗喺最後一張嘅時候，點擊先會重新開始
+            if (currentFrame === totalFrames - 1) {
+                currentFrame = 0; // 重置去第一張圖
+                
+                // 變返做播放中嘅狀態
+                statusBadge.innerText = "● LIVE ANIMATION";
+                statusBadge.style.color = "#39FF14"; // 變返螢光綠
+                
+                // 重新啟動計時器
+                animationInterval = setInterval(playAnimation, 500);
+            }
+        }
 
+        // 為圖片加入點擊事件
+        radarImage.addEventListener('click', restartAnimation);
+
+        // 頁面載入時，立即啟動第一次播放
+        animationInterval = setInterval(playAnimation, 500);
+
+        // 每 10 分鐘刷新整個網頁以獲取最新圖片
         setInterval(() => {
             window.location.reload();
         }, 600000);
