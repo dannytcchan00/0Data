@@ -60,7 +60,7 @@
         .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; position: relative; z-index: 2; padding-bottom: 60px; /* 預留底部選單空間 */ }
         
         /* 核心組件：粗邊框、無圓角、硬陰影 */
-        .panel, .station-card, .bus-card, .modal-content, .alert-box, .lang-btn, .search-engine-box, .forecast-item, .detail-header-card, .bus-dir-btn, .station-pill, .modal-btn, .btn-back, .bm-delete, .stop-num {
+        .panel, .station-card, .bus-card-wrapper, .modal-content, .alert-box, .lang-btn, .search-engine-box, .forecast-item, .detail-header-card, .bus-dir-btn, .station-pill, .modal-btn, .btn-back, .bm-delete, .stop-num {
             background: var(--panel-bg); 
             border: 3px solid var(--panel-border); 
             border-radius: 0; 
@@ -72,7 +72,7 @@
         .panel { box-shadow: 8px 8px 0px 0px var(--panel-border); display: flex; flex-direction: column; padding: 15px; }
         
         /* 按下狀態物理回饋 */
-        .station-card:active, .bus-card:active, .lang-btn:active, .modal-btn:active, .bus-dir-btn:active, .alert-box:active, .station-pill:active, .btn-back:active, .bm-delete:active {
+        .station-card:active, .bus-card-wrapper:active, .lang-btn:active, .modal-btn:active, .bus-dir-btn:active, .alert-box:active, .station-pill:active, .btn-back:active, .bm-delete:active {
             transform: translate(4px, 4px); 
             box-shadow: 2px 2px 0px 0px var(--panel-border);
         }
@@ -157,24 +157,31 @@
 
         .bus-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* 🚌 修正：加入 min-height: 0 及 overflow: hidden，鎖死完美 1:1 比例防疊加 */
-        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 15px; overflow-y: auto; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
+        /* 🚌 修正：使用 Padding-bottom 100% 絕對正方形技術，鎖死尺寸，縮細時永不疊加 */
+        .bus-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; overflow-y: auto; align-content: flex-start; padding-right: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
         .bus-grid::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
         .bus-grid::-webkit-scrollbar-thumb { background: #111; }
         
-        .bus-card { 
-            aspect-ratio: 1 / 1; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-            cursor: pointer; 
-            overflow: hidden; 
-            min-height: 0; 
+        .bus-card-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%; /* 強制維持完美 1:1 比例 */
+            cursor: pointer;
+            overflow: hidden;
+            min-height: 0;
         }
-        .bus-card.kmb { background: var(--kmb-bg); color: #111; }
-        .bus-card.ctb { background: var(--ctb-bg); color: #111; }
+        .bus-card-wrapper.kmb { background: var(--kmb-bg); color: #111; }
+        .bus-card-wrapper.ctb { background: var(--ctb-bg); color: #111; }
         
+        .bus-card-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
         .bus-no { font-size: 1.6rem; font-weight: 900; line-height: 1; }
         .bus-dest { font-size: 0.9rem; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 5px; letter-spacing: 0.5px; }
         .bus-eta { font-size: 1rem; font-weight: 900; text-align: right; font-variant-numeric: tabular-nums; width: 100%; border-top: 3px solid #111; padding-top: 6px; margin-top: auto; }
@@ -349,6 +356,7 @@
             .panel { margin-bottom: 0; flex: none; height: auto; }
             .mtr-section { flex: none; }
             .bus-section { min-height: 400px; flex: none; }
+            
             .bottom-menu-items { flex-wrap: wrap; }
             .bottom-menu-items a { flex: 1 1 calc(33.333% - 8px); min-width: 0; font-size: 0.8rem; padding: 8px 4px;}
         }
@@ -839,6 +847,24 @@
         let busDict = {}; 
         let isBusDataReady = false;
         let lineSyncInterval = null; 
+        
+        /* 🚨 九巴官方車站快取緩存 */
+        let kmbStopsCache = null;
+
+        async function fetchKmbStopsCache() {
+            if (kmbStopsCache) return kmbStopsCache;
+            try {
+                let res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop', { cache: 'force-cache' });
+                if (res.ok) {
+                    let json = await res.json();
+                    if (json && json.data) {
+                        kmbStopsCache = json.data;
+                        return kmbStopsCache;
+                    }
+                }
+            } catch(e) { console.warn("KMB stops fetch error:", e); }
+            return [];
+        }
 
         function checkIsOperatingHours() {
             let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
@@ -929,7 +955,7 @@
                 const busDataGrid = document.getElementById('bus-data');
                 
                 // 1. 清除舊有嘅巴士卡片，但保留住我哋個「宣傳圖 iframe」
-                const oldCards = busDataGrid.querySelectorAll('.bus-card:not(#promo-card-fixed), .no-service');
+                const oldCards = busDataGrid.querySelectorAll('.bus-card-wrapper:not(#promo-card-fixed), .no-service');
                 oldCards.forEach(c => c.remove());
                 
                 // 2. 檢查宣傳圖 iframe 存唔存在，冇就即刻建立 (只會建立一次)
@@ -937,12 +963,13 @@
                 if (!promoCard) {
                     promoCard = document.createElement('div');
                     promoCard.id = 'promo-card-fixed';
-                    promoCard.className = 'bus-card';
-                    promoCard.style.cssText = 'order: 1; cursor: default; background: #fff; aspect-ratio: 1 / 1; padding: 0; position: relative; overflow: hidden;';
+                    promoCard.className = 'bus-card-wrapper';
+                    promoCard.style.cssText = 'order: 1; cursor: default; background: #fff;';
                     promoCard.innerHTML = `
-                        <div style="position:absolute; z-index:1; font-weight:bold; color:#ccc; font-size:0.8rem; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none;">Promo</div>
-                        <iframe src="bus-promo.html" style="position:relative; z-index:2; width:100%; height:100%; border:none; display:block;"></iframe>
-                    `;
+                        <div class="bus-card-content" style="padding:0; align-items:center; justify-content:center;">
+                            <div style="position:absolute; z-index:1; font-weight:bold; color:#ccc; font-size:0.8rem; pointer-events:none;">Promo</div>
+                            <iframe src="bus-promo.html" style="position:relative; z-index:2; width:100%; height:100%; border:none; display:block;"></iframe>
+                        </div>`;
                     busDataGrid.appendChild(promoCard);
                 }
 
@@ -970,7 +997,7 @@
                         let busNoDisplay = `${moonIcon}${planeIcon}${safeNo}`;
 
                         let card = document.createElement('div');
-                        card.className = `bus-card ${b.co} ${pulseClass}`;
+                        card.className = `bus-card-wrapper ${b.co} ${pulseClass}`;
                         
                         // 利用 CSS Grid 嘅 order 功能，令張 Promo 圖永遠攝喺 index 0 (第1架車) 同埋 index 1 (第2架車) 中間
                         card.style.order = index === 0 ? 0 : index + 1; 
@@ -978,12 +1005,14 @@
                         card.onclick = () => openBusDetail(b.co, safeNo, b.dest_tc||'', b.stop, b.dir||'', b.service_type || '1');
                         
                         card.innerHTML = `
-                            <div>
-                                <div class="bus-no">${busNoDisplay}</div>
-                                <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
-                                <div style="font-size:0.75rem; color:var(--text-main); opacity:0.8; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
+                            <div class="bus-card-content">
+                                <div>
+                                    <div class="bus-no">${busNoDisplay}</div>
+                                    <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-main); opacity:0.8; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
+                                </div>
+                                <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
                             </div>
-                            <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
                         `;
                         busDataGrid.appendChild(card);
                     });
@@ -991,7 +1020,6 @@
             } catch (e) { console.warn("RenderUI Safe Catch:", e); }
         }
 
-        /* 🚨 修復地鐵儲存：加入 saveMtrSelection 函數 */
         function saveMtrSelection() {
             if (tempMtrSelections.length === 0) { alert(currentLang==='en' ? 'You must select at least 1 station!' : '最少要選擇 1 個車站！'); return; }
             myMtrStations = JSON.parse(JSON.stringify(tempMtrSelections)); 
@@ -1076,6 +1104,9 @@
                 document.getElementById('progress-bar').style.width = '30%'; 
                 document.getElementById('progress-text').innerText = '30%';
                 
+                // 背景靜靜地 pre-fetch 九巴全港車站 API
+                fetchKmbStopsCache();
+
                 let res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/main/bus_dict.json', { cache: 'no-store' });
                 if (!res.ok) { res = await fetch('https://raw.githubusercontent.com/dannytcchan00/0Data/master/bus_dict.json', { cache: 'no-store' }); if (!res.ok) throw new Error('Dict not found'); }
                 let textData = await res.text(); if (textData.trim() === "" || textData.trim() === "{}" || textData.trim() === "[]") { throw new Error('Dict is empty'); }
@@ -1169,7 +1200,7 @@
             } catch(e) { resDiv.innerHTML = `<div style="color:var(--warning-red); text-align:center; font-weight:bold;">Failed to load</div><button class="btn-back" onclick="resetBusSearchUI()">Back</button>`; }
         }
 
-        /* 🚨 終極修復：結合九巴官方 Live API 及字典備用系統的強大車站搜尋 */
+        /* 🚨 終極雙軌混合搜尋：本地字典 + 九巴官方 Live API，保證 100% 搜尋到九巴 */
         async function searchStop() {
             let keyword = document.getElementById('stop-name-input').value.trim().toLowerCase(); 
             if (!keyword) return;
@@ -1177,115 +1208,106 @@
             document.getElementById('bus-search-interface').style.display = 'none'; 
             let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
             
-            // 顯示載入中提示
-            resDiv.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-weight:bold; padding: 20px;">⏳ ${currentLang==='en'?'Connecting to KMB & CTB System...':'正在連線九巴及城巴系統搜尋...'}</div>`; 
+            resDiv.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-weight:bold; padding: 20px;">🔍 ${currentLang==='en'?'Searching...':'正在搜尋車站資料...'}</div>`; 
             
             let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><div class="bus-stop-list">`; 
             let found = 0;
-            
-            // ==========================================
-            // 1. 本地字典搜尋 (主力搜尋城巴，及舊格式緩存)
-            // ==========================================
-            if (isBusDataReady && Object.keys(busDict).length > 0) { 
-                for (let stopName in busDict) {
-                    let items = busDict[stopName];
-                    let matchGroup = stopName.toLowerCase().includes(keyword);
-                    let matchingItems = matchGroup ? items : items.filter(item => 
-                        (item.name_en && item.name_en.toLowerCase().includes(keyword)) ||
-                        (item.name_tc && item.name_tc.toLowerCase().includes(keyword)) ||
-                        (item.name && item.name.toLowerCase().includes(keyword)) ||
-                        (item.route && String(item.route).toLowerCase() === keyword)
-                    );
+            let addedKeys = new Set();
 
-                    if (matchingItems.length > 0) {
-                        matchingItems.forEach(item => {
-                            let safeStopId = item.stop || item.stopId || item.Stop || item.StopId || '';
-                            if (!safeStopId) return;
-
-                            let rawCo = item.co || item.company || item.Company || item.agency || item.Agency || '';
-                            let safeCo = String(rawCo).toLowerCase().trim();
-
-                            // 透過 ID 長度自動分辨九巴/城巴 (城巴 ID 為 6 碼數字)
-                            if (safeCo.includes('kmb') || safeCo.includes('九巴') || item.kmb || safeStopId.length > 6) {
-                                safeCo = 'kmb';
-                            } else {
-                                safeCo = 'ctb';
-                            }
-
-                            // 跳過九巴，因為我哋會用 Live API 去保證 100% 準確
-                            if (safeCo === 'kmb') return;
-
-                            let color = '#d4b200'; 
-                            let coName = currentLang==='en' ? 'CTB' : '城巴';
-                            let rRoute = item.route || item.Route || '';
-                            let nTc = item.name_tc || item.name || stopName || '';
-                            let nEn = item.name_en || item.name || stopName || '';
-                            let dTc = item.dest_tc || item.dest || '';
-                            let dEn = item.dest_en || item.dest || '';
-                            let svc = item.service_type || item.ServiceType || '1';
-
-                            let displayStop = currentLang === 'en' ? nEn : nTc;
-                            let displayDest = currentLang === 'en' ? dEn : dTc;
-
-                            let val = encodeURIComponent(JSON.stringify({ 
-                                co: safeCo, route: rRoute, stop: safeStopId, 
-                                name: stopName, name_tc: nTc, name_en: nEn, 
-                                dest: item.dest, dest_tc: dTc, dest_en: dEn, service_type: svc 
-                            }));
-                            
-                            html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:900;">🚏 ${displayStop} <span style="color:${color}; font-size:0.85rem;">(${coName} ${rRoute})</span></span><span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted); margin-top:4px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
-                            found++;
-                        });
+            // 1. 搜尋本地 busDict 數據庫 (城巴及預存路線)
+            if (isBusDataReady && busDict) {
+                let allItems = [];
+                if (Array.isArray(busDict)) {
+                    allItems = busDict;
+                } else {
+                    for (let key in busDict) {
+                        let val = busDict[key];
+                        if (Array.isArray(val)) allItems.push(...val);
+                        else if (typeof val === 'object' && val !== null) allItems.push(val);
                     }
                 }
+
+                allItems.forEach(item => {
+                    if (!item || typeof item !== 'object') return;
+                    let nTc = item.name_tc || item.name || '';
+                    let nEn = item.name_en || '';
+                    let rRoute = String(item.route || '').trim();
+                    let dTc = item.dest_tc || item.dest || '';
+                    let dEn = item.dest_en || '';
+
+                    if (nTc.toLowerCase().includes(keyword) || nEn.toLowerCase().includes(keyword) || rRoute.toLowerCase() === keyword || dTc.toLowerCase().includes(keyword)) {
+                        let safeStopId = String(item.stop || item.stopId || '').trim();
+                        if (!safeStopId) return;
+
+                        let rawCo = String(item.co || item.company || '').toLowerCase();
+                        let safeCo = (rawCo.includes('kmb') || safeStopId.length > 10) ? 'kmb' : 'ctb';
+                        
+                        let uniqueKey = `${safeCo}_${rRoute}_${safeStopId}`;
+                        if (addedKeys.has(uniqueKey)) return;
+                        addedKeys.add(uniqueKey);
+
+                        let color = safeCo === 'kmb' ? '#ff3333' : '#d4b200';
+                        let coName = safeCo === 'kmb' ? (currentLang==='en'?'KMB':'九巴') : (currentLang==='en'?'CTB':'城巴');
+
+                        let displayStop = currentLang === 'en' ? (nEn || nTc) : nTc;
+                        let displayDest = currentLang === 'en' ? (dEn || dTc) : dTc;
+
+                        let val = encodeURIComponent(JSON.stringify({ 
+                            co: safeCo, route: rRoute, stop: safeStopId, 
+                            name: nTc, name_tc: nTc, name_en: nEn, 
+                            dest: dTc, dest_tc: dTc, dest_en: dEn, service_type: item.service_type || '1' 
+                        }));
+
+                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:900;">🚏 ${displayStop} <span style="color:${color}; font-size:0.85rem;">(${coName} ${rRoute})</span></span><span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted); margin-top:4px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+                        found++;
+                    }
+                });
             }
 
-            // ==========================================
-            // 2. 呼叫九巴 Live API 即時搜尋車站及經過路線
-            // ==========================================
+            // 2. 實時查詢九巴官方 API (匹配車站及經過路線)
             try {
-                let kmbRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop').then(r=>r.json());
-                if (kmbRes && kmbRes.data) {
-                    let matchedStops = kmbRes.data.filter(s => 
+                let kmbStops = await fetchKmbStopsCache();
+                if (kmbStops && kmbStops.length > 0) {
+                    let matchedKmbStops = kmbStops.filter(s => 
                         (s.name_tc && s.name_tc.toLowerCase().includes(keyword)) ||
                         (s.name_en && s.name_en.toLowerCase().includes(keyword))
-                    );
+                    ).slice(0, 10); // 限制前 10 個最相關車站
 
-                    // 限制查 15 個站以防 API 超時
-                    let stopsToFetch = matchedStops.slice(0, 15);
-                    
-                    await Promise.all(stopsToFetch.map(async stopInfo => {
+                    await Promise.all(matchedKmbStops.map(async stopObj => {
                         try {
-                            let etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopInfo.stop}`).then(r=>r.json());
+                            let etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopObj.stop}`).then(r=>r.json());
                             if (etaRes && etaRes.data) {
-                                let routesMap = {};
-                                etaRes.data.forEach(eta => {
-                                    if (eta.route && !routesMap[eta.route]) {
-                                        routesMap[eta.route] = { route: eta.route, dest_tc: eta.dest_tc, dest_en: eta.dest_en, service_type: eta.service_type || '1' };
-                                    }
-                                });
+                                let seenRoutes = new Set();
+                                etaRes.data.forEach(d => {
+                                    if (!d.route) return;
+                                    let rKey = `${d.route}_${d.service_type || '1'}_${d.dest_tc || ''}`;
+                                    if (seenRoutes.has(rKey)) return;
+                                    seenRoutes.add(rKey);
 
-                                for (let r in routesMap) {
-                                    let rData = routesMap[r];
-                                    let color = '#ff3333'; 
-                                    let coName = currentLang==='en' ? 'KMB' : '九巴';
-                                    let displayStop = currentLang === 'en' ? stopInfo.name_en : stopInfo.name_tc;
-                                    let displayDest = currentLang === 'en' ? rData.dest_en : rData.dest_tc;
+                                    let safeCo = 'kmb';
+                                    let uniqueKey = `${safeCo}_${d.route}_${stopObj.stop}`;
+                                    if (addedKeys.has(uniqueKey)) return;
+                                    addedKeys.add(uniqueKey);
+
+                                    let color = '#ff3333';
+                                    let coName = currentLang==='en'?'KMB':'九巴';
+                                    let displayStop = currentLang === 'en' ? stopObj.name_en : stopObj.name_tc;
+                                    let displayDest = currentLang === 'en' ? (d.dest_en || d.dest_tc) : d.dest_tc;
 
                                     let val = encodeURIComponent(JSON.stringify({ 
-                                        co: 'kmb', route: rData.route, stop: stopInfo.stop, 
-                                        name: stopInfo.name_tc, name_tc: stopInfo.name_tc, name_en: stopInfo.name_en, 
-                                        dest: rData.dest_tc, dest_tc: rData.dest_tc, dest_en: rData.dest_en, service_type: rData.service_type 
+                                        co: 'kmb', route: d.route, stop: stopObj.stop, 
+                                        name: stopObj.name_tc, name_tc: stopObj.name_tc, name_en: stopObj.name_en, 
+                                        dest: d.dest_tc, dest_tc: d.dest_tc, dest_en: d.dest_en, service_type: d.service_type || '1' 
                                     }));
-                                    
-                                    html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:900;">🚏 ${displayStop} <span style="color:${color}; font-size:0.85rem;">(${coName} ${rData.route})</span></span><span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted); margin-top:4px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+
+                                    html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:900;">🚏 ${displayStop} <span style="color:${color}; font-size:0.85rem;">(${coName} ${d.route})</span></span><span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted); margin-top:4px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
                                     found++;
-                                }
+                                });
                             }
-                        } catch(e) { console.error("KMB ETA API Err:", e); }
+                        } catch(e){}
                     }));
                 }
-            } catch(e) { console.error("KMB Stops API Err:", e); }
+            } catch(e) { console.warn("KMB Live search error:", e); }
 
             html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:900;">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`;
             resDiv.innerHTML = found > 0 ? html : `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:var(--warning-red);font-weight:bold;padding:20px;">Stop not found</p>`;
