@@ -176,12 +176,12 @@
         
         .no-service { grid-column: 1 / -1; text-align: center; color: #111; font-weight: bold; padding: 40px; font-size: 1.05rem; line-height: 1.6; border: 3px dashed #111; background: #fff;}
 
-        /* Modals */
+        /* Modals (已將 z-index 調整為 10005，確保浮於 Menu Bar 頂層) */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
             background: rgba(255, 255, 255, 0.9); 
             display: flex; justify-content: center; align-items: center; 
-            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            z-index: 10005; opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
@@ -192,7 +192,8 @@
         }
         
         .modal-header { padding: 15px 20px; border-bottom: 3px solid #111; display: flex; justify-content: space-between; align-items: center; background: #fff; flex: 0 0 auto;}
-        .modal-header h3 { margin: 0; font-size: 1.3rem; color: #111; font-weight: 900; text-transform: uppercase; }
+        .modal-header h3 { margin: 0; font-size: 1.3rem; color: #111; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .modal-header button { flex-shrink: 0; }
         .modal-count { font-size: 1rem; color: #111; background: #fff; padding: 4px 10px; border: 2px solid #111; font-weight: 900; box-shadow: 2px 2px 0px 0px #111;}
         
         .modal-body { padding: 20px; flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #f4f4f4; }
@@ -256,12 +257,12 @@
         .install-btn { position: fixed; bottom: 20px; right: 20px; background: var(--accent-green); color: #fff; padding: 12px 20px; font-size: 1.05rem; font-weight: 900; cursor: pointer; z-index: 9000; display: none; align-items: center; gap: 8px; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 0; text-transform: uppercase; transition: transform 0.1s, box-shadow 0.1s;}
         .install-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px 0px #111; }
 
-        /* 底部自動伸縮 Menu Bar 設計 (Neo-brutalism 風格統一) */
+        /* 底部自動伸縮 Menu Bar 設計 */
         .bottom-menu-container {
             position: fixed;
-            bottom: -55px; /* 預設收埋，只露出上方 toggle 標籤 */
+            bottom: 0;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, 100%); /* 預設完美降落到底部，只留 Toggle 掣喺視窗外 */
             background: var(--panel-bg);
             border: 3px solid var(--panel-border);
             border-bottom: none;
@@ -270,26 +271,30 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             width: 92%;
             max-width: 600px;
         }
         .bottom-menu-container.active, .bottom-menu-container:hover {
-            bottom: 0; /* 滑鼠移上去或點擊時自動向上彈出 */
+            transform: translate(-50%, 0); /* 滑鼠移上 / 點擊時完全彈出 */
         }
         .bottom-menu-toggle {
+            position: absolute;
+            top: -35px; /* 控制標籤浮出高度 */
+            left: 50%;
+            transform: translateX(-50%);
             background: var(--accent-green);
             color: #fff;
-            padding: 6px 20px;
+            padding: 8px 25px;
             font-weight: 900;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             cursor: pointer;
             border: 3px solid var(--panel-border);
             border-bottom: none;
             box-shadow: 0px -3px 0px 0px var(--panel-border);
-            margin-top: -32px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
         .bottom-menu-items {
             display: flex;
@@ -314,11 +319,23 @@
             gap: 4px;
             flex: 1;
             transition: transform 0.1s, box-shadow 0.1s;
+            text-align: center;
+            white-space: nowrap;
         }
         .bottom-menu-items a:active {
             transform: translate(2px, 2px);
             box-shadow: 1px 1px 0px 0px var(--panel-border);
         }
+
+        /* Modal 內設定按鈕修正，防擠壓 */
+        .lang-btn-group { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
+        .lang-btn { flex: 1 1 calc(50% - 15px); min-width: 120px; padding: 12px; cursor: pointer; font-weight: 900; font-size: 1.05rem; text-align: center; }
+        .lang-btn.active { background: #111; color: #fff; box-shadow: 2px 2px 0px 0px #111; transform: translate(2px, 2px);}
+        
+        .donation-box { padding: 25px; text-align: center; margin-top: 15px; }
+        .donation-box h4 { margin: 0 0 15px 0; color: var(--warning-red); font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px;}
+        .donation-box p { color: #111; font-size: 1rem; line-height: 1.6; margin: 0 0 20px 0; font-weight: bold; }
+        .donation-box img { max-width: 220px; width: 100%; border: 3px solid #111; padding: 0; box-shadow: 4px 4px 0px 0px #111;}
 
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
@@ -327,7 +344,10 @@
             .panel { margin-bottom: 0; flex: none; height: auto; }
             .mtr-section { flex: none; }
             .bus-section { min-height: 400px; flex: none; }
-            .bottom-menu-items a { font-size: 0.75rem; padding: 6px 4px; }
+            
+            /* 手機版 Bottom Menu 自動切換成兩行排列，避免 6 粒掣堆埋一齊重疊 */
+            .bottom-menu-items { flex-wrap: wrap; }
+            .bottom-menu-items a { flex: 1 1 calc(33.333% - 8px); min-width: 80px; font-size: 0.8rem; padding: 8px 4px;}
         }
     </style>
 </head>
