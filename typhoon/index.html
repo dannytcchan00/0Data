@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HKO - Neo-Brutalist Cyclone Track</title>
+    <title>HKO & NCDR - Neo-Brutalist Cyclone Track</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Work+Sans:wght@700;900&display=swap" rel="stylesheet">
     
@@ -15,7 +15,7 @@
             --main-red: #ff3131;
             --main-green: #00bf63;
             --main-orange: #ff914d;
-            --main-purple: #c13584;
+            --main-purple: #c13584; /* NCDR 專用色 */
             --border-dark: #121212;
             --shadow-solid: 6px 6px 0px var(--border-dark);
             --border-thick: 4px solid var(--border-dark);
@@ -25,9 +25,7 @@
         body { 
             margin: 0; padding: 0; 
             font-family: 'Space Mono', monospace; 
-            background-color: var(--bg-light);
-            color: var(--border-dark);
-            overflow: hidden;
+            background-color: var(--bg-light); color: var(--border-dark); overflow: hidden;
         }
         #map { width: 100vw; height: 100vh; background-color: var(--bg-light); }
         
@@ -79,7 +77,6 @@
             box-shadow: var(--shadow-solid); font-weight: 700;
         }
         
-        /* 級別標籤 (動態背景色) */
         .intensity-badge {
             font-family: 'Work Sans', sans-serif; font-weight: 900;
             padding: 2px 6px; border: var(--border-thin); border-radius: 0;
@@ -99,6 +96,7 @@
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
         .color-box { width: 14px; height: 14px; margin-right: 10px; border: var(--border-thin); display: inline-block; }
         .circle-box { border-radius: 50%; }
+        .dashed-line { border-bottom: 3px dashed var(--border-dark); height: 0; width: 16px; margin-right: 10px;}
         
         .leaflet-popup-content-wrapper { 
             background: #fff; color: var(--border-dark); border: var(--border-thick); border-radius: 0;
@@ -165,7 +163,6 @@
             this.innerText = infoBox.classList.contains('collapsed') ? 'O' : 'X';
         });
 
-        // 判斷強度並回傳對應顏色的核心函數
         function getIntensityColor(intensityStr) {
             let s = intensityStr.toLowerCase();
             if (s.includes('low pressure') || s.includes('tropical depression')) return 'var(--main-green)';
@@ -173,10 +170,9 @@
             if (s.includes('tropical storm')) return 'var(--main-blue)';
             if (s.includes('super typhoon') || s.includes('severe typhoon')) return 'var(--main-red)';
             if (s.includes('typhoon')) return 'var(--main-orange)';
-            return '#ffffff'; // 預設白色
+            return '#ffffff';
         }
         
-        // 取得顏色HEX碼給 Leaflet polyline 使用
         function getIntensityHex(intensityStr) {
             let s = intensityStr.toLowerCase();
             if (s.includes('low pressure') || s.includes('tropical depression')) return '#00bf63';
@@ -194,13 +190,10 @@
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        // ==========================================
-        // 距離圈 5層設定 (1200, 800, 300, 100, 50)
-        // ==========================================
+        // 距離圈
         L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
-        // 新增 100公里 及 50公里
         L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map);
         L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map);
 
@@ -210,9 +203,7 @@
         });
         L.marker(HKO_COORDS, { icon: hkoIcon }).addTo(map).bindPopup(`
             <div class="popup-title" style="background:#ff3131;">R.H.K.O.</div>
-            <div style="text-align:center; padding: 5px;">
-                <b style="font-size:15px;">皇家香港天文台</b><br><span style="font-size:11px;">Royal Hong Kong Observatory</span>
-            </div>
+            <div style="text-align:center; padding: 5px;"><b style="font-size:15px;">皇家香港天文台</b><br><span style="font-size:11px;">Royal Hong Kong Observatory</span></div>
         `);
 
         const tcDataContainer = document.getElementById('tc-data');
@@ -221,202 +212,251 @@
 
         async function loadTyphoonData() {
             try {
-                const targetUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
-                let tcResponse = await fetch(targetUrl + '?t=' + new Date().getTime(), { cache: "no-store" });
+                // HKO 網址
+                const hkoUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
+                // NCDR 網址
+                const ncdrUrl = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
+                
+                let cacheBuster = '?t=' + new Date().getTime();
+                
+                // 平行下載兩個檔案
+                let [hkoRes, ncdrRes] = await Promise.all([
+                    fetch(hkoUrl + cacheBuster, { cache: "no-store" }).catch(() => null),
+                    fetch(ncdrUrl + cacheBuster, { cache: "no-store" }).catch(() => null)
+                ]);
                 
                 tcLayerGroup.clearLayers();
-                
-                if (!tcResponse.ok) {
+                let allMapBoundsLatLngs = []; // 儲存所有點用來對焦地圖
+                let tcName = "TC_UNKNOWN";
+                let latestData = {};
+                let closestPoint = null;
+                let minDistance = Infinity;
+
+                // ==========================================
+                // 處理 HKO XML 資料
+                // ==========================================
+                if (hkoRes && hkoRes.ok) {
+                    let tcXmlStr = await hkoRes.text();
+                    let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
+                    
+                    let nameNodes = data.querySelectorAll('TropicalCycloneName');
+                    if(nameNodes.length > 0) tcName = nameNodes[0].textContent;
+                    
+                    let latNodes = data.querySelectorAll('Latitude');
+                    let lonNodes = data.querySelectorAll('Longitude');
+                    
+                    if (latNodes.length > 0 && lonNodes.length > 0) {
+                        let pathData = []; 
+                        let forecastStepCounter = 0; 
+                        
+                        for (let i = 0; i < latNodes.length; i++) {
+                            let lat = parseFloat(latNodes[i].textContent.replace('N', '').trim());
+                            let lon = parseFloat(lonNodes[i].textContent.replace('E', '').trim());
+                            
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                allMapBoundsLatLngs.push([lat, lon]);
+                                
+                                let parentNode = latNodes[i].parentNode;
+                                let timeNode = parentNode.querySelector('Time');
+                                let intensityNode = parentNode.querySelector('Intensity');
+                                let windNode = parentNode.querySelector('MaximumWind');
+                                let pressureNode = parentNode.querySelector('CentralPressure');
+                                
+                                let rawTime = timeNode ? new Date(timeNode.textContent) : new Date();
+                                let timeText = `${rawTime.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} HKT`;
+                                let intensityText = intensityNode ? intensityNode.textContent : 'UNKNOWN';
+                                let windText = windNode ? windNode.textContent : 'N/A';
+                                let pressureText = pressureNode ? pressureNode.textContent : 'N/A';
+                                
+                                let pointColorHex = getIntensityHex(intensityText);
+                                let isLowPressure = intensityText.includes('Low Pressure');
+                                let lIcon = L.divIcon({ html: '<div class="low-pressure-icon">L</div>', className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+                                let distToHK = map.distance(HKO_COORDS, [lat, lon]) / 1000;
+                                
+                                let nodeTypeStr = "FCST";
+                                let isPast = false;
+                                
+                                if(parentNode.tagName === 'PastInformation') { nodeTypeStr = "PAST"; isPast = true; }
+                                else if(parentNode.tagName === 'AnalysisInformation') { nodeTypeStr = "LIVE"; isPast = true; } 
+
+                                if (distToHK < minDistance) {
+                                    minDistance = distToHK;
+                                    closestPoint = { lat: lat, lon: lon, dist: distToHK, time: timeText, status: nodeTypeStr };
+                                }
+
+                                pathData.push({ lat: lat, lon: lon, colorHex: pointColorHex, isPast: isPast });
+                                let marker;
+                                
+                                if(parentNode.tagName === 'PastInformation') {
+                                    if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
+                                    else marker = L.circleMarker([lat, lon], { radius: 6, fillColor: pointColorHex, color: '#121212', weight: 3, fillOpacity: 1 });
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    tcLayerGroup.addLayer(marker);
+                                } 
+                                else if(parentNode.tagName === 'AnalysisInformation') {
+                                    latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
+                                    
+                                    if (isLowPressure) {
+                                        marker = L.marker([lat, lon], { icon: lIcon });
+                                    } else {
+                                        let windSpeed = parseInt(windText) || 60;
+                                        let circulationRadius = windSpeed > 118 ? 250000 : (windSpeed > 88 ? 200000 : 150000); 
+                                        let circCircle = L.circle([lat, lon], { radius: circulationRadius, color: '#121212', weight: 3, fillColor: '#38b6ff', fillOpacity: 0.3, dashArray: '15, 15' });
+                                        tcLayerGroup.addLayer(circCircle);
+
+                                        let spinIcon = L.divIcon({ html: '<div class="typhoon-bounce"><div class="typhoon-emoji">🌀</div></div>', className: '', iconSize: [60, 60], iconAnchor: [30, 30] });
+                                        marker = L.marker([lat, lon], { icon: spinIcon });
+                                        marker.bindTooltip(`<div style="background:${latestData.color}; margin:-8px -12px; padding:4px 8px; border-bottom:2px solid #121212; text-transform:uppercase;"><b>[ ${tcName} ]</b></div><br>INT: ${intensityText}<br>WND: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
+                                    }
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO LIVE</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    tcLayerGroup.addLayer(marker);
+                                } 
+                                else if (parentNode.tagName === 'ForecastInformation') {
+                                    forecastStepCounter++;
+                                    if (isLowPressure) {
+                                        marker = L.marker([lat, lon], { icon: lIcon });
+                                    } else {
+                                        let coneRadius = 30000 + (forecastStepCounter * 4000); 
+                                        let coneCircle = L.circle([lat, lon], { radius: coneRadius, color: '#121212', weight: 1, fillColor: pointColorHex, fillOpacity: 0.15 });
+                                        tcLayerGroup.addLayer(coneCircle);
+                                        
+                                        let squareIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${pointColorHex};border:2px solid #121212;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+                                        marker = L.marker([lat, lon], { icon: squareIcon });
+                                    }
+                                    marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO FCST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
+                                    tcLayerGroup.addLayer(marker);
+                                }
+                            }
+                        }
+                        
+                        // 畫 HKO 線段
+                        for (let i = 0; i < pathData.length - 1; i++) {
+                            let p1 = pathData[i]; let p2 = pathData[i+1];
+                            let lineColor = p2.colorHex; 
+                            if (p2.isPast) {
+                                tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: '#121212', weight: 8, opacity: 1})); 
+                                tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: lineColor, weight: 4, opacity: 1})); 
+                            } else {
+                                tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: lineColor, weight: 5, opacity: 1, dashArray: '10, 8', lineJoin: 'square'}));
+                            }
+                        }
+                        
+                        // 最接近點連線
+                        if (closestPoint) {
+                            let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
+                            tcLayerGroup.addLayer(dashLine);
+                            if (closestPoint.status !== "LIVE") {
+                                let closestIcon = L.divIcon({ html: '<div style="width:12px;height:12px;background:#ffde59;border:3px solid #121212;border-radius:50%;"></div>', className: '', iconSize: [18, 18], iconAnchor: [9, 9] });
+                                let closestMarker = L.marker([closestPoint.lat, closestPoint.lon], { icon: closestIcon }).bindTooltip(`CPA: ${Math.round(closestPoint.dist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -10] });
+                                tcLayerGroup.addLayer(closestMarker);
+                            }
+                        }
+                    }
+                }
+
+                // ==========================================
+                // 處理台灣 NCDR KML 資料 (紫紅色軌跡)
+                // ==========================================
+                if (ncdrRes && ncdrRes.ok) {
+                    let kmlText = await ncdrRes.text();
+                    let kmlData = new DOMParser().parseFromString(kmlText, "text/xml");
+                    let placemarks = kmlData.querySelectorAll("Placemark");
+                    
+                    placemarks.forEach(pm => {
+                        // 畫 NCDR 線條
+                        let lineString = pm.querySelector("LineString coordinates");
+                        if (lineString) {
+                            let coords = lineString.textContent.trim().split(/\s+/);
+                            let latlngs = coords.map(c => {
+                                let pts = c.split(',');
+                                return pts.length >= 2 ? [parseFloat(pts[1]), parseFloat(pts[0])] : null;
+                            }).filter(Boolean);
+                            
+                            if (latlngs.length > 0) {
+                                allMapBoundsLatLngs.push(...latlngs);
+                                // 黑底 + 紫紅虛線
+                                tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
+                                tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#c13584', weight: 3, opacity: 1, dashArray: '8, 8'}));
+                            }
+                        }
+                        
+                        // 畫 NCDR 節點
+                        let point = pm.querySelector("Point coordinates");
+                        if (point) {
+                            let pts = point.textContent.trim().split(',');
+                            if (pts.length >= 2) {
+                                let lat = parseFloat(pts[1]); let lon = parseFloat(pts[0]);
+                                let name = pm.querySelector("name") ? pm.querySelector("name").textContent : "NCDR Point";
+                                
+                                let markerIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:#c13584;border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+                                let marker = L.marker([lat, lon], { icon: markerIcon });
+                                marker.bindPopup(`<div class="popup-title" style="background:#c13584;">NCDR (TAIWAN)</div><div>${name}</div>`);
+                                tcLayerGroup.addLayer(marker);
+                            }
+                        }
+                    });
+                }
+
+                // ==========================================
+                // 更新左方 UI 面板
+                // ==========================================
+                if (!latestData.lat && allMapBoundsLatLngs.length === 0) {
                     tcDataContainer.innerHTML = "<div style='background:#00bf63; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYSTEM NORMAL. NO ACTIVE THREATS.</div>";
                     return;
                 }
+
+                let htmlContent = `<span class="tc-name">${tcName}</span>`;
                 
-                let tcXmlStr = await tcResponse.text();
-                let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
-                
-                let nameNodes = data.querySelectorAll('TropicalCycloneName');
-                let tcName = nameNodes.length > 0 ? nameNodes[0].textContent : "TC_UNKNOWN";
-                
-                let latNodes = data.querySelectorAll('Latitude');
-                let lonNodes = data.querySelectorAll('Longitude');
-                
-                if (latNodes.length > 0 && lonNodes.length > 0) {
-                    let pathData = []; // 儲存所有點的資料，方便畫變色線條
-                    let forecastStepCounter = 0; 
-                    let latestData = {}; 
-                    
-                    let minDistance = Infinity;
-                    let closestPoint = null;
-                    
-                    for (let i = 0; i < latNodes.length; i++) {
-                        let lat = parseFloat(latNodes[i].textContent.replace('N', '').trim());
-                        let lon = parseFloat(lonNodes[i].textContent.replace('E', '').trim());
-                        
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            let parentNode = latNodes[i].parentNode;
-                            let timeNode = parentNode.querySelector('Time');
-                            let intensityNode = parentNode.querySelector('Intensity');
-                            let windNode = parentNode.querySelector('MaximumWind');
-                            let pressureNode = parentNode.querySelector('CentralPressure');
-                            
-                            let rawTime = timeNode ? new Date(timeNode.textContent) : new Date();
-                            let timeText = `${rawTime.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} HKT`;
-                            let intensityText = intensityNode ? intensityNode.textContent : 'UNKNOWN';
-                            let windText = windNode ? windNode.textContent : 'N/A';
-                            let pressureText = pressureNode ? pressureNode.textContent : 'N/A';
-                            
-                            // 獲取該點對應的顏色
-                            let pointColorHex = getIntensityHex(intensityText);
-                            let isLowPressure = intensityText.includes('Low Pressure');
-                            let lIcon = L.divIcon({ html: '<div class="low-pressure-icon">L</div>', className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
-                            let distToHK = map.distance(HKO_COORDS, [lat, lon]) / 1000;
-                            
-                            let nodeTypeStr = "FCST";
-                            let isPast = false;
-                            
-                            if(parentNode.tagName === 'PastInformation') { nodeTypeStr = "PAST"; isPast = true; }
-                            else if(parentNode.tagName === 'AnalysisInformation') { nodeTypeStr = "LIVE"; isPast = true; } // 最新點也算入過去連線中
-
-                            if (distToHK < minDistance) {
-                                minDistance = distToHK;
-                                closestPoint = { lat: lat, lon: lon, dist: distToHK, time: timeText, status: nodeTypeStr };
-                            }
-
-                            // 記錄每個點的詳細資料給線段使用
-                            pathData.push({ lat: lat, lon: lon, colorHex: pointColorHex, isPast: isPast });
-
-                            let marker;
-                            
-                            // ==== 過去位置 ====
-                            if(parentNode.tagName === 'PastInformation') {
-                                if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
-                                // 圓點顏色跟隨颱風強度
-                                else marker = L.circleMarker([lat, lon], { radius: 6, fillColor: pointColorHex, color: '#121212', weight: 3, fillOpacity: 1 });
-                                marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">PAST_POS</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
-                                tcLayerGroup.addLayer(marker);
-                            } 
-                            // ==== 最新位置 ====
-                            else if(parentNode.tagName === 'AnalysisInformation') {
-                                latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
-                                
-                                if (isLowPressure) {
-                                    marker = L.marker([lat, lon], { icon: lIcon });
-                                } else {
-                                    let windSpeed = parseInt(windText) || 60;
-                                    let circulationRadius = windSpeed > 118 ? 250000 : (windSpeed > 88 ? 200000 : 150000); 
-                                    let circCircle = L.circle([lat, lon], { radius: circulationRadius, color: '#121212', weight: 3, fillColor: '#38b6ff', fillOpacity: 0.3, dashArray: '15, 15' });
-                                    tcLayerGroup.addLayer(circCircle);
-
-                                    let spinIcon = L.divIcon({ html: '<div class="typhoon-bounce"><div class="typhoon-emoji">🌀</div></div>', className: '', iconSize: [60, 60], iconAnchor: [30, 30] });
-                                    marker = L.marker([lat, lon], { icon: spinIcon });
-                                    
-                                    marker.bindTooltip(`<div style="background:${latestData.color}; margin:-8px -12px; padding:4px 8px; border-bottom:2px solid #121212; text-transform:uppercase;"><b>[ ${tcName} ]</b></div><br>INT: ${intensityText}<br>WND: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
-                                }
-                                marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">LIVE_POS</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div><div>D: ${Math.round(distToHK)}km</div>`);
-                                tcLayerGroup.addLayer(marker);
-                            } 
-                            // ==== 未來預測 ====
-                            else if (parentNode.tagName === 'ForecastInformation') {
-                                forecastStepCounter++;
-                                if (isLowPressure) {
-                                    marker = L.marker([lat, lon], { icon: lIcon });
-                                } else {
-                                    let coneRadius = 30000 + (forecastStepCounter * 4000); 
-                                    let coneCircle = L.circle([lat, lon], { radius: coneRadius, color: '#121212', weight: 1, fillColor: pointColorHex, fillOpacity: 0.15 });
-                                    tcLayerGroup.addLayer(coneCircle);
-                                    
-                                    // 預測點顏色跟隨颱風強度
-                                    let squareIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${pointColorHex};border:2px solid #121212;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
-                                    marker = L.marker([lat, lon], { icon: squareIcon });
-                                }
-                                marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">FCST_POS</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
-                                tcLayerGroup.addLayer(marker);
-                            }
-                        }
-                    }
-                    
-                    // ==========================================
-                    // 繪製彩色線段 (每一截的顏色根據「目的地」的強度改變)
-                    // ==========================================
-                    for (let i = 0; i < pathData.length - 1; i++) {
-                        let p1 = pathData[i];
-                        let p2 = pathData[i+1];
-                        let lineColor = p2.colorHex; // 線的顏色跟隨下一個點的強度
-                        
-                        if (p2.isPast) {
-                            // 過去連線：粗實線
-                            tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: '#121212', weight: 8, opacity: 1})); // 黑底邊框
-                            tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: lineColor, weight: 4, opacity: 1})); // 彩色內線
-                        } else {
-                            // 未來連線：粗虛線
-                            tcLayerGroup.addLayer(L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {color: lineColor, weight: 5, opacity: 1, dashArray: '10, 8', lineJoin: 'square'}));
-                        }
-                    }
-                    
-                    if (closestPoint) {
-                        let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
-                        tcLayerGroup.addLayer(dashLine);
-                        
-                        if (closestPoint.status !== "LIVE") {
-                            let closestIcon = L.divIcon({ html: '<div style="width:12px;height:12px;background:#ffde59;border:3px solid #121212;border-radius:50%;"></div>', className: '', iconSize: [18, 18], iconAnchor: [9, 9] });
-                            let closestMarker = L.marker([closestPoint.lat, closestPoint.lon], { icon: closestIcon })
-                            .bindTooltip(`CPA: ${Math.round(closestPoint.dist)}km`, { permanent: true, direction: 'top', className: 'closest-tooltip', offset: [0, -10] });
-                            tcLayerGroup.addLayer(closestMarker);
-                        }
-                    }
-
-                    let htmlContent = `<span class="tc-name">${tcName}</span>`;
-                    
-                    if(latestData.lat) {
-                        let distColor = latestData.distToHK <= 50 ? '#121212' : (latestData.distToHK <= 100 ? 'var(--main-purple)' : (latestData.distToHK <= 300 ? 'var(--main-red)' : (latestData.distToHK <= 800 ? 'var(--main-yellow)' : 'var(--main-blue)')));
-                        let distText = latestData.distToHK <= 300 ? '#fff' : 'var(--border-dark)';
-                        
-                        htmlContent += `
-                        <div class="tc-details">
-                            <div style="margin-bottom:8px;"><b>INT</b> <span class="intensity-badge" style="background:${latestData.color};">${latestData.intensity}</span></div>
-                            <div><b>LOC</b> ${latestData.lat}°N, ${latestData.lon}°E</div>
-                            <div><b>DST</b> <span style="background:${distColor}; color:${distText}; padding:0 4px; border:2px solid var(--border-dark); box-shadow:2px 2px 0px var(--border-dark); display:inline-block; margin:2px 0;">${Math.round(latestData.distToHK)} km</span></div>
-                            <div><b>WND</b> ${latestData.wind}</div>
-                            <div><b>PRS</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
-                            
-                            <div class="closest-box">
-                                <div><b>CPA</b> ${Math.round(closestPoint.dist)} km <span style="font-size:10px;">[${closestPoint.status}]</span></div>
-                                <div style="font-size:11px; margin-top:4px;">T: ${closestPoint.time}</div>
-                            </div>
-                            
-                            <div style="margin-top: 15px; font-size:10px; text-align:right; border-top:var(--border-thin); padding-top:5px;">UPD: ${latestData.time}</div>
-                        </div>`;
-                    }
+                if(latestData.lat) {
+                    let distColor = latestData.distToHK <= 50 ? '#121212' : (latestData.distToHK <= 100 ? 'var(--main-purple)' : (latestData.distToHK <= 300 ? 'var(--main-red)' : (latestData.distToHK <= 800 ? 'var(--main-yellow)' : 'var(--main-blue)')));
+                    let distText = latestData.distToHK <= 300 ? '#fff' : 'var(--border-dark)';
                     
                     htmlContent += `
-                    <div class="legend">
-                        <div style="margin-bottom:10px; font-weight:900;">INTENSITY COLORS:</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-blue);"></span> TS (TROPICAL STORM)</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> STS (SEVERE TROPICAL STORM)</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-orange);"></span> TYPHOON</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> SUPER / SEVERE TYPHOON</div>
+                    <div class="tc-details">
+                        <div style="margin-bottom:8px;"><b>INT</b> <span class="intensity-badge" style="background:${latestData.color};">${latestData.intensity}</span></div>
+                        <div><b>LOC</b> ${latestData.lat}°N, ${latestData.lon}°E</div>
+                        <div><b>DST</b> <span style="background:${distColor}; color:${distText}; padding:0 4px; border:2px solid var(--border-dark); box-shadow:2px 2px 0px var(--border-dark); display:inline-block; margin:2px 0;">${Math.round(latestData.distToHK)} km</span></div>
+                        <div><b>WND</b> ${latestData.wind}</div>
+                        <div><b>PRS</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                         
-                        <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">HK DISTANCE:</div>
-                        <div class="legend-item"><span class="color-box" style="background:#121212;"></span> 50km (IMMINENT)</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-purple);"></span> 100km (CRITICAL)</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> 300km (WARN)</div>
-                        <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> 800km (ALRT)</div>
+                        <div class="closest-box">
+                            <div><b>CPA</b> ${Math.round(closestPoint.dist)} km <span style="font-size:10px;">[${closestPoint.status}]</span></div>
+                            <div style="font-size:11px; margin-top:4px;">T: ${closestPoint.time}</div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; font-size:10px; text-align:right; border-top:var(--border-thin); padding-top:5px;">UPD: ${latestData.time}</div>
                     </div>`;
-
-                    tcDataContainer.innerHTML = htmlContent;
-                    
-                    if (isFirstLoad) {
-                        let allLatLngs = pathData.map(p => [p.lat, p.lon]);
-                        let bounds = L.latLngBounds(allLatLngs);
-                        bounds.extend(HKO_COORDS);
-                        map.fitBounds(bounds, { padding: [50, 50] }); 
-                        isFirstLoad = false;
-                    }
-                    
-                } else {
-                    tcDataContainer.innerHTML = "<div style='background:#ff3131; color:#fff; padding:10px; border:3px solid #121212; font-weight:900;'>PARSE ERROR</div>";
                 }
+                
+                htmlContent += `
+                <div class="legend">
+                    <div style="margin-bottom:10px; font-weight:900;">TRACK SOURCES:</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#121212;"></div> HKO FORECAST</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--main-purple);"></div> NCDR (TAIWAN) FORECAST</div>
+                    
+                    <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">INTENSITY COLORS:</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-blue);"></span> TS (TROPICAL STORM)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> STS (SEVERE TROPICAL STORM)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-orange);"></span> TYPHOON</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> SUPER / SEVERE TYPHOON</div>
+                    
+                    <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">HK DISTANCE:</div>
+                    <div class="legend-item"><span class="color-box" style="background:#121212;"></span> 50km (IMMINENT)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-purple);"></span> 100km (CRITICAL)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> 300km (WARN)</div>
+                    <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> 800km (ALRT)</div>
+                </div>`;
+
+                tcDataContainer.innerHTML = htmlContent;
+                
+                if (isFirstLoad && allMapBoundsLatLngs.length > 0) {
+                    let bounds = L.latLngBounds(allMapBoundsLatLngs);
+                    bounds.extend(HKO_COORDS);
+                    map.fitBounds(bounds, { padding: [50, 50] }); 
+                    isFirstLoad = false;
+                }
+                
             } catch (err) {
                 tcDataContainer.innerHTML = `<div style='background:#ffde59; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYS FAIL: ${err.message}</div>`;
             }
