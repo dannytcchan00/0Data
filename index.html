@@ -57,7 +57,7 @@
 
         .ptr-indicator { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; color: #111; font-weight: 900; font-size: 0.95rem; z-index: 1000; text-shadow: 1px 1px 0px #fff; }
 
-        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; position: relative; z-index: 2; padding-bottom: 60px; }
+        .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; padding: 20px; flex: 1; overflow: hidden; position: relative; z-index: 2; padding-bottom: 60px; /* 預留底部選單空間 */ }
         
         /* 核心組件：粗邊框、無圓角、硬陰影 */
         .panel, .station-card, .bus-card, .modal-content, .alert-box, .lang-btn, .search-engine-box, .forecast-item, .detail-header-card, .bus-dir-btn, .station-pill, .modal-btn, .btn-back, .bm-delete, .stop-num {
@@ -176,7 +176,7 @@
         
         .no-service { grid-column: 1 / -1; text-align: center; color: #111; font-weight: bold; padding: 40px; font-size: 1.05rem; line-height: 1.6; border: 3px dashed #111; background: #fff;}
 
-        /* Modals */
+        /* Modals (已將 z-index 調整為 10005，確保浮於 Menu Bar 頂層) */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
             background: rgba(255, 255, 255, 0.9); 
@@ -355,8 +355,6 @@
     </style>
 </head>
 <body>
-    <link rel="manifest" id="manifest-link">
-
     <div id="loading-overlay">
         <div class="loading-title" id="t-sys-ready">🚌 系統準備中</div>
         <div class="progress-container"><div id="progress-bar"></div></div>
@@ -450,7 +448,7 @@
                 <div class="modal-count"><span id="bus-select-count">0</span> / 60</div>
             </div>
             <div class="modal-body">
-                <!-- 將搜尋介面放喺最頂 -->
+                <!-- 搜尋介面 -->
                 <div id="bus-search-interface" style="margin-bottom: 20px; border-bottom: 3px solid #111; padding-bottom: 10px;">
                     <div class="search-engine-box">
                         <h4 style="color:#ff3333;" id="t-sch-kmb">🔴 搜尋路線 (九巴)</h4>
@@ -478,7 +476,7 @@
                 
                 <div id="bus-search-results" style="display: none; margin-bottom: 20px; border-bottom: 3px solid #111; padding-bottom: 10px;"></div>
                 
-                <!-- 已選清單放喺下方 -->
+                <!-- 已選清單 -->
                 <div id="bus-manager-area" class="bus-manager-list"></div>
             </div>
             <div class="modal-footer"><button class="modal-btn btn-save" onclick="closeBusModal()" id="t-save-2">完成設定</button></div>
@@ -925,29 +923,40 @@
                 });
                 document.getElementById('mtr-dynamic-grid').innerHTML = mtrHtml;
 
-                let busHtml = '';
+                // =====================================
+                // 🚌 巴士列表重新渲染邏輯 (防 iframe 閃爍)
+                // =====================================
+                const busDataGrid = document.getElementById('bus-data');
+                
+                // 1. 清除舊有嘅巴士卡片，但保留住我哋個「宣傳圖 iframe」
+                const oldCards = busDataGrid.querySelectorAll('.bus-card:not(#promo-card-fixed), .no-service');
+                oldCards.forEach(c => c.remove());
+                
+                // 2. 檢查宣傳圖 iframe 存唔存在，冇就即刻建立 (只會建立一次)
+                let promoCard = document.getElementById('promo-card-fixed');
+                if (!promoCard) {
+                    promoCard = document.createElement('div');
+                    promoCard.id = 'promo-card-fixed';
+                    promoCard.className = 'bus-card';
+                    promoCard.style.cssText = 'padding:0; overflow:hidden; order: 1; min-height: 110px; display: flex; align-items: center; justify-content: center; background: #fff;';
+                    promoCard.innerHTML = '<div style="position:absolute; z-index:1; font-weight:bold; color:#ccc; font-size:0.8rem;">Promo</div><iframe src="AD/bus-promo.html" style="position:relative; z-index:2; width:100%; height:100%; border:none; display:block;"></iframe>';
+                    busDataGrid.appendChild(promoCard);
+                }
+
+                // 3. 處理巴士數據注入
                 if (transportTimestamps.bus.length === 0) {
                     let msg = myBuses.length === 0 ? (currentLang==='en'?'📭 No tracking set. Go to ⚙️ to add.':'📭 尚未設定任何追蹤，請到⚙️加入') : (currentLang==='en'?'⏳ Loading Bus ETAs...':'⏳ 正在讀取巴士實時班次...');
-                    busHtml = `<div class="no-service">${msg}</div>`;
+                    let noSvc = document.createElement('div');
+                    noSvc.className = 'no-service';
+                    noSvc.style.order = '0';
+                    noSvc.innerHTML = msg;
+                    busDataGrid.appendChild(noSvc);
                 } else {
-                    let promoInserted = false;
-                    
                     transportTimestamps.bus.forEach((b, index) => {
-                        
-                        /* 【新功能】自訂圖片穿插邏輯 */
-                        /* 在第 2 架巴士 (index 1) 後面穿插一個自訂 iframe 宣傳卡片 */
-                        if (index === 1 && !promoInserted) {
-                            busHtml += `
-                                <div class="bus-card" style="padding:0; overflow:hidden;">
-                                    <iframe src="AD/bus-promo.html" style="width:100%; height:100%; min-height:110px; border:none; display:block;"></iframe>
-                                </div>`;
-                            promoInserted = true;
-                        }
-
                         let etaInfo = parseRemaining(b.localTarget, 'bus'); 
                         let colorClass = ''; let pulseClass = '';
                         if (etaInfo.status === 'departing') { colorClass = 'departing-text'; }
-                        else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; }
+                        else if (etaInfo.status === 'arriving') { colorClass = 'arriving-text'; pulseClass = 'arriving-pulse'; }
 
                         let renderDest = currentLang === 'en' ? (b.dest_en||b.dest_tc||b.dest||'') : (b.dest_tc||b.dest||'');
                         let renderStop = currentLang === 'en' ? (b.stopName_en||b.stopName_tc||b.stopName||'') : (b.stopName_tc||b.stopName||'');
@@ -957,26 +966,25 @@
                         let planeIcon = (renderDest.includes('機場') || renderDest.toUpperCase().includes('AIRPORT')) ? '✈️ ' : '';
                         let busNoDisplay = `${moonIcon}${planeIcon}${safeNo}`;
 
-                        busHtml += `
-                            <div class="bus-card ${b.co} ${pulseClass}" onclick="openBusDetail('${b.co}', '${safeNo}', '${b.dest_tc||''}', '${b.stop}', '${b.dir||''}', '${b.service_type || '1'}')">
-                                <div>
-                                    <div class="bus-no">${busNoDisplay}</div>
-                                    <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
-                                    <div style="font-size:0.75rem; color:var(--text-main); opacity:0.8; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
-                                </div>
-                                <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
-                            </div>`;
+                        let card = document.createElement('div');
+                        card.className = `bus-card ${b.co} ${pulseClass}`;
+                        
+                        // 利用 CSS Grid 嘅 order 功能，令張 Promo 圖永遠攝喺 index 0 (第1架車) 同埋 index 1 (第2架車) 中間
+                        card.style.order = index === 0 ? 0 : index + 1; 
+                        
+                        card.onclick = () => openBusDetail(b.co, safeNo, b.dest_tc||'', b.stop, b.dir||'', b.service_type || '1');
+                        
+                        card.innerHTML = `
+                            <div>
+                                <div class="bus-no">${busNoDisplay}</div>
+                                <div class="bus-dest">${dict['txt-to']}${renderDest}</div>
+                                <div style="font-size:0.75rem; color:var(--text-main); opacity:0.8; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@ ${renderStop}</div>
+                            </div>
+                            <div class="bus-eta ${colorClass}">${etaInfo.text}</div>
+                        `;
+                        busDataGrid.appendChild(card);
                     });
-
-                    /* 如果巴士路線太少（得 1 架），就將宣傳卡片放喺最尾 */
-                    if (!promoInserted && transportTimestamps.bus.length > 0) {
-                        busHtml += `
-                            <div class="bus-card" style="padding:0; overflow:hidden;">
-                                <iframe src="AD/bus-promo.html" style="width:100%; height:100%; min-height:110px; border:none; display:block;"></iframe>
-                            </div>`;
-                    }
                 }
-                document.getElementById('bus-data').innerHTML = busHtml;
             } catch (e) { console.warn("RenderUI Safe Catch:", e); }
         }
 
