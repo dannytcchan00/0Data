@@ -1,60 +1,53 @@
-name: Fetch Typhoon XML
+name: Fetch Typhoon XML and KML
 
 on:
   schedule:
-    # 這裡改成 */10 代表每 10 分鐘執行一次
-    - cron: '*/10 * * * *' 
-  workflow_dispatch: # 允許手動觸發
+    - cron: '*/10 * * * *' # 每 10 分鐘執行一次
+  workflow_dispatch: 
 
 jobs:
   fetch_xml:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 允許 GitHub Action 寫入你的 Repo
+      contents: write 
       
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch and Parse XML
+      - name: Fetch and Parse Weather Data
         run: |
           mkdir -p data
           
-          # 1. 下載目錄清單 (加入 -L 防止天文台轉址)
+          # 1. 處理香港天文台 (HKO) 資料
           curl -sL "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
-          
-          # 2. 暴力提取清單內的 .xml 檔名或網址
           RAW_PATH=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' | head -n 1 || echo "")
           
           if [ ! -z "$RAW_PATH" ]; then
-            echo "成功提取到路徑: $RAW_PATH"
-            
-            # 3. 判斷是否為完整網址，如果不是則補上天文台前綴
             if [[ "$RAW_PATH" == http* ]]; then
               DOWNLOAD_URL="$RAW_PATH"
             else
               DOWNLOAD_URL="https://www.weather.gov.hk/wxinfo/currwx/$RAW_PATH"
             fi
-            
-            echo "即將下載網址: $DOWNLOAD_URL"
-            
-            # 4. 強制儲存為統一檔名 current_typhoon.xml
             curl -sL "$DOWNLOAD_URL" -o "data/current_typhoon.xml"
-            echo "✅ 已成功儲存為 data/current_typhoon.xml"
+            echo "✅ 已成功儲存 HKO 颱風數據"
           else
-            echo "目前沒有發現活躍的颱風資料。"
-            # 如果沒有颱風，自動刪除舊檔案
+            echo "目前沒有發現 HKO 活躍的颱風資料。"
             rm -f data/current_typhoon.xml
           fi
 
-      - name: Commit and Push changes (Force Update)
+          # 2. 【新增】處理台灣災害防救科技中心 (NCDR) KML 資料
+          echo "⬇️ 正在下載台灣 NCDR KML..."
+          curl -sL "https://dwfile.ncdr.nat.gov.tw/opendata/NSTC/TYRoute/TYRoute.kml" -o "data/ncdr_typhoon.kml"
+          echo "✅ 已成功儲存 NCDR 颱風數據"
+
+      - name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
           git add data/
           
-          # 使用 --allow-empty 允許強制 Commit，就算檔案沒有改變也會強行推上 GitHub
-          git commit --allow-empty -m "Auto update typhoon data: $(date +'%Y-%m-%d %H:%M')"
+          git commit --allow-empty -m "Auto update HKO & NCDR typhoon data: $(date +'%Y-%m-%d %H:%M')"
           git push
           echo "✅ 已強制推送到 GitHub，確保快取刷新！"
