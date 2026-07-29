@@ -120,19 +120,17 @@
         }
 
         /* ============================
-           動畫區：設定為逆時針旋轉
+           動畫區：逆時針旋轉
            ============================ */
         @keyframes spin-ccw { 
             from { transform: rotate(0deg); } 
-            to { transform: rotate(-360deg); } /* 負數度數代表逆時針 */
+            to { transform: rotate(-360deg); } 
         }
         @keyframes brutalBounce { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -3px); } }
         
         .typhoon-emoji {
             font-size: 50px; display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%; 
-            animation: spin-ccw 1.5s linear infinite; /* 套用逆時針旋轉 */
-            filter: drop-shadow(4px 4px 0px var(--border-dark)); 
+            width: 100%; height: 100%; animation: spin-ccw 1.5s linear infinite; filter: drop-shadow(4px 4px 0px var(--border-dark)); 
         }
         .typhoon-bounce { width: 100%; height: 100%; animation: brutalBounce 0.5s steps(2) infinite; }
 
@@ -147,7 +145,6 @@
         #update-progress-bar { height: 100%; width: 0%; background: var(--main-blue); transition: width 1s linear; }
         .refresh-text { font-size: 11px; font-weight: 700; color: var(--border-dark); text-align: right; margin-top: 5px; text-transform: uppercase; }
         
-        /* 隱藏 Leaflet 預設 Icon 邊框 */
         .agency-label-icon { background: transparent; border: none; }
     </style>
 </head>
@@ -173,7 +170,6 @@
             this.innerText = infoBox.classList.contains('collapsed') ? 'O' : 'X';
         });
 
-        // 颱風強度顏色判定
         function getIntensityColor(intensityStr) {
             let s = intensityStr.toLowerCase();
             if (s.includes('low pressure') || s.includes('tropical depression')) return 'var(--main-green)';
@@ -194,15 +190,12 @@
             return '#121212';
         }
 
-        // ==========================================
-        // 定義各國氣象機構的專屬 Neo-Brutalism 顏色
-        // ==========================================
         const agencyConfig = {
-            'JTWC': { color: '#00e5ff', name: 'USA (JTWC)' },     // 美國：螢光青
-            'JMA':  { color: '#ff00ff', name: 'JAPAN (JMA)' },    // 日本：螢光洋紅
-            'NMC':  { color: '#9d00ff', name: 'CHINA (NMC)' },    // 中國：螢光紫
-            'CWA':  { color: '#ff8c00', name: 'TAIWAN (CWA)' },   // 台灣：亮橘色
-            'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     // 韓國：螢光青綠
+            'JTWC': { color: '#00e5ff', name: 'USA (JTWC)' },     
+            'JMA':  { color: '#ff00ff', name: 'JAPAN (JMA)' },    
+            'NMC':  { color: '#9d00ff', name: 'CHINA (NMC)' },    
+            'CWA':  { color: '#ff8c00', name: 'TAIWAN (CWA)' },   
+            'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     
         };
 
         const HKO_COORDS = [22.3023, 114.1741];
@@ -212,14 +205,12 @@
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        // 繪製距離圈 (50, 100, 300, 800, 1200)
         L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
         L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
-        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); // Critical
-        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); // Imminent
+        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
+        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
 
-        // 皇家香港天文台標記
         let hkoIcon = L.divIcon({ 
             html: '<div style="width:14px;height:14px;background:#121212;border:2px solid #fff;box-shadow:3px 3px 0px #121212;"></div>', 
             className: '', iconSize: [18, 18], iconAnchor: [9, 9] 
@@ -235,13 +226,11 @@
 
         async function loadTyphoonData() {
             try {
-                // 資料來源網址
                 const hkoUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
                 const ncdrUrl = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
                 
                 let cacheBuster = '?t=' + new Date().getTime();
                 
-                // 並行抓取兩份資料
                 let [hkoRes, ncdrRes] = await Promise.all([
                     fetch(hkoUrl + cacheBuster, { cache: "no-store" }).catch(() => null),
                     fetch(ncdrUrl + cacheBuster, { cache: "no-store" }).catch(() => null)
@@ -249,19 +238,18 @@
                 
                 tcLayerGroup.clearLayers();
                 let allMapBoundsLatLngs = []; 
-                let tcName = "UNNAMED SYSTEM"; // 預設名稱防呆機制
+                let tcName = "UNNAMED SYSTEM"; 
                 let latestData = {};
                 let closestPoint = null;
                 let minDistance = Infinity;
 
                 // ==========================================
-                // 1. 處理 HKO XML 資料 (香港天文台)
+                // 1. 處理 HKO XML 資料 
                 // ==========================================
                 if (hkoRes && hkoRes.ok) {
                     let tcXmlStr = await hkoRes.text();
                     let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
                     
-                    // 智慧名稱判斷：如果名字是空的，自動改用 UNNAMED SYSTEM
                     let nameNodes = data.querySelectorAll('TropicalCycloneName');
                     if (nameNodes.length > 0 && nameNodes[0].textContent.trim() !== "") {
                         tcName = nameNodes[0].textContent.trim();
@@ -312,14 +300,12 @@
                                 pathData.push({ lat: lat, lon: lon, colorHex: pointColorHex, isPast: isPast });
                                 let marker;
                                 
-                                // ==== 過去點 ====
                                 if(parentNode.tagName === 'PastInformation') {
                                     if (isLowPressure) marker = L.marker([lat, lon], { icon: lIcon });
                                     else marker = L.circleMarker([lat, lon], { radius: 6, fillColor: pointColorHex, color: '#121212', weight: 3, fillOpacity: 1 });
                                     marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
-                                // ==== 最新點 (加入逆時針旋轉 🌀) ====
                                 else if(parentNode.tagName === 'AnalysisInformation') {
                                     latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
                                     
@@ -331,7 +317,6 @@
                                         let circCircle = L.circle([lat, lon], { radius: circulationRadius, color: '#121212', weight: 3, fillColor: '#38b6ff', fillOpacity: 0.3, dashArray: '15, 15' });
                                         tcLayerGroup.addLayer(circCircle);
 
-                                        // 這裡就是生成 🌀 的地方，由於前面 CSS 已經改為逆時針 (spin-ccw)，這裡會自動變逆時針旋轉
                                         let spinIcon = L.divIcon({ html: '<div class="typhoon-bounce"><div class="typhoon-emoji">🌀</div></div>', className: '', iconSize: [60, 60], iconAnchor: [30, 30] });
                                         marker = L.marker([lat, lon], { icon: spinIcon });
                                         marker.bindTooltip(`<div style="background:${latestData.color}; margin:-8px -12px; padding:4px 8px; border-bottom:2px solid #121212; text-transform:uppercase;"><b>[ ${tcName} ]</b></div><br>INT: ${intensityText}<br>WND: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
@@ -339,7 +324,6 @@
                                     marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO LIVE</div><div>T: ${timeText}</div><div>LOC: ${lat}, ${lon}</div><div>D: ${Math.round(distToHK)}km</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
-                                // ==== 預測點 ====
                                 else if (parentNode.tagName === 'ForecastInformation') {
                                     forecastStepCounter++;
                                     if (isLowPressure) {
@@ -358,7 +342,6 @@
                             }
                         }
                         
-                        // 畫連線 (因應強度變色)
                         for (let i = 0; i < pathData.length - 1; i++) {
                             let p1 = pathData[i]; let p2 = pathData[i+1];
                             let lineColor = p2.colorHex; 
@@ -370,7 +353,6 @@
                             }
                         }
                         
-                        // 畫最接近點的引導線
                         if (closestPoint) {
                             let dashLine = L.polyline([HKO_COORDS, [closestPoint.lat, closestPoint.lon]], { color: '#121212', weight: 3, dashArray: '5, 5', opacity: 1 });
                             tcLayerGroup.addLayer(dashLine);
@@ -384,7 +366,7 @@
                 }
 
                 // ==========================================
-                // 2. 處理多國 KML 資料 (美國、日本、中國、台灣、韓國)
+                // 2. 處理多國 KML 資料 (加入台灣 CWA 🌀 效果)
                 // ==========================================
                 if (ncdrRes && ncdrRes.ok) {
                     let kmlText = await ncdrRes.text();
@@ -395,13 +377,15 @@
                     folders.forEach(folder => {
                         let agencyNameRaw = folder.querySelector("name") ? folder.querySelector("name").textContent.trim() : "UNKNOWN";
                         
-                        // 根據字典檔尋找各國顏色
                         let agencyDetails = agencyConfig[agencyNameRaw] || { color: '#000000', name: agencyNameRaw };
                         let agencyColor = agencyDetails.color;
                         let agencyFullName = agencyDetails.name;
                         
                         let placemarks = folder.querySelectorAll("Placemark");
                         let agencyLatLngs = []; 
+                        
+                        // 用來計算這是該機構的第幾個點 (0 = 最新位置)
+                        let pointIndex = 0; 
 
                         placemarks.forEach(pm => {
                             let lineString = pm.querySelector("LineString coordinates");
@@ -415,7 +399,6 @@
                                 if (latlngs.length > 0) {
                                     allMapBoundsLatLngs.push(...latlngs);
                                     agencyLatLngs = latlngs; 
-                                    // 畫專屬國家顏色的路線
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
                                     tcLayerGroup.addLayer(L.polyline(latlngs, {color: agencyColor, weight: 3, opacity: 1, dashArray: '6, 6'}));
                                 }
@@ -428,15 +411,29 @@
                                     let lat = parseFloat(pts[1]); let lon = parseFloat(pts[0]);
                                     let name = pm.querySelector("name") ? pm.querySelector("name").textContent : `${agencyNameRaw} Point`;
                                     
-                                    let markerIcon = L.divIcon({ html: `<div style="width:8px;height:8px;background:${agencyColor};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [12, 12], iconAnchor: [6, 6] });
+                                    let markerIcon;
+                                    
+                                    // 【核心修改】判斷是否為台灣 CWA，且是路徑的第一點（最新位置）
+                                    if (agencyNameRaw === 'CWA' && pointIndex === 0) {
+                                        markerIcon = L.divIcon({ 
+                                            // 尺寸縮小為 40px，並將陰影改為 CWA 的亮橘色
+                                            html: `<div class="typhoon-bounce"><div class="typhoon-emoji" style="font-size:40px; filter: drop-shadow(3px 3px 0px ${agencyColor});">🌀</div></div>`, 
+                                            className: '', iconSize: [46, 46], iconAnchor: [23, 23] 
+                                        });
+                                    } else {
+                                        // 其他普通點
+                                        markerIcon = L.divIcon({ html: `<div style="width:8px;height:8px;background:${agencyColor};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [12, 12], iconAnchor: [6, 6] });
+                                    }
+                                    
                                     let marker = L.marker([lat, lon], { icon: markerIcon });
                                     marker.bindPopup(`<div class="popup-title" style="background:${agencyColor}; color:#121212;">${agencyFullName}</div><div>${name}</div>`);
                                     tcLayerGroup.addLayer(marker);
+                                    
+                                    pointIndex++; // 增加點數計數器
                                 }
                             }
                         });
 
-                        // 在路徑最後加上該國機構標籤
                         if (agencyLatLngs.length > 0) {
                             let lastPoint = agencyLatLngs[agencyLatLngs.length - 1];
                             let labelIcon = L.divIcon({
@@ -450,9 +447,6 @@
                     });
                 }
 
-                // ==========================================
-                // 更新左方 UI 面板
-                // ==========================================
                 if (!latestData.lat && allMapBoundsLatLngs.length === 0) {
                     tcDataContainer.innerHTML = "<div style='background:#00bf63; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYSTEM NORMAL. NO ACTIVE THREATS.</div>";
                     return;
@@ -509,7 +503,6 @@
 
                 tcDataContainer.innerHTML = htmlContent;
                 
-                // 自動置中到地圖範圍
                 if (isFirstLoad && allMapBoundsLatLngs.length > 0) {
                     let bounds = L.latLngBounds(allMapBoundsLatLngs);
                     bounds.extend(HKO_COORDS);
@@ -522,9 +515,6 @@
             }
         }
         
-        // ==========================================
-        // 自動刷新機制 (5分鐘 / 300秒)
-        // ==========================================
         const REFRESH_INTERVAL_SECONDS = 300; 
         let timeLeft = REFRESH_INTERVAL_SECONDS;
         const progressBar = document.getElementById('update-progress-bar');
