@@ -2,7 +2,7 @@ name: Fetch Typhoon XML and KML
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 每 10 分鐘執行一次
+    - cron: '*/10 * * * *' 
   workflow_dispatch: 
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
         run: |
           mkdir -p data
           
-          # 1. 處理香港天文台 (HKO) 資料
+          # 1. HKO Data (Hong Kong Observatory)
           curl -sL "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
           RAW_PATH=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' | head -n 1 || echo "")
           
@@ -30,16 +30,16 @@ jobs:
               DOWNLOAD_URL="https://www.weather.gov.hk/wxinfo/currwx/$RAW_PATH"
             fi
             curl -sL "$DOWNLOAD_URL" -o "data/current_typhoon.xml"
-            echo "✅ 已成功儲存 HKO 颱風數據"
+            echo "✅ Successfully saved HKO typhoon data."
           else
-            echo "目前沒有發現 HKO 活躍的颱風資料。"
+            echo "No active HKO typhoon data found."
             rm -f data/current_typhoon.xml
           fi
 
-          # 2. 【新增】處理台灣災害防救科技中心 (NCDR) KML 資料
-          echo "⬇️ 正在下載台灣 NCDR KML..."
+          # 2. NCDR KML Data (Taiwan)
+          echo "⬇️ Downloading Taiwan NCDR KML..."
           curl -sL "https://dwfile.ncdr.nat.gov.tw/opendata/NSTC/TYRoute/TYRoute.kml" -o "data/ncdr_typhoon.kml"
-          echo "✅ 已成功儲存 NCDR 颱風數據"
+          echo "✅ Successfully saved NCDR typhoon data."
 
       - name: Commit and Push changes
         run: |
@@ -48,6 +48,7 @@ jobs:
           
           git add data/
           
+          # Force commit even if unchanged
           git commit --allow-empty -m "Auto update HKO & NCDR typhoon data: $(date +'%Y-%m-%d %H:%M')"
           git push
-          echo "✅ 已強制推送到 GitHub，確保快取刷新！"
+          echo "✅ Force push to GitHub complete, cache refreshed."
