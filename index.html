@@ -176,7 +176,7 @@
         
         .no-service { grid-column: 1 / -1; text-align: center; color: #111; font-weight: bold; padding: 40px; font-size: 1.05rem; line-height: 1.6; border: 3px dashed #111; background: #fff;}
 
-        /* Modals */
+        /* Modals (已將 z-index 調整為 10005，確保浮於 Menu Bar 頂層) */
         .modal-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; 
             background: rgba(255, 255, 255, 0.9); 
@@ -257,9 +257,6 @@
         .bus-stop-item input[type="checkbox"] { transform: scale(1.6); cursor: pointer; accent-color: #111; border: 2px solid #111;}
         
         .multi-add-bar { position: sticky; bottom: -20px; background: #fff; padding: 15px 20px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: none; border-left: none; border-right: none; }
-        
-        .install-btn { position: fixed; bottom: 20px; right: 20px; background: var(--accent-green); color: #fff; padding: 12px 20px; font-size: 1.05rem; font-weight: 900; cursor: pointer; z-index: 9000; display: none; align-items: center; gap: 8px; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 0; text-transform: uppercase; transition: transform 0.1s, box-shadow 0.1s;}
-        .install-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px 0px #111; }
 
         /* 底部自動伸縮 Menu Bar 設計 */
         .bottom-menu-container {
@@ -353,7 +350,7 @@
             .bus-section { min-height: 400px; flex: none; }
             
             .bottom-menu-items { flex-wrap: wrap; }
-            .bottom-menu-items a { flex: 1 1 calc(33.333% - 8px); min-width: 0; font-size: 0.75rem; padding: 8px 4px;}
+            .bottom-menu-items a { flex: 1 1 calc(33.333% - 8px); min-width: 0; font-size: 0.8rem; padding: 8px 4px;}
         }
     </style>
 </head>
@@ -367,7 +364,6 @@
         <div id="progress-detail">正在連接數據庫...</div>
     </div>
 
-    <button id="install-btn" class="install-btn" onclick="installWebApp()"><span>📲</span> <span id="t-add-home">加至桌面</span></button>
     <div id="ptr-indicator" class="ptr-indicator">⬇️ <span id="t-pull">下拉以更新數據</span></div>
 
     <iframe id="app-iframe" style="display: none;"></iframe>
@@ -594,7 +590,7 @@
         const i18n = {
             'zh': {
                 'connecting': '正在連接數據庫...',
-                'sys-ready': '🚌 系統準備中', 'add-home': '加至桌面', 'pull': '下拉以更新數據',
+                'sys-ready': '🚌 系統準備中', 'pull': '下拉以更新數據',
                 'hum': '相對濕度', 'uv': 'UV指數', 'rain': '降雨概率', 'max': '今日最高', 'min': '今日最低',
                 'mtr-title': '🚇 下一班列車 Train Frequency', 'bus-title': '🚌 巴士到站時間 Bus Frequency',
                 'sel-mtr': '選擇地鐵站', 'cancel-1': '取消', 'save-1': '儲存',
@@ -613,7 +609,7 @@
             },
             'en': {
                 'connecting': 'Connecting to DB...',
-                'sys-ready': '🚌 System Readying', 'add-home': 'Add to Home', 'pull': 'Pull to refresh',
+                'sys-ready': '🚌 System Readying', 'pull': 'Pull to refresh',
                 'hum': 'Humidity', 'uv': 'UV Index', 'rain': 'Rain Prob.', 'max': 'Max Temp', 'min': 'Min Temp',
                 'mtr-title': '🚇 MTR Train Frequency', 'bus-title': '🚌 Bus ETA',
                 'sel-mtr': 'Select Stations', 'cancel-1': 'Cancel', 'save-1': 'Save',
@@ -637,7 +633,6 @@
                 const dict = i18n[currentLang];
                 document.getElementById('t-sys-ready').innerText = dict['sys-ready'];
                 document.getElementById('progress-detail').innerText = dict['connecting']; 
-                document.getElementById('t-add-home').innerText = dict['add-home'];
                 document.getElementById('t-pull').innerText = dict['pull'];
                 document.getElementById('t-hum').innerText = dict['hum'];
                 document.getElementById('t-uv').innerText = dict['uv'];
@@ -753,17 +748,6 @@
             } else { ptrMainContent.style.transform = `translateY(0)`; ptrIndicator.style.transform = `translateY(0)`; }
             ptrStartY = 0; ptrCurrentY = 0;
         });
-
-        let deferredPrompt; 
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-btn').style.display = 'flex'; });
-        const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-        const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
-        if (isIos && !isStandalone) { document.getElementById('install-btn').style.display = 'flex'; }
-
-        function installWebApp() { 
-            if (isIos && !isStandalone) { alert(currentLang==='en'?"🍎 iPhone / iPad users please click the 'Share' button [↑] at the bottom and select 'Add to Home Screen ➕'!" : "🍎 iPhone / iPad 用家請點擊瀏覽器底部的「分享」按鈕 [↑] ➔ 選擇「加入主畫面 ➕」即可安裝成獨立 App！"); } 
-            else if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => deferredPrompt = null); } 
-        }
 
         const CUSTOM_WARNING_CONFIG = {
             'WFIREY': { emoji: '🟡🔥', name_zh: '黃色火災危險警告', name_en: 'Yellow Fire Danger Warning' },
