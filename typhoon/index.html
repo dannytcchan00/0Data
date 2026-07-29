@@ -189,8 +189,10 @@
         }
 
         // ==========================================
-        // 定義四大重點城市/氣象廳座標與顏色
+        // 定義全局變數與座標
         // ==========================================
+        const HKO_COORDS = [22.3023, 114.1741]; // 修復：重新定義全局 HKO 座標
+
         const REGIONS = {
             'HKO': { name: 'HONG KONG (HKO)', lat: 22.3023, lon: 114.1741, color: '#ff3131' },
             'CWA': { name: 'TAIWAN (CWA)', lat: 25.0375, lon: 121.5173, color: '#ff8c00' },
@@ -206,19 +208,18 @@
             'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     
         };
 
-        var map = L.map('map').setView([REGIONS['HKO'].lat, REGIONS['HKO'].lon], 5);
+        var map = L.map('map').setView(HKO_COORDS, 5);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
             attribution: '© OpenStreetMap & CartoDB', maxZoom: 18 
         }).addTo(map);
 
-        // 只在香港畫距離圈
-        let hkoCoords = [REGIONS['HKO'].lat, REGIONS['HKO'].lon];
-        L.circle(hkoCoords, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
-        L.circle(hkoCoords, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
-        L.circle(hkoCoords, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
-        L.circle(hkoCoords, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
-        L.circle(hkoCoords, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
+        // 畫香港專屬距離圈
+        L.circle(HKO_COORDS, { radius: 1200000, color: '#121212', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
+        L.circle(HKO_COORDS, { radius: 800000, color: '#121212', weight: 2, fillColor: '#ffde59', fillOpacity: 0.1, dashArray: '10, 10' }).addTo(map);
+        L.circle(HKO_COORDS, { radius: 300000, color: '#121212', weight: 3, fillColor: '#ff3131', fillOpacity: 0.15 }).addTo(map);
+        L.circle(HKO_COORDS, { radius: 100000, color: '#121212', weight: 3, fillColor: '#c13584', fillOpacity: 0.25 }).addTo(map); 
+        L.circle(HKO_COORDS, { radius: 50000, color: '#121212', weight: 4, fillColor: '#121212', fillOpacity: 0.4 }).addTo(map); 
 
         // 標示四大氣象廳位置
         for (let key in REGIONS) {
@@ -254,7 +255,6 @@
                 let tcName = "UNNAMED SYSTEM"; 
                 let latestData = {};
                 
-                // 用來計算四大城市的距離
                 let regionStats = {
                     'HKO': { currDist: '--', minDist: Infinity, cpaPoint: null },
                     'CWA': { currDist: '--', minDist: Infinity, cpaPoint: null },
@@ -382,16 +382,13 @@
                         for (let key in REGIONS) {
                             let stats = regionStats[key];
                             if (stats.cpaPoint) {
-                                // 陰影黑線
                                 tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
                                     color: '#121212', weight: 4, dashArray: '5, 5', opacity: 0.5 
                                 }));
-                                // 彩色實線疊加
                                 tcLayerGroup.addLayer(L.polyline([[REGIONS[key].lat, REGIONS[key].lon], [stats.cpaPoint.lat, stats.cpaPoint.lon]], { 
                                     color: REGIONS[key].color, weight: 2, dashArray: '5, 5', opacity: 1 
                                 }));
                                 
-                                // 若最接近點不是現在位置，則標示出來
                                 if (stats.cpaPoint.status !== "LIVE") {
                                     let closestIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:${REGIONS[key].color};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
                                     let closestMarker = L.marker([stats.cpaPoint.lat, stats.cpaPoint.lon], { icon: closestIcon })
@@ -404,7 +401,7 @@
                 }
 
                 // ==========================================
-                // 2. 處理多國 KML 資料 (加入台灣 CWA 🌀 效果)
+                // 2. 處理多國 KML 資料 
                 // ==========================================
                 if (ncdrRes && ncdrRes.ok) {
                     let kmlText = await ncdrRes.text();
@@ -491,7 +488,6 @@
                         <div><b>WND</b> ${latestData.wind}</div>
                         <div><b>PRS</b> ${latestData.pressure !== 'N/A' ? latestData.pressure : '-- hPa'}</div>
                         
-                        <!-- 全新設計的威脅矩陣 (Threat Matrix) -->
                         <div class="threat-matrix">
                             <div class="tm-header">AGENCY THREAT DISTANCE</div>
                             
@@ -500,7 +496,7 @@
                                 <span class="tm-data">NOW: ${regionStats['HKO'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['HKO'].minDist)}km</span>
                             </div>
                             <div class="tm-row">
-                                <span class="tm-label" style="background:var(--main-orange); color:#121212;">CWA</span>
+                                <span class="tm-label" style="background:var(--agency-cwa); color:#121212;">CWA</span>
                                 <span class="tm-data">NOW: ${regionStats['CWA'].currDist}km <span style="color:#aaa;">|</span> CPA: ${Math.round(regionStats['CWA'].minDist)}km</span>
                             </div>
                             <div class="tm-row">
@@ -545,7 +541,6 @@
 
                 tcDataContainer.innerHTML = htmlContent;
                 
-                // 自動置中到地圖範圍
                 if (isFirstLoad && allMapBoundsLatLngs.length > 0) {
                     let bounds = L.latLngBounds(allMapBoundsLatLngs);
                     bounds.extend(HKO_COORDS);
