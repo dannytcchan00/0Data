@@ -119,12 +119,20 @@
             color: var(--border-dark); font-weight: 900; font-size: 12px; border-radius: 0;
         }
 
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* ============================
+           動畫區：設定為逆時針旋轉
+           ============================ */
+        @keyframes spin-ccw { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(-360deg); } /* 負數度數代表逆時針 */
+        }
         @keyframes brutalBounce { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -3px); } }
         
         .typhoon-emoji {
             font-size: 50px; display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%; animation: spin 1.5s linear infinite; filter: drop-shadow(4px 4px 0px var(--border-dark)); 
+            width: 100%; height: 100%; 
+            animation: spin-ccw 1.5s linear infinite; /* 套用逆時針旋轉 */
+            filter: drop-shadow(4px 4px 0px var(--border-dark)); 
         }
         .typhoon-bounce { width: 100%; height: 100%; animation: brutalBounce 0.5s steps(2) infinite; }
 
@@ -253,7 +261,7 @@
                     let tcXmlStr = await hkoRes.text();
                     let data = (new window.DOMParser()).parseFromString(tcXmlStr, "text/xml");
                     
-                    // 【重點更新】智慧名稱判斷：如果名字是空的，自動改用 UNNAMED SYSTEM
+                    // 智慧名稱判斷：如果名字是空的，自動改用 UNNAMED SYSTEM
                     let nameNodes = data.querySelectorAll('TropicalCycloneName');
                     if (nameNodes.length > 0 && nameNodes[0].textContent.trim() !== "") {
                         tcName = nameNodes[0].textContent.trim();
@@ -311,7 +319,7 @@
                                     marker.bindPopup(`<div class="popup-title" style="background:${pointColorHex};">HKO PAST</div><div>INT: ${intensityText}</div><div>T: ${timeText}</div><div>D: ${Math.round(distToHK)}km</div>`);
                                     tcLayerGroup.addLayer(marker);
                                 } 
-                                // ==== 最新點 ====
+                                // ==== 最新點 (加入逆時針旋轉 🌀) ====
                                 else if(parentNode.tagName === 'AnalysisInformation') {
                                     latestData = { lat: lat, lon: lon, time: timeText, intensity: intensityText, wind: windText, pressure: pressureText, distToHK: distToHK, color: getIntensityColor(intensityText) };
                                     
@@ -323,6 +331,7 @@
                                         let circCircle = L.circle([lat, lon], { radius: circulationRadius, color: '#121212', weight: 3, fillColor: '#38b6ff', fillOpacity: 0.3, dashArray: '15, 15' });
                                         tcLayerGroup.addLayer(circCircle);
 
+                                        // 這裡就是生成 🌀 的地方，由於前面 CSS 已經改為逆時針 (spin-ccw)，這裡會自動變逆時針旋轉
                                         let spinIcon = L.divIcon({ html: '<div class="typhoon-bounce"><div class="typhoon-emoji">🌀</div></div>', className: '', iconSize: [60, 60], iconAnchor: [30, 30] });
                                         marker = L.marker([lat, lon], { icon: spinIcon });
                                         marker.bindTooltip(`<div style="background:${latestData.color}; margin:-8px -12px; padding:4px 8px; border-bottom:2px solid #121212; text-transform:uppercase;"><b>[ ${tcName} ]</b></div><br>INT: ${intensityText}<br>WND: ${windText}`, { permanent: true, direction: 'right', className: 'permanent-tooltip', offset: [30, 0] });
