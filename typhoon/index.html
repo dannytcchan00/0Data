@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HKO & NCDR - Neo-Brutalist Cyclone Track</title>
+    <title>HKO & Multi-Agency - Neo-Brutalist Cyclone Track</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Work+Sans:wght@700;900&display=swap" rel="stylesheet">
     
@@ -15,7 +15,6 @@
             --main-red: #ff3131;
             --main-green: #00bf63;
             --main-orange: #ff914d;
-            --main-purple: #c13584; 
             --border-dark: #121212;
             --shadow-solid: 6px 6px 0px var(--border-dark);
             --border-thick: 4px solid var(--border-dark);
@@ -139,6 +138,9 @@
         #update-progress-container { width: 100%; height: 8px; background: #fff; border: var(--border-thin); margin-top: 15px; }
         #update-progress-bar { height: 100%; width: 0%; background: var(--main-blue); transition: width 1s linear; }
         .refresh-text { font-size: 11px; font-weight: 700; color: var(--border-dark); text-align: right; margin-top: 5px; text-transform: uppercase; }
+        
+        /* 隱藏 Leaflet 預設 Icon 邊框 */
+        .agency-label-icon { background: transparent; border: none; }
     </style>
 </head>
 <body>
@@ -163,6 +165,7 @@
             this.innerText = infoBox.classList.contains('collapsed') ? 'O' : 'X';
         });
 
+        // HKO 強度顏色判定
         function getIntensityColor(intensityStr) {
             let s = intensityStr.toLowerCase();
             if (s.includes('low pressure') || s.includes('tropical depression')) return 'var(--main-green)';
@@ -182,6 +185,17 @@
             if (s.includes('typhoon')) return '#ff914d';
             return '#121212';
         }
+
+        // ==========================================
+        // 定義各國氣象機構的專屬 Neo-Brutalism 顏色
+        // ==========================================
+        const agencyConfig = {
+            'JTWC': { color: '#00e5ff', name: 'USA (JTWC)' },     // 美國：螢光青
+            'JMA':  { color: '#ff00ff', name: 'JAPAN (JMA)' },    // 日本：螢光洋紅
+            'NMC':  { color: '#9d00ff', name: 'CHINA (NMC)' },    // 中國：螢光紫
+            'CWA':  { color: '#ff8c00', name: 'TAIWAN (CWA)' },   // 台灣：亮橘色
+            'KMA':  { color: '#ccff00', name: 'KOREA (KMA)' }     // 韓國：螢光青綠
+        };
 
         const HKO_COORDS = [22.3023, 114.1741];
         var map = L.map('map').setView(HKO_COORDS, 5);
@@ -211,7 +225,6 @@
 
         async function loadTyphoonData() {
             try {
-                // HKO and NCDR data URLs pointing to the dashboard repo
                 const hkoUrl = 'https://dannytcchan00.github.io/0Data/data/current_typhoon.xml';
                 const ncdrUrl = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
                 
@@ -230,7 +243,7 @@
                 let minDistance = Infinity;
 
                 // ==========================================
-                // Parse HKO XML Data
+                // 1. 處理 HKO XML 資料 (香港)
                 // ==========================================
                 if (hkoRes && hkoRes.ok) {
                     let tcXmlStr = await hkoRes.text();
@@ -350,45 +363,78 @@
                 }
 
                 // ==========================================
-                // Parse Taiwan NCDR KML Data
+                // 2. 處理多國 KML 資料 (美國、日本、中國、台灣、韓國)
                 // ==========================================
                 if (ncdrRes && ncdrRes.ok) {
                     let kmlText = await ncdrRes.text();
                     let kmlData = new DOMParser().parseFromString(kmlText, "text/xml");
-                    let placemarks = kmlData.querySelectorAll("Placemark");
                     
-                    placemarks.forEach(pm => {
-                        let lineString = pm.querySelector("LineString coordinates");
-                        if (lineString) {
-                            let coords = lineString.textContent.trim().split(/\s+/);
-                            let latlngs = coords.map(c => {
-                                let pts = c.split(',');
-                                return pts.length >= 2 ? [parseFloat(pts[1]), parseFloat(pts[0])] : null;
-                            }).filter(Boolean);
-                            
-                            if (latlngs.length > 0) {
-                                allMapBoundsLatLngs.push(...latlngs);
-                                tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
-                                tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#c13584', weight: 3, opacity: 1, dashArray: '8, 8'}));
-                            }
-                        }
+                    // 根據 Folder 拆解不同國家
+                    let folders = kmlData.querySelectorAll("Folder");
+                    
+                    folders.forEach(folder => {
+                        let agencyNameRaw = folder.querySelector("name") ? folder.querySelector("name").textContent.trim() : "UNKNOWN";
                         
-                        let point = pm.querySelector("Point coordinates");
-                        if (point) {
-                            let pts = point.textContent.trim().split(',');
-                            if (pts.length >= 2) {
-                                let lat = parseFloat(pts[1]); let lon = parseFloat(pts[0]);
-                                let name = pm.querySelector("name") ? pm.querySelector("name").textContent : "NCDR Point";
+                        // 取得對應國家的顏色與全名，如果找不到就用黑色
+                        let agencyDetails = agencyConfig[agencyNameRaw] || { color: '#000000', name: agencyNameRaw };
+                        let agencyColor = agencyDetails.color;
+                        let agencyFullName = agencyDetails.name;
+                        
+                        let placemarks = folder.querySelectorAll("Placemark");
+                        let agencyLatLngs = []; // 儲存該國家的路徑以標示文字
+
+                        placemarks.forEach(pm => {
+                            // 畫各國線條
+                            let lineString = pm.querySelector("LineString coordinates");
+                            if (lineString) {
+                                let coords = lineString.textContent.trim().split(/\s+/);
+                                let latlngs = coords.map(c => {
+                                    let pts = c.split(',');
+                                    return pts.length >= 2 ? [parseFloat(pts[1]), parseFloat(pts[0])] : null;
+                                }).filter(Boolean);
                                 
-                                let markerIcon = L.divIcon({ html: `<div style="width:10px;height:10px;background:#c13584;border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
-                                let marker = L.marker([lat, lon], { icon: markerIcon });
-                                marker.bindPopup(`<div class="popup-title" style="background:#c13584;">NCDR (TAIWAN)</div><div>${name}</div>`);
-                                tcLayerGroup.addLayer(marker);
+                                if (latlngs.length > 0) {
+                                    allMapBoundsLatLngs.push(...latlngs);
+                                    agencyLatLngs = latlngs; // 記錄下來
+                                    // 黑底 + 國家專屬顏色的虛線
+                                    tcLayerGroup.addLayer(L.polyline(latlngs, {color: '#121212', weight: 6, opacity: 1, lineJoin: 'square'}));
+                                    tcLayerGroup.addLayer(L.polyline(latlngs, {color: agencyColor, weight: 3, opacity: 1, dashArray: '6, 6'}));
+                                }
                             }
+                            
+                            // 畫各國節點
+                            let point = pm.querySelector("Point coordinates");
+                            if (point) {
+                                let pts = point.textContent.trim().split(',');
+                                if (pts.length >= 2) {
+                                    let lat = parseFloat(pts[1]); let lon = parseFloat(pts[0]);
+                                    let name = pm.querySelector("name") ? pm.querySelector("name").textContent : `${agencyNameRaw} Point`;
+                                    
+                                    let markerIcon = L.divIcon({ html: `<div style="width:8px;height:8px;background:${agencyColor};border:2px solid #121212;border-radius:50%;"></div>`, className: '', iconSize: [12, 12], iconAnchor: [6, 6] });
+                                    let marker = L.marker([lat, lon], { icon: markerIcon });
+                                    marker.bindPopup(`<div class="popup-title" style="background:${agencyColor}; color:#121212;">${agencyFullName}</div><div>${name}</div>`);
+                                    tcLayerGroup.addLayer(marker);
+                                }
+                            }
+                        });
+
+                        // 在該國預測路徑的「最後一點」加上國家標籤
+                        if (agencyLatLngs.length > 0) {
+                            let lastPoint = agencyLatLngs[agencyLatLngs.length - 1];
+                            let labelIcon = L.divIcon({
+                                className: 'agency-label-icon',
+                                html: `<div style="background:${agencyColor}; color:#121212; border:2px solid #121212; font-family:'Work Sans',sans-serif; font-weight:900; font-size:10px; padding:2px 4px; box-shadow: 2px 2px 0px #121212; white-space:nowrap; margin-top:8px;">[${agencyNameRaw}]</div>`,
+                                iconSize: [null, null],
+                                iconAnchor: [15, 0] // 稍微偏移避免擋住點
+                            });
+                            tcLayerGroup.addLayer(L.marker(lastPoint, { icon: labelIcon, interactive: false }));
                         }
                     });
                 }
 
+                // ==========================================
+                // 更新左方 UI 面板
+                // ==========================================
                 if (!latestData.lat && allMapBoundsLatLngs.length === 0) {
                     tcDataContainer.innerHTML = "<div style='background:#00bf63; color:#121212; padding:10px; border:3px solid #121212; font-weight:900;'>SYSTEM NORMAL. NO ACTIVE THREATS.</div>";
                     return;
@@ -419,20 +465,19 @@
                 
                 htmlContent += `
                 <div class="legend">
-                    <div style="margin-bottom:10px; font-weight:900;">TRACK SOURCES:</div>
+                    <div style="margin-bottom:10px; font-weight:900;">HKO TRACK:</div>
                     <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#121212;"></div> HKO FORECAST</div>
-                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:var(--main-purple);"></div> NCDR (TAIWAN) FORECAST</div>
                     
-                    <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">INTENSITY COLORS:</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-green);"></span> TD / LOW PRESSURE</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-blue);"></span> TS (TROPICAL STORM)</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> STS (SEVERE TROPICAL STORM)</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-orange);"></span> TYPHOON</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> SUPER / SEVERE TYPHOON</div>
+                    <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">MULTI-AGENCY FORECASTS:</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#00e5ff;"></div> USA (JTWC)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ff00ff;"></div> JAPAN (JMA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#9d00ff;"></div> CHINA (NMC)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ff8c00;"></div> TAIWAN (CWA)</div>
+                    <div class="legend-item"><div class="dashed-line" style="border-bottom-color:#ccff00;"></div> KOREA (KMA)</div>
                     
                     <div style="margin-top:15px; margin-bottom:10px; font-weight:900; border-top:var(--border-thin); padding-top:10px;">HK DISTANCE:</div>
                     <div class="legend-item"><span class="color-box" style="background:#121212;"></span> 50km (IMMINENT)</div>
-                    <div class="legend-item"><span class="color-box" style="background:var(--main-purple);"></span> 100km (CRITICAL)</div>
+                    <div class="legend-item"><span class="color-box" style="background:#c13584;"></span> 100km (CRITICAL)</div>
                     <div class="legend-item"><span class="color-box" style="background:var(--main-red);"></span> 300km (WARN)</div>
                     <div class="legend-item"><span class="color-box" style="background:var(--main-yellow);"></span> 800km (ALRT)</div>
                 </div>`;
