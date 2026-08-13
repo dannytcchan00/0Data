@@ -77,10 +77,11 @@
             box-shadow: 2px 2px 0px 0px var(--panel-border);
         }
 
-        .left-col { display: flex; flex-direction: column; gap: 12px; height: 100%; }
-        .integrated-weather-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
-        .integrated-weather-panel::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
-        .integrated-weather-panel::-webkit-scrollbar-thumb { background: #111; }
+        .left-col { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; padding-right: 5px; -webkit-overflow-scrolling: touch; }
+        .left-col::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; }
+        .left-col::-webkit-scrollbar-thumb { background: #111; }
+        
+        .integrated-weather-panel { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; }
         
         .top-info-bar { display: flex; justify-content: flex-start; align-items: center; border-bottom: 3px solid var(--panel-border); padding-bottom: 10px; margin-bottom: 5px; }
         .date-container { display: flex; align-items: center; gap: 8px; }
@@ -1073,12 +1074,13 @@
                             ['UP','DOWN'].forEach(dir => {
                                 let list = json.data[key][dir];
                                 if(list && list.length > 0) {
-                                    let validTrain = list.find(d => {
+                                    let validTrains = list.filter(d => {
                                         if (d.time && d.time !== '-') { return (new Date(d.time.replace(' ','T')+'+08:00').getTime() - apiTime) > -60000; } 
                                         else if (d.ttnt !== undefined && d.ttnt !== '') { return parseInt(d.ttnt) >= 0; }
                                         return false;
                                     });
-                                    if (validTrain) {
+                                    
+                                    validTrains.slice(0, 1).forEach(validTrain => {
                                         let targetTime = null;
                                         if (validTrain.time && validTrain.time !== '-') { targetTime = new Date(Date.now() + (new Date(validTrain.time.replace(' ','T')+'+08:00').getTime() - apiTime)); } 
                                         else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') { targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000); }
@@ -1090,7 +1092,7 @@
                                                 trains.push({ dest: mappedDest, localTarget: targetTime, dir: dir, plat: validTrain.plat || '' });
                                             }
                                         }
-                                    }
+                                    });
                                 }
                             });
                         }
@@ -1457,80 +1459,76 @@
 
         function openMtrDetail(lineCode, currentStaCode) {
             lockBackgroundScroll();
-            const modal = document.getElementById('mtr-detail-modal'); const body = document.getElementById('mtr-detail-body'); modal.classList.add('active');
+            const modal = document.getElementById('mtr-detail-modal'); 
+            const body = document.getElementById('mtr-detail-body'); 
+            modal.classList.add('active');
+            
             const line = MTR_NETWORK[lineCode]; if(!line) return;
 
-            const stationCodes = Object.keys(line.stations); const currentIndex = stationCodes.indexOf(currentStaCode);
             const currentStationName = currentLang === 'en' ? line.stations[currentStaCode].en : line.stations[currentStaCode].zh;
             const lineName = currentLang === 'en' ? line.name_en : line.name_zh;
 
+            const stationCodes = Object.keys(line.stations);
             const upTerminal = currentLang === 'en' ? (line.terminals?.UP.en || line.stations[stationCodes[stationCodes.length - 1]].en) : (line.terminals?.UP.zh || line.stations[stationCodes[stationCodes.length - 1]].zh);
             const downTerminal = currentLang === 'en' ? (line.terminals?.DOWN.en || line.stations[stationCodes[0]].en) : (line.terminals?.DOWN.zh || line.stations[stationCodes[0]].zh);
-
-            let upStopsHtml = ''; let downStopsHtml = ''; let upCount = 1;
-            for(let i = currentIndex + 1; i < stationCodes.length; i++) {
-                let code = stationCodes[i]; let name = currentLang === 'en' ? line.stations[code].en : line.stations[code].zh;
-                upStopsHtml += `
-                <div class="mtr-item" style="padding: 12px 15px; border-bottom: 2px solid #111;">
-                    <div class="mtr-dest-group" style="gap:12px;"><span class="stop-num">${upCount++}</span><span style="color:#111; font-weight:900;">${name}</span></div>
-                    <div class="mtr-eta" id="eta-up-${code}" style="color:var(--text-muted); font-weight:bold;">🔄</div>
-                </div>`;
-            }
-
-            let downCount = 1;
-            for(let i = currentIndex - 1; i >= 0; i--) {
-                let code = stationCodes[i]; let name = currentLang === 'en' ? line.stations[code].en : line.stations[code].zh;
-                downStopsHtml += `
-                <div class="mtr-item" style="padding: 12px 15px; border-bottom: 2px solid #111;">
-                    <div class="mtr-dest-group" style="gap:12px;"><span class="stop-num">${downCount++}</span><span style="color:#111; font-weight:900;">${name}</span></div>
-                    <div class="mtr-eta" id="eta-down-${code}" style="color:var(--text-muted); font-weight:bold;">🔄</div>
-                </div>`;
-            }
 
             let html = `
                 <div class="detail-header-card" style="border-left: 10px solid ${line.color}; text-align:left; padding-left:20px; position:relative; overflow:hidden;">
                     <div class="detail-route-title" style="font-size: 1.8rem; margin:0;">${currentStationName}</div>
                     <div class="detail-route-desc" style="color: ${line.color}; font-size: 1.1rem; margin: 8px 0 12px 0;">${lineName} (${lineCode})</div>
-                    <div><span class="current-stop-badge" style="background:${line.color}; color:#fff; margin:0;">📍 ${currentLang==='en'?'Current Stop':'現在位置'}</span></div>
+                    <div><span class="current-stop-badge" style="background:${line.color}; color:#fff; margin:0;">📍 ${currentLang==='en'?'Station ETAs':'車站到站時間'}</span></div>
                 </div>
             `;
 
-            if (upStopsHtml !== '') {
-                html += `<h4 style="margin: 20px 0 10px 0; color: var(--warning-red); font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;"><span>🔼 ${currentLang==='en'?'Upbound to':'上行方向 (開往'} ${upTerminal}${currentLang==='en'?'':')'}</span><span id="plat-up" class="plat-badge" style="display: none;"></span></h4><div class="detail-stops-container" style="padding:0;">${upStopsHtml}</div>`;
-            }
-            if (downStopsHtml !== '') {
-                html += `<h4 style="margin: 20px 0 10px 0; color: #005ea8; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;"><span>🔽 ${currentLang==='en'?'Downbound to':'下行方向 (開往'} ${downTerminal}${currentLang==='en'?'':')'}</span><span id="plat-down" class="plat-badge" style="display: none;"></span></h4><div class="detail-stops-container" style="padding:0;">${downStopsHtml}</div>`;
-            }
+            // 僅顯示該站上行方向
+            html += `
+                <h4 style="margin: 20px 0 10px 0; color: var(--warning-red); font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                    <span>🔼 ${currentLang==='en'?'To':'往'} ${upTerminal}</span>
+                    <span id="plat-up" class="plat-badge" style="display: none;"></span>
+                </h4>
+                <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111;">
+                    <div class="mtr-eta" id="eta-up-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;">🔄</div>
+                </div>`;
+
+            // 僅顯示該站下行方向
+            html += `
+                <h4 style="margin: 20px 0 10px 0; color: #005ea8; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                    <span>🔽 ${currentLang==='en'?'To':'往'} ${downTerminal}</span>
+                    <span id="plat-down" class="plat-badge" style="display: none;"></span>
+                </h4>
+                <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111;">
+                    <div class="mtr-eta" id="eta-down-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;">🔄</div>
+                </div>`;
 
             body.innerHTML = html;
 
             if(lineSyncInterval) clearInterval(lineSyncInterval);
             syncMtrLineData(lineCode, currentStaCode);
-            lineSyncInterval = setInterval(() => syncMtrLineData(lineCode, currentStaCode), 20000); 
+            lineSyncInterval = setInterval(() => syncMtrLineData(lineCode, currentStaCode), 10000); 
         }
 
         async function syncMtrLineData(lineCode, currentStaCode) {
             const line = MTR_NETWORK[lineCode]; if(!line) return; let ts = Date.now();
-            let promises = Object.keys(line.stations).map(staCode => 
-                fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${lineCode}&sta=${staCode}&_=${ts}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(json => ({ staCode, json }))
-            );
             
-            let results = await Promise.all(promises);
-
-            results.forEach(res => {
-                if(!res.json || res.json.status === 0 || !res.json.data) return;
-                let key = `${lineCode}-${res.staCode}`; let data = res.json.data[key]; if(!data) return;
+            try {
+                // 淨係讀取被撳嗰一個車站嘅數據，慳返資源同連線時間
+                let r = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${lineCode}&sta=${currentStaCode}&_=${ts}`, { cache: 'no-store' });
+                if (!r.ok) return;
+                let json = await r.json();
                 
-                updateTrainStatusDOM('up', res.staCode, data.UP, res.json.curr_time);
-                if (res.staCode === currentStaCode && data.UP && data.UP.length > 0 && data.UP[0].plat) {
+                if(!json || json.status === 0 || !json.data) return;
+                let key = `${lineCode}-${currentStaCode}`; let data = json.data[key]; if(!data) return;
+                
+                updateTrainStatusDOM('up', currentStaCode, data.UP, json.curr_time);
+                if (data.UP && data.UP.length > 0 && data.UP[0].plat) {
                     let platBadge = document.getElementById('plat-up'); if (platBadge) { platBadge.innerText = data.UP[0].plat; platBadge.style.display = 'inline-flex'; }
                 }
                 
-                updateTrainStatusDOM('down', res.staCode, data.DOWN, res.json.curr_time);
-                if (res.staCode === currentStaCode && data.DOWN && data.DOWN.length > 0 && data.DOWN[0].plat) {
+                updateTrainStatusDOM('down', currentStaCode, data.DOWN, json.curr_time);
+                if (data.DOWN && data.DOWN.length > 0 && data.DOWN[0].plat) {
                     let platBadge = document.getElementById('plat-down'); if (platBadge) { platBadge.innerText = data.DOWN[0].plat; platBadge.style.display = 'inline-flex'; }
                 }
-            });
+            } catch (e) { console.warn("MTR sync error", e); }
         }
 
         function updateTrainStatusDOM(dir, staCode, trainList, sysTimeStr) {
@@ -1538,30 +1536,42 @@
             if (!trainList || trainList.length === 0) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
 
             let apiTime = new Date(sysTimeStr.replace(' ','T')+'+08:00').getTime();
-            let validTrain = trainList.find(d => {
+            let validTrains = trainList.filter(d => {
                 if (d.time && d.time !== '-') { return (new Date(d.time.replace(' ','T')+'+08:00').getTime() - apiTime) > -60000; } 
                 else if (d.ttnt !== undefined && d.ttnt !== '') { return parseInt(d.ttnt) >= 0; }
                 return false;
             });
 
-            if (!validTrain) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
+            if (validTrains.length === 0) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
 
-            let targetTime = null;
-            if (validTrain.time && validTrain.time !== '-') { targetTime = new Date(Date.now() + (new Date(validTrain.time.replace(' ','T')+'+08:00').getTime() - apiTime)); } 
-            else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') { targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000); }
+            let etasHtml = validTrains.slice(0, 3).map((validTrain, index) => {
+                let targetTime = null;
+                if (validTrain.time && validTrain.time !== '-') { targetTime = new Date(Date.now() + (new Date(validTrain.time.replace(' ','T')+'+08:00').getTime() - apiTime)); } 
+                else if (validTrain.ttnt !== undefined && validTrain.ttnt !== '') { targetTime = new Date(Date.now() + parseInt(validTrain.ttnt) * 60000); }
 
-            if (targetTime) {
-                const diffSec = Math.floor((targetTime - new Date()) / 1000);
-                
-                if (diffSec > 1800) {
-                    el.innerHTML = `--`;
-                    el.className = 'mtr-eta';
-                    el.style.color = 'var(--text-muted)';
-                    return; 
+                if (targetTime) {
+                    const diffSec = Math.floor((targetTime - new Date()) / 1000);
+                    if (diffSec > 1800) return null;
+
+                    if (diffSec <= 0) { 
+                        return `<span class="departing-text" style="color: #111;">${dict['txt-departed']}</span>`; 
+                    } else { 
+                        const m = Math.floor(diffSec / 60);
+                        let prefix = (index === 0) ? dict['txt-arrive-cd'] : '';
+                        return `<span style="color: #ff3333; font-weight: 900;">${prefix}${m}${dict['txt-min']}</span>`; 
+                    }
                 }
+                return null;
+            }).filter(Boolean);
 
-                if (diffSec <= 0) { el.className = `mtr-eta departing-text`; el.innerHTML = dict['txt-departed']; el.style.color = '#111'; } 
-                else { const m = Math.floor(diffSec / 60); el.className = `mtr-eta`; el.innerHTML = `${dict['txt-arrive-cd']}${m}${dict['txt-min']}`; el.style.color = '#ff3333'; }
+            if (etasHtml.length > 0) {
+                el.className = `mtr-eta`; 
+                el.innerHTML = etasHtml.join('<br><span style="height:4px; display:block;"></span>');
+                el.style.color = '#ff3333';
+                el.style.textAlign = 'left'; 
+                el.style.lineHeight = '1.4';
+            } else {
+                el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)';
             }
         }
 
@@ -1711,7 +1721,7 @@
             try { updateTick(); setInterval(updateTick, 1000); } catch(e){}
             try { fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
             try { if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
-            try { fetchMTR(); setInterval(fetchMTR, 30000); } catch(e){}
+            try { fetchMTR(); setInterval(fetchMTR, 10000); } catch(e){}
             setInterval(fetchRealBusData, 30000);
             
             initStaticDatabase();
