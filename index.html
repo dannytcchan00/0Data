@@ -585,6 +585,11 @@
             </div>
             <div class="modal-body">
                 
+                <h4 style="margin: 0 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-noti-set">🔔 系統通知 Notifications</h4>
+                <div class="lang-btn-group">
+                    <button class="lang-btn" style="background: var(--warning-red); color: white;" onclick="requestNotificationPermission()" id="t-btn-noti">🔔 開啟天氣及港鐵通知</button>
+                </div>
+                
                 <h4 style="margin: 0 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
                 <div class="lang-btn-group">
                     <button class="lang-btn" onclick="closeSettingsModal(); openMtrModal();" id="t-btn-mtr-set">🚇 設定地鐵站</button>
@@ -629,6 +634,50 @@
         window.currentDetailStopId = null;
 
         // ==========================================
+        // 🔔 Web Notification 系統通知設定
+        // ==========================================
+        let notifiedWarnings = new Set();
+        let notifiedMtrIssues = new Set();
+
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert(currentLang === 'en' ? 'Your browser does not support notifications.' : '你的瀏覽器不支援通知功能。');
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    alert(currentLang === 'en' ? '✅ Notifications Enabled!' : '✅ 系統通知已成功開啟！');
+                    sendSystemNotification('HKG Dashboard', currentLang === 'en' ? 'Notification test successful.' : '通知測試成功，將在有天氣警告或港鐵故障時提醒你。');
+                } else {
+                    alert(currentLang === 'en' ? '⚠️ Permission denied.' : '⚠️ 權限被拒絕，無法發送通知。');
+                }
+            });
+        }
+
+        function sendSystemNotification(title, body) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            new Notification(title, { 
+                body: body, 
+                icon: 'icon.png',
+                badge: 'icon.png',
+                vibrate: [200, 100, 200]
+            });
+        }
+
+        // 開放給 marquee.js 呼叫的 MTR 事故通知接口
+        window.triggerMtrNotification = function(issueId, title, msg) {
+            if (!notifiedMtrIssues.has(issueId)) {
+                notifiedMtrIssues.add(issueId);
+                sendSystemNotification(title, msg);
+            }
+        };
+        
+        // 讓 marquee.js 在故障恢復時清除紀錄
+        window.clearMtrNotification = function(issueId) {
+            notifiedMtrIssues.delete(issueId);
+        };
+
+        // ==========================================
         // 🌐 多語言系統設定及容錯機制
         // ==========================================
         let currentLang = 'zh';
@@ -649,6 +698,7 @@
                 'bus-det': '🚌 路線詳細資料', 'wth-det': '🌈 延展天氣預報詳情', 'mtr-det': '🚇 港鐵路綫與車程分佈',
                 'sys-set': '⚙️ 系統設定 Settings', 'lang-set': '🌐 介面語言 Language', 'donate-title': '☕ 支持開發者 Support Developer', 
                 'donate-desc': '如果你覺得呢個 App 幫到你，可以考慮用 HSBC PayMe 請我飲杯咖啡，支持系統持續營運！',
+                'noti-set': '🔔 系統通知 Notifications', 'btn-noti': '🔔 開啟天氣及港鐵通知',
                 'ts-set': '🛠️ 追蹤設定 Tracking Settings', 'btn-mtr-set': '🚇 設定地鐵站', 'btn-bus-set': '🚌 設定巴士線',
                 'txt-to': '往 ', 'txt-eta-arr': '即將到達', 'txt-eta-dep': '正在開出', 'txt-eta-end': '服務已終止', 'txt-min': ' 分鐘', 'txt-sec': '秒',
                 'txt-arrive-cd': '到達倒數: ', 'txt-departed': '🚇 已經開出', 'txt-loading': '<span class="icon-spin">🔄</span> 載入中...',
@@ -668,6 +718,7 @@
                 'bus-det': '🚌 Route Details', 'wth-det': '🌈 Extended Forecast', 'mtr-det': '🚇 MTR Route Details',
                 'sys-set': '⚙️ Settings', 'lang-set': '🌐 Interface Language', 'donate-title': '☕ Support Developer', 
                 'donate-desc': 'If you find this App useful, consider buying me a coffee via HSBC PayMe to support the server!',
+                'noti-set': '🔔 System Notifications', 'btn-noti': '🔔 Enable Notifications',
                 'ts-set': '🛠️ Tracking Settings', 'btn-mtr-set': '🚇 MTR Settings', 'btn-bus-set': '🚌 Bus Settings',
                 'txt-to': 'To ', 'txt-eta-arr': 'Arriving', 'txt-eta-dep': 'Departing', 'txt-eta-end': 'Service Ended', 'txt-min': ' min ', 'txt-sec': 's',
                 'txt-arrive-cd': 'ETA: ', 'txt-departed': '🚇 Departed', 'txt-loading': '<span class="icon-spin">🔄</span> Loading...',
@@ -705,6 +756,8 @@
                 document.getElementById('t-wth-det').innerText = dict['wth-det'];
                 document.getElementById('t-mtr-det').innerText = dict['mtr-det'];
                 document.getElementById('t-sys-set').innerText = dict['sys-set'];
+                document.getElementById('t-noti-set').innerText = dict['noti-set'];
+                document.getElementById('t-btn-noti').innerText = dict['btn-noti'];
                 document.getElementById('t-ts-set').innerText = dict['ts-set'];
                 document.getElementById('t-btn-mtr-set').innerText = dict['btn-mtr-set'];
                 document.getElementById('t-btn-bus-set').innerText = dict['btn-bus-set'];
@@ -1785,15 +1838,25 @@
                 if (hasActiveWarn) { warnInfoRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null); }
                 
                 const warningsContainer = document.getElementById('warnings-container'); activeWarningsData = {}; let warningHtml = '';
+                let currentWarnCodes = new Set();
                 
                 if (warnSumRes && hasActiveWarn) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
                         if (w.name && w.code && w.actionCode && w.actionCode !== "CANCEL") {
+                            currentWarnCodes.add(w.code);
                             
                             let customCfg = CUSTOM_WARNING_CONFIG[w.code];
                             let emoji = customCfg ? customCfg.emoji : '⚠️';
                             let displayName = customCfg ? (currentLang === 'en' ? customCfg.name_en : customCfg.name_zh) : w.name;
+                            
+                            // 🚨 觸發系統推播通知 🚨
+                            if (!notifiedWarnings.has(w.code)) {
+                                notifiedWarnings.add(w.code);
+                                let notiTitle = currentLang === 'en' ? 'HKO Weather Warning' : '天文台天氣警告';
+                                let notiBody = currentLang === 'en' ? `${emoji} ${displayName} is in force.` : `${emoji} ${displayName} 現正生效。`;
+                                sendSystemNotification(notiTitle, notiBody);
+                            }
                             
                             let introStr = currentLang === 'en' ? 'is in force. Please take precautions.' : '現正生效。請留意最新天氣情況及採取相應預防措施。';
                             let detailTextHtml = `<div style="padding: 15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; margin-bottom:15px; font-weight:bold; border-radius: 12px;">${emoji} <b>${displayName}</b> ${introStr}</div>`;
@@ -1840,6 +1903,13 @@
                 } else {
                     warningsContainer.innerHTML = '';
                     warningsContainer.style.display = 'none';
+                }
+                
+                // 清除已經取消的警告追蹤紀錄，這樣下次該警告重發時才會再次推播
+                for (let code of notifiedWarnings) {
+                    if (!currentWarnCodes.has(code)) {
+                        notifiedWarnings.delete(code);
+                    }
                 }
 
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
