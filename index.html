@@ -86,8 +86,8 @@
             transition: transform 0.1s, box-shadow 0.1s;
         }
 
-        /* 針對不同組件調整最適當嘅圓角弧度 */
-        .modal-content { border-radius: 24px; overflow: hidden; } 
+        /* 擴闊彈出視窗以容納左右佈局 */
+        .modal-content { border-radius: 24px; overflow: hidden; width: 92%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; } 
         .station-pill { border-radius: 50px; padding: 6px 14px; box-shadow: 3px 3px 0px 0px var(--panel-border); }
         .stop-num { border-radius: 50%; width: 28px; height: 28px; box-shadow: 2px 2px 0px 0px var(--panel-border); } 
         .btn-back, .bm-delete, .modal-btn, .lang-btn { border-radius: 12px; }
@@ -225,12 +225,6 @@
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
-        .modal-content { 
-            width: 90%; max-width: 500px; max-height: 85vh; 
-            display: flex; flex-direction: column; 
-            box-shadow: 12px 12px 0px 0px #111;
-        }
-        
         .modal-header { padding: 15px 20px; border-bottom: 3px solid #111; display: flex; justify-content: space-between; align-items: center; background: #fff; flex: 0 0 auto;}
         .modal-header h3 { margin: 0; font-size: 1.2rem; color: #111; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .modal-header button { flex-shrink: 0; }
@@ -239,6 +233,11 @@
         .modal-body { padding: 15px; flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #f4f4f4; }
         .modal-body::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; border-radius: 10px; }
         .modal-body::-webkit-scrollbar-thumb { background: #111; border-radius: 10px; }
+
+        /* 🚨 巴士詳情專用：鎖定彈窗滾動，只准左側車站列表滾動 */
+        #bus-detail-body { padding: 15px 15px 0 15px; overflow: hidden !important; display: flex; flex-direction: column; }
+        #scrollable-stops-list::-webkit-scrollbar { width: 6px; border-left: 3px solid #111; border-radius: 10px; }
+        #scrollable-stops-list::-webkit-scrollbar-thumb { background: #111; border-radius: 10px; }
 
         .modal-footer { padding: 12px 20px; border-top: 3px solid #111; display: flex; justify-content: flex-end; gap: 15px; background: #fff; flex: 0 0 auto;}
         
@@ -253,14 +252,17 @@
         .detail-route-meta { display: flex; justify-content: center; gap: 8px; }
         .meta-badge { background: #111; color: #fff; padding: 4px 10px; font-size: 0.85rem; border-radius: 8px; font-weight: 900; border: 2px solid #111; }
         
-        .detail-stops-container { padding: 5px; margin-bottom: 15px; border-radius: 16px; }
-        .detail-stop-item { padding: 10px 12px; border-bottom: 2px solid #111; font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 10px; line-height: 1.3; }
+        /* 🚌 可點擊車站清單 CSS */
+        .detail-stop-item { padding: 10px 12px; border-bottom: 2px solid #111; font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 10px; line-height: 1.3; transition: all 0.2s; }
         .detail-stop-item:last-child { border-bottom: none; }
-        .stop-num { min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; font-size: 0.8rem; font-weight: 900; }
+        .clickable-stop { cursor: pointer; }
+        .clickable-stop:hover:not(.current-stop-highlight) { background: #e0e0e0; padding-left: 18px; }
         
-        .current-stop-highlight { background: #111 !important; color: #fff !important; border-radius: 12px; margin-bottom: 5px; }
+        .stop-num { min-width: 26px; height: 26px; display: inline-flex; justify-content: center; align-items: center; font-size: 0.8rem; font-weight: 900; transition: all 0.2s; }
+        
+        .current-stop-highlight { background: #111 !important; color: #fff !important; border-radius: 12px; margin-bottom: 5px; padding-left: 15px; }
         .current-stop-highlight .stop-num { background: #111; color: #fff; border-color: #fff; box-shadow: 2px 2px 0px 0px #fff; }
-        .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #fff; color: #111; padding: 2px 8px; border: 2px solid #111; border-radius: 8px; font-weight: 900; box-shadow: 2px 2px 0px 0px #111; }
+        .current-stop-badge { margin-left: auto; font-size: 0.75rem; background: #fff; color: #111; padding: 2px 8px; border: 2px solid #111; border-radius: 8px; font-weight: 900; box-shadow: 2px 2px 0px 0px #111; white-space: nowrap; }
 
         .line-group { margin-bottom: 15px; }
         .line-title { font-size: 1rem; font-weight: 900; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: #111; }
@@ -378,6 +380,7 @@
         .donation-box p { color: #111; font-size: 0.95rem; line-height: 1.6; margin: 0 0 15px 0; font-weight: bold; }
         .donation-box img { max-width: 200px; width: 100%; border: 3px solid #111; border-radius: 16px; padding: 0; box-shadow: 4px 4px 0px 0px #111;}
 
+        /* 🚨 手機屏幕優化左右排版，固定倒數框 */
         @media screen and (max-width: 767px) {
             html, body { height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
             .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px; padding-bottom: 60px; gap: 15px; }
@@ -388,6 +391,15 @@
             
             .bottom-menu-items { flex-wrap: wrap; }
             .bottom-menu-items a { flex: 1 1 calc(33.333% - 6px); min-width: 0; font-size: 0.75rem; padding: 6px 4px;}
+            
+            #bus-detail-flex-container { flex-direction: column; }
+            #detail-right-panel { 
+                width: 100% !important; 
+                max-width: none !important; 
+                margin-bottom: 10px !important; 
+                flex: 0 0 auto !important; /* 固定高度不拉伸 */
+                order: -1; 
+            }
         }
     </style>
 </head>
@@ -613,6 +625,9 @@
     <script src="marquee.js"></script>
 
     <script>
+        // 全局追蹤當前點擊的巴士站，防止快速點擊導致的 API 衝突
+        window.currentDetailStopId = null;
+
         // ==========================================
         // 🌐 多語言系統設定及容錯機制
         // ==========================================
@@ -1382,18 +1397,57 @@
             document.getElementById('refresh-status').innerHTML = currentLang==='en' ? '🟢 Auto Sync' : '🟢 30s定時更新'; renderUI();
         }
 
-        function closeBusDetailModal() { unlockBackgroundScroll(); document.getElementById('bus-detail-modal').classList.remove('active'); }
+        function closeBusDetailModal() { 
+            unlockBackgroundScroll(); 
+            if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+            window.currentDetailStopId = null; 
+            document.getElementById('bus-detail-modal').classList.remove('active'); 
+        }
+
+        window.switchBusDetailStop = function(co, route, newStopId, dir, serviceType, newStopName) {
+            window.currentDetailStopId = newStopId; 
+
+            document.querySelectorAll('.detail-stop-item').forEach(el => {
+                el.classList.remove('current-stop-highlight');
+                let labelContainer = el.querySelector('.stop-label-container');
+                if (labelContainer) labelContainer.innerHTML = '';
+            });
+
+            let newActiveEl = document.getElementById(`modal-stop-item-${newStopId}`);
+            if (newActiveEl) {
+                newActiveEl.classList.add('current-stop-highlight');
+                let labelContainer = newActiveEl.querySelector('.stop-label-container');
+                if (labelContainer) {
+                    labelContainer.innerHTML = `<span class="current-stop-badge">📍 ${currentLang==='en'?'Selected':'已選擇'}</span>`;
+                }
+            }
+
+            let panelNameEl = document.getElementById('detail-right-stop-name');
+            if (panelNameEl) panelNameEl.innerText = newStopName;
+
+            let etaEl = document.getElementById('detail-eta-countdown');
+            if (etaEl) {
+                etaEl.innerHTML = '<span class="icon-spin">🔄</span>';
+                etaEl.className = 'anim-pulse'; 
+                etaEl.style.color = '#111';
+            }
+
+            if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+            syncBusDetailETA(co, route, newStopId, dir, serviceType);
+            window.busSyncInterval = setInterval(() => syncBusDetailETA(co, route, newStopId, dir, serviceType), 10000);
+        }
 
         async function openBusDetail(co, route, destTcFallback, currentStopId = null, dir = null, serviceType = '1') {
             lockBackgroundScroll();
+            window.currentDetailStopId = currentStopId; 
+            
             const modal = document.getElementById('bus-detail-modal'); const body = document.getElementById('bus-detail-body');
             modal.classList.add('active'); body.innerHTML = `<div class="anim-pulse" style="text-align:center; padding: 30px; color:var(--text-main); font-weight:900; font-size:1.2rem;">${i18n[currentLang]['txt-loading']}</div>`;
 
             try {
                 let companyName = co === 'kmb' ? '九巴 (KMB)' : '城巴 (CTB)'; let stopsHtml = '';
-
                 let apiBound = (dir === 'I' || dir === 'inbound') ? 'inbound' : 'outbound';
-                let rawBoundO = 'O'; let rawBoundI = 'I';
+                let currentStopName = '';
 
                 if (co === 'kmb') {
                     let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
@@ -1415,12 +1469,21 @@
                         let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         
                         let isCurrent = (s.stop === currentStopId); let highlightClass = isCurrent ? 'current-stop-highlight' : '';
-                        let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
                         let stopName = st?.data ? (currentLang==='en'?st.data.name_en:st.data.name_tc) : s.stop;
+                        let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
 
-                        return `<div class="detail-stop-item ${highlightClass}"><span class="stop-num">${idx+1}</span> ${stopName} ${currentLabel}</div>`;
+                        if (isCurrent) currentStopName = stopName;
+
+                        let safeStopName = stopName.replace(/'/g, "\\'");
+
+                        return `<div id="modal-stop-item-${s.stop}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('${co}', '${route}', '${s.stop}', '${dir}', '${serviceType}', '${safeStopName}')">
+                                    <span class="stop-num">${idx+1}</span> 
+                                    <span style="flex:1;">${stopName}</span> 
+                                    <span class="stop-label-container">${currentLabel}</span>
+                                </div>`;
                     }));
-                    stopsHtml = stopDetails.join(''); renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml);
+                    stopsHtml = stopDetails.join(''); 
+                    renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml, currentStopName, currentStopId, co, dir, serviceType);
 
                 } else {
                     let rRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB/${route}`).then(r=>r.json());
@@ -1435,27 +1498,123 @@
                         let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         
                         let isCurrent = (s.stop === currentStopId); let highlightClass = isCurrent ? 'current-stop-highlight' : '';
-                        let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
                         let stopName = st?.data ? (currentLang==='en'?st.data.name_en:st.data.name_tc) : s.stop;
+                        let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
 
-                        return `<div class="detail-stop-item ${highlightClass}"><span class="stop-num">${idx+1}</span> ${stopName} ${currentLabel}</div>`;
+                        if (isCurrent) currentStopName = stopName;
+
+                        let safeStopName = stopName.replace(/'/g, "\\'");
+
+                        return `<div id="modal-stop-item-${s.stop}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('${co}', '${route}', '${s.stop}', '${dir}', '${serviceType}', '${safeStopName}')">
+                                    <span class="stop-num">${idx+1}</span> 
+                                    <span style="flex:1;">${stopName}</span> 
+                                    <span class="stop-label-container">${currentLabel}</span>
+                                </div>`;
                     }));
-                    stopsHtml = stopDetails.join(''); renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml);
+                    stopsHtml = stopDetails.join(''); 
+                    renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml, currentStopName, currentStopId, co, dir, serviceType);
                 }
             } catch (e) { body.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--warning-red); font-weight:900;">❌ ${currentLang==='en'?'Error Loading Data':'無法載入路線資料或網絡超時'}</div>`; }
         }
 
-        function renderDetailModalBody(coName, route, orig, dest, stopsHtml) {
+        function renderDetailModalBody(coName, route, orig, dest, stopsHtml, currentStopName, currentStopId, co, dir, serviceType) {
+            let rightPanel = '';
+            if (currentStopId && currentStopName) {
+                let themeColor = co === 'kmb' ? 'var(--warning-red)' : 'var(--ctb-bg)';
+                let textColor = co === 'kmb' ? '#fff' : '#111';
+                let iconText = currentLang==='en'?'ETA':'實時倒數';
+
+                rightPanel = `
+                <div id="detail-right-panel" style="flex: 0 0 45%; max-width: 250px; display: flex; flex-direction: column; margin-bottom: 15px;">
+                    <div class="countdown-box" style="background: #fff; border: 3px solid #111; border-radius: 16px; text-align: center; box-shadow: 4px 4px 0px 0px #111; overflow: hidden; display: flex; flex-direction: column; flex: 1;">
+                        <div style="background: ${themeColor}; color: ${textColor}; padding: 12px; border-bottom: 3px solid #111; flex-shrink: 0;">
+                            <div style="font-size: 2.5rem; margin-bottom: 5px;">🚏</div>
+                            <div id="detail-right-stop-name" style="font-size: 1.1rem; font-weight: 900; line-height: 1.3; word-break: break-word;">${currentStopName}</div>
+                        </div>
+                        <div style="padding: 20px 10px; background: #f4f4f4; flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
+                            <div style="font-size: 0.9rem; font-weight: 900; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">⏱️ ${iconText}</div>
+                            <div id="detail-eta-countdown" class="anim-pulse" style="font-size: 2.2rem; font-weight: 900; color: #111; line-height:1.2; letter-spacing: -1px;"><span class="icon-spin">🔄</span></div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
             document.getElementById('bus-detail-body').innerHTML = `
-                <div class="detail-header-card">
+                <div class="detail-header-card" style="flex-shrink: 0; margin-bottom: 10px;">
                     <div class="detail-route-title">${route}</div>
                     <div class="detail-route-desc">${orig} ➔ ${dest}</div>
                     <div class="detail-route-meta"><span class="meta-badge">${coName}</span></div>
                 </div>
-                <h4 style="margin:15px 0 10px 0; color:var(--text-main); font-size:1rem; font-weight:900; border-bottom: 3px solid #111; padding-bottom: 8px;">${currentLang==='en'?'All Stops:':'所有沿途停靠車站：'}</h4>
-                <div class="detail-stops-container">${stopsHtml}</div>
+                <div id="bus-detail-flex-container" style="display: flex; gap: 15px; align-items: stretch; flex: 1; min-height: 0;">
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; margin-bottom: 15px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--text-main); font-size:1rem; font-weight:900; border-bottom: 3px solid #111; padding-bottom: 8px; flex-shrink: 0;">${currentLang==='en'?'Route Stops (Click to select):':'沿途停靠車站 (點擊切換)：'}</h4>
+                        <div id="scrollable-stops-list" class="detail-stops-container" style="background:#fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px; padding: 10px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; margin-bottom: 0; position: relative;">
+                            ${stopsHtml}
+                        </div>
+                    </div>
+                    ${rightPanel}
+                </div>
             `;
-            setTimeout(() => { let currentStopElement = document.querySelector('.current-stop-highlight'); if (currentStopElement) { currentStopElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 100);
+            
+            setTimeout(() => { 
+                let currentStopElement = document.querySelector('.current-stop-highlight'); 
+                let scrollContainer = document.getElementById('scrollable-stops-list');
+                if (currentStopElement && scrollContainer) { 
+                    scrollContainer.scrollTo({
+                        top: currentStopElement.offsetTop - (scrollContainer.clientHeight / 2) + (currentStopElement.clientHeight / 2),
+                        behavior: 'smooth'
+                    });
+                } 
+            }, 100);
+
+            if (currentStopId) {
+                if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+                syncBusDetailETA(co, route, currentStopId, dir, serviceType);
+                window.busSyncInterval = setInterval(() => syncBusDetailETA(co, route, window.currentDetailStopId, dir, serviceType), 10000);
+            }
+        }
+
+        async function syncBusDetailETA(co, route, stopId, dir, serviceType) {
+            if (window.currentDetailStopId !== stopId) return;
+
+            let ts = Date.now();
+            let url = co === 'kmb' ? `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}?_=${ts}` : `https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${stopId}/${route}?_=${ts}`;
+            try {
+                let res = await fetch(url, { cache: 'no-store' }).then(r=>r.json());
+                
+                if (window.currentDetailStopId !== stopId) return;
+
+                let now = new Date();
+                let etas = [];
+                if(res?.data) {
+                    res.data.forEach(d => {
+                        if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(route).toUpperCase()) {
+                            let matchDir = true;
+                            let apiBound = (dir === 'I' || dir === 'inbound') ? 'I' : 'O';
+                            if (d.dir && d.dir !== apiBound) matchDir = false; 
+                            if(matchDir) etas.push(new Date(d.eta));
+                        }
+                    });
+                }
+                etas.sort((a,b) => a - b);
+                
+                let el = document.getElementById('detail-eta-countdown');
+                if(!el) return;
+                el.classList.remove('anim-pulse');
+                
+                if (etas.length > 0) {
+                    let etaInfo = parseRemaining(etas[0], 'bus');
+                    el.innerText = etaInfo.text;
+                    el.className = etaInfo.status === 'departing' ? 'departing-text' : (etaInfo.status === 'arriving' ? 'arriving-text' : '');
+                    el.style.color = '#ff3333'; 
+                } else {
+                    el.innerText = '--';
+                    el.className = '';
+                    el.style.color = 'var(--text-muted)';
+                }
+            } catch(e) {
+                console.warn(e);
+            }
         }
 
         function openWeatherDetail(idx) {
@@ -1514,7 +1673,7 @@
                     <span id="plat-up" class="plat-badge" style="display: none;"></span>
                 </h4>
                 <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
-                    <div class="mtr-eta" id="eta-up-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
+                    <div class="mtr-eta anim-pulse" id="eta-up-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
                 </div>`;
 
             // 僅顯示該站下行方向，加入載入動畫
@@ -1524,7 +1683,7 @@
                     <span id="plat-down" class="plat-badge" style="display: none;"></span>
                 </h4>
                 <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
-                    <div class="mtr-eta" id="eta-down-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
+                    <div class="mtr-eta anim-pulse" id="eta-down-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
                 </div>`;
 
             body.innerHTML = html;
@@ -1560,6 +1719,8 @@
 
         function updateTrainStatusDOM(dir, staCode, trainList, sysTimeStr) {
             const dict = i18n[currentLang]; let el = document.getElementById(`eta-${dir}-${staCode}`); if(!el) return;
+            el.classList.remove('anim-pulse');
+            
             if (!trainList || trainList.length === 0) { el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-muted)'; return; }
 
             let apiTime = new Date(sysTimeStr.replace(' ','T')+'+08:00').getTime();
