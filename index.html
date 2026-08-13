@@ -638,6 +638,12 @@
         // ==========================================
         let notifiedWarnings = new Set();
         let notifiedMtrIssues = new Set();
+        
+        // ==========================================
+        // ⏱️ 巴士詳情實時倒數記錄
+        // ==========================================
+        window.currentBusTargetTime = null;
+        window.busTickerInterval = null;
 
         function requestNotificationPermission() {
             if (!("Notification" in window)) {
@@ -710,7 +716,7 @@
             'en': {
                 'connecting': 'Connecting to DB...',
                 'sys-ready': '🚌 System Readying', 'pull': 'Pull to refresh',
-                'hum': 'Humidity', 'uv': '☀ Index', 'rain': '⛆ Prob.', 'max': '⤴ Temp', 'min': '↓ Temp',
+                'hum': 'Humidity', 'uv': 'UV Index', 'rain': 'Rain Prob.', 'max': 'Max Temp', 'min': 'Min Temp',
                 'mtr-title': '🚇 MTR Train Frequency', 'bus-title': '🚌 Bus ETA',
                 'sel-mtr': 'Select Stations', 'cancel-1': 'Cancel', 'save-1': 'Save',
                 'sel-bus': 'Bus Tracking Settings', 'sch-kmb': '🔴 Search KMB', 'sch-ctb': '🟡 Search CTB', 'sch-stop': '🚏 Search Stops',
@@ -1453,7 +1459,9 @@
         function closeBusDetailModal() { 
             unlockBackgroundScroll(); 
             if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+            if(window.busTickerInterval) clearInterval(window.busTickerInterval); 
             window.currentDetailStopId = null; 
+            window.currentBusTargetTime = null;
             document.getElementById('bus-detail-modal').classList.remove('active'); 
         }
 
@@ -1486,8 +1494,11 @@
             }
 
             if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+            if(window.busTickerInterval) clearInterval(window.busTickerInterval);
+
             syncBusDetailETA(co, route, newStopId, dir, serviceType);
             window.busSyncInterval = setInterval(() => syncBusDetailETA(co, route, newStopId, dir, serviceType), 10000);
+            window.busTickerInterval = setInterval(updateBusDetailCountdownDisplay, 1000); 
         }
 
         async function openBusDetail(co, route, destTcFallback, currentStopId = null, dir = null, serviceType = '1') {
@@ -1622,8 +1633,11 @@
 
             if (currentStopId) {
                 if(window.busSyncInterval) clearInterval(window.busSyncInterval);
+                if(window.busTickerInterval) clearInterval(window.busTickerInterval);
+                
                 syncBusDetailETA(co, route, currentStopId, dir, serviceType);
                 window.busSyncInterval = setInterval(() => syncBusDetailETA(co, route, window.currentDetailStopId, dir, serviceType), 10000);
+                window.busTickerInterval = setInterval(updateBusDetailCountdownDisplay, 1000); 
             }
         }
 
@@ -1651,22 +1665,28 @@
                 }
                 etas.sort((a,b) => a - b);
                 
-                let el = document.getElementById('detail-eta-countdown');
-                if(!el) return;
-                el.classList.remove('anim-pulse');
-                
-                if (etas.length > 0) {
-                    let etaInfo = parseRemaining(etas[0], 'bus');
-                    el.innerText = etaInfo.text;
-                    el.className = etaInfo.status === 'departing' ? 'departing-text' : (etaInfo.status === 'arriving' ? 'arriving-text' : '');
-                    el.style.color = '#ff3333'; 
-                } else {
-                    el.innerText = '--';
-                    el.className = '';
-                    el.style.color = 'var(--text-muted)';
-                }
+                window.currentBusTargetTime = etas.length > 0 ? etas[0] : null;
+                updateBusDetailCountdownDisplay();
+
             } catch(e) {
                 console.warn(e);
+            }
+        }
+
+        function updateBusDetailCountdownDisplay() {
+            let el = document.getElementById('detail-eta-countdown');
+            if (!el) return;
+            el.classList.remove('anim-pulse');
+            
+            if (window.currentBusTargetTime) {
+                let etaInfo = parseRemaining(window.currentBusTargetTime, 'bus');
+                el.innerText = etaInfo.text;
+                el.className = etaInfo.status === 'departing' ? 'departing-text' : (etaInfo.status === 'arriving' ? 'arriving-text' : '');
+                el.style.color = '#ff3333'; 
+            } else {
+                el.innerText = '--';
+                el.className = '';
+                el.style.color = 'var(--text-muted)';
             }
         }
 
