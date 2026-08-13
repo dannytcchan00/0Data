@@ -95,7 +95,6 @@
         
         .weather-time-main { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; background: #fff; border: 3px solid #111; border-radius: 16px; box-shadow: 3px 3px 0px 0px #111; gap: 6px; }
         .time-block { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
-        /* 修改咗時間字體大小及行高，取消 hidden 確保唔會被裁切 */
         .time-display { font-size: 1.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; letter-spacing: -0.5px; }
         .utc-display { font-size: 0.75rem; font-weight: 900; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -116,7 +115,6 @@
         .alert-box { padding: 10px; font-size: 1rem; font-weight: 900; text-align: center; cursor: pointer; }
         @keyframes brutalAlert { 0% { background: #ff4d4d; color: #fff; } 50% { background: #fff; color: #ff4d4d; } 100% { background: #ff4d4d; color: #fff; } }
         .alert-active { animation: brutalAlert 2s infinite steps(1); border: 3px solid #111; border-radius: 16px; }
-        .alert-none { background: #fff; color: var(--text-main); cursor: default; border-radius: 16px; }
         
         .swt-box { background: #fff; border: 3px solid #111; border-radius: 16px; padding: 10px; font-size: 0.85rem; line-height: 1.4; font-weight: bold; text-align: left; color: #111; box-shadow: 3px 3px 0px 0px #111; cursor: pointer; transition: transform 0.15s; margin-top: 5px; }
         .swt-box:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0px 0px #111; }
@@ -1655,7 +1653,15 @@
                         }
                     }
                 }
-                warningsContainer.innerHTML = (warningHtml !== '') ? warningHtml : `<div class="alert-box alert-none">🟢 ${currentLang==='en'?'No active weather warnings':'現時沒有生效的天氣警告'}</div>`;
+                
+                // 修改位置：如果冇生效嘅警告，直接隱藏警告容器
+                if (warningHtml !== '') {
+                    warningsContainer.innerHTML = warningHtml;
+                    warningsContainer.style.display = 'flex';
+                } else {
+                    warningsContainer.innerHTML = '';
+                    warningsContainer.style.display = 'none';
+                }
 
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 const swtBox = document.getElementById('swt-box');
