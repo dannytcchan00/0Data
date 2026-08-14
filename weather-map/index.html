@@ -151,13 +151,30 @@
         .popup-value { font-size: 1.25rem; font-weight: 800; color: #fff; }
 
         .list-container { flex: 1; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;}
-        .list-scroll-area { flex-grow: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 4px;}
+        .list-scroll-area { flex-grow: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 6px;}
         .list-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--inner-bg); transition: all 0.2s ease;}
         .list-row.clickable { cursor: pointer; }
-        .list-row.clickable:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.1); }
+        .list-row.clickable:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.15); transform: translateX(2px); }
         .list-name { font-size: 0.85rem; font-weight: 600; color: #fff;}
         .list-val { font-size: 0.9rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;}
         .val-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+        /* Rain Row Style - Lifestyle Indices Look */
+        .rain-item-card {
+            background: var(--inner-bg); border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm); padding: 8px 10px; display: flex;
+            flex-direction: column; gap: 6px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .rain-item-card:hover {
+            background: var(--card-bg-hover); border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+        .rain-card-header { display: flex; justify-content: space-between; align-items: center; }
+        .rain-card-name { font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+        .rain-card-val { font-size: 0.9rem; font-weight: 800; }
+        .rain-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+        .rain-mini-bar { display: flex; gap: 3px; height: 4px; width: 100%; }
+        .rain-step { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
 
         /* 9-Day Forecast */
         .situation-box { background: var(--inner-bg); font-size: 0.85rem; line-height: 1.5; color: #ccc; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 500; margin-bottom: 12px;}
@@ -190,7 +207,7 @@
         .radar-btn:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.2); }
         .radar-time-badge { font-size: 0.85rem; font-weight: 600; background: #fff; color: #000; padding: 4px 12px; border-radius: 12px; letter-spacing: 0.5px;}
 
-        .rain-wrapper { flex: 1; position: relative; min-height: 340px; }
+        .rain-wrapper { flex: 1; position: relative; min-height: 380px; }
         .rain-absolute { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
 
         /* Dual Typhoon Tracking Maps */
@@ -232,7 +249,7 @@
             #hk-map, #tc-map-hko, #tc-map-agency { min-height: 350px; }
             .list-container { min-height: 300px; }
             .station-stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .rain-wrapper { height: 350px; flex: none; display: flex; flex-direction: column;}
+            .rain-wrapper { height: 380px; flex: none; display: flex; flex-direction: column;}
             .rain-absolute { position: relative; height: 100%; width: 100%; }
         }
     </style>
@@ -400,7 +417,7 @@
 
                 <div class="rain-wrapper">
                     <div class="rain-absolute">
-                        <h2>🌧️ Hourly Rain (Official API)</h2>
+                        <h2>🌧️ Hourly Rain (Click Station for Details)</h2>
                         <div class="list-scroll-area" id="rain-list-container">
                             <div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading rain data...</div>
                         </div>
@@ -467,6 +484,48 @@
                 <div class="chart-box">
                     <h4 style="margin: 0 0 12px 0; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">📊 Today's Hourly Trend</h4>
                     <div style="position: relative; height: 220px; width: 100%;"><canvas id="station-chart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rainfall Station Detail Modal (NEW) -->
+    <div id="rain-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="rain-modal-title">🌧️ Station Rainfall Details</h3>
+                <button class="close-btn" onclick="closeRainModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="station-stats-grid">
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">Past 1-Hr Rain</div>
+                        <div class="s-stat-val" id="rm-current-val">-- mm</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">Intensity Level</div>
+                        <div class="s-stat-val" id="rm-level-val">--</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">24-Hr Accumulation</div>
+                        <div class="s-stat-val" id="rm-24h-total">-- mm</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">Rain Peak (24H)</div>
+                        <div class="s-stat-val" id="rm-peak-val">-- mm</div>
+                    </div>
+                </div>
+
+                <div class="chart-box">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+                        <h4 style="margin: 0; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">📊 Past 24-Hour Hourly Rainfall (每小時雨量趨勢)</h4>
+                        <span id="rm-hint-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-success);">Awaiting Data</span>
+                    </div>
+                    <div style="position: relative; height: 230px; width: 100%;">
+                        <canvas id="rain-chart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -593,6 +652,7 @@
 
         let stationMasterData = {};
         let stationChartInstance = null;
+        let rainChartInstance = null;
 
         // --- 2. Time, Date & Astro ---
         function getLunarDate() {
@@ -1193,10 +1253,24 @@
             } catch (e) { console.error("Master Station Fetch Error:", e); }
         }
 
-        // --- 新增雨量 (輿論資料) 讀取器 ---
+        // --- 5-Level Rainfall Index Logic (Lifestyle Indices Styled) ---
+        function getRainLevel(val) {
+            if (isNaN(val) || val <= 0) {
+                return { level: 1, name: "Dry / Trace", desc: "No or negligible rain", color: "#3498db", badgeBg: "rgba(52, 152, 219, 0.15)" };
+            } else if (val < 5) {
+                return { level: 2, name: "Light Rain", desc: "Light scattered showers", color: "#2ecc71", badgeBg: "rgba(46, 204, 113, 0.15)" };
+            } else if (val < 15) {
+                return { level: 3, name: "Moderate Rain", desc: "Moderate rain, carry an umbrella", color: "#f39c12", badgeBg: "rgba(243, 156, 18, 0.15)" };
+            } else if (val < 30) {
+                return { level: 4, name: "Heavy Rain", desc: "Heavy rain, watch for ponding", color: "#e67e22", badgeBg: "rgba(230, 126, 34, 0.18)" };
+            } else {
+                return { level: 5, name: "Torrential Rain", desc: "Extreme torrential rain! Stay safe indoors.", color: "#e74c3c", badgeBg: "rgba(231, 76, 60, 0.25)" };
+            }
+        }
+
+        // --- 雨量列表 (5 級別 + Lifestyle 5-Step Bar) ---
         async function fetchRainList() {
             try {
-                // Official HKO Hourly Rainfall API
                 const response = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/hourlyRainfall.php?lang=en&_=${Date.now()}`);
                 if (!response.ok) throw new Error(`HTTP Error`);
                 const data = await response.json();
@@ -1204,14 +1278,12 @@
                 let rainList = [];
                 let rawList = [];
                 
-                // 智能辨識 API 資料結構 (HKO hourlyRainfall.php)
                 if (data.hourlyRainfall && Array.isArray(data.hourlyRainfall)) rawList = data.hourlyRainfall;
                 else if (Array.isArray(data)) rawList = data;
                 else if (data.rainfall && Array.isArray(data.rainfall.data)) rawList = data.rainfall.data;
                 else if (data.data && Array.isArray(data.data)) rawList = data.data;
 
                 rawList.forEach(item => {
-                    // 天文台官方 雨量 API 個 Key 係叫 automaticWeatherStation
                     let name = item.automaticWeatherStation || item.stationName || item.place || item.name;
                     let val = item.value !== undefined ? item.value : (item.max !== undefined ? item.max : null);
                     if (name && val !== null && !isNaN(val)) {
@@ -1225,8 +1297,34 @@
                     listHtml = `<div style="text-align:center; padding:20px; color:var(--text-muted);">No rainfall data available</div>`;
                 } else {
                     rainList.forEach(item => {
-                        let col = item.val > 30 ? themeColors.red : (item.val > 10 ? themeColors.orange : (item.val > 0 ? themeColors.blue : themeColors.gray));
-                        listHtml += `<div class="list-row"><span class="list-name">${item.name}</span><span class="list-val"><span class="val-dot" style="background:${col}"></span>${item.val} mm</span></div>`;
+                        const rInfo = getRainLevel(item.val);
+                        const colors = ['#3498db', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'];
+                        
+                        // 產生 5 段式進度條 (Lifestyle Indices 設計風格)
+                        let barHtml = '';
+                        for (let s = 1; s <= 5; s++) {
+                            if (s <= rInfo.level) {
+                                let blinkClass = (rInfo.level === 5 && s === 5) ? 'step-blink' : '';
+                                barHtml += `<div class="rain-step ${blinkClass}" style="background: ${colors[s-1]};"></div>`;
+                            } else {
+                                barHtml += `<div class="rain-step"></div>`;
+                            }
+                        }
+
+                        listHtml += `
+                        <div class="rain-item-card" onclick="openRainModal('${item.name}', ${item.val})">
+                            <div class="rain-card-header">
+                                <div class="rain-card-name">
+                                    <span class="val-dot" style="background: ${rInfo.color}"></span>
+                                    ${item.name}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="rain-badge" style="background: ${rInfo.badgeBg}; color: ${rInfo.color}; border: 1px solid ${rInfo.color}40;">Lvl ${rInfo.level}</span>
+                                    <span class="rain-card-val" style="color: ${rInfo.color}">${item.val} <span style="font-size:0.7rem; color:var(--text-muted);">mm</span></span>
+                                </div>
+                            </div>
+                            <div class="rain-mini-bar">${barHtml}</div>
+                        </div>`;
                     });
                 }
                 document.getElementById('rain-list-container').innerHTML = listHtml;
@@ -1235,6 +1333,120 @@
                 document.getElementById('rain-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">Cannot load rain data.</div>`; 
             }
         }
+
+        // --- 氣象站降雨詳情 Modal + 24 小時每小時雨量趨勢圖 ---
+        async function openRainModal(stationName, currentRain) {
+            const rInfo = getRainLevel(currentRain);
+            document.getElementById('rain-modal-title').innerText = `🌧️ ${stationName} - Rainfall Details`;
+            document.getElementById('rm-current-val').innerText = `${currentRain} mm`;
+            document.getElementById('rm-current-val').style.color = rInfo.color;
+            
+            document.getElementById('rm-level-val').innerText = `Lvl ${rInfo.level} (${rInfo.name})`;
+            document.getElementById('rm-level-val').style.color = rInfo.color;
+            
+            const hintBadge = document.getElementById('rm-hint-badge');
+            hintBadge.innerText = rInfo.desc;
+            hintBadge.style.color = rInfo.color;
+
+            // 搜尋座標
+            let coords = null;
+            for (let ch in hkCoordinates) {
+                if (stationEnglishNames[ch] === stationName || ch === stationName || stationName.includes(ch)) {
+                    coords = hkCoordinates[ch];
+                    break;
+                }
+            }
+            if (!coords) coords = [22.302, 114.174]; // Default to HKO
+
+            document.getElementById('rain-modal').classList.add('active');
+
+            // 取得 24 小時每小時降雨量 API (Open-Meteo)
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords[0]}&longitude=${coords[1]}&hourly=precipitation&timezone=Asia%2FHong_Kong&past_days=1&forecast_days=1`);
+                const weatherData = await res.json();
+                
+                const allTimes = weatherData.hourly.time;
+                const allPrecip = weatherData.hourly.precipitation;
+                
+                // 截取當前時間前 24 個小時
+                const currentHourIndex = new Date().getHours() + 24;
+                const startIdx = Math.max(0, currentHourIndex - 23);
+                const endIdx = currentHourIndex + 1;
+                
+                const labels = allTimes.slice(startIdx, endIdx).map(t => t.substring(11, 16));
+                let precipValues = allPrecip.slice(startIdx, endIdx);
+                
+                // 確保最後一個數值反映最新真實雨量
+                if(precipValues.length > 0) {
+                    precipValues[precipValues.length - 1] = Math.max(precipValues[precipValues.length - 1], currentRain);
+                }
+
+                // 計算 24H 累積與峰值
+                const total24h = precipValues.reduce((a, b) => a + b, 0).toFixed(1);
+                const peak24h = Math.max(...precipValues).toFixed(1);
+                
+                document.getElementById('rm-24h-total').innerText = `${total24h} mm`;
+                document.getElementById('rm-peak-val').innerText = `${peak24h} mm`;
+
+                renderRainChart(labels, precipValues);
+            } catch (err) {
+                console.error("Hourly Rain Chart Fetch Error:", err);
+            }
+        }
+
+        function renderRainChart(labels, precipValues) {
+            const ctx = document.getElementById('rain-chart').getContext('2d');
+            if (rainChartInstance) rainChartInstance.destroy();
+
+            // 生成漸變色柱狀圖
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(52, 152, 219, 0.9)');
+            gradient.addColorStop(1, 'rgba(52, 152, 219, 0.15)');
+
+            rainChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Hourly Rain (mm)',
+                            data: precipValues,
+                            backgroundColor: gradient,
+                            borderColor: '#3498db',
+                            borderWidth: 1.5,
+                            borderRadius: 4,
+                            barPercentage: 0.7
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { maxTicksLimit: 8 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Rain (mm)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` ${context.parsed.y} mm`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function closeRainModal() { document.getElementById('rain-modal').classList.remove('active'); }
+        document.getElementById('rain-modal').addEventListener('click', function(e) { if (e.target === this) closeRainModal(); });
 
         function switchMapData(type) {
             document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
@@ -1337,7 +1549,7 @@
 
                 updateLaundryIndex(hVal, uvVal, psrRaw);
 
-                // --- 完美無死角警告遍歷 (確保同時顯示多個警告) ---
+                // --- 完美無死角警告遍歷 ---
                 const warnRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${ts}`);
                 const warnData = await warnRes.json();
                 const warningsBox = document.getElementById('weather-warnings-box');
@@ -1345,18 +1557,14 @@
                 let activeWarningsHtml = '';
                 
                 if (warnData && typeof warnData === 'object') {
-                    // Loop 盡所有 Object Keys，每個獨立處理，避免互斥覆蓋
                     for (let key in warnData) {
                         let warning = warnData[key];
-                        
-                        // 防錯機制：必須為 Object 且未被取消
                         if (!warning || typeof warning !== 'object') continue;
                         if (warning.actionCode === 'CANCEL') continue;
                         
                         let text = (warning.name || "").toLowerCase();
                         let finalCode = "";
 
-                        // 直接用最精準嘅字眼配對，無視 API 彈出嚟嘅奇怪代碼
                         if (text.includes("雷暴") || text.includes("thunder")) finalCode = "WT";
                         else if (text.includes("黃色暴雨") || text.includes("amber")) finalCode = "WRA";
                         else if (text.includes("紅色暴雨") || text.includes("red")) finalCode = "WRR";
@@ -1384,7 +1592,6 @@
                         else if (text.includes("酷熱") || text.includes("hot")) finalCode = "WHOT";
                         else if (text.includes("海嘯") || text.includes("tsunami")) finalCode = "WTSUN";
                         else {
-                            // 如果真係有新警告，先 fallback 用官方 Code
                             let c = warning.code || key;
                             if (c === "WTS") c = "WT";
                             if (c === "WRAIN") c = "WRA";
@@ -1392,7 +1599,6 @@
                             finalCode = c;
                         }
 
-                        // 一齊將所有搵到嘅警告疊加上去 HTML 入面
                         if (warningMap[finalCode]) {
                             activeWarningsHtml += `<div class="warning-badge active-blink"><img class="warning-icon" src="${warningMap[finalCode].img}"><div class="warning-text">${warningMap[finalCode].name}</div></div>`;
                         }
@@ -1403,11 +1609,11 @@
                     warningsBox.innerHTML = activeWarningsHtml; 
                     warningCard.classList.add('warning-card-active');
                 } else { 
-                    warningsBox.innerHTML = `<div class="warning-none"><span style="color: var(--accent-success);">●</span> No active weather warnings (暫時沒有生效的天氣警告)</div>`; 
+                    warningsBox.innerHTML = `<div class="warning-none"><span style="color: var(--accent-success);">●</span> No active weather warnings</div>`; 
                     warningCard.classList.remove('warning-card-active');
                 }
 
-                // --- 特別天氣提示 (Special Weather Tips) ---
+                // --- 特別天氣提示 ---
                 try {
                     const swtRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=tc&_=${ts}`);
                     const swtData = await swtRes.json();
@@ -1519,7 +1725,7 @@
         function closeStationModal() { document.getElementById('station-modal').classList.remove('active'); }
         document.getElementById('station-modal').addEventListener('click', function(e) { if (e.target === this) closeStationModal(); });
 
-        // --- 8. 雷達圖 (純數學絕對毫秒推算 + 動態切換 256/128/064 公里) ---
+        // --- 8. 雷達圖 ---
         let radarFrames = [], radarIdx = 0, radarInterval = null, isRadarPlaying = true;
         let currentRadarRange = '256'; 
 
