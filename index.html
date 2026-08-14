@@ -406,6 +406,33 @@
                 order: -1; 
             }
         }
+
+        /* 🚨 全域閃爍 Toast CSS */
+        #global-toast {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffcc00;
+            color: #111;
+            padding: 15px 20px;
+            border: 4px solid #111;
+            border-radius: 16px;
+            box-shadow: 6px 6px 0px 0px #111;
+            z-index: 100000;
+            font-weight: 900;
+            max-width: 90%;
+            width: max-content;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            animation: brutalToastBlink 1s infinite steps(2);
+        }
+        @keyframes brutalToastBlink {
+            0% { background: #ffcc00; color: #111; }
+            50% { background: #ff3333; color: #fff; box-shadow: 6px 6px 0px 0px #ff3333; border-color: #fff; }
+            100% { background: #ffcc00; color: #111; }
+        }
     </style>
 </head>
 <body>
@@ -415,6 +442,9 @@
         <div id="progress-text">0%</div>
         <div id="progress-detail" class="anim-pulse">正在連接數據庫...</div>
     </div>
+
+    <!-- 🚨 全域閃爍提示框 -->
+    <div id="global-toast"></div>
 
     <div id="ptr-indicator" class="ptr-indicator">⬇️ <span id="t-pull">下拉以更新數據</span></div>
 
@@ -430,7 +460,6 @@
                     </div>
                 </div>
                 
-                <!-- 🚨 移除了無名的 wrapping div，讓子元素統一透過 flex gap 控制間距 -->
                 <div class="weather-time-main">
                     <div class="time-block">
                         <div class="time-display" id="hk-time">--:--</div>
@@ -592,10 +621,11 @@
                 
                 <h4 style="margin: 0 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-noti-set">🔔 系統通知 Notifications</h4>
                 <div class="lang-btn-group">
-                    <button class="lang-btn" style="background: var(--warning-red); color: white;" onclick="requestNotificationPermission()" id="t-btn-noti">🔔 開啟天氣及港鐵通知</button>
+                    <button id="btn-noti-on" class="lang-btn" onclick="setNotificationSetting(true)">開啟 ON</button>
+                    <button id="btn-noti-off" class="lang-btn" onclick="setNotificationSetting(false)">關閉 OFF</button>
                 </div>
                 
-                <h4 style="margin: 0 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
+                <h4 style="margin: 15px 0 15px 0; color: #111; font-weight: 900; border-bottom: 3px solid #111; padding-bottom: 5px;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
                 <div class="lang-btn-group">
                     <button class="lang-btn" onclick="closeSettingsModal(); openMtrModal();" id="t-btn-mtr-set">🚇 設定地鐵站</button>
                     <button class="lang-btn" onclick="closeSettingsModal(); openBusModal();" id="t-btn-bus-set">🚌 設定巴士線</button>
@@ -639,40 +669,95 @@
         window.currentDetailStopId = null;
 
         // ==========================================
-        // 🔔 Web Notification 系統通知設定
+        // 🔔 全域 Toast 動態顯示功能
+        // ==========================================
+        let toastTimeout = null;
+        window.showGlobalToast = function(msg) {
+            let toast = document.getElementById('global-toast');
+            if (!toast) return;
+            toast.innerHTML = msg;
+            toast.style.display = 'block';
+            
+            toast.onclick = () => { toast.style.display = 'none'; }; // 點擊可手動關閉
+            
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.display = 'none';
+            }, 60000); // 1分鐘後消失
+        };
+
+        // ==========================================
+        // 🔔 Web Notification 系統推播完整邏輯 (含開關與特別提示)
         // ==========================================
         let notifiedWarnings = new Set();
         let notifiedMtrIssues = new Set();
-        
-        // ==========================================
-        // ⏱️ 巴士詳情實時倒數記錄
-        // ==========================================
-        window.currentBusTargetTime = null;
-        window.busTickerInterval = null;
+        let notifiedSwt = new Set();
 
-        function requestNotificationPermission() {
+        let isNotificationEnabled = false;
+        try {
+            isNotificationEnabled = localStorage.getItem('app_noti_enabled') === 'true';
+        } catch(e) {}
+
+        function updateNotiButtonUI() {
+            const btnOn = document.getElementById('btn-noti-on');
+            const btnOff = document.getElementById('btn-noti-off');
+            if (!btnOn || !btnOff) return;
+            
+            if (isNotificationEnabled && "Notification" in window && Notification.permission === "granted") {
+                btnOn.classList.add('active');
+                btnOff.classList.remove('active');
+            } else {
+                btnOn.classList.remove('active');
+                btnOff.classList.add('active');
+            }
+        }
+
+        function setNotificationSetting(enable) {
             if (!("Notification" in window)) {
                 alert(currentLang === 'en' ? 'Your browser does not support notifications.' : '你的瀏覽器不支援通知功能。');
                 return;
             }
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    alert(currentLang === 'en' ? '✅ Notifications Enabled!' : '✅ 系統通知已成功開啟！');
-                    sendSystemNotification('HKG Dashboard', currentLang === 'en' ? 'Notification test successful.' : '通知測試成功，將在有天氣警告或港鐵故障時提醒你。');
-                } else {
-                    alert(currentLang === 'en' ? '⚠️ Permission denied.' : '⚠️ 權限被拒絕，無法發送通知。');
-                }
-            });
+
+            if (enable) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        isNotificationEnabled = true;
+                        try { localStorage.setItem('app_noti_enabled', 'true'); } catch(e){}
+                        updateNotiButtonUI();
+                        alert(currentLang === 'en' ? '✅ Notifications Enabled!' : '✅ 系統通知已成功開啟！');
+                        sendSystemNotification('HKG Dashboard', currentLang === 'en' ? 'Notification test successful.' : '通知測試成功，將在有天氣警告、特別提示或港鐵故障時提醒你。', true);
+                    } else {
+                        isNotificationEnabled = false;
+                        try { localStorage.setItem('app_noti_enabled', 'false'); } catch(e){}
+                        updateNotiButtonUI();
+                        alert(currentLang === 'en' ? '⚠️ Permission denied in browser settings.' : '⚠️ 瀏覽器通知權限被拒絕，請在瀏覽器或系統設定中允許通知。');
+                    }
+                });
+            } else {
+                isNotificationEnabled = false;
+                try { localStorage.setItem('app_noti_enabled', 'false'); } catch(e){}
+                updateNotiButtonUI();
+                alert(currentLang === 'en' ? '🔕 Notifications Disabled.' : '🔕 系統通知已關閉。');
+            }
         }
 
-        function sendSystemNotification(title, body) {
-            if (!("Notification" in window) || Notification.permission !== "granted") return;
-            new Notification(title, { 
-                body: body, 
-                icon: 'icon.png',
-                badge: 'icon.png',
-                vibrate: [200, 100, 200]
-            });
+        function sendSystemNotification(title, body, force = false) {
+            if (!("Notification" in window)) return;
+            if (Notification.permission !== "granted") return;
+            if (!isNotificationEnabled && !force) return;
+
+            try {
+                // 使用 Dynamic Tag 保證每次發出最新推播都不會被 OS 靜音或自動摺疊
+                new Notification(title, { 
+                    body: body, 
+                    icon: 'icon.png',
+                    badge: 'icon.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'hk-dash-' + Date.now()
+                });
+            } catch(e) {
+                console.warn("Push error:", e);
+            }
         }
 
         // 開放給 marquee.js 呼叫的 MTR 事故通知接口
@@ -680,13 +765,20 @@
             if (!notifiedMtrIssues.has(issueId)) {
                 notifiedMtrIssues.add(issueId);
                 sendSystemNotification(title, msg);
+                showGlobalToast(`⚠️ ${title}<br><span style="font-size:0.9rem;">${msg}</span>`);
             }
         };
         
-        // 讓 marquee.js 在故障恢復時清除紀錄
+        // 讓 marquee.js 在故障恢復時清除紀錄，以便下次故障可再次推播
         window.clearMtrNotification = function(issueId) {
             notifiedMtrIssues.delete(issueId);
         };
+
+        // ==========================================
+        // ⏱️ 巴士詳情實時倒數記錄
+        // ==========================================
+        window.currentBusTargetTimes = []; // 更改為陣列以存儲最多3班車
+        window.busTickerInterval = null;
 
         // ==========================================
         // 🌐 多語言系統設定及容錯機制
@@ -709,7 +801,7 @@
                 'bus-det': '🚌 路線詳細資料', 'wth-det': '🌈 延展天氣預報詳情', 'mtr-det': '🚇 港鐵路綫與車程分佈',
                 'sys-set': '⚙️ 系統設定 Settings', 'lang-set': '🌐 介面語言 Language', 'donate-title': '☕ 支持開發者 Support Developer', 
                 'donate-desc': '如果你覺得呢個 App 幫到你，可以考慮用 HSBC PayMe 請我飲杯咖啡，支持系統持續營運！',
-                'noti-set': '🔔 系統通知 Notifications', 'btn-noti': '🔔 開啟天氣及港鐵通知',
+                'noti-set': '🔔 系統通知 Notifications', 'btn-noti-on': '🔔 開啟 ON', 'btn-noti-off': '🔕 關閉 OFF',
                 'ts-set': '🛠️ 追蹤設定 Tracking Settings', 'btn-mtr-set': '🚇 設定地鐵站', 'btn-bus-set': '🚌 設定巴士線',
                 'txt-to': '往 ', 'txt-eta-arr': '即將到達', 'txt-eta-dep': '正在開出', 'txt-eta-end': '服務已終止', 'txt-min': ' 分鐘', 'txt-sec': '秒',
                 'txt-arrive-cd': '到達倒數: ', 'txt-departed': '🚇 已經開出', 'txt-loading': '<span class="icon-spin">🔄</span> 載入中...',
@@ -721,7 +813,7 @@
             'en': {
                 'connecting': 'Connecting to DB...',
                 'sys-ready': '🚌 System Readying', 'pull': 'Pull to refresh',
-                'hum': 'Humidity', 'uv': '☼.Index', 'rain': '⛆.Prob', 'max': '⤴.Temp', 'min': '↓.Temp',
+                'hum': 'Humidity', 'uv': 'UV Index', 'rain': 'Rain Prob.', 'max': 'Max Temp', 'min': 'Min Temp',
                 'mtr-title': '🚇 MTR Train Frequency', 'bus-title': '🚌 Bus ETA',
                 'sel-mtr': 'Select Stations', 'cancel-1': 'Cancel', 'save-1': 'Save',
                 'sel-bus': 'Bus Tracking Settings', 'sch-kmb': '🔴 Search KMB', 'sch-ctb': '🟡 Search CTB', 'sch-stop': '🚏 Search Stops',
@@ -729,7 +821,7 @@
                 'bus-det': '🚌 Route Details', 'wth-det': '🌈 Extended Forecast', 'mtr-det': '🚇 MTR Route Details',
                 'sys-set': '⚙️ Settings', 'lang-set': '🌐 Interface Language', 'donate-title': '☕ Support Developer', 
                 'donate-desc': 'If you find this App useful, consider buying me a coffee via HSBC PayMe to support the server!',
-                'noti-set': '🔔 System Notifications', 'btn-noti': '🔔 Enable Notifications',
+                'noti-set': '🔔 System Notifications', 'btn-noti-on': '🔔 Enable ON', 'btn-noti-off': '🔕 Disable OFF',
                 'ts-set': '🛠️ Tracking Settings', 'btn-mtr-set': '🚇 MTR Settings', 'btn-bus-set': '🚌 Bus Settings',
                 'txt-to': 'To ', 'txt-eta-arr': 'Arriving', 'txt-eta-dep': 'Departing', 'txt-eta-end': 'Service Ended', 'txt-min': ' min ', 'txt-sec': 's',
                 'txt-arrive-cd': 'ETA: ', 'txt-departed': '🚇 Departed', 'txt-loading': '<span class="icon-spin">🔄</span> Loading...',
@@ -768,7 +860,9 @@
                 document.getElementById('t-mtr-det').innerText = dict['mtr-det'];
                 document.getElementById('t-sys-set').innerText = dict['sys-set'];
                 document.getElementById('t-noti-set').innerText = dict['noti-set'];
-                document.getElementById('t-btn-noti').innerText = dict['btn-noti'];
+                document.getElementById('btn-noti-on').innerText = dict['btn-noti-on'];
+                document.getElementById('btn-noti-off').innerText = dict['btn-noti-off'];
+                updateNotiButtonUI();
                 document.getElementById('t-ts-set').innerText = dict['ts-set'];
                 document.getElementById('t-btn-mtr-set').innerText = dict['btn-mtr-set'];
                 document.getElementById('t-btn-bus-set').innerText = dict['btn-bus-set'];
@@ -803,6 +897,7 @@
 
         function openSettingsModal() {
             lockBackgroundScroll();
+            updateNotiButtonUI();
             document.getElementById('bottom-menu').classList.remove('active');
             document.getElementById('settings-modal').classList.add('active');
         }
@@ -1466,7 +1561,7 @@
             if(window.busSyncInterval) clearInterval(window.busSyncInterval);
             if(window.busTickerInterval) clearInterval(window.busTickerInterval); 
             window.currentDetailStopId = null; 
-            window.currentBusTargetTime = null;
+            window.currentBusTargetTimes = [];
             document.getElementById('bus-detail-modal').classList.remove('active'); 
         }
 
@@ -1493,7 +1588,7 @@
 
             let etaEl = document.getElementById('detail-eta-countdown');
             if (etaEl) {
-                etaEl.innerHTML = '<span class="icon-spin">🔄</span>';
+                etaEl.innerHTML = '<span class="icon-spin" style="font-size: 2.2rem; color: #111;">🔄</span>';
                 etaEl.className = 'anim-pulse'; 
                 etaEl.style.color = '#111';
             }
@@ -1602,7 +1697,7 @@
                         </div>
                         <div style="padding: 20px 10px; background: #f4f4f4; flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 120px;">
                             <div style="font-size: 0.9rem; font-weight: 900; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">⏱️ ${iconText}</div>
-                            <div id="detail-eta-countdown" class="anim-pulse" style="font-size: 2.2rem; font-weight: 900; color: #111; line-height:1.2; letter-spacing: -1px;"><span class="icon-spin">🔄</span></div>
+                            <div id="detail-eta-countdown" class="anim-pulse" style="font-weight: 900; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;"><span class="icon-spin" style="font-size: 2.2rem; color: #111;">🔄</span></div>
                         </div>
                     </div>
                 </div>`;
@@ -1670,7 +1765,8 @@
                 }
                 etas.sort((a,b) => a - b);
                 
-                window.currentBusTargetTime = etas.length > 0 ? etas[0] : null;
+                // 擷取最多前 3 班車的時間
+                window.currentBusTargetTimes = etas.slice(0, 3);
                 updateBusDetailCountdownDisplay();
 
             } catch(e) {
@@ -1683,13 +1779,18 @@
             if (!el) return;
             el.classList.remove('anim-pulse');
             
-            if (window.currentBusTargetTime) {
-                let etaInfo = parseRemaining(window.currentBusTargetTime, 'bus');
-                el.innerText = etaInfo.text;
-                el.className = etaInfo.status === 'departing' ? 'departing-text' : (etaInfo.status === 'arriving' ? 'arriving-text' : '');
-                el.style.color = '#ff3333'; 
+            if (window.currentBusTargetTimes && window.currentBusTargetTimes.length > 0) {
+                let html = '';
+                window.currentBusTargetTimes.forEach((targetTime, index) => {
+                    let etaInfo = parseRemaining(targetTime, 'bus');
+                    let colorStyle = etaInfo.status === 'departing' ? 'color: #111; text-decoration: underline;' : 'color: #ff3333;';
+                    let fontSize = index === 0 ? '1.8rem' : '1.1rem'; // 第一班字體較大，其餘兩班較小
+                    let margin = index === 0 ? 'margin-bottom: 8px;' : 'margin-bottom: 4px;';
+                    html += `<div style="${colorStyle} font-size: ${fontSize}; line-height: 1.2; letter-spacing: -0.5px; ${margin}">${etaInfo.text}</div>`;
+                });
+                el.innerHTML = html;
             } else {
-                el.innerText = '--';
+                el.innerHTML = '--';
                 el.className = '';
                 el.style.color = 'var(--text-muted)';
             }
@@ -1736,6 +1837,10 @@
             const upTerminal = currentLang === 'en' ? (line.terminals?.UP.en || line.stations[stationCodes[stationCodes.length - 1]].en) : (line.terminals?.UP.zh || line.stations[stationCodes[stationCodes.length - 1]].zh);
             const downTerminal = currentLang === 'en' ? (line.terminals?.DOWN.en || line.stations[stationCodes[0]].en) : (line.terminals?.DOWN.zh || line.stations[stationCodes[0]].zh);
 
+            // 判斷是否為終點站
+            const isDownTerminal = (currentStaCode === stationCodes[0]);
+            const isUpTerminal = (currentStaCode === stationCodes[stationCodes.length - 1] || currentStaCode === 'POA' || currentStaCode === 'LOW');
+
             let html = `
                 <div class="detail-header-card" style="border-left: 10px solid ${line.color}; text-align:left; padding-left:20px; position:relative; overflow:hidden;">
                     <div class="detail-route-title" style="font-size: 1.8rem; margin:0;">${currentStationName}</div>
@@ -1744,25 +1849,29 @@
                 </div>
             `;
 
-            // 僅顯示該站上行方向，加入載入動畫
-            html += `
-                <h4 style="margin: 20px 0 10px 0; color: var(--warning-red); font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
-                    <span>🔼 ${currentLang==='en'?'To':'往'} ${upTerminal}</span>
-                    <span id="plat-up" class="plat-badge" style="display: none;"></span>
-                </h4>
-                <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
-                    <div class="mtr-eta anim-pulse" id="eta-up-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
-                </div>`;
+            // 如果不是上行終點站，才顯示「往 (上行終點)」方向
+            if (!isUpTerminal) {
+                html += `
+                    <h4 style="margin: 20px 0 10px 0; color: var(--warning-red); font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                        <span>🔼 ${currentLang==='en'?'To':'往'} ${upTerminal}</span>
+                        <span id="plat-up" class="plat-badge" style="display: none;"></span>
+                    </h4>
+                    <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
+                        <div class="mtr-eta anim-pulse" id="eta-up-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
+                    </div>`;
+            }
 
-            // 僅顯示該站下行方向，加入載入動畫
-            html += `
-                <h4 style="margin: 20px 0 10px 0; color: #005ea8; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
-                    <span>🔽 ${currentLang==='en'?'To':'往'} ${downTerminal}</span>
-                    <span id="plat-down" class="plat-badge" style="display: none;"></span>
-                </h4>
-                <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
-                    <div class="mtr-eta anim-pulse" id="eta-down-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
-                </div>`;
+            // 如果不是下行終點站，才顯示「往 (下行終點)」方向
+            if (!isDownTerminal) {
+                html += `
+                    <h4 style="margin: 20px 0 10px 0; color: #005ea8; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                        <span>🔽 ${currentLang==='en'?'To':'往'} ${downTerminal}</span>
+                        <span id="plat-down" class="plat-badge" style="display: none;"></span>
+                    </h4>
+                    <div class="detail-stops-container" style="padding:15px; background: #fff; border: 3px solid #111; box-shadow: 4px 4px 0px 0px #111; border-radius: 16px;">
+                        <div class="mtr-eta anim-pulse" id="eta-down-${currentStaCode}" style="color:var(--text-muted); font-weight:bold; font-size: 1.1rem; text-align: left;"><span class="icon-spin">🔄</span></div>
+                    </div>`;
+            }
 
             body.innerHTML = html;
 
@@ -1875,12 +1984,13 @@
                             let emoji = customCfg ? customCfg.emoji : '⚠️';
                             let displayName = customCfg ? (currentLang === 'en' ? customCfg.name_en : customCfg.name_zh) : w.name;
                             
-                            // 🚨 觸發系統推播通知 🚨
+                            // 🚨 觸發系統推播通知 & 全域 Toast
                             if (!notifiedWarnings.has(w.code)) {
                                 notifiedWarnings.add(w.code);
                                 let notiTitle = currentLang === 'en' ? 'HKO Weather Warning' : '天文台天氣警告';
                                 let notiBody = currentLang === 'en' ? `${emoji} ${displayName} is in force.` : `${emoji} ${displayName} 現正生效。`;
                                 sendSystemNotification(notiTitle, notiBody);
+                                showGlobalToast(`⚠️ ${notiTitle}<br><span style="font-size:0.9rem;">${notiBody}</span>`);
                             }
                             
                             let introStr = currentLang === 'en' ? 'is in force. Please take precautions.' : '現正生效。請留意最新天氣情況及採取相應預防措施。';
@@ -1939,11 +2049,26 @@
 
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 const swtBox = document.getElementById('swt-box');
+                let currentSwtKeys = new Set();
+
                 if (swtData && swtData.swt && swtData.swt.length > 0) {
                     let swtHead = currentLang==='en' ? '💡 <b>Special Weather Tips:</b><br>' : '💡 <b>特別天氣提示：</b><br>';
                     
                     swtBox.innerHTML = swtHead + swtData.swt.map(tip => `• ${tip.desc}`).join('<br>');
                     swtBox.style.display = 'block'; swtBox.classList.add('swt-blink');
+
+                    // 💡 特殊天氣提示推播處理 & 全域 Toast
+                    swtData.swt.forEach(tip => {
+                        let tipKey = tip.updateTime ? `${tip.updateTime}_${tip.desc.substring(0, 15)}` : tip.desc;
+                        currentSwtKeys.add(tipKey);
+
+                        if (!notifiedSwt.has(tipKey)) {
+                            notifiedSwt.add(tipKey);
+                            let notiTitle = currentLang === 'en' ? '💡 HKO Special Weather Tip' : '💡 天文台特別天氣提示';
+                            sendSystemNotification(notiTitle, tip.desc);
+                            showGlobalToast(`${notiTitle}<br><span style="font-size:0.9rem;">${tip.desc}</span>`);
+                        }
+                    });
                     
                     swtBox.onclick = function() {
                         let updateTxt = currentLang==='en' ? 'Updated:' : '更新時間：';
@@ -1973,6 +2098,13 @@
                         openWarningDetailModal('💡 ' + mainTitle, fullHtml);
                     };
                 } else { swtBox.style.display = 'none'; swtBox.classList.remove('swt-blink'); swtBox.onclick = null; }
+
+                // 清除舊過期的 SWT 紀錄，確保最新資訊發佈時可再次推播
+                for (let key of notifiedSwt) {
+                    if (!currentSwtKeys.has(key)) {
+                        notifiedSwt.delete(key);
+                    }
+                }
 
                 let fnd = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json());
                 if(fnd?.weatherForecast) {
