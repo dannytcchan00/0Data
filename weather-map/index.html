@@ -174,6 +174,12 @@
         /* Radar & Hourly Rain */
         .radar-rain-wrapper { display: flex; gap: 12px; height: auto;}
         .radar-box { flex: 2; display: flex; flex-direction: column; background: var(--card-bg); border-radius: var(--radius-lg); padding: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow);}
+        
+        .radar-header-row { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 10px; width: 100%; }
+        .rad-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 2px 8px; font-weight: 600; border-radius: 8px; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.7rem; }
+        .rad-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .rad-btn.active { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
+
         .radar-screen { max-width: 100%; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background: #000; position: relative; display: flex; justify-content: center; align-items: center;}
         .radar-screen img { max-width: 100%; height: auto; display: block; }
         .radar-controls-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; width: 100%; justify-content: center;}
@@ -357,7 +363,14 @@
             <!-- 3. Radar & Rain Data Row -->
             <div class="radar-rain-wrapper">
                 <div class="radar-box">
-                    <h2 style="align-self: flex-start; width: 100%;">📡 Radar Animation</h2>
+                    <div class="radar-header-row">
+                        <h2 style="margin: 0; border: none; padding: 0;">📡 Radar Animation</h2>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="rad-btn active" id="btn-rad-256" onclick="switchRadarRange('256')">256km</button>
+                            <button class="rad-btn" id="btn-rad-128" onclick="switchRadarRange('128')">128km</button>
+                            <button class="rad-btn" id="btn-rad-064" onclick="switchRadarRange('064')">64km</button>
+                        </div>
+                    </div>
                     <div class="radar-screen">
                         <img id="radar-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Loading Latest Radar...">
                     </div>
@@ -1443,8 +1456,17 @@
         function closeStationModal() { document.getElementById('station-modal').classList.remove('active'); }
         document.getElementById('station-modal').addEventListener('click', function(e) { if (e.target === this) closeStationModal(); });
 
-        // --- 8. 雷達圖 (純數學絕對毫秒推算 + 全新 HKO JPG 格式) ---
+        // --- 8. 雷達圖 (純數學絕對毫秒推算 + 動態切換 256/128/064 公里) ---
         let radarFrames = [], radarIdx = 0, radarInterval = null, isRadarPlaying = true;
+        let currentRadarRange = '256'; // 預設 256km
+
+        // 切換雷達範圍
+        function switchRadarRange(range) {
+            currentRadarRange = range;
+            document.querySelectorAll('.rad-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-rad-${range}`).classList.add('active');
+            initRadarPlayer(); // 重新拉圖
+        }
 
         function getFrameData(hktMs) {
             // 利用建立 Date 物件後調用 getUTC 方法，確保無論部機喺邊度，計出嚟嘅都必定係 HKT
@@ -1455,8 +1477,9 @@
             let hh = String(d.getUTCHours()).padStart(2, '0');
             let mm = String(d.getUTCMinutes()).padStart(2, '0');
             
+            // 按照當前選擇嘅 Range 生成對應嘅 URL
             return {
-                url: `https://www.hko.gov.hk/wxinfo/radars/rad_256_png/_${yyyy}${MM}${dd}${hh}${mm}.png`,
+                url: `https://www.hko.gov.hk/wxinfo/radars/rad_${currentRadarRange}_png/2d${currentRadarRange}nradar_${yyyy}${MM}${dd}${hh}${mm}.jpg`,
                 timeStr: `${hh}:${mm} HKT`
             };
         }
@@ -1466,12 +1489,19 @@
             let utcMs = now.getTime();
             let hktMs = utcMs + (8 * 3600000); // 絕對時間 + 8小時 = HKT Timestamp
             
-            let d = new Date(hktMs);
-            let currentMin = d.getUTCMinutes();
-            let remainder = currentMin % 6;
+            // 減去 18 分鐘 (3格 x 6分鐘) 作為安全延遲，保證唔會破壞 6 嘅倍數規律
+            let safeHktMs = hktMs - (18 * 60000);
+            let d = new Date(safeHktMs);
             
-            // Base HKT ms 向下對齊最近嗰個 6 分鐘，再減 15 分鐘 (天文台安全延遲)
-            let baseHktMs = hktMs - (remainder * 60000) - (d.getUTCSeconds() * 1000) - d.getUTCMilliseconds() - (15 * 60000);
+            // Set死分鐘為 00, 06, 12, 18, 24, 30, 36, 42, 48, 54
+            let validMin = Math.floor(d.getUTCMinutes() / 6) * 6;
+            
+            // 重新組裝最精準嘅 Base Timestamp
+            d.setUTCMinutes(validMin);
+            d.setUTCSeconds(0);
+            d.setUTCMilliseconds(0);
+            
+            let baseHktMs = d.getTime();
 
             radarFrames = [];
             for (let i = 0; i < 20; i++) {
