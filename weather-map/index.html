@@ -1443,7 +1443,7 @@
         function closeStationModal() { document.getElementById('station-modal').classList.remove('active'); }
         document.getElementById('station-modal').addEventListener('click', function(e) { if (e.target === this) closeStationModal(); });
 
-        // --- 8. 雷達圖 (純數學絕對毫秒推算，自動跨日、跨月、跨時區轉換) ---
+        // --- 8. 雷達圖 (純數學絕對毫秒推算 + 全新 HKO JPG 格式) ---
         let radarFrames = [], radarIdx = 0, radarInterval = null, isRadarPlaying = true;
 
         function getFrameData(hktMs) {
@@ -1456,7 +1456,7 @@
             let mm = String(d.getUTCMinutes()).padStart(2, '0');
             
             return {
-                url: `https://www.hko.gov.hk/wxinfo/radars/rad_256_png/2d256nradar_${yyyy}${MM}${dd}${hh}${mm}.png`,
+                url: `https://www.hko.gov.hk/wxinfo/radars/rad_256_png/2d256nradar_${yyyy}${MM}${dd}${hh}${mm}.jpg`,
                 timeStr: `${hh}:${mm} HKT`
             };
         }
@@ -1476,7 +1476,7 @@
             radarFrames = [];
             for (let i = 0; i < 20; i++) {
                 // i = 0 係最舊嘅一張，向後推算 19 - i 個 6 分鐘
-                // 每次精準減去 360000 毫秒，JavaScript 引擎自動處理日子轉換！
+                // 每次精準減去 360000 毫秒，JavaScript 引擎自動處理跨日、跨月、甚至閏年轉換！
                 let frameMs = baseHktMs - (19 - i) * 6 * 60000;
                 let frame = getFrameData(frameMs);
                 radarFrames.push({
