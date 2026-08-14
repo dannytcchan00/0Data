@@ -13,7 +13,6 @@
     
     <style>
         :root {
-            /* Professional Studio Graphite Theme (Compact) */
             --bg-color: #202020;        
             --card-bg: #2a2a2a;         
             --card-bg-hover: #333333;   
@@ -47,121 +46,127 @@
             background: var(--bg-color); color: var(--text-main); 
             margin: 0; padding: 12px; height: 100vh; height: 100dvh;
             display: flex; flex-direction: column; overflow: hidden; 
-            font-weight: 500; font-size: 12.5px; 
+            font-weight: 500; font-size: 13.2px; 
         }
 
         .dashboard-layout { display: flex; gap: 12px; height: 100%; width: 100%; }
-        .left-col { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
+        .left-col { width: 335px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
         .right-col { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
         .left-col::-webkit-scrollbar, .right-col::-webkit-scrollbar { width: 0px; }
 
         .pro-card { 
             background: var(--card-bg); border: var(--border-width) solid var(--border-color); 
             border-radius: var(--radius-lg); padding: 16px; 
-            box-shadow: var(--shadow); display: flex; flex-direction: column;
+            box-shadow: var(--shadow); display: flex; flex-direction: column; transition: all 0.3s ease;
         }
 
         h2 { 
-            font-size: 0.85rem; font-weight: 700; margin: 0 0 10px 0; 
+            font-size: 0.9rem; font-weight: 700; margin: 0 0 10px 0; 
             border-bottom: 1px solid var(--border-color); padding-bottom: 8px; 
             text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);
             display: flex; align-items: center; gap: 6px;
         }
 
         /* Merged Time & Weather Block */
-        .time-weather-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 12px; padding-bottom: 12px;
-        }
-        
+        .time-weather-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 12px; }
         .time-block { text-align: left; display: flex; flex-direction: column; justify-content: flex-start; }
-        .time-display { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #fff;}
-        .utc-display { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;}
-        .date-display { font-size: 0.95rem; font-weight: 600; margin-top: 8px; color: #fff;}
-        .lunar-display { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+        .time-display { font-size: 2.75rem; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #fff;}
+        .utc-display { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;}
+        .date-display { font-size: 1rem; font-weight: 600; margin-top: 8px; color: #fff;}
+        .lunar-display { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
 
         .weather-block { text-align: right; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start; }
-        .weather-status-icon { width: 50px; height: 50px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); margin-bottom: 2px;}
-        .current-temp { font-size: 2.2rem; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #fff; margin-bottom: 6px;}
-        .current-hum { 
-            font-size: 0.8rem; background: var(--inner-bg); padding: 3px 8px; 
-            border-radius: 12px; border: 1px solid var(--border-color); color: #ccc;
-            font-weight: 600; display: flex; align-items: center; gap: 4px;
+        .weather-status-icon { width: 52px; height: 52px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); margin-bottom: 2px;}
+        .current-temp { font-size: 2.3rem; font-weight: 800; line-height: 1; letter-spacing: -1px; color: #fff; margin-bottom: 6px;}
+        .current-hum { font-size: 0.85rem; background: var(--inner-bg); padding: 3px 8px; border-radius: 12px; border: 1px solid var(--border-color); color: #ccc; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+        /* Warnings Card - Blinking Animations */
+        @keyframes redAlertPulse {
+            0% { border-color: rgba(231, 76, 60, 0.3); box-shadow: 0 0 0px rgba(231, 76, 60, 0); }
+            50% { border-color: rgba(231, 76, 60, 1); box-shadow: 0 0 15px rgba(231, 76, 60, 0.5); }
+            100% { border-color: rgba(231, 76, 60, 0.3); box-shadow: 0 0 0px rgba(231, 76, 60, 0); }
+        }
+        @keyframes alertBadgeBlink {
+            0% { background-color: rgba(231, 76, 60, 0.1); transform: scale(1); }
+            50% { background-color: rgba(231, 76, 60, 0.35); transform: scale(1.02); }
+            100% { background-color: rgba(231, 76, 60, 0.1); transform: scale(1); }
         }
 
-        /* Warnings */
-        .warnings-container { display: none; flex-direction: column; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
-        .warning-badge { display: flex; align-items: center; gap: 8px; background: rgba(231, 76, 60, 0.08); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: var(--radius-sm); padding: 8px 10px; }
+        .warning-card-active { animation: redAlertPulse 1.8s infinite ease-in-out !important; }
+        .warnings-container { display: flex; flex-direction: column; gap: 6px; }
+        .warning-badge { display: flex; align-items: center; gap: 8px; border: 1px solid rgba(231, 76, 60, 0.8); border-radius: var(--radius-sm); padding: 8px 10px; }
+        .warning-badge.active-blink { animation: alertBadgeBlink 1.8s infinite ease-in-out; }
         .warning-icon { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; }
-        .warning-text { font-size: 0.8rem; font-weight: 600; line-height: 1.2; color: #fff; }
+        .warning-text { font-size: 0.85rem; font-weight: 600; line-height: 1.2; color: #fff; }
+        .warning-none { display: flex; align-items: center; gap: 8px; background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--text-muted); font-size: 0.85rem; }
 
         /* Merged 4-Stats Bar */
-        .weather-stats-merged {
-            display: flex; background: var(--inner-bg); border: 1px solid var(--border-color); 
-            border-radius: var(--radius-sm); overflow: hidden;
-        }
+        .weather-stats-merged { display: flex; background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; }
         .w-stat { flex: 1; text-align: center; padding: 8px 4px; border-right: 1px solid var(--border-color); }
         .w-stat:last-child { border-right: none; }
-        .w-label { font-size: 0.65rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase;}
-        .w-val { font-size: 1rem; font-weight: 700; color: #fff; white-space: nowrap;}
+        .w-label { font-size: 0.7rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase;}
+        .w-val { font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;}
 
-        /* Lifestyle Indices (Pet & Laundry) */
+        /* Lifestyle Indices */
         .index-container { background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .level-header { display: flex; justify-content: space-between; align-items: baseline; }
-        .level-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;}
-        .level-text { font-size: 0.95rem; font-weight: 800; color: #fff; text-align: right; }
+        .level-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;}
+        .level-text { font-size: 1rem; font-weight: 800; color: #fff; text-align: right; }
         .level-bar { display: flex; gap: 4px; height: 6px; width: 100%; margin-top: 2px;}
-        .level-step { flex: 1; border-radius: 4px; background: rgba(255,255,255,0.1); transition: 0.3s; }
-        .level-hint { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-top: 2px;}
+        .level-step { flex: 1; border-radius: 4px; background: rgba(255,255,255,0.1); transition: background 0.3s ease, box-shadow 0.3s ease; }
+        .level-hint { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-top: 2px;}
+
+        @keyframes blinkEffect { 0% { opacity: 0.4; } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.4; } }
+        .step-blink { animation: blinkEffect 1.2s infinite ease-in-out; position: relative; z-index: 2; }
 
         /* Astronomy */
         .astro-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;}
         .a-item { border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; background-color: var(--inner-bg); display: flex; justify-content: space-between; align-items: center;}
-        .a-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;}
-        .a-val { font-size: 0.9rem; font-weight: 700; color: #fff; }
+        .a-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;}
+        .a-val { font-size: 0.95rem; font-weight: 700; color: #fff; }
         .moon-phase-box { grid-column: span 2; display: flex; align-items: center; justify-content: space-between; background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 10px; margin-top: 4px; }
 
         /* Top Map & Regional Temp List */
-        .map-list-wrapper { display: flex; gap: 12px; height: 400px; flex-shrink: 0;}
+        .map-list-wrapper { display: flex; gap: 12px; height: 410px; flex-shrink: 0;}
         .map-container { flex: 2; display: flex; flex-direction: column; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow);}
         .map-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .map-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 4px 10px; font-weight: 600; border-radius: 12px; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.75rem; }
+        .map-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 4px 10px; font-weight: 600; border-radius: 12px; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem; }
         .map-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .map-btn.active { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
         #hk-map { border-radius: var(--radius-sm); flex-grow: 1; border: 1px solid var(--border-color); z-index: 1;}
 
         .minimal-text-icon {
             background: rgba(24, 24, 24, 0.85); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px);
-            padding: 2px 6px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; color: #fff;
+            padding: 2px 6px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: #fff;
             white-space: nowrap; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
         }
-        .wind-arrow-icon { color: #ccc; font-size: 0.75rem; }
+        .wind-arrow-icon { color: #ccc; font-size: 0.8rem; }
         
         .leaflet-popup-content-wrapper { border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow); background: var(--card-bg); color: var(--text-main); padding: 0; }
         .leaflet-popup-content { margin: 12px; font-family: 'Inter', sans-serif; text-align: center;}
         .leaflet-popup-tip { background: var(--card-bg); border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color); }
-        .popup-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; font-weight: 600;}
-        .popup-value { font-size: 1.2rem; font-weight: 800; color: #fff; }
+        .popup-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; font-weight: 600;}
+        .popup-value { font-size: 1.25rem; font-weight: 800; color: #fff; }
 
         .list-container { flex: 1; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;}
         .list-scroll-area { flex-grow: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 4px;}
         .list-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--inner-bg); transition: all 0.2s ease;}
         .list-row.clickable { cursor: pointer; }
         .list-row.clickable:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.1); }
-        .list-name { font-size: 0.8rem; font-weight: 600; color: #fff;}
-        .list-val { font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;}
+        .list-name { font-size: 0.85rem; font-weight: 600; color: #fff;}
+        .list-val { font-size: 0.9rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;}
         .val-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 
         /* 9-Day Forecast */
-        .situation-box { background: var(--inner-bg); font-size: 0.8rem; line-height: 1.5; color: #ccc; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 500; margin-bottom: 12px;}
-        .forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+        .situation-box { background: var(--inner-bg); font-size: 0.85rem; line-height: 1.5; color: #ccc; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 500; margin-bottom: 12px;}
+        .forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: 8px; }
         .forecast-item { background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s ease; cursor: pointer;}
         .forecast-item:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.3); transform: translateY(-2px);}
-        .fc-date { font-size: 0.9rem; font-weight: 700; line-height: 1.2; color: #fff; text-align: center;}
-        .fc-week { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;}
-        .fc-icon { width: 36px; height: 36px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-        .fc-temp { font-size: 0.85rem; font-weight: 700; color: #fff; margin-top: 2px;}
-        .fc-psr { font-size: 0.65rem; font-weight: 700; padding: 3px 6px; border-radius: 8px; text-transform: uppercase; width: 100%; text-align: center;}
+        .fc-date { font-size: 0.95rem; font-weight: 700; line-height: 1.2; color: #fff; text-align: center;}
+        .fc-week { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;}
+        .fc-icon { width: 38px; height: 38px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .fc-temp { font-size: 0.9rem; font-weight: 700; color: #fff; margin-top: 2px;}
+        .fc-psr { font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-radius: 8px; text-transform: uppercase; width: 100%; text-align: center;}
         .psr-high { background: rgba(231, 76, 60, 0.15); color: var(--accent-danger); border: 1px solid rgba(231, 76, 60, 0.3);} 
         .psr-med { background: rgba(243, 156, 18, 0.15); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3);} 
         .psr-low { background: rgba(46, 204, 113, 0.15); color: var(--accent-success); border: 1px solid rgba(46, 204, 113, 0.3);} 
@@ -172,15 +177,15 @@
         .radar-screen { max-width: 100%; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; background: #000; position: relative; display: flex; justify-content: center; align-items: center;}
         .radar-screen img { max-width: 100%; height: auto; display: block; }
         .radar-controls-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; width: 100%; justify-content: center;}
-        .radar-btn { background: var(--inner-bg); border: 1px solid var(--border-color); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;}
-        .radar-btn svg { width: 14px; height: 14px; }
+        .radar-btn { background: var(--inner-bg); border: 1px solid var(--border-color); color: #fff; width: 34px; height: 34px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;}
+        .radar-btn svg { width: 15px; height: 15px; }
         .radar-btn:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.2); }
-        .radar-time-badge { font-size: 0.8rem; font-weight: 600; background: #fff; color: #000; padding: 4px 12px; border-radius: 12px; letter-spacing: 0.5px;}
+        .radar-time-badge { font-size: 0.85rem; font-weight: 600; background: #fff; color: #000; padding: 4px 12px; border-radius: 12px; letter-spacing: 0.5px;}
 
         .rain-wrapper { flex: 1; position: relative; min-height: 340px; }
         .rain-absolute { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
 
-        /* Dual Typhoon Maps Grid */
+        /* Dual Typhoon Tracking Maps */
         .typhoon-dual-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; flex-shrink: 0; }
         .tc-map-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative; }
         .map-leaflet-view { width: 100%; height: 360px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); position: relative; z-index: 1; background: #000;}
@@ -188,17 +193,11 @@
         @keyframes spin-counter-clockwise { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
         .spinning-typhoon-icon { display: flex; align-items: center; justify-content: center; font-size: 1.6rem; line-height: 1; animation: spin-counter-clockwise 2s linear infinite; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
 
-        .no-typhoon-alert {
-            position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(32, 32, 32, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-md); 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.8); padding: 16px 20px; font-size: 0.85rem; font-weight: 600; 
-            color: #fff; z-index: 1000; text-align: center; display: flex; flex-direction: column; gap: 4px; 
-            pointer-events: none; width: 85%; backdrop-filter: blur(8px);
-        }
-        .no-typhoon-alert span { font-size: 0.7rem; color: var(--text-muted); font-weight: 500;}
+        .no-typhoon-alert { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); background: rgba(32, 32, 32, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.8); padding: 16px 20px; font-size: 0.9rem; font-weight: 600; color: #fff; z-index: 1000; text-align: center; display: flex; flex-direction: column; gap: 4px; pointer-events: none; width: 85%; backdrop-filter: blur(8px); }
+        .no-typhoon-alert span { font-size: 0.75rem; color: var(--text-muted); font-weight: 500;}
 
         .agency-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .legend-item { font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); color: #fff; text-transform: uppercase;}
+        .legend-item { font-size: 0.7rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); color: #fff; text-transform: uppercase;}
 
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
@@ -206,17 +205,16 @@
         .modal-content { background: var(--card-bg); width: 100%; max-width: 650px; border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; transform: translateY(20px) scale(0.98); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
         .modal-header { background: rgba(255,255,255,0.02); padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff; }
+        .modal-header h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #fff; }
         .close-btn { background: transparent; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; color: var(--text-muted); transition: 0.2s; display: flex; justify-content: center; align-items: center; }
         .close-btn svg { width: 16px; height: 16px; }
         .close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .modal-body { padding: 20px; overflow-y: auto; max-height: 80vh; display: flex; flex-direction: column; gap: 16px;}
         
-        /* Station specific modal */
         .station-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
         .s-stat-box { background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 8px; text-align: center; }
-        .s-stat-label { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;}
-        .s-stat-val { font-size: 1.1rem; font-weight: 800; color: #fff;}
+        .s-stat-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;}
+        .s-stat-val { font-size: 1.15rem; font-weight: 800; color: #fff;}
         .chart-box { background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; }
 
         @media screen and (max-width: 1100px) {
@@ -237,11 +235,8 @@
         <!-- ================= LEFT COLUMN ================= -->
         <div class="left-col">
             
-            <!-- System Status / Info Card -->
+            <!-- 1. Time & Weather Card -->
             <div class="pro-card">
-                <div class="warnings-container" id="weather-warnings-box"></div>
-                
-                <!-- Merged Time & Current Weather -->
                 <div class="time-weather-header">
                     <div class="time-block">
                         <div class="time-display" id="hk-time">--:--</div>
@@ -256,7 +251,6 @@
                     </div>
                 </div>
                 
-                <!-- Merged Weather Stats -->
                 <div class="weather-stats-merged">
                     <div class="w-stat"><div class="w-label">Max</div><div class="w-val" id="hk-max">--°C</div></div>
                     <div class="w-stat"><div class="w-label">Min</div><div class="w-val" id="hk-min">--°C</div></div>
@@ -265,7 +259,15 @@
                 </div>
             </div>
 
-            <!-- Lifestyle Indices Card (Pet & Laundry - Independent Logic) -->
+            <!-- 2. Weather Warnings Card -->
+            <div class="pro-card" id="warning-card">
+                <h2>⚠️ Weather Warnings</h2>
+                <div class="warnings-container" id="weather-warnings-box">
+                    <div class="warning-none"><span style="color: var(--accent-success);">●</span> No active weather warnings</div>
+                </div>
+            </div>
+
+            <!-- 3. Lifestyle Indices Card -->
             <div class="pro-card">
                 <h2>💡 Lifestyle Indices</h2>
                 
@@ -302,7 +304,7 @@
                 </div>
             </div>
 
-            <!-- Astronomy -->
+            <!-- 4. Astronomy -->
             <div class="pro-card">
                 <h2>🔭 Astronomy</h2>
                 <div class="astro-grid">
@@ -345,7 +347,7 @@
 
             <!-- 2. 9-Day Forecast Card -->
             <div class="pro-card" style="flex-shrink: 0;">
-                <h2>📅 9-Day Forecast <span style="font-size: 0.7rem; font-weight:normal; text-transform:none; color:var(--text-muted);">(Click for details)</span></h2>
+                <h2>📅 9-Day Forecast <span style="font-size: 0.75rem; font-weight:normal; text-transform:none; color:var(--text-muted);">(Click for details)</span></h2>
                 <div class="situation-box" id="general-situation">Loading general situation...</div>
                 <div class="forecast-grid" id="forecast-container">
                     <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">Loading forecast data...</div>
@@ -357,7 +359,7 @@
                 <div class="radar-box">
                     <h2 style="align-self: flex-start; width: 100%;">📡 Radar Animation</h2>
                     <div class="radar-screen">
-                        <img id="radar-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Radar Loading...">
+                        <img id="radar-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Loading Latest Radar...">
                     </div>
                     <div class="radar-controls-row">
                         <button class="radar-btn" onclick="prevRadar()">
@@ -369,7 +371,7 @@
                         <button class="radar-btn" onclick="nextRadar()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
                         </button>
-                        <div class="radar-time-badge" id="radar-time">Frame -- / --</div>
+                        <div class="radar-time-badge" id="radar-time">Connecting to HKO...</div>
                     </div>
                 </div>
 
@@ -385,7 +387,6 @@
 
             <!-- 4. Dual Typhoon Tracking Maps -->
             <div class="typhoon-dual-container">
-                <!-- Map A: HKO Only (HKO-Centered 1200km) -->
                 <div class="pro-card">
                     <h2>🌀 Typhoon Track (HKO Official - 1200km Range)</h2>
                     <div class="agency-legend">
@@ -401,7 +402,6 @@
                     </div>
                 </div>
 
-                <!-- Map B: Other Agencies (Typhoon-Centered 2000km based on JMA) -->
                 <div class="pro-card">
                     <h2>🌐 Typhoon Track (Global Agencies - 2000km Range)</h2>
                     <div class="agency-legend" id="agency-legend-bar">
@@ -442,7 +442,7 @@
                     <div class="s-stat-box"><div class="s-stat-label">Humidity</div><div class="s-stat-val" id="m-humidity">--%</div></div>
                 </div>
                 <div class="chart-box">
-                    <h4 style="margin: 0 0 12px 0; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">📊 Today's Hourly Trend</h4>
+                    <h4 style="margin: 0 0 12px 0; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">📊 Today's Hourly Trend</h4>
                     <div style="position: relative; height: 220px; width: 100%;"><canvas id="station-chart"></canvas></div>
                 </div>
             </div>
@@ -463,21 +463,21 @@
                     <img id="f-modal-icon" src="" style="width:75px; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
                     <div>
                         <div id="f-modal-temp" style="font-size:2rem; font-weight:800; color:#fff; line-height:1;"></div>
-                        <div id="f-modal-rh" style="font-size:0.9rem; color:var(--text-muted); margin-top:8px; font-weight:600;"></div>
+                        <div id="f-modal-rh" style="font-size:0.95rem; color:var(--text-muted); margin-top:8px; font-weight:600;"></div>
                     </div>
                 </div>
                 
                 <div style="background:var(--inner-bg); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px;">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Weather Condition</div>
-                    <div id="f-modal-wx" style="font-size:1rem; color:#fff; line-height:1.5;"></div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Weather Condition</div>
+                    <div id="f-modal-wx" style="font-size:1.05rem; color:#fff; line-height:1.5;"></div>
                 </div>
 
                 <div style="background:var(--inner-bg); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px;">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Wind Forecast</div>
-                    <div id="f-modal-wind" style="font-size:0.95rem; color:#fff; line-height:1.5;"></div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Wind Forecast</div>
+                    <div id="f-modal-wind" style="font-size:1rem; color:#fff; line-height:1.5;"></div>
                 </div>
 
-                <div id="f-modal-psr" style="margin-top:5px; font-size:0.85rem; font-weight:700; text-align:center;"></div>
+                <div id="f-modal-psr" style="margin-top:5px; font-size:0.9rem; font-weight:700; text-align:center;"></div>
             </div>
         </div>
     </div>
@@ -485,13 +485,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // Set Chart.js Defaults to Dark Theme
         Chart.defaults.color = '#9e9e9e';
         Chart.defaults.font.family = "'Inter', sans-serif";
 
         let nineDayForecastData = [];
 
-        // --- 1. Map & CSV Setup ---
         const mapSources = {
             'temp': 'https://dannytcchan00.github.io/0Data/data/temp_data.csv',
             'maxmin': 'https://dannytcchan00.github.io/0Data/data/maxmin_data.csv',
@@ -547,30 +545,23 @@
             {c: "東", e: "E"}, {c: "南", e: "S"}, {c: "西", e: "W"}
         ];
 
-        // Theme Colors
         const themeColors = { blue: '#3498db', green: '#2ecc71', orange: '#f39c12', red: '#e74c3c', gray: '#7f8c8d' };
         const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-        // --- 地圖初始化 ---
         const hkoCenter = [22.302, 114.174];
-        let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222; color:#fff; font-size:0.6rem; font-weight:700; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 6px rgba(0,0,0,0.5);">HKO</div>`, iconAnchor: [12, 8] });
-        
-        // Local Map Bounds
+        let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222; color:#fff; font-size:0.65rem; font-weight:700; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 6px rgba(0,0,0,0.5);">HKO</div>`, iconAnchor: [12, 8] });
         const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
-        // 1200km HKO Viewport (Diameter = 2400km)
         const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
 
         let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 9 }).setView([22.35, 114.13], 10);
         L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18 }).addTo(map);
         let dataLayerGroup = L.layerGroup().addTo(map);
 
-        // Map A: HKO
         let tcMapHko = L.map('tc-map-hko', { minZoom: 3, maxZoom: 10, zoomControl: false });
         L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18 }).addTo(tcMapHko);
         let tcHkoLayerGroup = L.layerGroup().addTo(tcMapHko);
         L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapHko);
 
-        // Map B: Agency
         let tcMapAgency = L.map('tc-map-agency', { minZoom: 3, maxZoom: 10, zoomControl: false });
         L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18 }).addTo(tcMapAgency);
         let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
@@ -584,10 +575,10 @@
         // --- 2. Time, Date & Astro ---
         function getLunarDate() {
             try {
-                const formatter = new Intl.DateTimeFormat('en-GB-u-ca-chinese', { month: 'numeric', day: 'numeric' });
-                const parts = formatter.formatToParts(new Date());
-                const month = parts.find(p => p.type === 'month')?.value;
-                const day = parts.find(p => p.type === 'day')?.value;
+                let formatter = new Intl.DateTimeFormat('en-GB-u-ca-chinese', { timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric' });
+                let parts = formatter.formatToParts(new Date());
+                let month = parts.find(p => p.type === 'month')?.value;
+                let day = parts.find(p => p.type === 'day')?.value;
                 if(month && day) return `Lunar: Day ${day}, Month ${month}`;
                 return 'Lunar: --';
             } catch (e) { return ''; }
@@ -595,11 +586,24 @@
 
         function updateTick() {
             const now = new Date();
+            let utcMs = now.getTime();
+            let hktMs = utcMs + (8 * 3600000); // 將系統絕對時間轉為 HKT Timestamp
+            let d = new Date(hktMs); 
+            
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-            document.getElementById('current-date').innerText = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${days[now.getDay()]}`;
-            document.getElementById('hk-time').innerText = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Hong_Kong', hour12: false, hour: '2-digit', minute: '2-digit' });
-            document.getElementById('utc-time').innerText = now.toLocaleTimeString('en-GB', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit' }) + ' UTC';
+            
+            // 使用 getUTC 系列可以完美反映加上 8 小時後嘅正確 HKT 日期、跨日等
+            document.getElementById('current-date').innerText = `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${days[d.getUTCDay()]}`;
+            
+            let hh = String(d.getUTCHours()).padStart(2, '0');
+            let mm = String(d.getUTCMinutes()).padStart(2, '0');
+            document.getElementById('hk-time').innerText = `${hh}:${mm}`;
+            
+            let utc_hh = String(now.getUTCHours()).padStart(2, '0');
+            let utc_mm = String(now.getUTCMinutes()).padStart(2, '0');
+            document.getElementById('utc-time').innerText = `${utc_hh}:${utc_mm} UTC`;
+            
             document.getElementById('lunar-date').innerText = getLunarDate();
         }
 
@@ -638,7 +642,37 @@
             }
         }
 
-        // --- 3. Independent Lifestyle Indices (Pet & Laundry) ---
+        // --- 3. Lifestyle Indices & Animations ---
+        function animateIndex(prefix, targetLevel, colors) {
+            for(let i=1; i<=5; i++) {
+                let step = document.getElementById(`${prefix}-step-${i}`);
+                if(step) {
+                    step.style.background = 'rgba(255,255,255,0.1)';
+                    step.style.boxShadow = 'none';
+                    step.classList.remove('step-blink');
+                }
+            }
+            
+            let current = 1;
+            let animInterval = setInterval(() => {
+                if (current > targetLevel) {
+                    clearInterval(animInterval);
+                    let lastStep = document.getElementById(`${prefix}-step-${targetLevel}`);
+                    if(lastStep) {
+                        lastStep.classList.add('step-blink');
+                        lastStep.style.boxShadow = `0 0 12px ${colors[targetLevel-1]}`;
+                    }
+                    return;
+                }
+                
+                let step = document.getElementById(`${prefix}-step-${current}`);
+                if (step) {
+                    step.style.background = colors[current-1]; 
+                }
+                current++;
+            }, 250); 
+        }
+
         function updatePetWalkingIndex(tVal, hVal) {
             let petLevel = 1;
             if (!isNaN(tVal) && !isNaN(hVal)) {
@@ -667,16 +701,7 @@
             document.getElementById('pet-level-val').style.color = colors[petLevel-1];
             document.getElementById('pet-hint-text').innerText = pHints[petLevel-1];
 
-            for(let i=1; i<=5; i++) {
-                let step = document.getElementById(`pet-step-${i}`);
-                if (i <= petLevel) {
-                    step.style.background = colors[i-1];
-                    step.style.boxShadow = (i === petLevel) ? `0 0 8px ${colors[i-1]}` : 'none';
-                } else {
-                    step.style.background = 'rgba(255,255,255,0.1)';
-                    step.style.boxShadow = 'none';
-                }
-            }
+            animateIndex('pet', petLevel, colors);
         }
 
         function updateLaundryIndex(hVal, uvVal, psrRaw) {
@@ -685,7 +710,7 @@
                 return;
             }
             
-            let laundryLevel = 2; // Default
+            let laundryLevel = 2;
             let psr = "Low";
             if (psrRaw) {
                 let p = psrRaw.toLowerCase();
@@ -693,7 +718,6 @@
                 else if (p.includes('medium') || p.includes('中')) psr = 'Medium';
             }
 
-            // Fallback for UV (night time is 0)
             let uv = isNaN(uvVal) ? 0 : uvVal;
 
             if (psr === 'High' || hVal >= 90) { laundryLevel = 5; } 
@@ -716,18 +740,8 @@
             document.getElementById('laundry-level-val').style.color = colors[laundryLevel-1];
             document.getElementById('laundry-hint-text').innerText = lHints[laundryLevel-1];
 
-            for(let i=1; i<=5; i++) {
-                let step = document.getElementById(`laundry-step-${i}`);
-                if (i <= laundryLevel) {
-                    step.style.background = colors[i-1];
-                    step.style.boxShadow = (i === laundryLevel) ? `0 0 8px ${colors[i-1]}` : 'none';
-                } else {
-                    step.style.background = 'rgba(255,255,255,0.1)';
-                    step.style.boxShadow = 'none';
-                }
-            }
+            animateIndex('laundry', laundryLevel, colors);
         }
-
 
         // --- 4. Local CSV Data Parsing ---
         function parseCSVLine(text) {
@@ -833,7 +847,7 @@
             } catch(e) { console.error('CSV Map Error:', e); }
         }
 
-        // --- 5. Dual Typhoon Maps Logic (Cone, Radius, Viewport) ---
+        // --- 5. Dual Typhoon Maps Logic ---
         const agencyColorPalette = {
             'JTWC': '#9b59b6', 'JMA': '#3498db', 'NMC': '#2ecc71', 'CWA': '#f39c12', 'PAGASA': '#e84393', 'OTHER': '#9e9e9e'
         };
@@ -860,16 +874,13 @@
 
         function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, drawCone, isPrimary) {
             if (points.length === 0) return;
-
             let currentPt = points[0]; 
             
             if (drawCone) {
-                // 180km Current Gale Radius
                 L.circle([currentPt.lat, currentPt.lon], {
                     radius: 180000, color: colorCode, weight: 1.5, fillColor: colorCode, fillOpacity: 0.1
                 }).addTo(mapLayerGroup);
 
-                // Funnel Forecast Cone
                 if (points.length > 1) {
                     let leftPoints = [], rightPoints = [];
                     points.forEach((pt, idx) => {
@@ -892,11 +903,9 @@
                 }
             }
 
-            // Polyline Track
             let latlngs = points.map(p => [p.lat, p.lon]);
             L.polyline(latlngs, { color: colorCode, weight: isPrimary ? 3 : 2, dashArray: isPrimary ? '4, 6' : '3, 5', opacity: 0.8 }).addTo(mapLayerGroup);
 
-            // Markers
             points.forEach((pt, idx) => {
                 if (idx === 0) {
                     if (isPrimary) {
@@ -920,7 +929,6 @@
             const hkoAlert = document.getElementById('no-tc-hko-alert');
             const agencyAlert = document.getElementById('no-tc-agency-alert');
 
-            // --- Map A: HKO Official ---
             try {
                 const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
                 if (!resHko.ok) throw new Error("No XML response");
@@ -956,12 +964,10 @@
                 }
                 tcMapHko.fitBounds(hkoBounds1200);
             } catch (err) {
-                console.warn("HKO XML Error:", err);
                 hkoAlert.style.display = 'flex';
                 tcMapHko.fitBounds(hkoBounds1200);
             }
 
-            // --- Map B: Agencies (Typhoon-Centered 2000km radius based on JMA) ---
             try {
                 const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
                 if (!resAgy.ok) throw new Error("No KML response");
@@ -1009,7 +1015,6 @@
                     }
                 }
 
-                // Points fallback
                 if (Object.keys(parsedAgencyTracks).length === 0) {
                      for (let i = 0; i < placemarks.length; i++) {
                         let pm = placemarks[i];
@@ -1068,7 +1073,6 @@
                     }
                     
                     if (typhoonCenterCoords) {
-                        // 以颱風為中心，2000km 視野邊界 (直徑 4,000,000 米)
                         let typhoonBounds2000 = L.latLng(typhoonCenterCoords).toBounds(4000000);
                         tcMapAgency.fitBounds(typhoonBounds2000, { padding: [20, 20] });
                     } else {
@@ -1077,7 +1081,6 @@
                 }
 
             } catch (err) {
-                console.warn("Agency KML Error:", err);
                 agencyAlert.style.display = 'flex';
                 tcMapAgency.fitBounds(hkoBounds1200);
             }
@@ -1240,9 +1243,13 @@
             "WRR": { name: "Red Rainstorm Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainred.png" },
             "WRB": { name: "Black Rainstorm Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainblack.png" },
             "WT": { name: "Thunderstorm Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png" },
+            "WTS": { name: "Thunderstorm Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png" },
             "WNF": { name: "NT North Flooding Special Report", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/northflood.png" },
+            "WFNTSA": { name: "NT North Flooding Special Report", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/northflood.png" },
             "WLS": { name: "Landslip Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ls.png" },
+            "WL": { name: "Landslip Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ls.png" },
             "SMS": { name: "Strong Monsoon Signal", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/sms.png" },
+            "WMSL": { name: "Strong Monsoon Signal", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/sms.png" },
             "WFROST": { name: "Frost Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/frost.png" },
             "WFIREY": { name: "Yellow Fire Danger Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/fireyellow.png" },
             "WFIRER": { name: "Red Fire Danger Warning", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/firered.png" },
@@ -1274,12 +1281,10 @@
                     document.getElementById('hk-uv').innerHTML = '--';
                 }
 
-                // 獨立執行 Pet Index (只依賴 Temp, Hum)
                 let tVal = t ? parseFloat(t.value) : NaN;
                 let hVal = h ? parseFloat(h.value) : NaN;
                 updatePetWalkingIndex(tVal, hVal);
                 
-                // Forecast (需要用作 Laundry Index 判斷 PSR)
                 const fndRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en&_=${ts}`);
                 const fnd = await fndRes.json();
                 
@@ -1315,26 +1320,41 @@
                                  </div>`;
                     });
                     document.getElementById('forecast-container').innerHTML = html;
-                    document.getElementById('refresh-status').innerText = 'UPDATED';
                 }
 
-                // 獨立執行 Laundry Index (依賴 Hum, UV, PSR)
                 updateLaundryIndex(hVal, uvVal, psrRaw);
 
-                // Warnings
+                // --- 天氣警告及閃爍控制 ---
                 const warnRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en&_=${ts}`);
                 const warnData = await warnRes.json();
                 const warningsBox = document.getElementById('weather-warnings-box');
+                const warningCard = document.getElementById('warning-card');
                 let activeWarningsHtml = '';
-                for (let key in warnData) {
-                    if (warningMap[key]) {
-                        activeWarningsHtml += `<div class="warning-badge"><img class="warning-icon" src="${warningMap[key].img}"><div class="warning-text">${warningMap[key].name}</div></div>`;
+                
+                if (warnData && Object.keys(warnData).length > 0) {
+                    for (let key in warnData) {
+                        let warning = warnData[key];
+                        let k = key === 'WTS' ? 'WT' : key;
+                        let isCancelled = false;
+                        if (warning && warning.actionCode === 'CANCEL') isCancelled = true;
+
+                        if (warningMap[k] && !isCancelled) {
+                            activeWarningsHtml += `<div class="warning-badge active-blink"><img class="warning-icon" src="${warningMap[k].img}"><div class="warning-text">${warningMap[k].name}</div></div>`;
+                        }
                     }
                 }
-                if (activeWarningsHtml !== '') { warningsBox.innerHTML = activeWarningsHtml; warningsBox.style.display = 'flex'; } 
-                else { warningsBox.innerHTML = ''; warningsBox.style.display = 'none'; }
+                
+                if (activeWarningsHtml !== '') { 
+                    warningsBox.innerHTML = activeWarningsHtml; 
+                    warningCard.classList.add('warning-card-active');
+                } else { 
+                    warningsBox.innerHTML = `<div class="warning-none"><span style="color: var(--accent-success);">●</span> No active weather warnings</div>`; 
+                    warningCard.classList.remove('warning-card-active');
+                }
 
-            } catch (error) { document.getElementById('refresh-status').innerText = 'ERROR'; }
+            } catch (error) { 
+                console.error("fetchTopOverview error:", error); 
+            }
         }
 
         // --- Forecast Detail Modal ---
@@ -1367,7 +1387,6 @@
 
         function closeForecastModal() { document.getElementById('forecast-modal').classList.remove('active'); }
         document.getElementById('forecast-modal').addEventListener('click', function(e) { if (e.target === this) closeForecastModal(); });
-
 
         // --- 7. Station Modal ---
         async function openStationModal(stationName) {
@@ -1424,20 +1443,57 @@
         function closeStationModal() { document.getElementById('station-modal').classList.remove('active'); }
         document.getElementById('station-modal').addEventListener('click', function(e) { if (e.target === this) closeStationModal(); });
 
-        // --- 8. Radar Animation Player ---
+        // --- 8. 雷達圖 (純數學絕對毫秒推算，自動跨日、跨月、跨時區轉換) ---
         let radarFrames = [], radarIdx = 0, radarInterval = null, isRadarPlaying = true;
 
+        function getFrameData(hktMs) {
+            // 利用建立 Date 物件後調用 getUTC 方法，確保無論部機喺邊度，計出嚟嘅都必定係 HKT
+            let d = new Date(hktMs);
+            let yyyy = d.getUTCFullYear();
+            let MM = String(d.getUTCMonth() + 1).padStart(2, '0');
+            let dd = String(d.getUTCDate()).padStart(2, '0');
+            let hh = String(d.getUTCHours()).padStart(2, '0');
+            let mm = String(d.getUTCMinutes()).padStart(2, '0');
+            
+            return {
+                url: `https://www.hko.gov.hk/wxinfo/radars/rad_256_png/rad256_${yyyy}${MM}${dd}${hh}${mm}.png`,
+                timeStr: `${hh}:${mm} HKT`
+            };
+        }
+
         function initRadarPlayer() {
-            for(let i = 0; i < 20; i++) {
-                let paddedIdx = String(i).padStart(2, '0');
-                radarFrames.push({ primary: `https://dannytcchan00.github.io/0Data/radar/imag/frame_${paddedIdx}.png`, time: `Frame ${i + 1} / 20` });
+            let now = new Date();
+            let utcMs = now.getTime();
+            let hktMs = utcMs + (8 * 3600000); // 絕對時間 + 8小時 = HKT Timestamp
+            
+            let d = new Date(hktMs);
+            let currentMin = d.getUTCMinutes();
+            let remainder = currentMin % 6;
+            
+            // Base HKT ms 向下對齊最近嗰個 6 分鐘，再減 15 分鐘 (天文台安全延遲)
+            let baseHktMs = hktMs - (remainder * 60000) - (d.getUTCSeconds() * 1000) - d.getUTCMilliseconds() - (15 * 60000);
+
+            radarFrames = [];
+            for (let i = 0; i < 20; i++) {
+                // i = 0 係最舊嘅一張，向後推算 19 - i 個 6 分鐘
+                // 每次精準減去 360000 毫秒，JavaScript 引擎自動處理日子轉換！
+                let frameMs = baseHktMs - (19 - i) * 6 * 60000;
+                let frame = getFrameData(frameMs);
+                radarFrames.push({
+                    url: frame.url,
+                    time: `Frame ${i + 1} / 20 (${frame.timeStr})`
+                });
             }
+            
+            radarIdx = 0;
             loadRadarFrame(0);
-            radarInterval = setInterval(nextRadar, 800); 
+            if(radarInterval) clearInterval(radarInterval);
+            if(isRadarPlaying) radarInterval = setInterval(nextRadar, 800);
         }
 
         function loadRadarFrame(idx) {
-            document.getElementById('radar-img').src = radarFrames[idx].primary;
+            if(!radarFrames.length) return;
+            document.getElementById('radar-img').src = radarFrames[idx].url;
             document.getElementById('radar-time').innerText = radarFrames[idx].time;
         }
 
@@ -1456,14 +1512,15 @@
 
         // --- 啟動系統 ---
         updateTick(); setInterval(updateTick, 1000);
-        fetchTopOverview(); setInterval(fetchTopOverview, 300000);
+        fetchTopOverview(); setInterval(fetchTopOverview, 300000); // 每 5 分鐘 update 天氣
         fetchAstroData(); setInterval(fetchAstroData, 3600000); 
         fetchAllStationData(); setInterval(fetchAllStationData, 300000);
         fetchRainList(); setInterval(fetchRainList, 300000);
         fetchAndRenderBothTyphoonMaps(); setInterval(fetchAndRenderBothTyphoonMaps, 300000);
         
         switchMapData('temp');
-        initRadarPlayer();
+        
+        initRadarPlayer(); setInterval(initRadarPlayer, 360000); // 每 6 分鐘重新計過最新嘅雷達圖
 
     </script>
 </body>
