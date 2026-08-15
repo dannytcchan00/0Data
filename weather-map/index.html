@@ -131,7 +131,6 @@
         .warning-icon { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; }
         .warning-text { font-size: 0.85rem; font-weight: 600; line-height: 1.3; color: #fff; flex-grow: 1; }
         .warning-arrow { color: var(--text-muted); font-size: 0.8rem; }
-        .warning-none { display: flex; align-items: center; gap: 8px; background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--text-muted); font-size: 0.85rem; }
 
         .swt-item { 
             font-size: 0.8rem; color: #fff; background: rgba(243, 156, 18, 0.1); padding: 8px 10px; 
@@ -334,9 +333,24 @@
                 </div>
             </div>
 
-            <!-- 2. 多維度五級綜合氣象威脅警報 -->
+            <!-- 2. Weather Warnings Card (置於時間下方，沒有警告時自動隱藏) -->
+            <div class="pro-card" id="warning-card" style="display: none;">
+                <h2>⚠️ 天氣警告</h2>
+                <div class="warnings-container" id="weather-warnings-box"></div>
+            </div>
+
+            <!-- 3. Special Weather Tips Card (置於時間下方，沒有提示時自動隱藏) -->
+            <div class="pro-card" id="swt-card" style="display: none;">
+                <h2>💡 特別天氣提示</h2>
+                <div id="swt-box" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <!-- 4. 多維度五級綜合氣象威脅警報 (加入 ℹ️ 解說) -->
             <div class="pro-card">
-                <h2>⚡ 綜合氣象威脅評級</h2>
+                <h2>
+                    <span>⚡ 綜合氣象威脅評級</span>
+                    <span class="info-btn" onclick="event.stopPropagation(); openThreatInfoModal()" title="查看綜合氣象威脅評級解說">ℹ️</span>
+                </h2>
                 <div class="threat-card" id="threat-alert-box" onclick="openThreatModal()">
                     <div class="threat-header">
                         <div class="threat-title" id="threat-title-text">評估中...</div>
@@ -371,25 +385,12 @@
                 </div>
             </div>
 
-            <!-- 3. Weather Warnings Card -->
-            <div class="pro-card" id="warning-card">
-                <h2>⚠️ 天氣警告</h2>
-                <div class="warnings-container" id="weather-warnings-box">
-                    <div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有生效的天氣警告</div>
-                </div>
-            </div>
-
-            <!-- 4. Special Weather Tips Card -->
-            <div class="pro-card" id="swt-card">
-                <h2>💡 特別天氣提示</h2>
-                <div id="swt-box" style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有特別天氣提示</div>
-                </div>
-            </div>
-
-            <!-- 5. Lifestyle Indices Card -->
+            <!-- 5. Lifestyle Indices Card (加入 ℹ️ 解說) -->
             <div class="pro-card">
-                <h2>💡 生活指數</h2>
+                <h2>
+                    <span>💡 生活指數</span>
+                    <span class="info-btn" onclick="event.stopPropagation(); openLifestyleInfoModal()" title="查看生活指數評估解說">ℹ️</span>
+                </h2>
                 <div class="index-container" onclick="openLifestyleModal('pet')">
                     <div class="level-header">
                         <div class="level-title">🐾 寵物散步</div>
@@ -571,7 +572,100 @@
 
     <!-- ================= MODALS ================= -->
 
-    <!-- 全新：氣溫 5 級分級解說 Modal -->
+    <!-- 全新：綜合氣象威脅評級解說 Modal -->
+    <div id="threat-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚡ 綜合氣象威脅評級機制解說</h3>
+                <button class="close-btn" onclick="closeModal('threat-info-modal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="level-info-card" style="border-left-color: #e74c3c;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #e74c3c;"><span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：極端危險 (Extreme Hazard)</div>
+                    </div>
+                    <p class="tl-desc">風暴極度逼近（≤ 150km）、離岸颶風（≥ 88km/h）、特大暴雨（≥ 70mm/h）或極端危險酷熱（暑熱指數 ≥ 37°C）。應立即暫停所有戶外活動並留在室內堅固避難場所。</p>
+                </div>
+
+                <div class="level-info-card" style="border-left-color: #e67e22;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #e67e22;"><span class="val-dot" style="background: #e67e22;"></span> 第 4 級：嚴重威脅 (High Hazard)</div>
+                    </div>
+                    <p class="tl-desc">風暴逼近（≤ 300km）、離岸烈風（63-87km/h）、大暴雨（50-69.9mm/h）、嚴重酷熱（≥ 35°C）或極端嚴寒（體感 ≤ 0°C）。天氣急劇轉壞，需嚴密防範水浸或被風吹倒之危險。</p>
+                </div>
+
+                <div class="level-info-card" style="border-left-color: #f39c12;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #f39c12;"><span class="val-dot" style="background: #f39c12;"></span> 第 3 級：顯著威脅 (Moderate Hazard)</div>
+                    </div>
+                    <p class="tl-desc">風暴戒備（≤ 500km）、離岸強風（41-62km/h）、大雨（30-49.9mm/h）、炎熱逼人（≥ 33°C）或嚴寒（體感 ≤ 5°C）。市民外出需高度警覺並隨時留意天氣突變。</p>
+                </div>
+
+                <div class="level-info-card" style="border-left-color: #3498db;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #3498db;"><span class="val-dot" style="background: #3498db;"></span> 第 2 級：輕微戒備 (Low Hazard)</div>
+                    </div>
+                    <p class="tl-desc">遠洋風暴外圍（≤ 800km）、局部大雨（15-29.9mm/h）、溫暖微熱（30-32.9°C）或寒冷（體感 ≤ 10°C）。天氣狀況出現變化，戶外人士宜注意周遭環境。</p>
+                </div>
+
+                <div class="level-info-card" style="border-left-color: #2ecc71;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #2ecc71;"><span class="val-dot" style="background: #2ecc71;"></span> 第 1 級：平靜穩定 (Calm & Safe)</div>
+                    </div>
+                    <p class="tl-desc">各項氣象指標平穩，風力微弱且無熱帶氣旋與顯著降雨威脅，氣溫適中宜人，適宜進行各類戶外活動。</p>
+                </div>
+
+                <div class="detail-info-block">
+                    <div class="detail-info-title">💡 綜合判定機制</div>
+                    <div class="detail-info-content" style="font-size: 0.85rem; color: #bbb;">
+                        系統採用<strong>最大威脅優先（Max-Threat Principle）演算法</strong>，實時比對【颱風距離】、【離岸風力】、【時雨量】及【日式綜合暑熱指數】，取其中最高之風險級別作為當前總體評級。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全新：生活指數解說 Modal -->
+    <div id="lifestyle-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💡 生活指數計算與評估解說</h3>
+                <button class="close-btn" onclick="closeModal('lifestyle-info-modal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="level-info-card" style="border-left-color: #00cec9;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #00cec9;">🐾 寵物散步適宜度評估機制</div>
+                    </div>
+                    <p class="tl-desc">
+                        毛孩主要靠腳墊與喘氣散熱。本指數綜合<strong>即時氣溫、相對濕度與地面熱輻射</strong>進行 5 級分級：<br>
+                        • <strong>第 1-2 級（極適宜 / 適宜）</strong>：氣溫 ≤ 24°C，完美適合戶外運動。<br>
+                        • <strong>第 3 級（一般）</strong>：氣溫 24-28°C，建議選有樹蔭泥地並注意補水。<br>
+                        • <strong>第 4-5 級（不適宜 / 極不適宜）</strong>：氣溫 ≥ 28°C 且濕度高，柏油路面可達 50°C+ 極易燙傷肉墊與引發熱衰竭，應只作短暫如廁或改在室內活動。
+                    </p>
+                </div>
+
+                <div class="level-info-card" style="border-left-color: #f39c12;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #f39c12;">👕 戶外晾衣指數加權公式</div>
+                    </div>
+                    <p class="tl-desc">
+                        採用三維加權計算法：<br>
+                        $$\text{乾衣指數} = (\text{紫外線} \times 40\%) + (\text{降雨機率} \times 30\%) + (\text{相對濕度} \times 30\%)$$<br>
+                        • <strong>第 1-2 級（極適宜 / 適宜）</strong>：陽光充足且相對乾燥，預計 2-4 小時內可自然風乾殺菌。<br>
+                        • <strong>第 3 級（一般）</strong>：濕度略高或紫外線偏弱，乾衣需 4-6 小時以上。<br>
+                        • <strong>第 4-5 級（不適宜 / 極不適宜）</strong>：降雨機率高或濕度 ≥ 80%，衣物難以乾透且易生霉菌，建議使用抽濕機或乾衣機。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 氣溫 5 級分級解說 Modal -->
     <div id="temp-info-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -581,12 +675,9 @@
                 </button>
             </div>
             <div class="modal-body">
-                
                 <div class="level-info-card" style="border-left-color: #e74c3c;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e74c3c;">
-                            <span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：酷熱 / 極端酷熱
-                        </div>
+                        <div class="tl-title" style="color: #e74c3c;"><span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：酷熱 / 極端酷熱</div>
                         <span class="tl-range">≥ 33.0°C</span>
                     </div>
                     <p class="tl-desc">達到香港天文台<strong>酷熱天氣警告</strong>發布水平。熱壓力極高，容易引發熱衰竭或中暑。應避免長時間在陽光下暴曬，並充分補充電解質與水分。</p>
@@ -594,9 +685,7 @@
 
                 <div class="level-info-card" style="border-left-color: #e67e22;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e67e22;">
-                            <span class="val-dot" style="background: #e67e22;"></span> 第 4 級：炎熱
-                        </div>
+                        <div class="tl-title" style="color: #e67e22;"><span class="val-dot" style="background: #e67e22;"></span> 第 4 級：炎熱</div>
                         <span class="tl-range">28.0°C - 32.9°C</span>
                     </div>
                     <p class="tl-desc">夏季普遍典型氣溫。戶外體感悶熱，進行戶外活動時排汗量大，建議穿著透氣排汗淺色衣物，並定時在陰涼處休息。</p>
@@ -604,9 +693,7 @@
 
                 <div class="level-info-card" style="border-left-color: #2ecc71;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #2ecc71;">
-                            <span class="val-dot" style="background: #2ecc71;"></span> 第 3 級：溫暖舒適
-                        </div>
+                        <div class="tl-title" style="color: #2ecc71;"><span class="val-dot" style="background: #2ecc71;"></span> 第 3 級：溫暖舒適</div>
                         <span class="tl-range">20.0°C - 27.9°C</span>
                     </div>
                     <p class="tl-desc">人體最舒適的溫度區間。氣候宜人，極度適合進行戶外運動、晨運、郊遊野餐及毛孩散步。</p>
@@ -614,9 +701,7 @@
 
                 <div class="level-info-card" style="border-left-color: #3498db;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #3498db;">
-                            <span class="val-dot" style="background: #3498db;"></span> 第 2 級：清涼
-                        </div>
+                        <div class="tl-title" style="color: #3498db;"><span class="val-dot" style="background: #3498db;"></span> 第 2 級：清涼</div>
                         <span class="tl-range">13.0°C - 19.9°C</span>
                     </div>
                     <p class="tl-desc">春秋或初冬常見氣溫。早晚體感清涼，日夜溫差可能較大，出門建議隨身攜帶薄外套或風褸以防著涼。</p>
@@ -624,9 +709,7 @@
 
                 <div class="level-info-card" style="border-left-color: #9b59b6;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #9b59b6;">
-                            <span class="val-dot" style="background: #9b59b6;"></span> 第 1 級：寒冷 / 嚴寒
-                        </div>
+                        <div class="tl-title" style="color: #9b59b6;"><span class="val-dot" style="background: #9b59b6;"></span> 第 1 級：寒冷 / 嚴寒</div>
                         <span class="tl-range">≤ 12.9°C</span>
                     </div>
                     <p class="tl-desc">達到<strong>寒冷天氣警告</strong>發布水平（高地及新界北部可能更低）。受強烈冬季季候風吹襲，長者、幼童及慢性病患者應特別注重防風保暖措施。</p>
@@ -638,12 +721,11 @@
                         系統會根據香港天文台各分區自動氣象站所回傳的實時氣溫，自動劃分對應的 5 級色階與進度條，協助市民迅速掌握全港微氣候分佈。
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- 全新：雨量 5 級分級解說 Modal -->
+    <!-- 雨量 5 級分級解說 Modal -->
     <div id="rain-info-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -653,12 +735,9 @@
                 </button>
             </div>
             <div class="modal-body">
-                
                 <div class="level-info-card" style="border-left-color: #e74c3c;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e74c3c;">
-                            <span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：黑雨級別特大暴雨
-                        </div>
+                        <div class="tl-title" style="color: #e74c3c;"><span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：黑雨級別特大暴雨</div>
                         <span class="tl-range">≥ 70 mm/h</span>
                     </div>
                     <p class="tl-desc">達到或超過香港天文台<strong>黑色暴雨警告</strong>標準。極度危險，廣泛地區可能出現嚴重水浸及山泥傾瀉，應留在安全室內地方。</p>
@@ -666,9 +745,7 @@
 
                 <div class="level-info-card" style="border-left-color: #e67e22;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e67e22;">
-                            <span class="val-dot" style="background: #e67e22;"></span> 第 4 級：紅雨級別大暴雨
-                        </div>
+                        <div class="tl-title" style="color: #e67e22;"><span class="val-dot" style="background: #e67e22;"></span> 第 4 級：紅雨級別大暴雨</div>
                         <span class="tl-range">50 - 69.9 mm/h</span>
                     </div>
                     <p class="tl-desc">達到香港天文台<strong>紅色暴雨警告</strong>標準。道路嚴重水浸風險極高，交通可能嚴重受阻。</p>
@@ -676,9 +753,7 @@
 
                 <div class="level-info-card" style="border-left-color: #f39c12;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #f39c12;">
-                            <span class="val-dot" style="background: #f39c12;"></span> 第 3 級：黃雨級別大雨
-                        </div>
+                        <div class="tl-title" style="color: #f39c12;"><span class="val-dot" style="background: #f39c12;"></span> 第 3 級：黃雨級別大雨</div>
                         <span class="tl-range">30 - 49.9 mm/h</span>
                     </div>
                     <p class="tl-desc">達到香港天文台<strong>黃色暴雨警告</strong>標準。低窪地帶及排水不良地區可能出現水浸，外出需帶備雨具並提高警覺。</p>
@@ -686,9 +761,7 @@
 
                 <div class="level-info-card" style="border-left-color: #2ecc71;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #2ecc71;">
-                            <span class="val-dot" style="background: #2ecc71;"></span> 第 2 級：中雨至大雨
-                        </div>
+                        <div class="tl-title" style="color: #2ecc71;"><span class="val-dot" style="background: #2ecc71;"></span> 第 2 級：中雨至大雨</div>
                         <span class="tl-range">15 - 29.9 mm/h</span>
                     </div>
                     <p class="tl-desc">局部地區驟雨或持續有雨，對出行有一定影響，路面濕滑需小心駕駛。</p>
@@ -696,19 +769,16 @@
 
                 <div class="level-info-card" style="border-left-color: #3498db;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #3498db;">
-                            <span class="val-dot" style="background: #3498db;"></span> 第 1 級：微雨
-                        </div>
+                        <div class="tl-title" style="color: #3498db;"><span class="val-dot" style="background: #3498db;"></span> 第 1 級：微雨</div>
                         <span class="tl-range">0.1 - 14.9 mm/h</span>
                     </div>
                     <p class="tl-desc">輕微降雨或毛毛雨，對日常活動影響較小。</p>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- 全新：風力 5 級分級解說 Modal -->
+    <!-- 風力 5 級分級解說 Modal -->
     <div id="wind-info-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -718,12 +788,9 @@
                 </button>
             </div>
             <div class="modal-body">
-                
                 <div class="level-info-card" style="border-left-color: #e74c3c;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e74c3c;">
-                            <span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：暴風 / 颶風
-                        </div>
+                        <div class="tl-title" style="color: #e74c3c;"><span class="val-dot" style="background: #e74c3c;"></span> 第 5 級：暴風 / 颶風</div>
                         <span class="tl-range">≥ 88 km/h</span>
                     </div>
                     <p class="tl-desc">對應蒲福氏風級 10-12 級及<strong>九號/十號颶風信號</strong>。具極高破壞力，能將樹木連根拔起及損毀建築物，必須留在堅固的室內避風。</p>
@@ -731,9 +798,7 @@
 
                 <div class="level-info-card" style="border-left-color: #e67e22;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #e67e22;">
-                            <span class="val-dot" style="background: #e67e22;"></span> 第 4 級：烈風
-                        </div>
+                        <div class="tl-title" style="color: #e67e22;"><span class="val-dot" style="background: #e67e22;"></span> 第 4 級：烈風</div>
                         <span class="tl-range">63 - 87 km/h</span>
                     </div>
                     <p class="tl-desc">對應蒲福氏風級 8-9 級及<strong>八號烈風或暴風信號</strong>。步行極度困難，容易被吹倒的物件會被吹走，請盡快回家避風。</p>
@@ -741,9 +806,7 @@
 
                 <div class="level-info-card" style="border-left-color: #f39c12;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #f39c12;">
-                            <span class="val-dot" style="background: #f39c12;"></span> 第 3 級：強風
-                        </div>
+                        <div class="tl-title" style="color: #f39c12;"><span class="val-dot" style="background: #f39c12;"></span> 第 3 級：強風</div>
                         <span class="tl-range">41 - 62 km/h</span>
                     </div>
                     <p class="tl-desc">對應蒲福氏風級 6-7 級及<strong>三號強風信號</strong>。大樹搖動，海面有大浪及湧浪，應停止水上活動及固定戶外懸掛物。</p>
@@ -751,9 +814,7 @@
 
                 <div class="level-info-card" style="border-left-color: #2ecc71;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #2ecc71;">
-                            <span class="val-dot" style="background: #2ecc71;"></span> 第 2 級：清勁
-                        </div>
+                        <div class="tl-title" style="color: #2ecc71;"><span class="val-dot" style="background: #2ecc71;"></span> 第 2 級：清勁</div>
                         <span class="tl-range">15 - 40 km/h</span>
                     </div>
                     <p class="tl-desc">對應蒲福氏風級 3-5 級。樹葉及小樹枝不斷搖動，風勢令人感覺清涼至有阻力。</p>
@@ -761,14 +822,11 @@
 
                 <div class="level-info-card" style="border-left-color: #3498db;">
                     <div class="tl-header">
-                        <div class="tl-title" style="color: #3498db;">
-                            <span class="val-dot" style="background: #3498db;"></span> 第 1 級：微風
-                        </div>
+                        <div class="tl-title" style="color: #3498db;"><span class="val-dot" style="background: #3498db;"></span> 第 1 級：微風</div>
                         <span class="tl-range">1 - 14 km/h</span>
                     </div>
                     <p class="tl-desc">對應蒲福氏風級 1-2 級。風向標能轉動，樹葉有輕微沙沙聲，平靜宜人。</p>
                 </div>
-
             </div>
         </div>
     </div>
@@ -1099,6 +1157,8 @@
             });
         });
 
+        function openThreatInfoModal() { document.getElementById('threat-info-modal')?.classList.add('active'); }
+        function openLifestyleInfoModal() { document.getElementById('lifestyle-info-modal')?.classList.add('active'); }
         function openTempInfoModal() { document.getElementById('temp-info-modal')?.classList.add('active'); }
         function openRainInfoModal() { document.getElementById('rain-info-modal')?.classList.add('active'); }
         function openWindInfoModal() { document.getElementById('wind-info-modal')?.classList.add('active'); }
@@ -1547,7 +1607,7 @@
         };
 
         function openWarningModal(code) {
-            const db = warningDetailsDb[code] || { name: "天氣警告信號", img: warningMap[code]?.img || "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "香港天文台正發出相關天氣警告信號，請密切留意天氣動向。", precautions: ["留意天文台最新公布", "做好相應的防護及安全準備措施"] };
+            const db = warningDetailsDb[code] || { name: "天氣警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "香港天文台正發出相關天氣警告信號，請密切留意天氣動向。", precautions: ["留意天文台最新公布", "做好相應的防護及安全準備措施"] };
             document.getElementById('wm-title').innerText = `⚠️ 警告詳情`;
             document.getElementById('wm-name').innerText = db.name;
             document.getElementById('wm-icon').src = db.img;
@@ -2116,7 +2176,6 @@
                 if (windRes.status === 'fulfilled' && windRes.value.ok) {
                     const windText = await windRes.value.text(); let wLines = windText.trim().split('\n');
                     for (let i = 1; i < wLines.length; i++) {
-                        // 修正：將 windLines 更改為 wLines，解決了 ReferenceError 導致的讀取中斷問題
                         let row = parseCSVLine(wLines[i]); 
                         let st = "未知", dir = "", spd = "";
                         for (let cell of row) {
@@ -2314,16 +2373,20 @@
                     updateLaundryIndex(globalWxState.hum, globalWxState.uv, psrRaw);
                 }
 
+                // --- ⚠️ 天氣警告（多重警告支援 + 0警告時隱藏） ---
                 if (warnRes.status === 'fulfilled' && warnRes.value.ok) {
                     const warnData = await warnRes.value.json();
-                    const warningsBox = document.getElementById('weather-warnings-box'); const warningCard = document.getElementById('warning-card');
+                    const warningsBox = document.getElementById('weather-warnings-box');
+                    const warningCard = document.getElementById('warning-card');
                     let activeWarningsHtml = '';
                     
                     if (warnData && typeof warnData === 'object') {
                         for (let key in warnData) {
                             let warning = warnData[key];
-                            if (!warning || typeof warning !== 'object') continue; if (warning.actionCode === 'CANCEL') continue;
-                            let text = (warning.name || "").toLowerCase(); let finalCode = "";
+                            if (!warning || typeof warning !== 'object') continue;
+                            if (warning.actionCode === 'CANCEL') continue;
+                            let text = (warning.name || "").toLowerCase();
+                            let finalCode = "";
 
                             if (text.includes("雷暴") || text.includes("thunder")) finalCode = "WT";
                             else if (text.includes("黃色暴雨") || text.includes("amber")) finalCode = "WRA";
@@ -2350,20 +2413,40 @@
                             else if (text.includes("海嘯") || text.includes("tsunami")) finalCode = "WTSUN";
                             else { let c = warning.code || key; if (c === "WTS") c = "WT"; if (c === "WRAIN") c = "WRA"; if (c === "WMSL") c = "SMS"; finalCode = c; }
 
-                            if (warningDetailsDb[finalCode]) { activeWarningsHtml += `<div class="warning-badge active-blink" onclick="openWarningModal('${finalCode}')"><img class="warning-icon" src="${warningDetailsDb[finalCode].img}"><div class="warning-text">${warningDetailsDb[finalCode].name}</div><span class="warning-arrow">➔</span></div>`; }
+                            if (warningDetailsDb[finalCode]) {
+                                activeWarningsHtml += `<div class="warning-badge active-blink" onclick="openWarningModal('${finalCode}')"><img class="warning-icon" src="${warningDetailsDb[finalCode].img}"><div class="warning-text">${warningDetailsDb[finalCode].name}</div><span class="warning-arrow">➔</span></div>`;
+                            }
                         }
                     }
-                    if (activeWarningsHtml !== '') { warningsBox.innerHTML = activeWarningsHtml; warningCard.classList.add('warning-card-active'); } 
-                    else { warningsBox.innerHTML = `<div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有生效的天氣警告</div>`; warningCard.classList.remove('warning-card-active'); }
+                    if (activeWarningsHtml !== '') {
+                        warningsBox.innerHTML = activeWarningsHtml;
+                        warningCard.style.display = 'flex';
+                        warningCard.classList.add('warning-card-active');
+                    } else {
+                        warningsBox.innerHTML = '';
+                        warningCard.style.display = 'none';
+                        warningCard.classList.remove('warning-card-active');
+                    }
                 }
 
+                // --- 💡 特別天氣提示（0提示時隱藏） ---
                 if (swtRes.status === 'fulfilled' && swtRes.value.ok) {
-                    const swtData = await swtRes.value.json(); const swtBox = document.getElementById('swt-box');
+                    const swtData = await swtRes.value.json();
+                    const swtBox = document.getElementById('swt-box');
+                    const swtCard = document.getElementById('swt-card');
                     if (swtData && swtData.swt && swtData.swt.length > 0) {
-                        activeSwtList = swtData.swt; let swtHtml = '';
-                        swtData.swt.forEach((tip, idx) => { swtHtml += `<div class="swt-item" onclick="openSwtModal(${idx})"><span>💡 ${tip.desc}</span><span style="color: var(--text-muted); font-size: 0.75rem;">➔</span></div>`; });
+                        activeSwtList = swtData.swt;
+                        let swtHtml = '';
+                        swtData.swt.forEach((tip, idx) => {
+                            swtHtml += `<div class="swt-item" onclick="openSwtModal(${idx})"><span>💡 ${tip.desc}</span><span style="color: var(--text-muted); font-size: 0.75rem;">➔</span></div>`;
+                        });
                         swtBox.innerHTML = swtHtml;
-                    } else { activeSwtList = []; swtBox.innerHTML = `<div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有特別天氣提示</div>`; }
+                        swtCard.style.display = 'flex';
+                    } else {
+                        activeSwtList = [];
+                        swtBox.innerHTML = '';
+                        swtCard.style.display = 'none';
+                    }
                 }
 
             } catch (error) { console.error("fetchTopOverview error:", error); }
