@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>專業天氣 - 香港氣象儀表板 (晾衣黃金比例版)</title>
+    <title>專業天氣 - 香港氣象儀表板 (無縫背景更新版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -29,6 +29,7 @@
             --accent-success: #2ecc71;  
             --accent-warning: #f39c12;  
             --accent-danger: #e74c3c;   
+            --accent-info: #00cec9;
             
             --radius-lg: 8px;   
             --radius-md: 6px;
@@ -66,9 +67,6 @@
             text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);
             display: flex; align-items: center; justify-content: space-between;
         }
-        h2 span.header-hint {
-            font-size: 0.7rem; font-weight: normal; text-transform: none; color: var(--text-muted);
-        }
 
         /* Merged Time & Weather Block */
         .time-weather-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 12px; }
@@ -90,10 +88,7 @@
             transition: all 0.3s ease; cursor: pointer;
         }
         .threat-card:hover {
-            background: var(--card-bg-hover);
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            background: var(--card-bg-hover); border-color: rgba(255, 255, 255, 0.3); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4);
         }
         .threat-header { display: flex; justify-content: space-between; align-items: center; }
         .threat-title { font-size: 0.88rem; font-weight: 800; letter-spacing: 0.3px; }
@@ -201,19 +196,20 @@
         .list-val { font-size: 0.9rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;}
         .val-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 
-        /* Rain Row Style */
-        .rain-item-card {
+        /* Rain & Wind Row Styles */
+        .rain-item-card, .wind-item-card {
             background: var(--inner-bg); border: 1px solid var(--border-color);
             border-radius: var(--radius-sm); padding: 8px 10px; display: flex;
             flex-direction: column; gap: 6px; cursor: pointer; transition: all 0.2s ease;
         }
-        .rain-item-card:hover { background: var(--card-bg-hover); border-color: rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
-        .rain-card-header { display: flex; justify-content: space-between; align-items: center; }
-        .rain-card-name { font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
-        .rain-card-val { font-size: 0.9rem; font-weight: 800; }
-        .rain-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
-        .rain-mini-bar { display: flex; gap: 3px; height: 4px; width: 100%; }
-        .rain-step { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+        .rain-item-card:hover, .wind-item-card:hover { background: var(--card-bg-hover); border-color: rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
+        
+        .rain-card-header, .wind-card-header { display: flex; justify-content: space-between; align-items: center; }
+        .rain-card-name, .wind-card-name { font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+        .rain-card-val, .wind-card-val { font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+        .rain-badge, .wind-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+        .rain-mini-bar, .wind-mini-bar { display: flex; gap: 3px; height: 4px; width: 100%; }
+        .rain-step, .wind-step { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
 
         /* 9-Day Forecast */
         .situation-box { background: var(--inner-bg); font-size: 0.85rem; line-height: 1.5; color: #ccc; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 500; margin-bottom: 12px;}
@@ -229,7 +225,7 @@
         .psr-med { background: rgba(243, 156, 18, 0.15); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3);} 
         .psr-low { background: rgba(46, 204, 113, 0.15); color: var(--accent-success); border: 1px solid rgba(46, 204, 113, 0.3);} 
 
-        /* Radar & Hourly Rain */
+        /* Radar & Hourly Rain & Wind Column (3-Column Layout) */
         .radar-rain-wrapper { display: flex; gap: 12px; height: auto;}
         .radar-box { flex: 2; display: flex; flex-direction: column; background: var(--card-bg); border-radius: var(--radius-lg); padding: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow);}
         .radar-header-row { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 10px; width: 100%; }
@@ -243,8 +239,9 @@
         .radar-btn svg { width: 15px; height: 15px; }
         .radar-btn:hover { background: var(--card-bg-hover); border-color: rgba(255,255,255,0.2); }
         .radar-time-badge { font-size: 0.85rem; font-weight: 600; background: #fff; color: #000; padding: 4px 12px; border-radius: 12px; letter-spacing: 0.5px;}
-        .rain-wrapper { flex: 1; position: relative; min-height: 380px; }
-        .rain-absolute { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+        
+        .rain-wrapper, .wind-wrapper { flex: 1; position: relative; min-height: 380px; }
+        .rain-absolute, .wind-absolute { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--card-bg); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
 
         /* Dual Typhoon Tracking Maps */
         .typhoon-dual-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; flex-shrink: 0; }
@@ -287,8 +284,9 @@
             #hk-map, #tc-map-hko, #tc-map-agency { min-height: 350px; }
             .list-container { min-height: 300px; }
             .station-stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .rain-wrapper { height: 380px; flex: none; display: flex; flex-direction: column;}
-            .rain-absolute { position: relative; height: 100%; width: 100%; }
+            /* Update to adapt 3 columns in mobile */
+            .rain-wrapper, .wind-wrapper { height: 380px; flex: none; display: flex; flex-direction: column;}
+            .rain-absolute, .wind-absolute { position: relative; height: 100%; width: 100%; }
         }
     </style>
 </head>
@@ -322,9 +320,9 @@
                 </div>
             </div>
 
-            <!-- 2. 全面升級：多維度五級綜合氣象威脅警報 (支援點擊查看詳情) -->
+            <!-- 2. 全面升級：多維度五級綜合氣象威脅警報 -->
             <div class="pro-card">
-                <h2>⚡ 綜合氣象威脅評級 <span class="header-hint">(點擊查看詳情)</span></h2>
+                <h2>⚡ 綜合氣象威脅評級</h2>
                 <div class="threat-card" id="threat-alert-box" onclick="openThreatModal()">
                     <div class="threat-header">
                         <div class="threat-title" id="threat-title-text">評估中...</div>
@@ -361,7 +359,7 @@
 
             <!-- 3. Weather Warnings Card -->
             <div class="pro-card" id="warning-card">
-                <h2>⚠️ 天氣警告 <span class="header-hint">(點擊查看詳情)</span></h2>
+                <h2>⚠️ 天氣警告</h2>
                 <div class="warnings-container" id="weather-warnings-box">
                     <div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有生效的天氣警告</div>
                 </div>
@@ -369,15 +367,15 @@
 
             <!-- 4. Special Weather Tips Card -->
             <div class="pro-card" id="swt-card">
-                <h2>💡 特別天氣提示 <span class="header-hint">(點擊查看詳情)</span></h2>
+                <h2>💡 特別天氣提示</h2>
                 <div id="swt-box" style="display: flex; flex-direction: column; gap: 8px;">
                     <div class="warning-none"><span style="color: var(--accent-success);">●</span> 暫時沒有特別天氣提示</div>
                 </div>
             </div>
 
-            <!-- 5. Lifestyle Indices Card (已升級黃金比例晾衣算法) -->
+            <!-- 5. Lifestyle Indices Card -->
             <div class="pro-card">
-                <h2>💡 生活指數 <span class="header-hint">(點擊查看詳情)</span></h2>
+                <h2>💡 生活指數</h2>
                 <div class="index-container" onclick="openLifestyleModal('pet')">
                     <div class="level-header">
                         <div class="level-title">🐾 寵物散步</div>
@@ -451,15 +449,16 @@
 
             <!-- 2. 9-Day Forecast Card -->
             <div class="pro-card" style="flex-shrink: 0;">
-                <h2>📅 九天天氣預報 <span class="header-hint">(點擊查看詳情)</span></h2>
+                <h2>📅 九天天氣預報</h2>
                 <div class="situation-box" id="general-situation">載入一般天氣狀況...</div>
                 <div class="forecast-grid" id="forecast-container">
                     <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">載入預報數據...</div>
                 </div>
             </div>
 
-            <!-- 3. Radar & Rain Data Row -->
+            <!-- 3. Radar, Rain & Wind Data Row (3-Columns Layout) -->
             <div class="radar-rain-wrapper">
+                <!-- 雷達動畫 (佔 50%) -->
                 <div class="radar-box">
                     <div class="radar-header-row">
                         <h2 style="margin: 0; border: none; padding: 0;">📡 雷達動畫</h2>
@@ -486,11 +485,22 @@
                     </div>
                 </div>
 
+                <!-- 各區降雨量 (佔 25%) -->
                 <div class="rain-wrapper">
                     <div class="rain-absolute">
-                        <h2>🌧️ 每小時雨量 <span class="header-hint">(點擊氣象站查看詳情)</span></h2>
+                        <h2>🌧️ 各區雨量</h2>
                         <div class="list-scroll-area" id="rain-list-container">
                             <div style="text-align: center; padding: 20px; color: var(--text-muted);">載入雨量數據中...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新增：風速 (佔 25%) -->
+                <div class="wind-wrapper">
+                    <div class="wind-absolute">
+                        <h2>💨 各區風力</h2>
+                        <div class="list-scroll-area" id="wind-list-container">
+                            <div style="text-align: center; padding: 20px; color: var(--text-muted);">載入風力數據中...</div>
                         </div>
                     </div>
                 </div>
@@ -538,7 +548,49 @@
 
     <!-- ================= MODALS ================= -->
 
-    <!-- 全新：綜合氣象威脅評級詳情與建議 Modal -->
+    <!-- 全新：氣象站風力與逐時風向圖表 Modal -->
+    <div id="wind-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="wind-modal-title">💨 氣象站風力詳情</h3>
+                <button class="close-btn" onclick="closeModal('wind-modal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="station-stats-grid">
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">現時風速與風向</div>
+                        <div class="s-stat-val" id="wm-curr-wind">--</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">蒲福氏風級</div>
+                        <div class="s-stat-val" id="wm-wind-level">--</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">過去24小時最高風速</div>
+                        <div class="s-stat-val" id="wm-peak-wind">-- km/h</div>
+                    </div>
+                    <div class="s-stat-box">
+                        <div class="s-stat-label">過去24小時最高陣風</div>
+                        <div class="s-stat-val" id="wm-peak-gust">-- km/h</div>
+                    </div>
+                </div>
+
+                <div class="chart-box">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+                        <h4 style="margin: 0; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">📊 過去24小時每小時風速與風向趨勢</h4>
+                        <span id="wm-wind-hint" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-info);">等待數據</span>
+                    </div>
+                    <div style="position: relative; height: 230px; width: 100%;">
+                        <canvas id="wind-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 綜合氣象威脅評級詳情與建議 Modal -->
     <div id="threat-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -548,7 +600,6 @@
                 </button>
             </div>
             <div class="modal-body">
-                <!-- 總體等級 Header -->
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--inner-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px;">
                     <div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">當前總體評級</div>
@@ -557,7 +608,6 @@
                     <div id="tm-badge-pill" style="font-size: 0.95rem; font-weight: 800; padding: 6px 14px; border-radius: 20px;">--</div>
                 </div>
 
-                <!-- 四大指標細分數據 -->
                 <div class="station-stats-grid">
                     <div class="s-stat-box">
                         <div class="s-stat-label">🌀 颱風直線距離</div>
@@ -581,13 +631,11 @@
                     </div>
                 </div>
 
-                <!-- 評估報告 -->
                 <div class="detail-info-block">
                     <div class="detail-info-title">實時氣象威脅狀態與觸發分析</div>
                     <div class="detail-info-content" id="tm-desc-text" style="white-space: pre-line;">--</div>
                 </div>
 
-                <!-- 具體行動與防禦指引 -->
                 <div class="detail-info-block">
                     <div class="detail-info-title" style="color: var(--accent-warning);">⚡ 市民應變及安全指引</div>
                     <ul class="detail-list" id="tm-advice-list"></ul>
@@ -730,7 +778,8 @@
         let globalWxState = { temp: NaN, hum: NaN, uv: 0, psr: '低', psrRaw: '' };
         let activeSwtList = [];
         let meteoCache = {}; 
-        let currentThreatState = {}; // 儲存當前威脅詳情
+        let currentThreatState = {}; 
+        let windChartInstance = null; 
 
         const mapSources = {
             'temp': 'https://dannytcchan00.github.io/0Data/data/temp_data.csv',
@@ -949,16 +998,12 @@
             animateIndex('pet', petLevel, colors);
         }
 
-        // ==========================================
-        // 👕 戶外晾衣指數 (黃金比例加權算法 30/40/30)
-        // ==========================================
         function updateLaundryIndex(hVal, uvVal, psrRaw) {
             if (isNaN(hVal)) { document.getElementById('laundry-level-val').innerText = `--`; return; }
 
             let uv = isNaN(uvVal) || uvVal === null ? 0 : parseFloat(uvVal);
             let rainStr = psrRaw || "低";
 
-            // 1. 降雨概率 (佔 30%) -> 轉換為 0-100 滿分制
             let rainScore = 100;
             if (rainStr.includes('高')) rainScore = 0;
             else if (rainStr.includes('中高')) rainScore = 30;
@@ -966,21 +1011,12 @@
             else if (rainStr.includes('中低')) rainScore = 80;
             else rainScore = 100;
 
-            // 2. 太陽紫外線 (佔 40%) -> 轉換為 0-100 滿分制
-            // 假設 UV 8 或以上即達到完美天然殺菌與熱力條件 (100分)
             let sunScore = Math.min(100, uv * 12.5); 
-
-            // 3. 濕濕度 (佔 30%) -> 轉換為 0-100 滿分制
-            // 濕度 50% 或以下為極乾燥 (100分)，超過 50% 則分數線性遞減，100% 濕度 = 0 分
             let humScore = 100;
-            if (hVal > 50) {
-                humScore = Math.max(0, 100 - (hVal - 50) * 2);
-            }
+            if (hVal > 50) { humScore = Math.max(0, 100 - (hVal - 50) * 2); }
 
-            // 綜合加權總分 (0 - 100)
             let totalScore = (rainScore * 0.3) + (sunScore * 0.4) + (humScore * 0.3);
 
-            // 分數轉換為 1-5 級制
             let laundryLevel = 2;
             if (totalScore >= 80) laundryLevel = 1;
             else if (totalScore >= 60) laundryLevel = 2;
@@ -988,19 +1024,10 @@
             else if (totalScore >= 20) laundryLevel = 4;
             else laundryLevel = 5;
 
-            // ⚠️ 安全機制：如果天文台明言降雨機率高，不論是否有太陽，強制設為第 5 級極不適宜
-            if (rainStr.includes('高') && laundryLevel < 4) {
-                laundryLevel = 5;
-            }
+            if (rainStr.includes('高') && laundryLevel < 4) { laundryLevel = 5; }
 
             const lDescs = ["極適宜", "適宜", "一般", "不適宜", "極不適宜"];
-            const lHints = [
-                "陽光充沛且乾燥！衣物會好快乾。",
-                "狀況良好。適合一般戶外晾曬。",
-                "乾衣速度較慢。紫外線偏弱或稍濕。",
-                "唔太適合。濕度偏高或下雨機率較高。",
-                "極差！下雨機率極高或極度潮濕。"
-            ];
+            const lHints = ["陽光充沛且乾燥！衣物會好快乾。", "狀況良好。適合一般戶外晾曬。", "乾衣速度較慢。紫外線偏弱或稍濕。", "唔太適合。濕度偏高或下雨機率較高。", "極差！下雨機率極高或極度潮濕。"];
             const colors = [themeColors.blue, themeColors.green, themeColors.orange, "#e67e22", themeColors.red];
 
             document.getElementById('laundry-level-val').innerText = `第 ${laundryLevel} 級 - ${lDescs[laundryLevel-1]}`;
@@ -1029,16 +1056,13 @@
             } else if (type === 'laundry') {
                 titleEl.innerText = "👕 戶外晾衣指數詳情";
                 gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div><div class="s-stat-box"><div class="s-stat-label">預計乾衣時間</div><div class="s-stat-val">${globalWxState.hum < 65 ? '2-3 小時' : (globalWxState.hum < 80 ? '4-6 小時' : '建議室內')}</div></div>`;
-                
-                // 更新模態框中的說明文字，反映 30/40/30 邏輯
                 evalEl.innerHTML = `當前指數採用綜合加權演算法：<strong>太陽紫外線佔 40%、降雨概率佔 30%、相對濕度佔 30%</strong>。分數越高代表越適合進行戶外天然除菌乾衣。`;
-                
                 tipsEl.innerHTML = `<li><strong>戶外晾曬條件</strong>：當相對濕度超過 75% 或有降雨機率時，衣物晾乾速度緩慢且容易滋生霉菌與異味。</li><li><strong>紫外線天然殺菌</strong>：UV 指數高於 3 時有助於分解棉質衣物上的細菌，但深色絲綢及羊毛應避免長時間直曬以防褪色。</li><li><strong>室內替代方案</strong>：當指標為 4 級或 5 級時，強烈建議將衣物移入室內，配合抽濕機或乾衣機進行烘乾。</li>`;
             }
             modal.classList.add('active');
         }
 
-        // --- ⚡ 智能多維度威脅評估 (即時動態標題與描述生成) ---
+        // --- ⚡ 智能多維度威脅評估 ---
         function updateSmartThreatAlert() {
             const waglanData = stationMasterData['橫瀾島'] || {};
             const cheungChauData = stationMasterData['長洲'] || {};
@@ -1067,14 +1091,9 @@
                 const wMs = 3; 
                 const Q = uv * 25; 
 
-                // 體感溫度 (以作綜合濕球/體感基準)
                 at = t + 0.348 * e - 0.70 * wMs + 0.70 * (Q / (wMs + 10)) - 4.25;
                 at = Math.round(at * 10) / 10;
-
-                // 估算黑球溫度 (Tg)
                 let estimated_Tg = t + (uv * 1.5); 
-                
-                // 日式計算方法：體感(70%) + 即時氣溫(20%) + 黑球(10%)
                 custom_heat_index = (at * 0.70) + (t * 0.20) + (estimated_Tg * 0.10);
                 custom_heat_index = Math.round(custom_heat_index * 10) / 10;
             }
@@ -1115,7 +1134,6 @@
 
             const finalLevel = Math.max(windLvl, rainLvl, tempLvl, tcLvl);
 
-            // 🎯 動態實況標題與描述生成器
             let dynamicTitle = "";
             let dynamicDesc = "";
             let prefix = "";
@@ -1130,13 +1148,9 @@
             let adviceList = [];
 
             if (finalLevel === 1) {
-                dynamicTitle = `${prefix} (無顯著氣象威脅)`;
+                dynamicTitle = `${prefix}`;
                 dynamicDesc = "本港各項氣象指標平穩。\n\n離岸風力平緩，未受熱帶氣旋威脅，氣溫適中且無顯著降雨，適宜進行各類戶外活動。";
-                adviceList = [
-                    "戶外天氣適中宜人，適宜進行各類戶外活動、晨運或寵物散步。",
-                    "日常生活中仍請留意日夜溫差變化，適時添減衣物。",
-                    "隨時留意香港天文台發出的最新常規天氣報告。"
-                ];
+                adviceList = ["戶外天氣適中宜人，適宜進行各類戶外活動、晨運或寵物散步。", "日常生活中仍請留意日夜溫差變化，適時添減衣物。", "隨時留意香港天文台發出的最新常規天氣報告。"];
             } else {
                 let factors = [];
                 let shortThreats = [];
@@ -1146,7 +1160,6 @@
                     else if (dist <= 300) { factors.push(`🌀 熱帶氣旋正進入本港 300 公里範圍，天氣將急劇轉壞`); shortThreats.push("風暴逼近"); }
                     else if (dist <= 500) { factors.push(`🌀 熱帶氣旋進入本港 500 公里戒備範圍，需密切留意風暴動向`); shortThreats.push("風暴戒備"); }
                     else { factors.push(`🌀 遠洋熱帶氣旋可能開始影響本港外圍天氣`); shortThreats.push("遠洋風暴外圍"); }
-
                     adviceList.push("熱帶氣旋正在逼近，請將花盆、曬衣架等易被風吹倒的物件移入室內或固定。");
                     adviceList.push("檢查門窗是否牢固，低窪及沿岸地區應提防湧浪與風暴潮。");
                 }
@@ -1155,7 +1168,6 @@
                     if (maxOffshoreWind >= 88) { factors.push(`💨 離岸及高地正受暴風或颶風吹襲 (${maxOffshoreWind} km/h)，具極高破壞力`); shortThreats.push("暴風/颶風吹襲"); }
                     else if (maxOffshoreWind >= 63) { factors.push(`💨 離岸持續吹烈風 (${maxOffshoreWind} km/h)，隨時有樹木倒塌危險`); shortThreats.push("離岸吹烈風"); }
                     else if (maxOffshoreWind >= 41) { factors.push(`💨 本港普遍吹強風 (${maxOffshoreWind} km/h)，海面有大浪及湧浪`); shortThreats.push("離岸吹強風"); }
-
                     adviceList.push("離岸及高地風力顯著，切勿前往海邊觀浪，停止所有水上活動及高空作業。");
                     adviceList.push("在戶外行走時遠離大型廣告招牌、老舊樹木及建築地盤。");
                 }
@@ -1165,7 +1177,6 @@
                     else if (r >= 50) { factors.push(`🌧️ 大暴雨侵襲 (${r} mm/h)，多處道路水浸風險甚高`); shortThreats.push("大暴雨"); }
                     else if (r >= 30) { factors.push(`🌧️ 雨勢頗大 (${r} mm/h)，可能導致局部地區水浸`); shortThreats.push("大雨"); }
                     else if (r >= 15) { factors.push(`🌧️ 受顯著驟雨影響 (${r} mm/h)，戶外出行請帶備雨具`); shortThreats.push("局部大雨"); }
-
                     adviceList.push("暴雨可能引發嚴重水浸，駕駛人士請減慢車速，切勿強行駛過水浸路段。");
                     adviceList.push("遠離河道、引水道及斜坡，居住於低窪地區人士應準備沙包防浸。");
                 }
@@ -1209,34 +1220,13 @@
                 else if (finalLevel === 2) { dynamicDesc += "\n\n💡 指引：天氣狀況出現變化，戶外活動人士應隨時留意周遭環境。"; }
             }
 
-            // 保存當前威脅狀態以供 Modal 讀取
-            currentThreatState = {
-                finalLevel,
-                dynamicTitle,
-                dynamicDesc,
-                curColor,
-                tcLvl,
-                windLvl,
-                rainLvl,
-                tempLvl,
-                dist,
-                maxOffshoreWind,
-                r,
-                custom_heat_index,
-                at,
-                t,
-                adviceList
-            };
+            currentThreatState = { finalLevel, dynamicTitle, dynamicDesc, curColor, tcLvl, windLvl, rainLvl, tempLvl, dist, maxOffshoreWind, r, custom_heat_index, at, t, adviceList };
 
-            // 更新面板數據
             document.getElementById('threat-wind-val').innerText = `${wSpd || '--'} / ${cSpd || '--'} km/h`;
             document.getElementById('threat-rain-val').innerText = `${r} mm/h`;
-            document.getElementById('threat-temp-val').innerHTML = t !== null 
-                ? `${custom_heat_index} <span style="font-size:0.75rem; color:var(--text-muted);">(${tempStatus.split(' ')[0]})</span><br><span style="font-size:0.75rem; font-weight:600; color:var(--accent-warning);">純氣溫 ${t}°C | 體感 ${at}°C</span>` 
-                : '--°C';
+            document.getElementById('threat-temp-val').innerHTML = t !== null ? `${custom_heat_index} <span style="font-size:0.75rem; color:var(--text-muted);">(${tempStatus.split(' ')[0]})</span><br><span style="font-size:0.75rem; font-weight:600; color:var(--accent-warning);">純氣溫 ${t}°C | 體感 ${at}°C</span>` : '--°C';
             document.getElementById('threat-tc-dist').innerText = dist !== null ? `約 ${dist} 公里` : '無活躍熱帶氣旋';
 
-            // 渲染 UI (顏色、標題與描述)
             const alertCard = document.getElementById('threat-alert-box');
             const titleEl = document.getElementById('threat-title-text');
             const badgeEl = document.getElementById('threat-badge-val');
@@ -1269,13 +1259,11 @@
             else { alertCard.style.borderColor = 'rgba(255, 255, 255, 0.15)'; alertCard.style.boxShadow = 'none'; }
         }
 
-        // --- ⚡ 點擊打開綜合氣象威脅評級詳情 Modal ---
         function openThreatModal() {
             const modal = document.getElementById('threat-modal');
             const data = currentThreatState;
             if (!data.finalLevel) return;
 
-            // 總體標題與 Badge
             document.getElementById('tm-badge-title').innerText = data.dynamicTitle;
             document.getElementById('tm-badge-title').style.color = data.curColor;
             
@@ -1285,31 +1273,20 @@
             badgePill.style.color = data.curColor;
             badgePill.style.border = `1px solid ${data.curColor}70`;
 
-            // 四大子項目數值與子等級
             document.getElementById('tm-stat-tc').innerText = data.dist !== null ? `${data.dist} km` : '無風暴';
             document.getElementById('tm-lvl-tc').innerText = `子評級：第 ${data.tcLvl} 級`;
-
             document.getElementById('tm-stat-wind').innerText = `${data.maxOffshoreWind || 0} km/h`;
             document.getElementById('tm-lvl-wind').innerText = `子評級：第 ${data.windLvl} 級`;
-
             document.getElementById('tm-stat-rain').innerText = `${data.r || 0} mm/h`;
             document.getElementById('tm-lvl-rain').innerText = `子評級：第 ${data.rainLvl} 級`;
-
             document.getElementById('tm-stat-temp').innerText = data.custom_heat_index !== null ? `${data.custom_heat_index}` : '--';
             document.getElementById('tm-lvl-temp').innerText = `子評級：第 ${data.tempLvl} 級 (體感 ${data.at || '--'}°C)`;
 
-            // 狀態分析
             document.getElementById('tm-desc-text').innerText = data.dynamicDesc;
 
-            // 具體建議列表
             let adviceHtml = '';
-            if (data.adviceList && data.adviceList.length > 0) {
-                data.adviceList.forEach(adv => {
-                    adviceHtml += `<li>${adv}</li>`;
-                });
-            } else {
-                adviceHtml = `<li>各項氣象指標平穩，請隨時留意最新天氣預報。</li>`;
-            }
+            if (data.adviceList && data.adviceList.length > 0) { data.adviceList.forEach(adv => { adviceHtml += `<li>${adv}</li>`; }); } 
+            else { adviceHtml = `<li>各項氣象指標平穩，請隨時留意最新天氣預報。</li>`; }
             document.getElementById('tm-advice-list').innerHTML = adviceHtml;
 
             modal.classList.add('active');
@@ -1625,6 +1602,212 @@
             document.getElementById('temp-list-container').innerHTML = tHtml;
         }
 
+        // ==========================================
+        // 💨 風力等級、風向角度轉換與列表渲染
+        // ==========================================
+        function getWindLevelInfo(speed) {
+            if (speed >= 88) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '暴風/颶風' };
+            if (speed >= 63) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '烈風' };
+            if (speed >= 41) return { level: 3, color: '#f39c12', badgeBg: 'rgba(243,156,18,0.15)', name: '強風' };
+            if (speed >= 15) return { level: 2, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '清勁' };
+            if (speed > 0) return { level: 1, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '微風' };
+            return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '靜止' };
+        }
+
+        function degreesToCompass(deg) {
+            if (deg === null || isNaN(deg)) return { dir: '無定向', arrow: '•' };
+            const sectors = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
+            const arrows = ['⬇', '↙', '↙', '⬅', '⬅', '↖', '↖', '⬆', '⬆', '↗', '↗', '➡', '➡', '↘', '↘', '⬇'];
+            let idx = Math.round(deg / 22.5) % 16;
+            return { dir: sectors[idx], arrow: arrows[idx] };
+        }
+
+        function renderWindList() {
+            let windList = [];
+            for (let station in stationMasterData) {
+                if (stationMasterData[station].wind && stationMasterData[station].wind !== '靜止') {
+                    let windStr = stationMasterData[station].wind;
+                    let speedMatch = windStr.match(/(\d+)/);
+                    let speed = speedMatch ? parseFloat(speedMatch[1]) : 0;
+                    let dir = windStr.replace(/[\d\skm/h.]/g, '').trim();
+                    if (dir === '') dir = '無定向';
+                    windList.push({ name: station, speed: speed, dir: dir, raw: windStr });
+                }
+            }
+            
+            windList.sort((a, b) => b.speed - a.speed);
+            
+            let listHtml = '';
+            if (windList.length === 0) {
+                listHtml = `<div style="text-align:center; padding:20px; color:var(--text-muted);">暫時沒有風速數據</div>`;
+            } else {
+                windList.forEach(item => {
+                    const wInfo = getWindLevelInfo(item.speed);
+                    const colors = ['#3498db', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'];
+                    let barHtml = '';
+                    for (let s = 1; s <= 5; s++) {
+                        if (s <= wInfo.level) {
+                            let blinkClass = (wInfo.level === 5 && s === 5) ? 'step-blink' : '';
+                            barHtml += `<div class="wind-step ${blinkClass}" style="background: ${colors[s-1]};"></div>`;
+                        } else {
+                            barHtml += `<div class="wind-step"></div>`;
+                        }
+                    }
+
+                    // 點擊打開專屬的風力與風向趨勢 Modal
+                    listHtml += `
+                    <div class="wind-item-card" data-station="${item.name}" onclick="openWindModal(this.dataset.station)">
+                        <div class="wind-card-header">
+                            <div class="wind-card-name">
+                                <span class="val-dot" style="background: ${wInfo.color}"></span>
+                                ${item.name}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="wind-badge" style="background: ${wInfo.badgeBg}; color: ${wInfo.color}; border: 1px solid ${wInfo.color}40;">${wInfo.name}</span>
+                                <span class="wind-card-val" style="color: ${wInfo.color}">
+                                    <span style="font-size: 0.75rem; color: #ccc;">${item.dir}</span> 
+                                    ${item.speed} <span style="font-size:0.7rem; color:var(--text-muted);">km/h</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="wind-mini-bar">${barHtml}</div>
+                    </div>`;
+                });
+            }
+            document.getElementById('wind-list-container').innerHTML = listHtml;
+        }
+
+        // ==========================================
+        // 💨 全新：風力圖表 Modal 觸發與繪製邏輯
+        // ==========================================
+        async function openWindModal(stationName) {
+            if (!stationName) return;
+            const data = stationMasterData[stationName] || {};
+            const windStr = data.wind || '靜止 0 km/h';
+            let speedMatch = windStr.match(/(\d+)/);
+            let currentSpeed = speedMatch ? parseFloat(speedMatch[1]) : 0;
+            const wInfo = getWindLevelInfo(currentSpeed);
+
+            document.getElementById('wind-modal-title').innerText = `💨 ${stationName} 氣象站風力詳情`;
+            document.getElementById('wm-curr-wind').innerText = windStr;
+            document.getElementById('wm-curr-wind').style.color = wInfo.color;
+            document.getElementById('wm-wind-level').innerText = `${wInfo.name} (第 ${wInfo.level} 級)`;
+            document.getElementById('wm-wind-level').style.color = wInfo.color;
+
+            let coords = null;
+            for (let ch in hkCoordinates) {
+                if (ch === stationName || stationName.includes(ch) || (stationEnglishNames[ch] && stationName.includes(stationEnglishNames[ch]))) {
+                    coords = hkCoordinates[ch];
+                    break;
+                }
+            }
+            if (!coords) coords = [22.302, 114.174];
+
+            document.getElementById('wind-modal').classList.add('active');
+
+            try {
+                const weatherData = await fetchMeteoDataWithCache(coords[0], coords[1]);
+                const allTimes = weatherData.hourly.time;
+                const allWindSpeeds = weatherData.hourly.wind_speed_10m || [];
+                const allWindDirs = weatherData.hourly.wind_direction_10m || [];
+                const allWindGusts = weatherData.hourly.wind_gusts_10m || [];
+
+                const currentHourIndex = new Date().getHours() + 24;
+                const startIdx = Math.max(0, currentHourIndex - 23);
+                const endIdx = currentHourIndex + 1;
+
+                const labels = allTimes.slice(startIdx, endIdx).map(t => t.substring(11, 16));
+                let speeds = allWindSpeeds.slice(startIdx, endIdx);
+                let dirs = allWindDirs.slice(startIdx, endIdx);
+                let gusts = allWindGusts.slice(startIdx, endIdx);
+
+                if (speeds.length > 0 && currentSpeed > 0) {
+                    speeds[speeds.length - 1] = currentSpeed;
+                }
+
+                const peakWind = Math.max(...speeds).toFixed(0);
+                const peakGust = gusts.length > 0 ? Math.max(...gusts).toFixed(0) : peakWind;
+
+                document.getElementById('wm-peak-wind').innerText = `${peakWind} km/h`;
+                document.getElementById('wm-peak-gust').innerText = `${peakGust} km/h`;
+                document.getElementById('wm-wind-hint').innerText = `最高陣風 ${peakGust} km/h`;
+
+                renderWindChart(labels, speeds, gusts, dirs);
+            } catch (err) {
+                console.error("Hourly Wind Chart Fetch Error:", err);
+            }
+        }
+
+        function renderWindChart(labels, speeds, gusts, dirs) {
+            const ctx = document.getElementById('wind-chart').getContext('2d');
+            if (windChartInstance) windChartInstance.destroy();
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(0, 206, 201, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 206, 201, 0.02)');
+
+            windChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '平均風速 (km/h)',
+                            data: speeds,
+                            borderColor: '#00cec9',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: '最高陣風 (km/h)',
+                            data: gusts,
+                            borderColor: '#e67e22',
+                            borderWidth: 1.8,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { maxTicksLimit: 8 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: '風速 (km/h)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const idx = context.dataIndex;
+                                    const compass = degreesToCompass(dirs[idx]);
+                                    if (context.datasetIndex === 0) {
+                                        return ` 風速: ${context.parsed.y} km/h (風向: ${compass.dir} ${compass.arrow} ${dirs[idx]}°)`;
+                                    } else {
+                                        return ` 陣風: ${context.parsed.y} km/h`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         async function fetchAllStationData() {
             try {
                 const [tempRes, maxminRes, windRes] = await Promise.allSettled([
@@ -1677,6 +1860,8 @@
                     }
                 }
             } catch (e) { console.error("Master Station Fetch Error:", e); }
+            
+            renderWindList();
             updateSmartThreatAlert();
         }
 
@@ -1737,7 +1922,7 @@
             const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
             const now = Date.now();
             if (meteoCache[cacheKey] && (now - meteoCache[cacheKey].timestamp < 300000)) return meteoCache[cacheKey].data;
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation&timezone=Asia%2FHong_Kong&past_days=1&forecast_days=1`);
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=Asia%2FHong_Kong&past_days=1&forecast_days=1`);
             const data = await res.json();
             meteoCache[cacheKey] = { data: data, timestamp: now }; return data;
         }
@@ -2057,34 +2242,41 @@
         function prevRadar() { radarIdx = (radarIdx - 1 + radarFrames.length) % radarFrames.length; loadRadarFrame(radarIdx); }
 
         // ==========================================
-        // 🚀 系統極速非阻塞啟動 (Map Loading Optimization)
+        // 🚀 系統極速非阻塞啟動 & 靜默更新
         // ==========================================
         updateTick(); 
         setInterval(updateTick, 1000);
         
-        // 1. 立即請求輕量數據並更新 UI (不被地圖卡住)
-        fetchTopOverview();
-        fetchAstroData();
+        function silentBackgroundUpdate() {
+            fetchTopOverview();
+            fetchAstroData();
+            fetchAllStationData().then(() => {
+                let activeBtn = document.querySelector('.map-btn.active');
+                if (activeBtn) fetchAndRenderCSV(activeBtn.dataset.type);
+            });
+            fetchAndRenderBothTyphoonMaps();
+            initRadarPlayer();
+        }
 
-        // 2. 讓瀏覽器優先渲染三個地圖的底層 (秒出畫面)
+        // 初始載入
         requestAnimationFrame(() => {
             map.invalidateSize(); 
             tcMapHko.invalidateSize(); 
             tcMapAgency.invalidateSize();
 
-            // 3. 地圖畫好後，才開始請求主地圖的氣溫 CSV 數據
             switchMapData('temp');
             fetchAllStationData(); 
             initRadarPlayer();     
+            fetchTopOverview();
+            fetchAstroData();
         });
 
-        // 4. 將極度龐大的各國颱風 KML 解析強行延遲 0.8 秒，確保不阻塞前面所有畫面的流暢度
         setTimeout(() => {
             fetchAndRenderBothTyphoonMaps();
         }, 800); 
 
-        // 自動刷新 (5分鐘)
-        setTimeout(() => { window.location.reload(); }, 300000);
+        // 自動背景刷新 (每 5 分鐘 = 300000 毫秒)，不再重整網頁
+        setInterval(silentBackgroundUpdate, 300000);
 
     </script>
 </body>
