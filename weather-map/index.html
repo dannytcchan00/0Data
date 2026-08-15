@@ -419,6 +419,20 @@
                     </div>
                     <div class="level-hint" id="laundry-hint-text">等待天氣數據中...</div>
                 </div>
+                <div class="index-container" style="margin-top: 12px;" onclick="openLifestyleModal('hiking')">
+                    <div class="level-header">
+                        <div class="level-title">⛰️ 戶外運動行山</div>
+                        <div class="level-text" id="hiking-level-val">--</div>
+                    </div>
+                    <div class="level-bar">
+                        <div class="level-step" id="hiking-step-1"></div>
+                        <div class="level-step" id="hiking-step-2"></div>
+                        <div class="level-step" id="hiking-step-3"></div>
+                        <div class="level-step" id="hiking-step-4"></div>
+                        <div class="level-step" id="hiking-step-5"></div>
+                    </div>
+                    <div class="level-hint" id="hiking-hint-text">等待天氣數據中...</div>
+                </div>
             </div>
 
             <!-- 6. Astronomy -->
@@ -659,6 +673,18 @@
                         • <strong>第 1-2 級（極適宜 / 適宜）</strong>：陽光充足且相對乾燥，預計 2-4 小時內可自然風乾殺菌。<br>
                         • <strong>第 3 級（一般）</strong>：濕度略高或紫外線偏弱，乾衣需 4-6 小時以上。<br>
                         • <strong>第 4-5 級（不適宜 / 極不適宜）</strong>：降雨機率高或濕度 ≥ 80%，衣物難以乾透且易生霉菌，建議使用抽濕機或乾衣機。
+                    </p>
+                </div>
+                
+                <div class="level-info-card" style="border-left-color: #2ecc71;">
+                    <div class="tl-header">
+                        <div class="tl-title" style="color: #2ecc71;">⛰️ 戶外運動行山指數加權</div>
+                    </div>
+                    <p class="tl-desc">
+                        此指數綜合分析<strong>氣溫、降雨機率與紫外線強度</strong>，並篩選出最高風險因子（Max-Risk），同時直接連動<strong>綜合氣象威脅評級</strong>：<br>
+                        • <strong>第 1-2 級（極適宜 / 適宜）</strong>：氣溫適中（15-28°C）、降雨機率低且無顯著天氣威脅，適合大部分戶外路線。<br>
+                        • <strong>第 3 級（一般）</strong>：氣溫偏高（≥28°C）或有驟雨機率，建議縮短行程並隨時留意體力消耗。<br>
+                        • <strong>第 4-5 級（不適宜 / 極不適宜）</strong>：出現酷熱（≥31°C）、大雨、雷暴，或綜合威脅評級達 4 級以上（惡劣天氣警告生效）。中暑及滑倒風險極高，強烈建議取消行程。
                     </p>
                 </div>
             </div>
@@ -1325,6 +1351,57 @@
             animateIndex('laundry', laundryLevel, colors);
         }
 
+        // 新增：戶外運動行山指數演算法
+        function updateHikingIndex(tVal, hVal, uvVal, psrRaw) {
+            let hikingLevel = 1;
+            if (isNaN(tVal)) {
+                document.getElementById('hiking-level-val').innerText = `--`;
+                return;
+            }
+
+            let rainStr = psrRaw || "低";
+            let uv = isNaN(uvVal) || uvVal === null ? 0 : parseFloat(uvVal);
+            
+            let heatScore = 1;
+            if (tVal >= 33) heatScore = 5;
+            else if (tVal >= 31) heatScore = 4;
+            else if (tVal >= 28) heatScore = 3;
+            else if (tVal < 10) heatScore = 4;
+            else if (tVal < 15) heatScore = 2;
+
+            let rainScore = 1;
+            if (rainStr.includes('高')) rainScore = 5;
+            else if (rainStr.includes('中高')) rainScore = 4;
+            else if (rainStr.includes('中')) rainScore = 3;
+
+            let uvScore = 1;
+            if (uv >= 10) uvScore = 4;
+            else if (uv >= 6) uvScore = 3;
+
+            hikingLevel = Math.max(heatScore, rainScore, uvScore);
+
+            if (currentThreatState && currentThreatState.finalLevel >= 4) {
+                hikingLevel = 5;
+            } else if (currentThreatState && currentThreatState.finalLevel === 3) {
+                hikingLevel = Math.max(hikingLevel, 4);
+            }
+
+            const hDescs = ["極適宜", "適宜", "一般", "不適宜", "極不適宜"];
+            const hHints = [
+                "天氣完美！非常適合行山及各類戶外運動。", 
+                "狀況良好。記得帶備足夠食水及防曬用品。", 
+                "天氣漸熱或有微雨。需注意體力消耗，避免高難度路線。", 
+                "天氣狀況較差。中暑或滑倒風險高，不建議登高。", 
+                "極度危險！強烈呼籲暫停所有行山活動，遠離山區。"
+            ];
+            const colors = [themeColors.blue, themeColors.green, themeColors.orange, "#e67e22", themeColors.red];
+
+            document.getElementById('hiking-level-val').innerText = `第 ${hikingLevel} 級 - ${hDescs[hikingLevel-1]}`;
+            document.getElementById('hiking-level-val').style.color = colors[hikingLevel-1];
+            document.getElementById('hiking-hint-text').innerText = hHints[hikingLevel-1];
+            animateIndex('hiking', hikingLevel, colors);
+        }
+
         function openLifestyleModal(type) {
             const modal = document.getElementById('lifestyle-modal');
             const titleEl = document.getElementById('lifestyle-modal-title');
@@ -1347,6 +1424,11 @@
                 gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div><div class="s-stat-box"><div class="s-stat-label">預計乾衣時間</div><div class="s-stat-val">${globalWxState.hum < 65 ? '2-3 小時' : (globalWxState.hum < 80 ? '4-6 小時' : '建議室內')}</div></div>`;
                 evalEl.innerHTML = `當前指數採用綜合加權演算法：<strong>太陽紫外線佔 40%、降雨概率佔 30%、相對濕度佔 30%</strong>。分數越高代表越適合進行戶外天然除菌乾衣。`;
                 tipsEl.innerHTML = `<li><strong>戶外晾曬條件</strong>：當相對濕度超過 75% 或有降雨機率時，衣物晾乾速度緩慢且容易滋生霉菌與異味。</li><li><strong>紫外線天然殺菌</strong>：UV 指數高於 3 時有助於分解棉質衣物上的細菌，但深色絲綢及羊毛應避免長時間直曬以防褪色。</li><li><strong>室內替代方案</strong>：當指標為 4 級或 5 級時，強烈建議將衣物移入室內，配合抽濕機或乾衣機進行烘乾。</li>`;
+            } else if (type === 'hiking') {
+                titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
+                gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${t}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
+                evalEl.innerHTML = `當前指數綜合考慮了<strong>極端氣溫、降雨機率與紫外線強度</strong>。香港郊野地形多變，天氣突變易引發中暑、低溫症或山洪暴發。`;
+                tipsEl.innerHTML = `<li><strong>防暑與水分</strong>：高溫及高濕度下，汗水難以蒸發，行山者極易中暑。建議每人攜帶最少 2-3 公升食水。</li><li><strong>降雨與防滑</strong>：若有降雨機率，山徑（尤其是石面及泥路）會變得極度濕滑，下坡時發生意外的風險大增。</li><li><strong>雷暴與強風</strong>：空曠山脊及高地極易受雷擊及強風影響，如遇惡劣天氣請盡快下降至安全地點。</li>`;
             }
             modal.classList.add('active');
         }
@@ -2335,7 +2417,6 @@
 
                     let tVal = t ? parseFloat(t.value) : NaN; let hVal = h ? parseFloat(h.value) : NaN;
                     globalWxState.temp = tVal; globalWxState.hum = hVal; globalWxState.uv = uvVal;
-                    updatePetWalkingIndex(tVal, hVal);
 
                     if (rtData.temperature && Array.isArray(rtData.temperature.data)) {
                         let tempList = [];
@@ -2370,7 +2451,6 @@
                         });
                         document.getElementById('forecast-container').innerHTML = html;
                     }
-                    updateLaundryIndex(globalWxState.hum, globalWxState.uv, psrRaw);
                 }
 
                 // --- ⚠️ 天氣警告（多重警告支援 + 0警告時隱藏） ---
@@ -2450,7 +2530,12 @@
                 }
 
             } catch (error) { console.error("fetchTopOverview error:", error); }
+            
+            // 確保每次更新時，生活指數都會被重新計算
             updateSmartThreatAlert();
+            updatePetWalkingIndex(globalWxState.temp, globalWxState.hum);
+            updateLaundryIndex(globalWxState.hum, globalWxState.uv, globalWxState.psrRaw);
+            updateHikingIndex(globalWxState.temp, globalWxState.hum, globalWxState.uv, globalWxState.psrRaw);
         }
 
         // --- Forecast Detail Modal ---
