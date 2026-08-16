@@ -1022,7 +1022,7 @@
                         <div id="wm-status" style="font-size: 0.85rem; color: var(--accent-danger); font-weight: 600; margin-top: 4px;">● 生效中 (Active Warning)</div>
                     </div>
                 </div>
-                <div class="detail-info-block"><div class="detail-info-title">警告意義及潛在影響</div><div class="detail-info-content" id="wm-meaning">--</div></div>
+                <div class="detail-info-block"><div class="detail-info-title">警告意義及潛影響</div><div class="detail-info-content" id="wm-meaning">--</div></div>
                 <div class="detail-info-block"><div class="detail-info-title">應變及防禦指引</div><ul class="detail-list" id="wm-precautions"></ul></div>
             </div>
         </div>
@@ -1440,12 +1440,16 @@
             const colors = [themeColors.blue, themeColors.green, themeColors.orange, "#e67e22", themeColors.red];
 
             let dynamicHint = "";
+            let currentRain = currentThreatState.r || 0; 
+            
             if (threatLevel >= 4 || currentThreatState.tcLvl >= 3 || currentThreatState.windLvl >= 3) {
                 dynamicHint = "惡劣天氣警告生效中，山區極度危險！強烈呼籲暫停所有戶外行程。";
+            } else if (currentThreatState.rainLvl >= 3 || currentRain > 0) {
+                dynamicHint = `即時雨勢達 ${currentRain} mm/h，山徑泥濘濕滑，能見度低兼有山洪風險，建議取消行程。`;
+            } else if (tVal >= 30) {
+                dynamicHint = `氣溫達 ${tVal}°C 炎熱，極易中暑。如需行山請避開正午並帶備大量食水。`;
             } else if (rainStr.includes('高')) {
-                dynamicHint = "降雨機率高，山徑泥濘濕滑，能見度低兼有山洪風險，建議取消行程。";
-            } else if (tVal >= 31) {
-                dynamicHint = `氣溫達 ${tVal}°C 酷熱，極易中暑。如需行山請避開正午並帶備大量食水。`;
+                dynamicHint = "今日降雨機率高，雖然未落雨但隨時變天，請三思並帶備雨具。";
             } else if (tVal <= 13) {
                 dynamicHint = `市區氣溫 ${tVal}°C，高地風寒效應顯著，請著夠防風保暖衣物防低溫症。`;
             } else if (uv >= 10) {
@@ -1585,21 +1589,44 @@
             else if (type === 'hiking') {
                 titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
                 
+                // 讀取當前即時雨量，用嚟判斷係咪真係落緊雨
+                let currentRain = currentThreatState.r || 0; 
+                
                 if (threatLevel >= 4 || tcLvl >= 3 || windLvl >= 3) {
-                    evalText = "⚠️ 警告：目前正生效惡劣天氣警告（如颱風、烈風或極端天氣），戶外與山區環境極度危險！";
-                    tipsHtml = `<li><strong>極度危險！</strong> 強烈呼籲立即取消所有行山、露營或水上活動。</li><li>山區容易出現塌樹、山泥傾瀉及暴洪，切勿前往海邊、湧浪區或陡峭山坡。</li><li>如您目前已在戶外，請立刻中止行程，盡快尋找堅固的室內地方暫避，並遠離當風位置。</li>`;
-                } else if (rainLvl >= 3 || psr.includes('高')) {
-                    evalText = "目前降雨機率高或正在下雨，山徑泥濘濕滑，能見度降低，且山洪暴發風險大增。";
-                    tipsHtml = `<li>強烈建議取消或延期行程，切勿強行上山。</li><li>避免前往溪澗、瀑布或引水道區域（極易受山洪暴發波及）。</li><li>如已在途中遇雨，請穿著防滑行山鞋及雨衣（避免使用雨傘以免阻礙雙手或引雷），並盡快沿安全的大路下山。</li><li>切勿行經有潛在山泥傾瀉風險的斜坡或泥路。</li>`;
+                    evalText = "⚠️ 警告：而家有惡劣天氣警告生效緊（可能有颱風、烈風或者極端天氣），山區環境非常危險！";
+                    tipsHtml = `<li><strong>極度危險！</strong> 強烈呼籲即刻取消所有行山、露營或者水上活動。</li>
+                                <li>山區好容易塌樹、山泥傾瀉或者山洪暴發，千祈唔好去海邊、大浪位或者斜坡。</li>
+                                <li>如果你而家已經喺出面，請即刻中斷行程，盡快搵個堅固嘅室內地方暫避！</li>`;
+                } else if (rainLvl >= 3 || currentRain > 0) {
+                    // 確保真係「落緊雨」先出呢個提示
+                    evalText = `而家出面落緊雨（即時雨量 ${currentRain} mm/h），山路會變得非常濕滑泥濘，能見度變差，有山泥傾瀉同山洪暴發風險。`;
+                    tipsHtml = `<li><strong>強烈建議改期或者取消行程</strong>，無謂夾硬上山冒險。</li>
+                                <li>絕對要避開溪澗、瀑布同引水道呢啲極危險、隨時會山洪暴發嘅位。</li>
+                                <li>如果已經喺山上遇著落雨，請著好防滑行山鞋同雨褸，盡快沿平坦大路落山。</li>`;
                 } else if (t >= 30) {
-                    evalText = `目前氣溫酷熱（${tStr}），加上戶外無遮蔽暴曬，極易引發中暑或熱衰竭。`;
-                    tipsHtml = `<li>強烈建議縮短行程，並選擇有充足樹蔭遮蔽的平緩路線，避免在正午時分（11:00-15:00）曝曬。</li><li>水分補給至關重要：每人必須帶備最少 2-3 公升食水及電解質飲品，定時小口補充。</li><li>穿著淺色、透氣排汗的長袖衣物，帶備寬邊帽、太陽眼鏡，並塗抹防曬霜。</li><li>如感到頭暈、作嘔、心跳過快或停止出汗，應立即在陰涼處躺下休息、補充水分並物理降溫，若無好轉需立即求救。</li>`;
+                    // 冇落雨而且溫度 >= 30，優先顯示酷熱行山警告
+                    evalText = `而家出面氣溫去到 ${tStr}，真係相當之熱！喺戶外無遮擋長時間暴曬會好辛苦，有極高中暑同熱衰竭嘅風險。`;
+                    tipsHtml = `<li>建議縮短行程，揀啲多樹蔭同平坦嘅輕鬆路線，盡量避開正午最曬嗰幾粒鐘（11:00-15:00）。</li>
+                                <li><strong>水一定要帶夠！</strong> 每人最少準備 2-3 公升食水同電解質飲品，行緊嗰陣要密密飲，唔好等口渴先飲。</li>
+                                <li>著淺色、透氣排汗嘅長袖衫褲防曬，戴頂大邊帽、黑超同埋搽防曬。</li>
+                                <li>如果行行吓覺得頭暈、想嘔、心跳得好快或者突然冇汗出，即刻搵個陰涼位抖低物理降溫，唔對路要即刻求救！</li>`;
+                } else if (psr.includes('高')) {
+                    // 冇落雨、唔算極熱，但預測降雨機率高
+                    evalText = "雖然而家未落雨，但今日降雨機率偏高，天氣隨時轉壞，山徑有潛在濕滑同山洪暴發風險。";
+                    tipsHtml = `<li>出發前請三思，並隨時留意天文台最新雷達圖。</li>
+                                <li>帶備防水風褸同雨具，盡量揀鋪設良好嘅石屎路，避免行泥路或溯澗。</li>
+                                <li>如果途中見到天色突然變暗或聽到雷聲，請即刻撤退。</li>`;
                 } else if (t <= 13) {
-                    evalText = `目前市區天氣寒冷（${tStr}），高地及空曠山脊氣溫會顯著更低，風寒效應極易引發低溫症。`;
-                    tipsHtml = `<li>務必採用「洋蔥式穿搭法」：排汗內層、保暖中層（抓毛絨），以及防風防水的外殼（風褸）。</li><li>高山風勢凜冽，頭部及手部容易流失熱量，請帶備冷帽、頸巾及防風手套。</li><li>出發前多進食高熱量食物，隨身帶備保溫壺（裝熱飲）及朱古力等高能量零食。</li><li>行進時控制配速，避免過度出汗令內衣濕透，休息時應立即穿上外套保暖。</li>`;
+                    evalText = `而家市區氣溫得 ${tStr}，高地同空曠山脊因為大風，體感溫度會再低一截，風寒效應極易引發低溫症。`;
+                    tipsHtml = `<li>一定要用「洋蔥式著法」：底層排汗、中層保暖（例如抓毛），出面加件擋風防水嘅風褸。</li>
+                                <li>高山風大，頭同手好易流失熱量，記得帶冷帽、頸巾同防風手套。</li>
+                                <li>行緊嗰陣控制好節奏，一停低休息就要即刻著返件褸保暖。</li>`;
                 } else {
-                    evalText = "目前天氣穩定，氣溫及濕度適中，是進行遠足及各類戶外運動的絕佳時機。";
-                    tipsHtml = `<li>天氣條件非常理想，適合挑戰平日規劃的中長距離路線。</li><li>儘管天氣良好，亦請緊記「結伴同行」，帶備足夠糧水、急救包及充足電量的電話。</li><li>出發前請將行程路線告知家人或朋友，並下載離線地圖確保不迷路。</li><li>做好防蚊防蟲措施，切勿破壞大自然及亂丟垃圾（自己垃圾自己帶走）。</li>`;
+                    evalText = "而家天氣相當穩定，氣溫同濕度都好舒服，絕對係出走大自然、行山做運動嘅完美時機！";
+                    tipsHtml = `<li>天氣一流，好適合挑戰平時想行嘅中長距離路線！</li>
+                                <li>出發前記得同屋企人或者朋友交代低行程路線，同埋 download 定離線地圖。</li>
+                                <li>就算好天都記住要「結伴同行」，帶齊足夠糧水、急救包同尿袋。</li>
+                                <li>做好防蚊防蟲措施，愛護大自然，<strong>自己嘅垃圾自己帶走</strong>。</li>`;
                 }
             }
             
