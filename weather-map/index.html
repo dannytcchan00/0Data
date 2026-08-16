@@ -419,6 +419,7 @@
                     </div>
                     <div class="level-hint" id="laundry-hint-text">等待天氣數據中...</div>
                 </div>
+                <!-- 新增：戶外運動行山指數 -->
                 <div class="index-container" style="margin-top: 12px;" onclick="openLifestyleModal('hiking')">
                     <div class="level-header">
                         <div class="level-title">⛰️ 戶外運動行山</div>
@@ -1005,7 +1006,7 @@
         </div>
     </div>
 
-    <!-- Lifestyle Indices Detail Modal -->
+    <!-- Lifestyle Indices Detail Modal (全新動態建議版) -->
     <div id="lifestyle-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -1014,8 +1015,8 @@
             </div>
             <div class="modal-body">
                 <div class="station-stats-grid" id="ls-metric-grid"></div>
-                <div class="detail-info-block"><div class="detail-info-title">當前適宜度與評估</div><div class="detail-info-content" id="ls-evaluation-text">--</div></div>
-                <div class="detail-info-block"><div class="detail-info-title">具體建議與注意事項</div><ul class="detail-list" id="ls-tips-list"></ul></div>
+                <div class="detail-info-block"><div class="detail-info-title">當前狀況評估</div><div class="detail-info-content" id="ls-evaluation-text">--</div></div>
+                <div class="detail-info-block"><div class="detail-info-title" style="color: var(--accent-warning);">具體應對建議</div><ul class="detail-list" id="ls-tips-list"></ul></div>
             </div>
         </div>
     </div>
@@ -1351,7 +1352,6 @@
             animateIndex('laundry', laundryLevel, colors);
         }
 
-        // 新增：戶外運動行山指數演算法
         function updateHikingIndex(tVal, hVal, uvVal, psrRaw) {
             let hikingLevel = 1;
             if (isNaN(tVal)) {
@@ -1402,6 +1402,9 @@
             animateIndex('hiking', hikingLevel, colors);
         }
 
+        // ==========================================
+        // 💡 全新：動態生活指數解說與建議
+        // ==========================================
         function openLifestyleModal(type) {
             const modal = document.getElementById('lifestyle-modal');
             const titleEl = document.getElementById('lifestyle-modal-title');
@@ -1409,27 +1412,83 @@
             const evalEl = document.getElementById('ls-evaluation-text');
             const tipsEl = document.getElementById('ls-tips-list');
 
-            const t = isNaN(globalWxState.temp) ? '--' : `${globalWxState.temp}°C`;
-            const h = isNaN(globalWxState.hum) ? '--' : `${globalWxState.hum}%`;
-            const uv = globalWxState.uv !== null ? `${globalWxState.uv}` : '--';
-            const psr = globalWxState.psr || '低';
+            const t = globalWxState.temp;
+            const h = globalWxState.hum;
+            const uv = globalWxState.uv !== null ? parseFloat(globalWxState.uv) : 0;
+            const psr = globalWxState.psrRaw || '低';
+            
+            const tcLvl = currentThreatState.tcLvl || 1;
+            const windLvl = currentThreatState.windLvl || 1;
+            const rainLvl = currentThreatState.rainLvl || 1;
+            const threatLevel = currentThreatState.finalLevel || 1;
+
+            const tStr = isNaN(t) ? '--' : `${t}°C`;
+            const hStr = isNaN(h) ? '--' : `${h}%`;
+            const uvStr = globalWxState.uv !== null ? `${globalWxState.uv}` : '--';
+
+            gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${tStr}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${hStr}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線</div><div class="s-stat-val">${uvStr}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
+
+            let evalText = "";
+            let tipsHtml = "";
 
             if (type === 'pet') {
                 titleEl.innerText = "🐾 寵物散步適宜度詳情";
-                gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${t}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-                evalEl.innerHTML = `當前指數綜合考慮了<strong>氣溫、相對濕度與地面熱輻射</strong>。短吻犬種散熱較差，高溫環境下極易引發熱衰竭。`;
-                tipsEl.innerHTML = `<li><strong>7秒手背觸地測試</strong>：出門前將手背貼在柏油路面 7 秒，如感到燙手則切勿讓毛孩落地行走，避免肉墊燙傷。</li><li><strong>最佳散步時段</strong>：夏天宜選清晨 7:00 前或日落後 20:00 後，避開柏油路蓄熱最高峰。</li><li><strong>補充水分</strong>：隨身攜帶便攜水壺，散步每 15-20 分鐘讓毛孩補充常溫水。</li><li><strong>熱衰竭警號</strong>：如發現毛孩呼吸極度急促、舌頭暗紅發紫、步態不穩，應立即移至陰涼處降溫並就醫。</li>`;
+                if (tcLvl >= 3 || windLvl >= 3) {
+                    evalText = "目前受強風或熱帶氣旋影響，戶外環境不穩定，帶寵物外出具一定危險性。";
+                    tipsHtml = `<li>強烈建議留在室內，暫停所有戶外散步活動。</li><li>請在家中與毛孩進行室內遊戲消耗精力（如嗅聞遊戲或漏食玩具）。</li><li>如必須外出如廁，請留在有遮擋的安全地方，並務必牽緊狗繩，完成後盡快回家。</li>`;
+                } else if (rainLvl >= 3 || psr.includes('高')) {
+                    evalText = "目前降雨機率高或正在下雨，路面濕滑積水，毛孩容易著涼或滑倒。";
+                    tipsHtml = `<li>建議暫停戶外散步，或只在有上蓋的平台短暫活動。</li><li>如需外出，請為寵物穿著雨衣，避開水浸區域及泥濘。</li><li>回家後務必徹底擦乾毛孩的毛髮及腳掌（尤其是趾間），使用風筒吹乾，防止真菌感染或濕疹。</li>`;
+                } else if (t >= 28) {
+                    evalText = `目前天氣炎熱（${tStr}），陽光直射下柏油路面積熱極度嚴重，極易引發寵物中暑或燙傷肉墊。`;
+                    tipsHtml = `<li>強烈建議將散步時間改至清晨（7點前）或入黑後（晚上8點後），完全避開烈日高溫。</li><li>出門前必須進行「7秒手背測試」：將手背緊貼路面7秒，若感燙手則切勿讓寵物落地行走。</li><li>隨身帶備充足常溫水，每10-15分鐘讓毛孩補充水分。</li><li>留意熱衰竭警號：如發現毛孩異常喘氣、舌頭發紫、口水黏稠或步伐不穩，請立即移至冷氣地方降溫並盡快就醫。</li>`;
+                } else if (t <= 15) {
+                    evalText = `目前天氣寒冷（${tStr}），部分短毛、小型犬隻或老貓老狗容易流失體溫，引發低溫症狀。`;
+                    tipsHtml = `<li>為短毛犬（如唐狗、吉娃娃）、老犬或幼犬穿著保暖衣物。</li><li>避免長時間在當風處停留，可適度縮短散步時間，以保持適當運動量即可。</li><li>回家後注意毛孩四肢保暖，並提供溫暖避風的休息空間。</li>`;
+                } else {
+                    evalText = "目前氣溫與濕度適中，天氣穩定，非常適合帶寵物長時間戶外活動。";
+                    tipsHtml = `<li>把握好天氣，可適當延長散步或戶外探索時間。</li><li>保持正常的補水頻率，帶備便攜水壺。</li><li>可選擇前往狗公園或郊外讓毛孩自由奔跑（請留意周遭環境並牽好狗繩）。</li><li>做好防蚊防牛蜱措施，保護毛孩免受寄生蟲侵擾。</li>`;
+                }
             } else if (type === 'laundry') {
                 titleEl.innerText = "👕 戶外晾衣指數詳情";
-                gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div><div class="s-stat-box"><div class="s-stat-label">預計乾衣時間</div><div class="s-stat-val">${globalWxState.hum < 65 ? '2-3 小時' : (globalWxState.hum < 80 ? '4-6 小時' : '建議室內')}</div></div>`;
-                evalEl.innerHTML = `當前指數採用綜合加權演算法：<strong>太陽紫外線佔 40%、降雨概率佔 30%、相對濕度佔 30%</strong>。分數越高代表越適合進行戶外天然除菌乾衣。`;
-                tipsEl.innerHTML = `<li><strong>戶外晾曬條件</strong>：當相對濕度超過 75% 或有降雨機率時，衣物晾乾速度緩慢且容易滋生霉菌與異味。</li><li><strong>紫外線天然殺菌</strong>：UV 指數高於 3 時有助於分解棉質衣物上的細菌，但深色絲綢及羊毛應避免長時間直曬以防褪色。</li><li><strong>室內替代方案</strong>：當指標為 4 級或 5 級時，強烈建議將衣物移入室內，配合抽濕機或乾衣機進行烘乾。</li>`;
+                gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${tStr}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${hStr}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div><div class="s-stat-box"><div class="s-stat-label">預計乾衣時間</div><div class="s-stat-val">${(h < 65 && t >= 25 && !psr.includes('高')) ? '2-3 小時' : (h < 80 && !psr.includes('高') ? '4-6 小時' : '建議室內')}</div></div>`;
+                
+                if (tcLvl >= 3 || windLvl >= 4 || rainLvl >= 3 || psr.includes('高')) {
+                    evalText = "目前天氣極不穩定（伴隨強風或大雨），完全不適合戶外晾曬，衣物容易被吹走、淋濕或沾染污垢。";
+                    tipsHtml = `<li>強烈建議將衣物移入室內晾曬。</li><li>若懸掛在窗外或露台，請務必收回室內並鎖緊門窗，以免晾衣架被強風吹落引發危險。</li><li>建議配合抽濕機或乾衣機，加快乾衣速度並防止細菌滋生。</li>`;
+                } else if (h >= 80) {
+                    evalText = `目前相對濕度極高（達 ${hStr}），空氣中水分接近飽和，戶外衣物極難自然風乾。`;
+                    tipsHtml = `<li>建議將衣物放於室內通風處，並開啟抽濕機、冷氣機或風扇輔助抽乾水分。</li><li>潮濕環境極易令衣物產生難聞的「噏味」（霉菌滋生），若衣物已產生異味，建議加入少量消毒液重新洗滌。</li><li>洗衣時可考慮縮減每次洗衣量，增加衣物間的通風空間。</li>`;
+                } else if (t >= 25 && h < 70 && !psr.includes('高')) {
+                    evalText = "目前天氣乾爽、陽光充沛，是戶外晾衣的絕佳時機，高溫與紫外線能迅速烘乾衣物並天然殺菌。";
+                    tipsHtml = `<li>把握陽光充沛的時間將大件衣物（如被單、床單）拿至戶外晾曬。</li><li>紫外線能有效分解棉質衣物上的細菌，具良好殺菌除臭作用。</li><li>注意：深色衣物、絲綢或羊毛材質建議「反轉晾曬」或放在通風陰涼處，以免紫外線導致嚴重褪色。</li>`;
+                } else {
+                    evalText = "目前天氣狀況一般，衣物可於戶外晾乾，但耗時可能稍長。";
+                    tipsHtml = `<li>可正常於戶外晾曬，但需隨時留意天氣變化（尤其是局部驟雨）。</li><li>建議將較厚重的衣物（如牛仔褲、毛浴巾）掛在通風迎風面，加快風乾速度。</li><li>確保衣物之間保留足夠的空間，讓空氣流通。</li>`;
+                }
             } else if (type === 'hiking') {
                 titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
-                gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${t}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${h}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線指數</div><div class="s-stat-val">${uv}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-                evalEl.innerHTML = `當前指數綜合考慮了<strong>極端氣溫、降雨機率與紫外線強度</strong>。香港郊野地形多變，天氣突變易引發中暑、低溫症或山洪暴發。`;
-                tipsEl.innerHTML = `<li><strong>防暑與水分</strong>：高溫及高濕度下，汗水難以蒸發，行山者極易中暑。建議每人攜帶最少 2-3 公升食水。</li><li><strong>降雨與防滑</strong>：若有降雨機率，山徑（尤其是石面及泥路）會變得極度濕滑，下坡時發生意外的風險大增。</li><li><strong>雷暴與強風</strong>：空曠山脊及高地極易受雷擊及強風影響，如遇惡劣天氣請盡快下降至安全地點。</li>`;
+                
+                if (threatLevel >= 4 || tcLvl >= 3 || windLvl >= 3) {
+                    evalText = "⚠️ 警告：目前正生效惡劣天氣警告（如颱風、烈風或極端天氣），戶外與山區環境極度危險！";
+                    tipsHtml = `<li><strong>極度危險！</strong> 強烈呼籲立即取消所有行山、露營或水上活動。</li><li>山區容易出現塌樹、山泥傾瀉及暴洪，切勿前往海邊、湧浪區或陡峭山坡。</li><li>如您目前已在戶外，請立刻中止行程，盡快尋找堅固的室內地方暫避，並遠離當風位置。</li>`;
+                } else if (rainLvl >= 3 || psr.includes('高')) {
+                    evalText = "目前降雨機率高或正在下雨，山徑泥濘濕滑，能見度降低，且山洪暴發風險大增。";
+                    tipsHtml = `<li>強烈建議取消或延期行程，切勿強行上山。</li><li>避免前往溪澗、瀑布或引水道區域（極易受山洪暴發波及）。</li><li>如已在途中遇雨，請穿著防滑行山鞋及雨衣（避免使用雨傘以免阻礙雙手或引雷），並盡快沿安全的大路下山。</li><li>切勿行經有潛在山泥傾瀉風險的斜坡或泥路。</li>`;
+                } else if (t >= 30) {
+                    evalText = `目前氣溫酷熱（${tStr}），加上戶外無遮蔽暴曬，極易引發中暑或熱衰竭。`;
+                    tipsHtml = `<li>強烈建議縮短行程，並選擇有充足樹蔭遮蔽的平緩路線，避免在正午時分（11:00-15:00）曝曬。</li><li>水分補給至關重要：每人必須帶備最少 2-3 公升食水及電解質飲品，定時小口補充。</li><li>穿著淺色、透氣排汗的長袖衣物，帶備寬邊帽、太陽眼鏡，並塗抹防曬霜。</li><li>如感到頭暈、作嘔、心跳過快或停止出汗，應立即在陰涼處躺下休息、補充水分並物理降溫，若無好轉需立即求救。</li>`;
+                } else if (t <= 13) {
+                    evalText = `目前市區天氣寒冷（${tStr}），高地及空曠山脊氣溫會顯著更低，風寒效應極易引發低溫症。`;
+                    tipsHtml = `<li>務必採用「洋蔥式穿搭法」：排汗內層、保暖中層（抓毛絨），以及防風防水的外殼（風褸）。</li><li>高山風勢凜冽，頭部及手部容易流失熱量，請帶備冷帽、頸巾及防風手套。</li><li>出發前多進食高熱量食物，隨身帶備保溫壺（裝熱飲）及朱古力等高能量零食。</li><li>行進時控制配速，避免過度出汗令內衣濕透，休息時應立即穿上外套保暖。</li>`;
+                } else {
+                    evalText = "目前天氣穩定，氣溫及濕度適中，是進行遠足及各類戶外運動的絕佳時機。";
+                    tipsHtml = `<li>天氣條件非常理想，適合挑戰平日規劃的中長距離路線。</li><li>儘管天氣良好，亦請緊記「結伴同行」，帶備足夠糧水、急救包及充足電量的電話。</li><li>出發前請將行程路線告知家人或朋友，並下載離線地圖確保不迷路。</li><li>做好防蚊防蟲措施，切勿破壞大自然及亂丟垃圾（自己垃圾自己帶走）。</li>`;
+                }
             }
+            
+            evalEl.innerText = evalText;
+            tipsEl.innerHTML = tipsHtml;
             modal.classList.add('active');
         }
 
