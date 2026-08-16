@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>香港氣象儀表板</title>
+    <title>專業天氣 - 香港氣象儀表板 (無縫背景更新版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2008,6 +2008,87 @@
                     }
                 }
             } catch(e) { console.error('CSV Map Error:', e); }
+
+            // ====== 透過 CORS Proxy 讀取澳門氣象局 XML 數據 ======
+            if (['temp', 'wind'].includes(type)) { 
+                try {
+                    // 17 個澳門氣象站與大橋座標
+                    const macauStationsList = {
+                        "紀念孫中山市政公園": [22.214, 113.541],
+                        "黑沙環": [22.211, 113.555],
+                        "大炮台": [22.197, 113.542],
+                        "外港": [22.197, 113.558],
+                        "媽閣": [22.185, 113.531],
+                        "大潭山": [22.158, 113.560],
+                        "東亞運大馬路": [22.153, 113.542],
+                        "九澳": [22.133, 113.583],
+                        "澳門大學": [22.128, 113.550],
+                        "路環市區": [22.116, 113.552],
+                        "澳門大橋北": [22.195, 113.568],
+                        "澳門大橋南": [22.162, 113.578],
+                        "友誼大橋北": [22.194, 113.562],
+                        "友誼大橋南": [22.164, 113.565],
+                        "嘉樂庇總督大橋": [22.179, 113.544],
+                        "西灣大橋": [22.173, 113.535],
+                        "蓮花大橋": [22.139, 113.543]
+                    };
+
+                    // 使用 corsproxy.io 進行跨域代理請求
+                    const proxyUrl = 'https://corsproxy.io/?';
+                    const targetUrl = encodeURIComponent(`https://xml.smg.gov.mo/c_actualweather.xml?_=${Date.now()}`);
+                    
+                    const res = await fetch(proxyUrl + targetUrl);
+                    if (!res.ok) throw new Error("CORS Proxy 請求失敗");
+                    
+                    const xmlText = await res.text();
+                    const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+                    
+                    // SMG 的 XML 節點通常叫 <ActualWeather>
+                    const stations = xmlDoc.querySelectorAll("ActualWeather");
+
+                    stations.forEach(st => {
+                        const name = st.querySelector("CustomaryName")?.textContent?.trim();
+                        const coords = macauStationsList[name];
+                        if (!coords) return; // 如果這個站不在我們的列表中就跳過
+
+                        let val = null;
+                        let windDir = "";
+
+                        if (type === 'temp') {
+                            val = parseFloat(st.querySelector("Temperature")?.textContent);
+                        } else if (type === 'wind') {
+                            val = parseFloat(st.querySelector("WindSpeed")?.textContent);
+                            windDir = st.querySelector("WindDirection")?.textContent?.trim();
+                        }
+
+                        if (val !== null && !isNaN(val)) {
+                            let mUnit = (type === 'wind') ? ' km/h' : '°C';
+                            let mColor = (type === 'wind') ? 
+                                `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
+                                `color: ${getTempColor(val)};`;
+
+                            let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
+                            
+                            // 處理風向箭嘴
+                            if (type === 'wind' && windDir) {
+                                let windAngle = getWindAngle([windDir]); // 重用原本的風向轉換函數
+                                if (windAngle !== null) {
+                                    mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
+                                }
+                            }
+
+                            // 渲染標記
+                            let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
+                            let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                            
+                            mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${name}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                        }
+                    });
+
+                } catch (e) {
+                    console.warn('Macau XML Proxy 測試失敗:', e);
+                }
+            }
         }
 
         // --- Dual Typhoon Maps Logic ---
