@@ -1,10 +1,9 @@
 name: Fetch HKO Weather Data
 
 on:
-  schedule:
-    # 確保設定為每 10 分鐘執行一次
-    - cron: '*/10 * * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [cronjob_trigger] 
 
 permissions:
   contents: write
@@ -44,7 +43,6 @@ jobs:
       - name: Download Tide CSV
         run: curl -sL "https://data.weather.gov.hk/weatherAPI/hko_data/tide/ALL_tc.csv" -o data/tide_data.csv
 
-      # 【新增】強制寫入當下時間，確保每次都有檔案變動
       - name: Force Update Marker
         run: date > data/last_run.txt
 
@@ -53,9 +51,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 將所有 csv 同埋 last_run.txt 加晒入去
           git add data/
           
-          # 就算只有 last_run.txt 改變，都會照樣 Commit 同 Push
           git commit -m "Force update HKO weather datasets" || echo "No changes to commit"
           git push
