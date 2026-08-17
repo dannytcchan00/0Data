@@ -71,7 +71,7 @@ let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222
 const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
 const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
 
-// 🗺️ 修改了初始地圖視角！將 Zoom 改為 9，中心點改為大嶼山與澳門之間，確保一打開就睇到澳門！
+// 將預設中心點設定為能同時看見香港與澳門 (Zoom 9)
 let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
 L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
 let dataLayerGroup = L.layerGroup().addTo(map);
@@ -868,7 +868,7 @@ async function fetchAndRenderCSV(type) {
     else if (type === 'visibility') unit = ' km'; 
     else if (type === 'tide') unit = ' m';
 
-    // 2. 香港 CSV 數據讀取 (獨立執行，唔干擾澳門)
+    // 2. 香港 CSV 數據讀取
     const loadHK = async () => {
         try {
             let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
@@ -934,83 +934,95 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
-    // 3. 澳門 XML 數據讀取 (防彈全域掃描版)
+    // 3. 澳門 XML 數據讀取 (無差別全域掃描版)
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
-            const macauStationsList = [
-                { keys: ["大潭山", "taipa grande", "taipa"], coords: [22.158, 113.560] },
-                { keys: ["紀念孫中山", "孫中山", "sun yat sen", "sun yat-sen"], coords: [22.214, 113.541] },
-                { keys: ["黑沙環", "areia preta"], coords: [22.211, 113.555] },
-                { keys: ["大炮台", "monte", "fortaleza"], coords: [22.197, 113.542] },
-                { keys: ["外港", "outer harbour", "porto exterior"], coords: [22.197, 113.558] },
-                { keys: ["媽閣", "a-ma", "barro"], coords: [22.185, 113.531] },
-                { keys: ["東亞運", "east asian games", "jogos da asia"], coords: [22.153, 113.542] },
-                { keys: ["九澳", "ka-ho", "kaho"], coords: [22.133, 113.583] },
-                { keys: ["澳門大學", "macau university", "universidade de macau", "um"], coords: [22.128, 113.550] },
-                { keys: ["路環", "coloane"], coords: [22.116, 113.552] },
-                { keys: ["澳門大橋北", "macau bridge (north)", "ponte de macau (norte)"], coords: [22.195, 113.568] },
-                { keys: ["澳門大橋南", "macau bridge (south)", "ponte de macau (sul)"], coords: [22.162, 113.578] },
-                { keys: ["友誼大橋北", "amizade bridge (north)", "amizade norte"], coords: [22.194, 113.562] },
-                { keys: ["友誼大橋南", "amizade bridge (south)", "amizade sul"], coords: [22.164, 113.565] },
-                { keys: ["嘉樂庇", "nobre de carvalho", "macau-taipa bridge"], coords: [22.179, 113.544] },
-                { keys: ["西灣大橋", "sai van"], coords: [22.173, 113.535] },
-                { keys: ["蓮花大橋", "lotus bridge", "flor de lotus"], coords: [22.139, 113.543] },
-                { keys: ["松山", "guia"], coords: [22.163, 113.550] }
+            const macauCoordsMap = [
+                { keys: ["大潭山"], coords: [22.158, 113.560] },
+                { keys: ["孫中山"], coords: [22.214, 113.541] },
+                { keys: ["黑沙環", "祐漢"], coords: [22.211, 113.555] },
+                { keys: ["大炮台"], coords: [22.197, 113.542] },
+                { keys: ["外港"], coords: [22.197, 113.558] },
+                { keys: ["媽閣", "海事"], coords: [22.185, 113.531] },
+                { keys: ["東亞運"], coords: [22.153, 113.542] },
+                { keys: ["九澳"], coords: [22.133, 113.583] },
+                { keys: ["澳門大學", "澳大"], coords: [22.128, 113.550] },
+                { keys: ["路環"], coords: [22.116, 113.552] },
+                { keys: ["澳門大橋(北)", "澳門大橋北", "澳門大橋 北"], coords: [22.195, 113.568] },
+                { keys: ["澳門大橋(南)", "澳門大橋南", "澳門大橋 南"], coords: [22.162, 113.578] },
+                { keys: ["澳門大橋"], coords: [22.178, 113.573] }, 
+                { keys: ["友誼大橋(北)", "友誼大橋北", "友誼大橋 北"], coords: [22.194, 113.562] },
+                { keys: ["友誼大橋(南)", "友誼大橋南", "友誼大橋 南"], coords: [22.164, 113.565] },
+                { keys: ["友誼大橋"], coords: [22.179, 113.563] },
+                { keys: ["嘉樂庇"], coords: [22.179, 113.544] },
+                { keys: ["西灣大橋"], coords: [22.173, 113.535] },
+                { keys: ["蓮花大橋"], coords: [22.139, 113.543] },
+                { keys: ["松山"], coords: [22.163, 113.550] },
+                { keys: ["橫琴"], coords: [22.139, 113.543] },
+                { keys: ["港珠澳"], coords: [22.201, 113.568] }
             ];
 
             const res = await fetch(`https://dannytcchan00.github.io/0Data/data/macao_weather.xml?_=${Date.now()}`);
             if (!res.ok) return;
             const xmlText = await res.text();
             
-            // 使用正則表達式尋找所有可能的區塊
+            // 使用正則表達式尋找所有類似標籤區塊
             const stationBlocks = xmlText.match(/<([A-Za-z0-9_]+)[^>]*>[\s\S]*?<\/\1>/gi) || [];
             let parsedStations = new Set();
 
             for (let block of stationBlocks) {
-                // 檢查呢個區塊入面有冇澳門站名
-                let matchedStation = null;
-                for (let ms of macauStationsList) {
-                    for (let key of ms.keys) {
-                        if (block.toLowerCase().includes(key.toLowerCase())) {
-                            matchedStation = ms;
-                            break;
-                        }
-                    }
-                    if (matchedStation) break;
+                // 1. 抓取 XML 原汁原味的站名 (完美顯示用)
+                let xmlName = "";
+                let nameMatch = block.match(/<(?:CustomaryName|StationName|stationName|name|Station)[^>]*>(?:<!\[CDATA\[)?\s*(.*?)\s*(?:]]>)?<\//i);
+                if (nameMatch) {
+                    xmlName = nameMatch[1].trim();
+                } else {
+                    let attrMatch = block.match(/(?:name|station|StationName)=["']([^"']+)["']/i);
+                    if (attrMatch) xmlName = attrMatch[1].trim();
                 }
 
-                if (!matchedStation || parsedStations.has(matchedStation.keys[0])) continue;
+                if (!xmlName || parsedStations.has(xmlName)) continue;
 
+                // 2. 匹配座標
+                let coords = null;
+                // a. 先看看 XML 裡有沒有自帶座標
+                let latMatch = block.match(/<(?:lat|latitude)[^>]*>\s*([-0-9.]+)\s*<\//i);
+                let lonMatch = block.match(/<(?:lon|longitude)[^>]*>\s*([-0-9.]+)\s*<\//i);
+                if (latMatch && lonMatch) {
+                    coords = [parseFloat(latMatch[1]), parseFloat(lonMatch[1])];
+                } else {
+                    // b. 沒有的話用關鍵字尋找預設座標
+                    for (let ms of macauCoordsMap) {
+                        for (let key of ms.keys) {
+                            if (xmlName.toLowerCase().includes(key.toLowerCase())) {
+                                coords = ms.coords;
+                                break;
+                            }
+                        }
+                        if (coords) break;
+                    }
+                }
+
+                if (!coords) continue; 
+
+                // 3. 抓取數值
                 let val = null;
                 let windDir = "";
 
-                // 無差別抽離數值
                 if (type === 'temp') {
                     let tempMatch = block.match(/<(?:Temperature|Temp|AirTemperature|Value|氣溫)[^>]*>\s*([-0-9.]+)\s*<\//i);
                     if (tempMatch) val = parseFloat(tempMatch[1]);
-                    else {
-                        let attrMatch = block.match(/(?:temp|temperature|value)\s*=\s*["']([-0-9.]+)["']/i);
-                        if (attrMatch) val = parseFloat(attrMatch[1]);
-                    }
                 } else if (type === 'wind') {
                     let speedMatch = block.match(/<(?:WindSpeed|Speed|Wind|風速)[^>]*>\s*([-0-9.]+)\s*<\//i);
                     if (speedMatch) val = parseFloat(speedMatch[1]);
-                    else {
-                        let attrMatch = block.match(/(?:windspeed|speed|wind)\s*=\s*["']([-0-9.]+)["']/i);
-                        if (attrMatch) val = parseFloat(attrMatch[1]);
-                    }
 
                     let dirMatch = block.match(/<(?:WindDirection|WindDir|Direction|Dir|風向)[^>]*>\s*([A-Za-z]+)\s*<\//i);
                     if (dirMatch) windDir = dirMatch[1].trim();
-                    else {
-                        let dirAttrMatch = block.match(/(?:winddirection|winddir|direction|dir)\s*=\s*["']([A-Za-z]+)["']/i);
-                        if (dirAttrMatch) windDir = dirAttrMatch[1].trim();
-                    }
                 }
 
                 if (val !== null && !isNaN(val)) {
-                    parsedStations.add(matchedStation.keys[0]);
+                    parsedStations.add(xmlName);
                     
                     let mUnit = (type === 'wind') ? ' km/h' : '°C';
                     let mColor = (type === 'wind') ? 
@@ -1026,10 +1038,10 @@ async function fetchAndRenderCSV(type) {
                         }
                     }
 
-                    let displayStr = matchedStation.keys[0];
+                    // 這裡直接將 XML 的原名 (xmlName) 放入彈出視窗！
                     let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
-                    let mMarker = L.marker(matchedStation.coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
-                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${displayStr}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                    let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${xmlName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
                 }
             }
         } catch (e) { 
