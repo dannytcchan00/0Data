@@ -52,10 +52,18 @@ jobs:
           git config --local user.name "github-actions[bot]"
           
           git add data/
+          git commit --allow-empty -m "Auto update HKO datasets: $(date +'%Y-%m-%d %H:%M')"
           
-          git commit -m "Force update HKO weather datasets" || echo "No changes to commit"
+          # 智能重試機制：最多嘗試 5 次
+          for i in {1..5}; do
+            git pull --rebase origin main
+            if git push; then
+              echo "✅ HKO Push 成功！"
+              exit 0
+            fi
+            echo "⚠️ 伺服器鎖定中，隨機等待後重試... (第 $i 次/共 5 次)"
+            sleep $(( (RANDOM % 10) + 5 ))
+          done
           
-          # 關鍵修復：先拉取並合併其他 Action 剛剛 Push 的更新，防止撞車
-          git pull --rebase origin main
-          
-          git push
+          echo "❌ 嘗試咗 5 次都失敗，放棄本次更新。"
+          exit 1
