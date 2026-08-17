@@ -1,9 +1,10 @@
 name: Fetch Typhoon XML and KML
 
 on:
-  schedule:
-    - cron: '*/10 * * * *' 
   workflow_dispatch: 
+  # 【修改這裡】加入 cron-job.org 的暗號接收器
+  repository_dispatch:
+    types: [cronjob_trigger] 
 
 jobs:
   fetch_xml:
@@ -50,5 +51,9 @@ jobs:
           
           # Force commit even if unchanged
           git commit --allow-empty -m "Auto update HKO & NCDR typhoon data: $(date +'%Y-%m-%d %H:%M')"
+          
+          # 【新增這行】先拉取並合併其他 Action 剛剛 Push 的更新，防止撞車
+          git pull --rebase origin main
+          
           git push
           echo "✅ Force push to GitHub complete, cache refreshed."
