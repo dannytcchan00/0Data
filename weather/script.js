@@ -940,7 +940,7 @@ async function fetchAndRenderCSV(type) {
         try {
             const macauCoordsMap = [
                 { keys: ["大潭山"], coords: [22.158, 113.560] },
-                { keys: ["孫中山"], coords: [22.214, 113.541] },
+                { keys: ["紀念孫中山市政公園"], coords: [22.214, 113.541] },
                 { keys: ["黑沙環", "祐漢"], coords: [22.211, 113.555] },
                 { keys: ["大炮台"], coords: [22.197, 113.542] },
                 { keys: ["外港"], coords: [22.197, 113.558] },
