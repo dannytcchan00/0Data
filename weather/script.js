@@ -857,173 +857,170 @@ function getTempLevelInfo(val) {
 }
 
 async function fetchAndRenderCSV(type) {
-    try {
-        let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
-        const res = await fetch(`${url}?_=${Date.now()}`);
-        const text = await res.text();
-        let lines = text.trim().split('\n');
-        if (lines.length < 2) return;
-        
-        dataLayerGroup.clearLayers();
-        let unit = '';
-        if (type === 'temp' || type === 'max' || type === 'min') unit = '°C'; else if (type === 'pressure') unit = ' hPa'; else if (type === 'wind') unit = ' km/h'; else if (type === 'visibility') unit = ' km'; else if (type === 'tide') unit = ' m';
+    // 1. 清空地圖 marker
+    dataLayerGroup.clearLayers();
 
-        for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
-            let rowArr = parseCSVLine(lines[i]);
-            let matchedCoords = null, displayStation = "未知", numericalValues = [], textValues = []; 
+    let unit = '';
+    if (type === 'temp' || type === 'max' || type === 'min') unit = '°C'; 
+    else if (type === 'pressure') unit = ' hPa'; 
+    else if (type === 'wind') unit = ' km/h'; 
+    else if (type === 'visibility') unit = ' km'; 
+    else if (type === 'tide') unit = ' m';
 
-            for (let cell of rowArr) {
-                let cellStr = cell.replace(/['"]/g, '').trim(); if (cellStr === "") continue;
-                let searchKey = cellStr.toLowerCase(); let isStation = false;
-                for (let chName in hkCoordinates) {
-                    if (cellStr.includes(chName) || searchKey === chName.toLowerCase() || (stationEnglishNames[chName] && searchKey === stationEnglishNames[chName].toLowerCase())) {
-                        matchedCoords = hkCoordinates[chName]; displayStation = chName; if (displayStation === '香港天文台') displayStation = '天文台'; isStation = true; break;
+    // 2. 香港 CSV 數據讀取 (獨立封裝)
+    const loadHK = async () => {
+        try {
+            let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
+            const res = await fetch(`${url}?_=${Date.now()}`);
+            if (!res.ok) return;
+            const text = await res.text();
+            let lines = text.trim().split('\n');
+            if (lines.length < 2) return;
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                let rowArr = parseCSVLine(lines[i]);
+                let matchedCoords = null, displayStation = "未知", numericalValues = [], textValues = []; 
+
+                for (let cell of rowArr) {
+                    let cellStr = cell.replace(/['"]/g, '').trim(); if (cellStr === "") continue;
+                    let searchKey = cellStr.toLowerCase(); let isStation = false;
+                    for (let chName in hkCoordinates) {
+                        if (cellStr.includes(chName) || searchKey === chName.toLowerCase() || (stationEnglishNames[chName] && searchKey === stationEnglishNames[chName].toLowerCase())) {
+                            matchedCoords = hkCoordinates[chName]; displayStation = chName; if (displayStation === '香港天文台') displayStation = '天文台'; isStation = true; break;
+                        }
+                    }
+                    if (isStation) continue;
+
+                    let isTime = /^[0-9]{4}[-/][0-9]{1,2}/.test(cellStr) || /^[0-9]{1,2}:[0-9]{2}/.test(cellStr) || /^20[0-9]{6,12}/.test(cellStr) || cellStr.includes('年') || cellStr.includes('月');
+                    let tempNum = parseFloat(cellStr);
+                    let isCoord = !isNaN(tempNum) && ((tempNum > 21.5 && tempNum < 23.0) || (tempNum > 113.5 && tempNum < 115.0));
+                    if (isTime || isCoord) continue; 
+
+                    if (!isNaN(tempNum)) {
+                        numericalValues.push(tempNum);
+                    } else {
+                        let engText = cellStr;
+                        engText = engText.replace(/[\u4e00-\u9fa5]/g, '').trim();
+                        if (engText === "") engText = cellStr; 
+                        if (engText !== "") textValues.push(engText);
                     }
                 }
-                if (isStation) continue;
 
-                let isTime = /^[0-9]{4}[-/][0-9]{1,2}/.test(cellStr) || /^[0-9]{1,2}:[0-9]{2}/.test(cellStr) || /^20[0-9]{6,12}/.test(cellStr) || cellStr.includes('年') || cellStr.includes('月');
-                let tempNum = parseFloat(cellStr);
-                let isCoord = !isNaN(tempNum) && ((tempNum > 21.5 && tempNum < 23.0) || (tempNum > 113.5 && tempNum < 115.0));
-                if (isTime || isCoord) continue; 
+                if (matchedCoords && (numericalValues.length > 0 || textValues.length > 0)) {
+                    let finalDisplayNumber = "";
+                    if (type === 'max' && numericalValues.length > 0) finalDisplayNumber = Math.max(...numericalValues);
+                    else if (type === 'min' && numericalValues.length > 0) finalDisplayNumber = Math.min(...numericalValues);
+                    else if (numericalValues.length > 0) finalDisplayNumber = numericalValues[0];
 
-                if (!isNaN(tempNum)) {
-                    numericalValues.push(tempNum);
-                } else {
-                    let engText = cellStr;
-                    engText = engText.replace(/[\u4e00-\u9fa5]/g, '').trim();
-                    if (engText === "") engText = cellStr; 
-                    if (engText !== "") textValues.push(engText);
+                    let windAngle = null;
+                    if (type === 'wind') { windAngle = getWindAngle(textValues); if (windAngle !== null) textValues = []; }
+
+                    let finalString = textValues.join(' ') + " " + finalDisplayNumber;
+                    let colorStyle = "";
+                    if(type === 'temp' || type === 'max' || type === 'min') { colorStyle = `color: ${getTempColor(finalDisplayNumber)};`; } 
+                    else if (type === 'wind') { colorStyle = `color: ${finalDisplayNumber >= 41 ? themeColors.red : (finalDisplayNumber >= 15 ? themeColors.orange : '#fff')};`; }
+
+                    let iconHtml = `<div class="minimal-text-icon" style="${colorStyle}">${finalDisplayNumber}</div>`;
+                    if (type === 'wind' && windAngle !== null) { iconHtml = `<div class="minimal-text-icon" style="${colorStyle} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${finalDisplayNumber}</div>`; } 
+                    else if (type === 'wind' && finalDisplayNumber === "") { iconHtml = `<div class="minimal-text-icon" style="color:var(--text-muted);">${textValues.join(' ')}</div>`; }
+
+                    let customPin = L.divIcon({ className: '', html: iconHtml, iconSize: null, iconAnchor: [15, 10] });
+                    let marker = L.marker(matchedCoords, {icon: customPin, zIndexOffset: !isNaN(finalDisplayNumber) ? Math.round(finalDisplayNumber) : 0}).addTo(dataLayerGroup);
+                    marker.bindPopup(`<div class="popup-title">📍 ${displayStation}</div><div class="popup-value">${finalString.trim()} <span style="font-size:1rem; color:var(--text-muted);">${unit}</span></div>`, {className: 'brutal-popup', closeButton: false});
                 }
             }
+        } catch(e) { console.error('HK CSV Map Error:', e); }
+    };
 
-            if (matchedCoords && (numericalValues.length > 0 || textValues.length > 0)) {
-                let finalDisplayNumber = "";
-                if (type === 'max' && numericalValues.length > 0) finalDisplayNumber = Math.max(...numericalValues);
-                else if (type === 'min' && numericalValues.length > 0) finalDisplayNumber = Math.min(...numericalValues);
-                else if (numericalValues.length > 0) finalDisplayNumber = numericalValues[0];
-
-                let windAngle = null;
-                if (type === 'wind') { windAngle = getWindAngle(textValues); if (windAngle !== null) textValues = []; }
-
-                let finalString = textValues.join(' ') + " " + finalDisplayNumber;
-                let colorStyle = "";
-                if(type === 'temp' || type === 'max' || type === 'min') { colorStyle = `color: ${getTempColor(finalDisplayNumber)};`; } 
-                else if (type === 'wind') { colorStyle = `color: ${finalDisplayNumber >= 41 ? themeColors.red : (finalDisplayNumber >= 15 ? themeColors.orange : '#fff')};`; }
-
-                let iconHtml = `<div class="minimal-text-icon" style="${colorStyle}">${finalDisplayNumber}</div>`;
-                if (type === 'wind' && windAngle !== null) { iconHtml = `<div class="minimal-text-icon" style="${colorStyle} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${finalDisplayNumber}</div>`; } 
-                else if (type === 'wind' && finalDisplayNumber === "") { iconHtml = `<div class="minimal-text-icon" style="color:var(--text-muted);">${textValues.join(' ')}</div>`; }
-
-                let customPin = L.divIcon({ className: '', html: iconHtml, iconSize: null, iconAnchor: [15, 10] });
-                let marker = L.marker(matchedCoords, {icon: customPin, zIndexOffset: !isNaN(finalDisplayNumber) ? Math.round(finalDisplayNumber) : 0}).addTo(dataLayerGroup);
-                marker.bindPopup(`<div class="popup-title">📍 ${displayStation}</div><div class="popup-value">${finalString.trim()} <span style="font-size:1rem; color:var(--text-muted);">${unit}</span></div>`, {className: 'brutal-popup', closeButton: false});
-            }
-        }
-    } catch(e) { console.error('CSV Map Error:', e); }
-
-    // ====== 讀取 GitHub 上的澳門氣象 XML 數據 (超強容錯解析版) ======
-    if (['temp', 'wind'].includes(type)) { 
+    // 3. 澳門 XML 數據讀取 (獨立封裝，防彈解析版)
+    const loadMacao = async () => {
+        if (!['temp', 'wind'].includes(type)) return;
         try {
-            // 澳門氣象站與大橋座標
             const macauStationsList = {
-                "大潭山": [22.158, 113.560], "紀念孫中山市政公園": [22.214, 113.541],
+                "大潭山": [22.158, 113.560], "紀念孫中山": [22.214, 113.541], "孫中山": [22.214, 113.541],
                 "黑沙環": [22.211, 113.555], "大炮台": [22.197, 113.542],
                 "外港": [22.197, 113.558], "媽閣": [22.185, 113.531],
                 "東亞運": [22.153, 113.542], "九澳": [22.133, 113.583],
                 "澳門大學": [22.128, 113.550], "路環": [22.116, 113.552],
                 "澳門大橋北": [22.195, 113.568], "澳門大橋南": [22.162, 113.578],
                 "友誼大橋北": [22.194, 113.562], "友誼大橋南": [22.164, 113.565],
-                "嘉樂庇總督大橋": [22.179, 113.544], "西灣大橋": [22.173, 113.535],
+                "嘉樂庇": [22.179, 113.544], "西灣大橋": [22.173, 113.535],
                 "蓮花大橋": [22.139, 113.543], "松山": [22.163, 113.550]
             };
 
-            const targetUrl = `https://dannytcchan00.github.io/0Data/data/macao_weather.xml?_=${Date.now()}`;
-            const res = await fetch(targetUrl);
+            const res = await fetch(`https://dannytcchan00.github.io/0Data/data/macao_weather.xml?_=${Date.now()}`);
+            if (!res.ok) return;
+            const xmlText = await res.text();
             
-            if (res.ok) {
-                const xmlText = await res.text();
-                const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
-                
-                // 尋找 XML 入面所有嘅節點，無視層級限制
-                const allNodes = Array.from(xmlDoc.querySelectorAll("*"));
-                const parsedStations = new Set(); // 用嚟記低已經處理過嘅站，防重複
-                
-                allNodes.forEach(st => {
-                    // 1. 尋找名稱節點 (支援多種常見命名，無懼大小寫)
-                    let nameNode = null;
+            const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+            const allElements = Array.from(xmlDoc.querySelectorAll("*"));
+            const parsedStations = new Set();
+
+            allElements.forEach(st => {
+                let name = st.getAttribute('name') || st.getAttribute('StationName') || st.getAttribute('CustomaryName');
+                if (!name) {
                     for (let child of st.children) {
                         const tag = child.tagName.toLowerCase();
-                        if (['customaryname', 'stationname', 'name', 'station_name'].includes(tag)) {
-                            nameNode = child; 
-                            break;
-                        }
+                        if (tag.includes('name')) { name = child.textContent.trim(); break; }
                     }
-                    
-                    if (!nameNode) return;
-                    const name = nameNode.textContent.trim();
-                    
-                    // 2. 模糊匹配尋找對應座標 (例如 "大潭山(Taipa)" 都會當係 "大潭山")
-                    let matchedKey = Object.keys(macauStationsList).find(k => name.includes(k));
-                    if (!matchedKey || parsedStations.has(matchedKey)) return;
-                    
-                    const coords = macauStationsList[matchedKey];
-                    let val = null;
-                    let windDir = "";
+                }
+                if (!name) return;
 
-                    // 3. 根據當前按鈕 (氣溫/風力) 抓取對應數值
-                    if (type === 'temp') {
+                let matchedKey = Object.keys(macauStationsList).find(k => name.includes(k));
+                if (!matchedKey || parsedStations.has(matchedKey)) return;
+
+                let val = null;
+                let windDir = "";
+
+                if (type === 'temp') {
+                    val = st.getAttribute('temp') || st.getAttribute('Temperature') || st.getAttribute('value');
+                    if (val == null) {
                         for (let child of st.children) {
                             const tag = child.tagName.toLowerCase();
-                            if (['temperature', 'temp', 'airtemperature', 'value'].includes(tag)) {
-                                val = parseFloat(child.textContent); 
-                                break;
-                            }
+                            if (tag.includes('temp') || tag.includes('value')) { val = child.textContent.trim(); break; }
                         }
-                    } else if (type === 'wind') {
+                    }
+                } else if (type === 'wind') {
+                    val = st.getAttribute('windSpeed') || st.getAttribute('speed');
+                    windDir = st.getAttribute('windDir') || st.getAttribute('direction') || st.getAttribute('WindDirection');
+                    if (val == null) {
                         for (let child of st.children) {
                             const tag = child.tagName.toLowerCase();
-                            if (['windspeed', 'wind_speed', 'speed'].includes(tag)) {
-                                val = parseFloat(child.textContent);
-                            }
-                            if (['winddirection', 'wind_direction', 'winddir', 'dir'].includes(tag)) {
-                                windDir = child.textContent.trim();
-                            }
+                            if (tag.includes('speed') || tag.includes('wind')) val = child.textContent.trim();
+                            if (tag.includes('dir') || tag.includes('direction')) windDir = child.textContent.trim();
+                        }
+                    }
+                }
+
+                let parsedVal = parseFloat(val);
+                if (!isNaN(parsedVal)) {
+                    parsedStations.add(matchedKey);
+                    let mUnit = (type === 'wind') ? ' km/h' : '°C';
+                    let mColor = (type === 'wind') ? 
+                        `color: ${parsedVal >= 41 ? themeColors.red : (parsedVal >= 15 ? themeColors.orange : '#fff')};` : 
+                        `color: ${getTempColor(parsedVal)};`;
+
+                    let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${parsedVal}</div>`;
+                    
+                    if (type === 'wind' && windDir) {
+                        let windAngle = getWindAngle([windDir]); 
+                        if (windAngle !== null) {
+                            mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${parsedVal}</div>`;
                         }
                     }
 
-                    // 4. 將讀到嘅數據畫落地圖
-                    if (val !== null && !isNaN(val)) {
-                        parsedStations.add(matchedKey); // 標記為已處理
-                        
-                        let mUnit = (type === 'wind') ? ' km/h' : '°C';
-                        let mColor = (type === 'wind') ? 
-                            `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
-                            `color: ${getTempColor(val)};`;
-
-                        let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
-                        
-                        if (type === 'wind' && windDir) {
-                            let windAngle = getWindAngle([windDir]); 
-                            if (windAngle !== null) {
-                                mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
-                            }
-                        }
-
-                        let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
-                        let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
-                        
-                        mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${name}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
-                    }
-                });
-            }
+                    let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
+                    let mMarker = L.marker(macauStationsList[matchedKey], {icon: mPin, zIndexOffset: Math.round(parsedVal)}).addTo(dataLayerGroup);
+                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${name}</div><div class="popup-value">${parsedVal} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                }
+            });
         } catch (e) { console.warn('Macau XML 數據讀取失敗:', e); }
-    }
-}
+    };
 
-// --- Dual Typhoon Maps Logic ---
-const agencyColorPalette = { 'JTWC': '#9b59b6', 'JMA': '#3498db', 'NMC': '#2ecc71', 'CWA': '#f39c12', 'PAGASA': '#e84393', 'OTHER': '#9e9e9e' };
+    // 4. 同步並行執行兩者 (用 allSettled 確保兩邊即使報錯都絕對唔會互相拖累)
+    await Promise.allSettled([loadHK(), loadMacao()]);
+}
 
 function getOffsetLatLng(lat, lon, distanceMeters, bearingDegrees) {
     const rad = bearingDegrees * Math.PI / 180;
