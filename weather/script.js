@@ -923,7 +923,7 @@ async function fetchAndRenderCSV(type) {
         }
     } catch(e) { console.error('CSV Map Error:', e); }
 
-    // ====== 讀取 GitHub 上的澳門氣象 XML 數據 ======
+    // ====== 讀取 GitHub 上的澳門氣象 XML 數據 (超強容錯解析版) ======
     if (['temp', 'wind'].includes(type)) { 
         try {
             // 澳門氣象站與大橋座標
@@ -931,12 +931,12 @@ async function fetchAndRenderCSV(type) {
                 "大潭山": [22.158, 113.560], "紀念孫中山市政公園": [22.214, 113.541],
                 "黑沙環": [22.211, 113.555], "大炮台": [22.197, 113.542],
                 "外港": [22.197, 113.558], "媽閣": [22.185, 113.531],
-                "東亞運大馬路": [22.153, 113.542], "九澳": [22.133, 113.583],
-                "澳門大學": [22.128, 113.550], "路環市區": [22.116, 113.552],
+                "東亞運": [22.153, 113.542], "九澳": [22.133, 113.583],
+                "澳門大學": [22.128, 113.550], "路環": [22.116, 113.552],
                 "澳門大橋北": [22.195, 113.568], "澳門大橋南": [22.162, 113.578],
                 "友誼大橋北": [22.194, 113.562], "友誼大橋南": [22.164, 113.565],
                 "嘉樂庇總督大橋": [22.179, 113.544], "西灣大橋": [22.173, 113.535],
-                "蓮花大橋": [22.139, 113.543]
+                "蓮花大橋": [22.139, 113.543], "松山": [22.163, 113.550]
             };
 
             const targetUrl = `https://dannytcchan00.github.io/0Data/data/macao_weather.xml?_=${Date.now()}`;
@@ -945,28 +945,58 @@ async function fetchAndRenderCSV(type) {
             if (res.ok) {
                 const xmlText = await res.text();
                 const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
-                const stations = xmlDoc.querySelectorAll("ActualWeather, station");
-
-                stations.forEach(st => {
-                    const nameNode = st.querySelector("CustomaryName") || st.querySelector("name");
-                    const name = nameNode?.textContent?.trim();
-                    const coords = macauStationsList[name];
-                    if (!coords) return; 
-
+                
+                // 尋找 XML 入面所有嘅節點，無視層級限制
+                const allNodes = Array.from(xmlDoc.querySelectorAll("*"));
+                const parsedStations = new Set(); // 用嚟記低已經處理過嘅站，防重複
+                
+                allNodes.forEach(st => {
+                    // 1. 尋找名稱節點 (支援多種常見命名，無懼大小寫)
+                    let nameNode = null;
+                    for (let child of st.children) {
+                        const tag = child.tagName.toLowerCase();
+                        if (['customaryname', 'stationname', 'name', 'station_name'].includes(tag)) {
+                            nameNode = child; 
+                            break;
+                        }
+                    }
+                    
+                    if (!nameNode) return;
+                    const name = nameNode.textContent.trim();
+                    
+                    // 2. 模糊匹配尋找對應座標 (例如 "大潭山(Taipa)" 都會當係 "大潭山")
+                    let matchedKey = Object.keys(macauStationsList).find(k => name.includes(k));
+                    if (!matchedKey || parsedStations.has(matchedKey)) return;
+                    
+                    const coords = macauStationsList[matchedKey];
                     let val = null;
                     let windDir = "";
 
+                    // 3. 根據當前按鈕 (氣溫/風力) 抓取對應數值
                     if (type === 'temp') {
-                        const tempNode = st.querySelector("Temperature") || st.querySelector("temp") || st.querySelector("AirTemperature");
-                        val = parseFloat(tempNode?.textContent);
+                        for (let child of st.children) {
+                            const tag = child.tagName.toLowerCase();
+                            if (['temperature', 'temp', 'airtemperature', 'value'].includes(tag)) {
+                                val = parseFloat(child.textContent); 
+                                break;
+                            }
+                        }
                     } else if (type === 'wind') {
-                        const windSpeedNode = st.querySelector("WindSpeed") || st.querySelector("windSpeed");
-                        val = parseFloat(windSpeedNode?.textContent);
-                        const windDirNode = st.querySelector("WindDirection") || st.querySelector("windDir");
-                        windDir = windDirNode?.textContent?.trim();
+                        for (let child of st.children) {
+                            const tag = child.tagName.toLowerCase();
+                            if (['windspeed', 'wind_speed', 'speed'].includes(tag)) {
+                                val = parseFloat(child.textContent);
+                            }
+                            if (['winddirection', 'wind_direction', 'winddir', 'dir'].includes(tag)) {
+                                windDir = child.textContent.trim();
+                            }
+                        }
                     }
 
+                    // 4. 將讀到嘅數據畫落地圖
                     if (val !== null && !isNaN(val)) {
+                        parsedStations.add(matchedKey); // 標記為已處理
+                        
                         let mUnit = (type === 'wind') ? ' km/h' : '°C';
                         let mColor = (type === 'wind') ? 
                             `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
@@ -974,7 +1004,6 @@ async function fetchAndRenderCSV(type) {
 
                         let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
                         
-                        // 處理風向箭嘴
                         if (type === 'wind' && windDir) {
                             let windAngle = getWindAngle([windDir]); 
                             if (windAngle !== null) {
