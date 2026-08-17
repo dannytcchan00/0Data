@@ -958,6 +958,7 @@ async function fetchAndRenderCSV(type) {
             const parsedStations = new Set();
 
             allElements.forEach(st => {
+                // 自動掃描尋找 Name
                 let name = st.getAttribute('name') || st.getAttribute('StationName') || st.getAttribute('CustomaryName');
                 if (!name) {
                     for (let child of st.children) {
@@ -973,6 +974,7 @@ async function fetchAndRenderCSV(type) {
                 let val = null;
                 let windDir = "";
 
+                // 自動掃描尋找 Temp / Wind
                 if (type === 'temp') {
                     val = st.getAttribute('temp') || st.getAttribute('Temperature') || st.getAttribute('value');
                     if (val == null) {
