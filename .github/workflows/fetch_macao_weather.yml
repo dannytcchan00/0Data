@@ -22,7 +22,22 @@ jobs:
 
       - name: Commit and Push
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action Bot"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
           git add data/macao_weather.xml
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update Macao Weather XML" && git push)
+          git commit --allow-empty -m "Auto update Macao XML: $(date +'%Y-%m-%d %H:%M')"
+          
+          # 智能重試機制：最多嘗試 5 次
+          for i in {1..5}; do
+            git pull --rebase origin main
+            if git push; then
+              echo "✅ Macao Push 成功！"
+              exit 0
+            fi
+            echo "⚠️ 伺服器鎖定中，隨機等待後重試... (第 $i 次/共 5 次)"
+            sleep $(( (RANDOM % 10) + 5 ))
+          done
+          
+          echo "❌ 嘗試咗 5 次都失敗，放棄本次更新。"
+          exit 1
