@@ -2,7 +2,6 @@ name: Fetch Typhoon XML and KML
 
 on:
   workflow_dispatch: 
-  # 【修改這裡】加入 cron-job.org 的暗號接收器
   repository_dispatch:
     types: [cronjob_trigger] 
 
@@ -37,23 +36,29 @@ jobs:
             rm -f data/current_typhoon.xml
           fi
 
-          # 2. 【已修正】直接抓取圖片中的「各國預報路徑」真實連結
+          # 2. 台灣 NCDR KML
           echo "⬇️ Downloading Taiwan NCDR KML..."
           curl -sL "https://satis.ncdr.nat.gov.tw/kml/multityroute.aspx" -o "data/ncdr_typhoon.kml"
           echo "✅ Successfully saved NCDR typhoon data."
 
       - name: Commit and Push changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           
           git add data/
+          git commit --allow-empty -m "Auto update Typhoon data: $(date +'%Y-%m-%d %H:%M')"
           
-          # Force commit even if unchanged
-          git commit --allow-empty -m "Auto update HKO & NCDR typhoon data: $(date +'%Y-%m-%d %H:%M')"
+          # 智能重試機制：最多嘗試 5 次
+          for i in {1..5}; do
+            git pull --rebase origin main
+            if git push; then
+              echo "✅ Typhoon Push 成功！"
+              exit 0
+            fi
+            echo "⚠️ 伺服器鎖定中，隨機等待後重試... (第 $i 次/共 5 次)"
+            sleep $(( (RANDOM % 10) + 5 ))
+          done
           
-          # 【新增這行】先拉取並合併其他 Action 剛剛 Push 的更新，防止撞車
-          git pull --rebase origin main
-          
-          git push
-          echo "✅ Force push to GitHub complete, cache refreshed."
+          echo "❌ 嘗試咗 5 次都失敗，放棄本次更新。"
+          exit 1
