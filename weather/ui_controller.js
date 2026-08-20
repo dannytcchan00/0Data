@@ -1,13 +1,11 @@
-// ui_controller.js - 視窗開閂、生活指數、圖表繪製、雷達播放器
+// ui_controller.js
 
 function closeModal(modalId) {
     const el = document.getElementById(modalId);
     if (el) el.classList.remove('active');
 }
 document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) this.classList.remove('active');
-    });
+    modal.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
 });
 
 function openThreatInfoModal() { document.getElementById('threat-info-modal')?.classList.add('active'); }
@@ -15,13 +13,6 @@ function openLifestyleInfoModal() { document.getElementById('lifestyle-info-moda
 function openTempInfoModal() { document.getElementById('temp-info-modal')?.classList.add('active'); }
 function openRainInfoModal() { document.getElementById('rain-info-modal')?.classList.add('active'); }
 function openWindInfoModal() { document.getElementById('wind-info-modal')?.classList.add('active'); }
-
-function getLunarDate() {
-    try {
-        let formatter = new Intl.DateTimeFormat('zh-HK-u-ca-chinese', { timeZone: 'Asia/Hong_Kong', month: 'long', day: 'numeric' });
-        return formatter.format(new Date());
-    } catch (e) { return ''; }
-}
 
 function updateTick() {
     const now = new Date();
@@ -42,36 +33,23 @@ function updateTick() {
     let utc_mm = String(now.getUTCMinutes()).padStart(2, '0');
     document.getElementById('utc-time').innerText = `世界協調時間 (UTC) ${utc_hh}:${utc_mm}`;
     
-    document.getElementById('lunar-date').innerText = `農曆${getLunarDate()}`;
-}
-
-function getMoonPhase() {
-    const date = new Date(); let year = date.getFullYear(), month = date.getMonth() + 1, day = date.getDate();
-    if (month < 3) { year--; month += 12; } ++month;
-    let jd = (365.25 * year) + (30.6 * month) + day - 694039.09; jd /= 29.5305882;
-    let b = Math.round((jd - parseInt(jd)) * 8); if (b >= 8) b = 0;
-    const phases = [{ i: '🌑', n: '新月' }, { i: '🌒', n: '峨眉月' }, { i: '🌓', n: '上弦月' }, { i: '🌔', n: '盈凸月' }, { i: '🌕', n: '滿月' }, { i: '🌖', n: '虧凸月' }, { i: '🌗', n: '下弦月' }, { i: '🌘', n: '殘月' }];
-    return phases[b];
+    try {
+        let formatter = new Intl.DateTimeFormat('zh-HK-u-ca-chinese', { timeZone: 'Asia/Hong_Kong', month: 'long', day: 'numeric' });
+        document.getElementById('lunar-date').innerText = `農曆${formatter.format(new Date())}`;
+    } catch (e) { document.getElementById('lunar-date').innerText = ``; }
 }
 
 function animateIndex(prefix, targetLevel, colors) {
     for(let i=1; i<=5; i++) {
         let step = document.getElementById(`${prefix}-step-${i}`);
-        if(step) {
-            step.style.background = 'rgba(255,255,255,0.1)';
-            step.style.boxShadow = 'none';
-            step.classList.remove('step-blink');
-        }
+        if(step) { step.style.background = 'rgba(255,255,255,0.1)'; step.style.boxShadow = 'none'; step.classList.remove('step-blink'); }
     }
     let current = 1;
     let animInterval = setInterval(() => {
         if (current > targetLevel) {
             clearInterval(animInterval);
             let lastStep = document.getElementById(`${prefix}-step-${targetLevel}`);
-            if(lastStep) {
-                lastStep.classList.add('step-blink');
-                lastStep.style.boxShadow = `0 0 12px ${colors[targetLevel-1]}`;
-            }
+            if(lastStep) { lastStep.classList.add('step-blink'); lastStep.style.boxShadow = `0 0 12px ${colors[targetLevel-1]}`; }
             return;
         }
         let step = document.getElementById(`${prefix}-step-${current}`);
@@ -91,15 +69,12 @@ function updatePetWalkingIndex() {
 
     let heatScore = 1;
     if (heatIndex >= 33) heatScore = 5; else if (heatIndex >= 30) heatScore = 4; else if (heatIndex >= 27) heatScore = 3; else if (heatIndex <= 10) heatScore = 4; else if (heatIndex <= 15) heatScore = 3;   
-
     let rainScore = 1;
     if (rain >= 30) rainScore = 5; else if (rain >= 10) rainScore = 4; else if (rain > 0 || rainStr.includes('高')) rainScore = 3; 
-
     let windScore = 1;
     if (wind >= 41 || tcLvl >= 3) windScore = 5; else if (wind >= 30) windScore = 4; else if (wind >= 15) windScore = 2;          
 
     let petLevel = Math.max(heatScore, rainScore, windScore);
-
     const pDescs = ["極適宜", "適宜", "一般", "不適宜", "極不適宜"];
     const colors = [themeColors.blue, themeColors.green, themeColors.orange, "#e67e22", themeColors.red];
 
@@ -150,16 +125,13 @@ function updateLaundryIndex() {
 
 function updateHikingIndex() {
     let tVal = globalWxState.temp; let hVal = globalWxState.hum; let uvVal = globalWxState.uv; let psrRaw = globalWxState.psrRaw;
-
     if (isNaN(tVal)) { document.getElementById('hiking-level-val').innerText = `--`; return; }
 
     let rainStr = psrRaw || "低"; let uv = isNaN(uvVal) || uvVal === null ? 0 : parseFloat(uvVal); let threatLevel = currentThreatState.finalLevel || 1;
     let heatScore = 1;
     if (tVal >= 33) heatScore = 5; else if (tVal >= 31) heatScore = 4; else if (tVal >= 28) heatScore = 3; else if (tVal < 10) heatScore = 4; else if (tVal < 15) heatScore = 2;
-
     let rainScore = 1;
     if (rainStr.includes('高')) rainScore = 5; else if (rainStr.includes('中高')) rainScore = 4; else if (rainStr.includes('中')) rainScore = 3;
-
     let uvScore = 1;
     if (uv >= 10) uvScore = 4; else if (uv >= 6) uvScore = 3;
 
@@ -184,8 +156,161 @@ function updateHikingIndex() {
     animateIndex('hiking', hikingLevel, colors);
 }
 
-// 雷達圖播放器
-let radarFrames = [], radarIdx = 0, radarInterval = null, isRadarPlaying = true, currentRadarRange = '256'; 
+function updateSmartThreatAlert() {
+    const waglanData = stationMasterData['橫瀾島'] || {};
+    const cheungChauData = stationMasterData['長洲'] || {};
+    
+    const extractSpeed = (wStr) => {
+        if (!wStr) return 0;
+        let num = parseFloat(wStr.replace(/[^0-9.]/g, ''));
+        return isNaN(num) ? 0 : num;
+    };
+
+    const wSpd = extractSpeed(waglanData.wind);
+    const cSpd = extractSpeed(cheungChauData.wind);
+    const maxOffshoreWind = Math.max(wSpd, cSpd);
+    
+    const t = isNaN(globalWxState.temp) ? null : globalWxState.temp;
+    const h = isNaN(globalWxState.hum) ? null : globalWxState.hum;
+    const uv = globalWxState.uv || 0;
+    const r = globalMaxRain || 0;
+    const dist = globalLatestTcDist;
+
+    let at = t;
+    let custom_heat_index = t;
+    
+    if (t !== null && h !== null) {
+        const e = (h / 100) * 6.105 * Math.exp((17.27 * t) / (237.7 + t));
+        const wMs = 3; const Q = uv * 25; 
+        at = t + 0.348 * e - 0.70 * wMs + 0.70 * (Q / (wMs + 10)) - 4.25;
+        at = Math.round(at * 10) / 10;
+        let estimated_Tg = t + (uv * 1.5); 
+        custom_heat_index = (at * 0.70) + (t * 0.20) + (estimated_Tg * 0.10);
+        custom_heat_index = Math.round(custom_heat_index * 10) / 10;
+    }
+
+    let windLvl = 1;
+    if (maxOffshoreWind >= 88) windLvl = 5; else if (maxOffshoreWind >= 63) windLvl = 4; else if (maxOffshoreWind >= 56) windLvl = 3; else if (maxOffshoreWind >= 41) windLvl = 2; 
+
+    let rainLvl = 1;
+    if (r >= 70) rainLvl = 5; else if (r >= 50) rainLvl = 4; else if (r >= 30) rainLvl = 3; else if (r >= 15) rainLvl = 2; 
+
+    let tempLvl = 1; let tempStatus = "舒適氣溫";
+    if (t !== null) {
+        if (custom_heat_index >= 37.0) { tempLvl = 5; tempStatus = "🔥 極端危險酷熱 (中暑極高危)"; } else if (custom_heat_index >= 35.0) { tempLvl = 4; tempStatus = "☀️ 嚴重酷熱 (強烈熱輻射)"; } else if (custom_heat_index >= 33.0) { tempLvl = 3; tempStatus = "🌡️ 炎熱及熱氣逼人"; } else if (custom_heat_index >= 30.0) { tempLvl = 2; tempStatus = "🌤️ 溫暖至微熱"; } else { tempLvl = 1; tempStatus = "舒適氣溫"; }
+        if (at <= 0) { tempLvl = 4; tempStatus = "❄️ 極端嚴寒"; } else if (at <= 5) { tempLvl = 3; tempStatus = "🧣 嚴寒天氣"; } else if (at <= 10) { tempLvl = 2; tempStatus = "🧤 寒冷天氣"; }
+    }
+
+    let tcLvl = 1;
+    if (dist !== null) { if (dist <= 150) tcLvl = 5; else if (dist <= 300) tcLvl = 4; else if (dist <= 500) tcLvl = 3; else if (dist <= 800) tcLvl = 2; }
+
+    const finalLevel = Math.max(windLvl, rainLvl, tempLvl, tcLvl);
+    let dynamicTitle = ""; let dynamicDesc = ""; let prefix = ""; let curColor = "";
+
+    if (finalLevel === 1) { prefix = "🟢 第一級：平靜穩定"; curColor = themeColors.green; } else if (finalLevel === 2) { prefix = "🔵 第二級：輕微戒備"; curColor = "#3498db"; } else if (finalLevel === 3) { prefix = "🟡 第三級：顯著威脅"; curColor = themeColors.orange; } else if (finalLevel === 4) { prefix = "🟠 第四級：嚴重威脅"; curColor = "#e67e22"; } else if (finalLevel === 5) { prefix = "🔴 第五級：極端危險"; curColor = themeColors.red; }
+
+    let adviceList = [];
+    if (finalLevel === 1) {
+        dynamicTitle = `${prefix}`;
+        dynamicDesc = "本港各項氣象指標平穩。\n\n離岸風力平緩，未受熱帶氣旋威脅，氣溫適中且無顯著降雨，適宜進行各類戶外活動。";
+        adviceList = ["戶外天氣適中宜人，適宜進行各類戶外活動、晨運或寵物散步。", "日常生活中仍請留意日夜溫差變化，適時添減衣物。", "隨時留意香港天文台發出的最新常規天氣報告。"];
+    } else {
+        let factors = []; let shortThreats = [];
+        if (tcLvl === finalLevel && dist !== null) {
+            if (dist <= 150) { factors.push(`🌀 風暴中心極度逼近本港 (距離約 ${dist} 公里)，構成極大直接威脅`); shortThreats.push("風暴極度逼近"); } else if (dist <= 300) { factors.push(`🌀 熱帶氣旋正進入本港 300 公里範圍，天氣將急劇轉壞`); shortThreats.push("風暴逼近"); } else if (dist <= 500) { factors.push(`🌀 熱帶氣旋進入本港 500 公里戒備範圍，需密切留意風暴動向`); shortThreats.push("風暴戒備"); } else { factors.push(`🌀 遠洋熱帶氣旋可能開始影響本港外圍天氣`); shortThreats.push("遠洋風暴外圍"); }
+            adviceList.push("熱帶氣旋正在逼近，請將花盆、曬衣架等易被風吹倒的物件移入室內或固定。"); adviceList.push("檢查門窗是否牢固，低窪及沿岸地區應提防湧浪與風暴潮。");
+        }
+        if (windLvl === finalLevel) {
+            if (maxOffshoreWind >= 88) { factors.push(`💨 離岸及高地正受暴風或颶風吹襲 (${maxOffshoreWind} km/h)，具極高破壞力`); shortThreats.push("暴風/颶風吹襲"); } else if (maxOffshoreWind >= 63) { factors.push(`💨 離岸持續吹烈風 (${maxOffshoreWind} km/h)，隨時有樹木倒塌危險`); shortThreats.push("離岸吹烈風"); } else if (maxOffshoreWind >= 41) { factors.push(`💨 本港普遍吹強風 (${maxOffshoreWind} km/h)，海面有大浪及湧浪`); shortThreats.push("離岸吹強風"); }
+            adviceList.push("離岸及高地風力顯著，切勿前往海邊觀浪，停止所有水上活動及高空作業。"); adviceList.push("在戶外行走時遠離大型廣告招牌、老舊樹木及建築地盤。");
+        }
+        if (rainLvl === finalLevel) {
+            if (r >= 70) { factors.push(`🌧️ 特大暴雨正在發生 (${r} mm/h)，低窪地區可能出現極嚴重水浸及山泥傾瀉`); shortThreats.push("特大暴雨"); } else if (r >= 50) { factors.push(`🌧️ 大暴雨侵襲 (${r} mm/h)，多處道路水浸風險甚高`); shortThreats.push("大暴雨"); } else if (r >= 30) { factors.push(`🌧️ 雨勢頗大 (${r} mm/h)，可能導致局部地區水浸`); shortThreats.push("大雨"); } else if (r >= 15) { factors.push(`🌧️ 受顯著驟雨影響 (${r} mm/h)，戶外出行請帶備雨具`); shortThreats.push("局部大雨"); }
+            adviceList.push("暴雨可能引發嚴重水浸，駕駛人士請減慢車速，切勿強行駛過水浸路段。"); adviceList.push("遠離河道、引水道及斜坡，居住於低窪地區人士應準備沙包防浸。");
+        }
+        if (tempLvl === finalLevel && t !== null) {
+            if (custom_heat_index >= 37.0) { factors.push(`🔥 錄得極端危險高溫 (綜合指數 ${custom_heat_index})，極易引發熱衰竭或中暑`); shortThreats.push("極端危險酷熱"); adviceList.push("極端酷熱！避免長時間在烈日下暴曬，戶外活動應強制暫停。"); } else if (custom_heat_index >= 35.0) { factors.push(`☀️ 天氣嚴重酷熱 (綜合指數 ${custom_heat_index})，有強烈熱輻射威脅`); shortThreats.push("嚴重酷熱"); } else if (custom_heat_index >= 33.0) { factors.push(`🌡️ 天氣炎熱及熱氣逼人，需注意補充水分`); shortThreats.push("炎熱逼人"); } else if (custom_heat_index >= 30.0 && finalLevel === 2) { factors.push(`🌤️ 天氣溫暖至微熱`); shortThreats.push("溫暖微熱"); } else if (at <= 0) { factors.push(`❄️ 天氣極端嚴寒 (體感 ${at}°C)，可能出現結霜或結冰現象`); shortThreats.push("極端嚴寒"); adviceList.push("極端嚴寒天氣，請穿著足夠防風保暖衣物，關顧長者及慢性病患者。"); } else if (at <= 5) { factors.push(`🧣 天氣嚴寒 (體感 ${at}°C)，需特別關注保暖`); shortThreats.push("嚴寒天氣"); } else if (at <= 10) { factors.push(`🧤 天氣寒冷 (體感 ${at}°C)，請添衣保暖`); shortThreats.push("寒冷天氣"); }
+        }
+        dynamicTitle = shortThreats.length > 0 ? `${prefix} (${shortThreats.join('、')})` : prefix;
+        dynamicDesc = `⚠️ 目前觸發【 第 ${finalLevel} 級 】威脅的主要原因：\n` + factors.map(f => "• " + f).join("\n");
+        if (finalLevel >= 4) { dynamicDesc += "\n\n🚨 警告：目前天氣狀況具高度危險性，強烈建議留在安全室內地方，暫停所有戶外活動！"; } else if (finalLevel === 3) { dynamicDesc += "\n\n⚠️ 指引：請提高警覺，提防惡劣天氣突變帶來之影響，並留意最新天氣警告。"; } else if (finalLevel === 2) { dynamicDesc += "\n\n💡 指引：天氣狀況出現變化，戶外活動人士應隨時留意周遭環境。"; }
+    }
+
+    currentThreatState = { finalLevel, dynamicTitle, dynamicDesc, curColor, tcLvl, windLvl, rainLvl, tempLvl, dist, maxOffshoreWind, r, custom_heat_index, at, t, adviceList };
+    document.getElementById('threat-wind-val').innerText = `${wSpd || '--'} / ${cSpd || '--'} km/h`;
+    document.getElementById('threat-rain-val').innerText = `${r} mm/h`;
+    document.getElementById('threat-temp-val').innerHTML = t !== null ? `${custom_heat_index} <span style="font-size:0.75rem; color:var(--text-muted);">(${tempStatus.split(' ')[0]})</span><br><span style="font-size:0.75rem; font-weight:600; color:var(--accent-warning);">純氣溫 ${t}°C | 體感 ${at}°C</span>` : '--°C';
+    document.getElementById('threat-tc-dist').innerText = dist !== null ? `約 ${dist} 公里` : '無活躍熱帶氣旋';
+
+    const alertCard = document.getElementById('threat-alert-box');
+    const titleEl = document.getElementById('threat-title-text');
+    const badgeEl = document.getElementById('threat-badge-val');
+    const descEl = document.getElementById('threat-desc-text');
+
+    titleEl.innerText = dynamicTitle; titleEl.style.color = curColor;
+    badgeEl.innerText = `第 ${finalLevel} 級`; badgeEl.style.background = `${curColor}22`; badgeEl.style.color = curColor; badgeEl.style.border = `1px solid ${curColor}66`;
+    descEl.innerText = dynamicDesc; 
+
+    const colors = ['#2ecc71', '#3498db', '#f39c12', '#e67e22', '#e74c3c'];
+    for (let s = 1; s <= 5; s++) {
+        const stepEl = document.getElementById(`t-step-${s}`);
+        if (stepEl) {
+            if (s <= finalLevel) { stepEl.style.background = colors[s - 1]; if (s === finalLevel && finalLevel >= 3) { stepEl.classList.add('step-blink'); stepEl.style.boxShadow = `0 0 10px ${colors[s - 1]}`; } else { stepEl.classList.remove('step-blink'); stepEl.style.boxShadow = 'none'; } } else { stepEl.style.background = 'rgba(255, 255, 255, 0.1)'; stepEl.style.boxShadow = 'none'; stepEl.classList.remove('step-blink'); }
+        }
+    }
+    if (finalLevel >= 3) { alertCard.style.borderColor = curColor; alertCard.style.boxShadow = `0 0 16px ${curColor}44`; } else { alertCard.style.borderColor = 'rgba(255, 255, 255, 0.15)'; alertCard.style.boxShadow = 'none'; }
+}
+
+function openThreatModal() {
+    const modal = document.getElementById('threat-modal'); const data = currentThreatState; if (!data.finalLevel) return;
+    document.getElementById('tm-badge-title').innerText = data.dynamicTitle; document.getElementById('tm-badge-title').style.color = data.curColor;
+    const badgePill = document.getElementById('tm-badge-pill'); badgePill.innerText = `第 ${data.finalLevel} 級威脅`; badgePill.style.background = `${data.curColor}25`; badgePill.style.color = data.curColor; badgePill.style.border = `1px solid ${data.curColor}70`;
+    document.getElementById('tm-stat-tc').innerText = data.dist !== null ? `${data.dist} km` : '無風暴'; document.getElementById('tm-lvl-tc').innerText = `子評級：第 ${data.tcLvl} 級`;
+    document.getElementById('tm-stat-wind').innerText = `${data.maxOffshoreWind || 0} km/h`; document.getElementById('tm-lvl-wind').innerText = `子評級：第 ${data.windLvl} 級`;
+    document.getElementById('tm-stat-rain').innerText = `${data.r || 0} mm/h`; document.getElementById('tm-lvl-rain').innerText = `子評級：第 ${data.rainLvl} 級`;
+    document.getElementById('tm-stat-temp').innerText = data.custom_heat_index !== null ? `${data.custom_heat_index}` : '--'; document.getElementById('tm-lvl-temp').innerText = `子評級：第 ${data.tempLvl} 級 (體感 ${data.at || '--'}°C)`;
+    document.getElementById('tm-desc-text').innerText = data.dynamicDesc;
+    let adviceHtml = ''; if (data.adviceList && data.adviceList.length > 0) { data.adviceList.forEach(adv => { adviceHtml += `<li>${adv}</li>`; }); } else { adviceHtml = `<li>各項氣象指標平穩，請隨時留意最新天氣預報。</li>`; }
+    document.getElementById('tm-advice-list').innerHTML = adviceHtml; modal.classList.add('active');
+}
+
+function openLifestyleModal(type) {
+    const modal = document.getElementById('lifestyle-modal');
+    const titleEl = document.getElementById('lifestyle-modal-title');
+    const gridEl = document.getElementById('ls-metric-grid');
+    const evalEl = document.getElementById('ls-evaluation-text');
+    const tipsEl = document.getElementById('ls-tips-list');
+
+    const t = globalWxState.temp; const h = globalWxState.hum; const uv = globalWxState.uv !== null ? parseFloat(globalWxState.uv) : 0; const psr = globalWxState.psrRaw || '低';
+    const tcLvl = currentThreatState.tcLvl || 1; const windLvl = currentThreatState.windLvl || 1; const rainLvl = currentThreatState.rainLvl || 1; const threatLevel = currentThreatState.finalLevel || 1;
+
+    const tStr = isNaN(t) ? '--' : `${t}°C`; const hStr = isNaN(h) ? '--' : `${h}%`; const uvStr = globalWxState.uv !== null ? `${globalWxState.uv}` : '--';
+
+    gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${tStr}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${hStr}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線</div><div class="s-stat-val">${uvStr}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
+
+    let evalText = ""; let tipsHtml = "";
+    if (type === 'pet') {
+        titleEl.innerText = "🐾 寵物散步適宜度詳情";
+        let heatIndex = currentThreatState.custom_heat_index !== undefined ? currentThreatState.custom_heat_index : t;
+        let rain = currentThreatState.r || 0; let wind = currentThreatState.maxOffshoreWind || 0;
+        gridEl.innerHTML = `
+            <div class="s-stat-box"><div class="s-stat-label">日式暑熱指數</div><div class="s-stat-val" style="color: ${heatIndex >= 30 ? 'var(--accent-danger)' : '#fff'}">${heatIndex}</div></div>
+            <div class="s-stat-box"><div class="s-stat-label">即時最高雨量</div><div class="s-stat-val" style="color: ${rain >= 10 ? 'var(--accent-warning)' : '#fff'}">${rain} mm/h</div></div>
+            <div class="s-stat-box"><div class="s-stat-label">離岸最高風速</div><div class="s-stat-val" style="color: ${wind >= 41 ? 'var(--accent-danger)' : '#fff'}">${wind} km/h</div></div>
+            <div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
+        evalText = `目前暑熱指數（${heatIndex}）、即時雨量（${rain} mm/h）及風速（${wind} km/h）綜合判定為當前風險級別。`;
+        tipsHtml = `<li>出門前注意路面溫度與補水。</li><li>大風大雨時請留在室內。</li>`;
+    } else if (type === 'laundry') {
+        titleEl.innerText = "👕 戶外晾衣指數詳情";
+        evalText = `目前相對濕度 ${hStr}。`;
+        tipsHtml = `<li>高濕度或降雨時建議室內抽濕。</li><li>陽光充沛時可進行戶外晾曬殺菌。</li>`;
+    } else if (type === 'hiking') {
+        titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
+        evalText = `目前市區氣溫 ${tStr}。`;
+        tipsHtml = `<li>留意天氣突變與降雨機率。</li><li>帶備充足糧水與保暖防風衣物。</li>`;
+    }
+    evalEl.innerText = evalText; tipsEl.innerHTML = tipsHtml; modal.classList.add('active');
+}
 
 function switchRadarRange(range) {
     currentRadarRange = range;
@@ -245,6 +370,7 @@ function renderStationChart(labels, temps, humidities) {
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, yTemp: { type: 'linear', position: 'left', title: { display: true, text: '氣溫 (°C)' }, grid: { color: 'rgba(255,255,255,0.05)' } }, yHum: { type: 'linear', position: 'right', title: { display: true, text: '相對濕度 (%)' }, grid: { drawOnChartArea: false }, min: 20, max: 100 } }, plugins: { legend: { position: 'top' } } }
     });
 }
+
 function renderWindChart(labels, speeds, gusts, dirs) {
     const ctx = document.getElementById('wind-chart').getContext('2d');
     if (windChartInstance) windChartInstance.destroy();
@@ -255,6 +381,7 @@ function renderWindChart(labels, speeds, gusts, dirs) {
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, title: { display: true, text: '風速 (km/h)' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } } }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => { const idx = context.dataIndex; const compass = degreesToCompass(dirs[idx]); if (context.datasetIndex === 0) { return ` 風速: ${context.parsed.y} km/h (風向: ${compass.dir} ${compass.arrow} ${dirs[idx]}°)`; } else { return ` 陣風: ${context.parsed.y} km/h`; } } } } } }
     });
 }
+
 function renderRainChart(labels, precipValues) {
     const ctx = document.getElementById('rain-chart').getContext('2d');
     if (rainChartInstance) rainChartInstance.destroy();
@@ -264,4 +391,200 @@ function renderRainChart(labels, precipValues) {
         data: { labels: labels, datasets: [{ label: '每小時雨量 (mm)', data: precipValues, backgroundColor: gradient, borderColor: '#3498db', borderWidth: 1.5, borderRadius: 4, barPercentage: 0.7 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, title: { display: true, text: '雨量 (mm)' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => ` ${context.parsed.y} mm` } } } }
     });
+}
+
+function renderTempList(tempList) {
+    if (!tempList || tempList.length === 0) return;
+    let tHtml = ''; 
+    const colors = ['#9b59b6', '#3498db', '#2ecc71', '#e67e22', '#e74c3c'];
+    tempList.forEach(item => {
+        const tInfo = getTempLevelInfo(item.val);
+        let barHtml = '';
+        for (let s = 1; s <= 5; s++) {
+            if (s <= tInfo.level) { let blinkClass = (tInfo.level === 5 && s === 5) ? 'step-blink' : ''; barHtml += `<div class="temp-step ${blinkClass}" style="background: ${colors[s-1]};"></div>`; } 
+            else { barHtml += `<div class="temp-step"></div>`; }
+        }
+        tHtml += `
+        <div class="temp-item-card" data-station="${item.name}" onclick="openStationModal(this.dataset.station)">
+            <div class="temp-card-header"><div class="temp-card-name"><span class="val-dot" style="background: ${tInfo.color}"></span>${item.name}</div><div style="display: flex; align-items: center; gap: 8px;"><span class="temp-badge" style="background: ${tInfo.badgeBg}; color: ${tInfo.color}; border: 1px solid ${tInfo.color}40;">${tInfo.name} (第 ${tInfo.level} 級)</span><span class="temp-card-val" style="color: ${tInfo.color}">${item.val} <span style="font-size:0.7rem; color:var(--text-muted);">°C</span></span></div></div><div class="temp-mini-bar">${barHtml}</div>
+        </div>`;
+    });
+    document.getElementById('temp-list-container').innerHTML = tHtml;
+}
+
+function renderWindList() {
+    let windList = [];
+    for (let station in stationMasterData) {
+        if (stationMasterData[station].wind && stationMasterData[station].wind !== '靜止') {
+            let windStr = stationMasterData[station].wind; let speedMatch = windStr.match(/(\d+)/); let speed = speedMatch ? parseFloat(speedMatch[1]) : 0;
+            let dir = windStr.replace(/[\d\skm/h.]/g, '').trim(); if (dir === '') dir = '無定向';
+            windList.push({ name: station, speed: speed, dir: dir, raw: windStr });
+        }
+    }
+    windList.sort((a, b) => b.speed - a.speed);
+    let listHtml = '';
+    if (windList.length === 0) { listHtml = `<div style="text-align:center; padding:20px; color:var(--text-muted);">暫時沒有風速數據</div>`; } 
+    else {
+        windList.forEach(item => {
+            const wInfo = getWindLevelInfo(item.speed); const colors = ['#3498db', '#2ecc71', '#f39c12', '#e67e22', '#e74c3c'];
+            let barHtml = '';
+            for (let s = 1; s <= 5; s++) {
+                if (s <= wInfo.level) { let blinkClass = (wInfo.level === 5 && s === 5) ? 'step-blink' : ''; barHtml += `<div class="wind-step ${blinkClass}" style="background: ${colors[s-1]};"></div>`; } 
+                else { barHtml += `<div class="wind-step"></div>`; }
+            }
+            listHtml += `
+            <div class="wind-item-card" data-station="${item.name}" onclick="openWindModal(this.dataset.station)">
+                <div class="wind-card-header"><div class="wind-card-name"><span class="val-dot" style="background: ${wInfo.color}"></span>${item.name}</div><div style="display: flex; align-items: center; gap: 8px;"><span class="wind-badge" style="background: ${wInfo.badgeBg}; color: ${wInfo.color}; border: 1px solid ${wInfo.color}40;">${wInfo.name}</span><span class="wind-card-val" style="color: ${wInfo.color}"><span style="font-size: 0.75rem; color: #ccc;">${item.dir}</span> ${item.speed} <span style="font-size:0.7rem; color:var(--text-muted);">km/h</span></span></div></div><div class="wind-mini-bar">${barHtml}</div>
+            </div>`;
+        });
+    }
+    document.getElementById('wind-list-container').innerHTML = listHtml;
+}
+
+function openWarningModal(code) {
+    const db = warningDetailsDb[code] || { name: "天氣警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "香港天文台正發出相關天氣警告信號。", precautions: ["留意最新公布", "做好相應防護措施"] };
+    document.getElementById('wm-title').innerText = `⚠️ 警告詳情`;
+    document.getElementById('wm-name').innerText = db.name;
+    document.getElementById('wm-icon').src = db.img;
+    document.getElementById('wm-meaning').innerText = db.meaning;
+    let pHtml = ''; db.precautions.forEach(p => { pHtml += `<li>${p}</li>`; });
+    document.getElementById('wm-precautions').innerHTML = pHtml;
+    document.getElementById('warning-modal').classList.add('active');
+}
+
+function openSwtModal(index) {
+    if (!activeSwtList || !activeSwtList[index]) return;
+    document.getElementById('swt-modal-desc').innerText = activeSwtList[index].desc || activeSwtList[index];
+    document.getElementById('swt-modal').classList.add('active');
+}
+
+function openForecastModal(idx) {
+    if(!nineDayForecastData || !nineDayForecastData[idx]) return;
+    const fc = nineDayForecastData[idx];
+    let d = parseInt(fc.forecastDate.substring(6,8), 10); let m = parseInt(fc.forecastDate.substring(4,6), 10);
+    document.getElementById('f-modal-title').innerText = `📅 ${d}日${m}月 (${fc.week})`;
+    document.getElementById('f-modal-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon || fc.forecastIcon || '50'}.png`;
+    document.getElementById('f-modal-temp').innerText = `${fc.forecastMintemp.value}° - ${fc.forecastMaxtemp.value}°C`;
+    document.getElementById('f-modal-rh').innerText = `相對濕度: ${fc.forecastMinrh.value}% - ${fc.forecastMaxrh.value}%`;
+    document.getElementById('f-modal-wx').innerText = fc.forecastWeather;
+    document.getElementById('f-modal-wind').innerText = fc.forecastWind;
+    let psrText = fc.PSR || fc.psr || '低'; let psrClass = "";
+    if (psrText.includes('高')) psrClass = 'psr-high'; else if (psrText.includes('中')) psrClass = 'psr-med'; else psrClass = 'psr-low';
+    const psrEl = document.getElementById('f-modal-psr');
+    psrEl.className = `fc-psr ${psrClass}`; psrEl.innerText = `💧 降雨概率: ${psrText}`; psrEl.style.padding = "12px";
+    document.getElementById('forecast-modal').classList.add('active');
+}
+
+async function openStationModal(stationName) {
+    if (!stationName) return;
+    document.getElementById('modal-station-name').innerText = `📍 ${stationName} 氣象站`;
+    const now = new Date();
+    const lastUpdatedStr = `${now.getFullYear()}年${String(now.getMonth()+1).padStart(2, '0')}月${String(now.getDate()).padStart(2, '0')}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    document.getElementById('m-last-updated').innerText = `最後更新: ${lastUpdatedStr}`;
+    
+    const data = stationMasterData[stationName] || {};
+    document.getElementById('m-curr-temp').innerText = data.temp ? `${data.temp}°C` : '--°C';
+    document.getElementById('m-maxmin-temp').innerText = (data.max && data.min) ? `${data.max}° / ${data.min}°` : '--° / --°';
+    document.getElementById('m-wind').innerText = data.wind || '--';
+    document.getElementById('m-humidity').innerText = document.getElementById('hk-hum').innerText || '--%';
+
+    let coords = null;
+    for (let ch in hkCoordinates) { if (ch === stationName || stationName.includes(ch) || ch.includes(stationName)) { coords = hkCoordinates[ch]; break; } }
+    if (!coords) coords = [22.302, 114.174];
+    document.getElementById('station-modal').classList.add('active');
+    
+    try {
+        const weatherData = await fetchMeteoDataWithCache(coords[0], coords[1]);
+        const allTimes = weatherData.hourly.time; const allTemps = weatherData.hourly.temperature_2m; const allHums = weatherData.hourly.relative_humidity_2m;
+        const currentHour = now.getHours(); const currentHourIndex = currentHour + 24;
+        const labels = allTimes.slice(24, currentHourIndex + 1).map(t => t.substring(11, 16));
+        let temps = allTemps.slice(24, currentHourIndex + 1); let humidities = allHums.slice(24, currentHourIndex + 1);
+        if (data.temp && temps.length > 0) temps[temps.length - 1] = data.temp;
+        if (!isNaN(globalWxState.hum) && humidities.length > 0) humidities[humidities.length - 1] = globalWxState.hum;
+        renderStationChart(labels, temps, humidities);
+    } catch (err) { console.error("Hourly Chart Error:", err); }
+}
+
+async function openRainModal(stationName, currentRain) {
+    if (!stationName) return;
+    if (isNaN(currentRain)) currentRain = 0;
+    const rInfo = getRainLevel(currentRain);
+    document.getElementById('rain-modal-title').innerText = `🌧️ ${stationName} 氣象站雨量詳情`;
+    document.getElementById('rm-current-val').innerText = `${currentRain} mm`;
+    document.getElementById('rm-current-val').style.color = rInfo.color;
+    document.getElementById('rm-level-val').innerText = `第 ${rInfo.level} 級 (${rInfo.name.split(' ')[0]})`;
+    document.getElementById('rm-level-val').style.color = rInfo.color;
+    
+    const hintBadge = document.getElementById('rm-hint-badge');
+    if (hintBadge) { hintBadge.innerText = rInfo.desc; hintBadge.style.color = rInfo.color; }
+
+    let coords = null;
+    for (let ch in hkCoordinates) { if (ch === stationName || stationName.includes(ch) || (stationEnglishNames[ch] && stationName.includes(stationEnglishNames[ch]))) { coords = hkCoordinates[ch]; break; } }
+    if (!coords) coords = [22.302, 114.174];
+    document.getElementById('rain-modal').classList.add('active');
+
+    try {
+        const weatherData = await fetchMeteoDataWithCache(coords[0], coords[1]);
+        const allTimes = weatherData.hourly.time; const allPrecip = weatherData.hourly.precipitation;
+        const currentHourIndex = new Date().getHours() + 24;
+        const startIdx = Math.max(0, currentHourIndex - 23); const endIdx = currentHourIndex + 1;
+        const labels = allTimes.slice(startIdx, endIdx).map(t => t.substring(11, 16));
+        let precipValues = allPrecip.slice(startIdx, endIdx);
+        if(precipValues.length > 0) precipValues[precipValues.length - 1] = Math.max(precipValues[precipValues.length - 1], currentRain);
+        document.getElementById('rm-24h-total').innerText = `${precipValues.reduce((a, b) => a + b, 0).toFixed(1)} mm`;
+        document.getElementById('rm-peak-val').innerText = `${Math.max(...precipValues).toFixed(1)} mm`;
+        renderRainChart(labels, precipValues);
+    } catch (err) { console.error("Hourly Rain Chart Fetch Error:", err); }
+}
+
+async function openWindModal(stationName) {
+    if (!stationName) return;
+    const data = stationMasterData[stationName] || {};
+    const windStr = data.wind || '靜止 0 km/h';
+    let speedMatch = windStr.match(/(\d+)/);
+    let currentSpeed = speedMatch ? parseFloat(speedMatch[1]) : 0;
+    const wInfo = getWindLevelInfo(currentSpeed);
+
+    document.getElementById('wind-modal-title').innerText = `💨 ${stationName} 氣象站風力詳情`;
+    document.getElementById('wm-curr-wind').innerText = windStr;
+    document.getElementById('wm-curr-wind').style.color = wInfo.color;
+    document.getElementById('wm-wind-level').innerText = `${wInfo.name} (第 ${wInfo.level} 級)`;
+    document.getElementById('wm-wind-level').style.color = wInfo.color;
+
+    let coords = null;
+    for (let ch in hkCoordinates) {
+        if (ch === stationName || stationName.includes(ch) || (stationEnglishNames[ch] && stationName.includes(stationEnglishNames[ch]))) {
+            coords = hkCoordinates[ch]; break;
+        }
+    }
+    if (!coords) coords = [22.302, 114.174];
+    document.getElementById('wind-modal').classList.add('active');
+
+    try {
+        const weatherData = await fetchMeteoDataWithCache(coords[0], coords[1]);
+        const allTimes = weatherData.hourly.time;
+        const allWindSpeeds = weatherData.hourly.wind_speed_10m || [];
+        const allWindDirs = weatherData.hourly.wind_direction_10m || [];
+        const allWindGusts = weatherData.hourly.wind_gusts_10m || [];
+
+        const currentHourIndex = new Date().getHours() + 24;
+        const startIdx = Math.max(0, currentHourIndex - 23);
+        const endIdx = currentHourIndex + 1;
+
+        const labels = allTimes.slice(startIdx, endIdx).map(t => t.substring(11, 16));
+        let speeds = allWindSpeeds.slice(startIdx, endIdx);
+        let dirs = allWindDirs.slice(startIdx, endIdx);
+        let gusts = allWindGusts.slice(startIdx, endIdx);
+
+        if (speeds.length > 0 && currentSpeed > 0) { speeds[speeds.length - 1] = currentSpeed; }
+
+        const peakWind = Math.max(...speeds).toFixed(0);
+        const peakGust = gusts.length > 0 ? Math.max(...gusts).toFixed(0) : peakWind;
+
+        document.getElementById('wm-peak-wind').innerText = `${peakWind} km/h`;
+        document.getElementById('wm-peak-gust').innerText = `${peakGust} km/h`;
+        document.getElementById('wm-wind-hint').innerText = `最高陣風 ${peakGust} km/h`;
+
+        renderWindChart(labels, speeds, gusts, dirs);
+    } catch (err) { console.error("Hourly Wind Chart Fetch Error:", err); }
 }
