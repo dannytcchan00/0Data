@@ -272,44 +272,6 @@ function openThreatModal() {
     document.getElementById('tm-advice-list').innerHTML = adviceHtml; modal.classList.add('active');
 }
 
-function openLifestyleModal(type) {
-    const modal = document.getElementById('lifestyle-modal');
-    const titleEl = document.getElementById('lifestyle-modal-title');
-    const gridEl = document.getElementById('ls-metric-grid');
-    const evalEl = document.getElementById('ls-evaluation-text');
-    const tipsEl = document.getElementById('ls-tips-list');
-
-    const t = globalWxState.temp; const h = globalWxState.hum; const uv = globalWxState.uv !== null ? parseFloat(globalWxState.uv) : 0; const psr = globalWxState.psrRaw || '低';
-    const tcLvl = currentThreatState.tcLvl || 1; const windLvl = currentThreatState.windLvl || 1; const rainLvl = currentThreatState.rainLvl || 1; const threatLevel = currentThreatState.finalLevel || 1;
-
-    const tStr = isNaN(t) ? '--' : `${t}°C`; const hStr = isNaN(h) ? '--' : `${h}%`; const uvStr = globalWxState.uv !== null ? `${globalWxState.uv}` : '--';
-
-    gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${tStr}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${hStr}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線</div><div class="s-stat-val">${uvStr}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-
-    let evalText = ""; let tipsHtml = "";
-    if (type === 'pet') {
-        titleEl.innerText = "🐾 寵物散步適宜度詳情";
-        let heatIndex = currentThreatState.custom_heat_index !== undefined ? currentThreatState.custom_heat_index : t;
-        let rain = currentThreatState.r || 0; let wind = currentThreatState.maxOffshoreWind || 0;
-        gridEl.innerHTML = `
-            <div class="s-stat-box"><div class="s-stat-label">日式暑熱指數</div><div class="s-stat-val" style="color: ${heatIndex >= 30 ? 'var(--accent-danger)' : '#fff'}">${heatIndex}</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">即時最高雨量</div><div class="s-stat-val" style="color: ${rain >= 10 ? 'var(--accent-warning)' : '#fff'}">${rain} mm/h</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">離岸最高風速</div><div class="s-stat-val" style="color: ${wind >= 41 ? 'var(--accent-danger)' : '#fff'}">${wind} km/h</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-        evalText = `目前暑熱指數（${heatIndex}）、即時雨量（${rain} mm/h）及風速（${wind} km/h）綜合判定為當前風險級別。`;
-        tipsHtml = `<li>出門前注意路面溫度與補水。</li><li>大風大雨時請留在室內。</li>`;
-    } else if (type === 'laundry') {
-        titleEl.innerText = "👕 戶外晾衣指數詳情";
-        evalText = `目前相對濕度 ${hStr}。`;
-        tipsHtml = `<li>高濕度或降雨時建議室內抽濕。</li><li>陽光充沛時可進行戶外晾曬殺菌。</li>`;
-    } else if (type === 'hiking') {
-        titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
-        evalText = `目前市區氣溫 ${tStr}。`;
-        tipsHtml = `<li>留意天氣突變與降雨機率。</li><li>帶備充足糧水與保暖防風衣物。</li>`;
-    }
-    evalEl.innerText = evalText; tipsEl.innerHTML = tipsHtml; modal.classList.add('active');
-}
-
 function switchRadarRange(range) {
     currentRadarRange = range;
     document.querySelectorAll('.rad-btn').forEach(btn => btn.classList.remove('active'));
