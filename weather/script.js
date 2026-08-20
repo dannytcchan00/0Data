@@ -302,7 +302,7 @@ function updateLaundryIndex() {
 
         if (totalScore >= 80) {
             laundryLevel = 1;
-            dynamicHint = `陽猛烈且有微風 (${wind}km/h)，強烈紫外線可天然殺菌除臭，衣物極速乾透！`;
+            dynamicHint = `陽光猛烈且有微風 (${wind}km/h)，強烈紫外線可天然殺菌除臭，衣物極速乾透！`;
         } else if (totalScore >= 60) {
             laundryLevel = 2;
             dynamicHint = `天氣乾爽，狀況良好，適合一般戶外自然晾曬。`;
@@ -866,6 +866,9 @@ async function fetchAndRenderCSV(type) {
     else if (type === 'visibility') unit = ' km'; 
     else if (type === 'tide') unit = ' m';
 
+    // ============================================
+    // 🇭🇰 香港 CSV 數據讀取
+    // ============================================
     const loadHK = async () => {
         try {
             let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
@@ -931,6 +934,9 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
+    // ============================================
+    // 🇲🇴 澳門 XML 數據讀取 (100% 針對真實 XML 結構)
+    // ============================================
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
@@ -959,16 +965,21 @@ async function fetchAndRenderCSV(type) {
             const xmlText = await res.text();
             
             const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+            
+            // 讀取 XML 中的所有 <station> 標籤
             const stations = xmlDoc.getElementsByTagName("station");
 
             for (let i = 0; i < stations.length; i++) {
                 let st = stations[i];
+                
+                // 讀取站名
                 let nameNode = st.getElementsByTagName("stationname")[0];
                 if (!nameNode) continue;
                 
                 let stationName = nameNode.textContent.trim();
                 let coords = macauCoordsMap[stationName];
                 
+                // 保底：用關鍵字配對坐標
                 if (!coords) {
                     for (let key in macauCoordsMap) {
                         if (stationName.includes(key) || key.includes(stationName)) {
@@ -980,6 +991,7 @@ async function fetchAndRenderCSV(type) {
                 
                 if (!coords) continue;
 
+                // 協助從指定的 parent tag 中獲取 <Value> 的數值
                 const getValueFromTag = (tagName) => {
                     let tagNode = st.getElementsByTagName(tagName)[0];
                     if (tagNode) {
@@ -1018,6 +1030,8 @@ async function fetchAndRenderCSV(type) {
 
                     let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
                     let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                    
+                    // 完全原封不動使用 xml 內抓到的名字 (stationName)
                     mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
                 }
             }
@@ -1026,6 +1040,7 @@ async function fetchAndRenderCSV(type) {
         }
     };
 
+    // 4. 同步並行執行，確保即使一邊出錯都唔會干擾另一邊
     await Promise.allSettled([loadHK(), loadMacao()]);
 }
 
@@ -1049,6 +1064,9 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+// ============================================
+// 🌀 颱風路徑地圖繪製
+// ============================================
 function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, drawCone, isPrimary) {
     if (points.length === 0) return;
     let currentPt = points[0]; 
@@ -1088,15 +1106,20 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, drawCone
     });
 }
 
+// ============================================
+// 🌀 讀取所有颱風資料 (HKO XML + 國際 KML)
+// ============================================
 async function fetchAndRenderBothTyphoonMaps() {
     const hkoAlert = document.getElementById('no-tc-hko-alert');
     const agencyAlert = document.getElementById('no-tc-agency-alert');
 
+    // 1. 讀取香港天文台 XML
     try {
         const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
         if (!resHko.ok) throw new Error("No XML response");
         let xmlText = await resHko.text();
         
+        // 防彈處理：強制移除 XML 的所有命名空間 (xmlns)，防止瀏覽器解析崩潰
         xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/g, '');
         const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
 
@@ -1106,15 +1129,22 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         for (let i = 0; i < elements.length; i++) {
             let el = elements[i];
+            
+            // 安全地獲取經緯度
             let latEl = el.querySelector(':scope > lat') || el.querySelector(':scope > latitude') || el.querySelector(':scope > cLat') || el.getElementsByTagName('lat')[0];
             let lonEl = el.querySelector(':scope > lon') || el.querySelector(':scope > longitude') || el.querySelector(':scope > cLon') || el.getElementsByTagName('lon')[0];
             
             if (latEl && lonEl && !el.getAttribute('data-parsed')) {
-                let lat = parseFloat(latEl.textContent); let lon = parseFloat(lonEl.textContent);
+                let lat = parseFloat(latEl.textContent); 
+                let lon = parseFloat(lonEl.textContent);
+                
                 let timeEl = el.querySelector(':scope > time') || el.querySelector(':scope > date') || el.getElementsByTagName('time')[0];
                 let time = timeEl ? timeEl.textContent : '';
                 
-                if (!isNaN(lat) && !isNaN(lon)) { hkoPoints.push({ lat, lon, time }); el.setAttribute('data-parsed', 'true'); }
+                if (!isNaN(lat) && !isNaN(lon)) { 
+                    hkoPoints.push({ lat, lon, time }); 
+                    el.setAttribute('data-parsed', 'true'); 
+                }
             }
         }
         
@@ -1125,29 +1155,39 @@ async function fetchAndRenderBothTyphoonMaps() {
             globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
         }
         tcMapHko.fitBounds(hkoBounds1200);
-    } catch (err) { hkoAlert.style.display = 'flex'; tcMapHko.fitBounds(hkoBounds1200); }
+    } catch (err) { 
+        hkoAlert.style.display = 'flex'; 
+        tcMapHko.fitBounds(hkoBounds1200); 
+    }
 
     await new Promise(r => setTimeout(r, 10));
 
+    // 2. 讀取各國氣象機構 KML
     try {
         const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
         if (!resAgy.ok) throw new Error("No KML response");
         let kmlText = await resAgy.text();
         
+        // 🚨 防彈處理：強制移除 KML 的所有命名空間 (xmlns)，解決有資料但顯示唔到嘅 Bug
         kmlText = kmlText.replace(/xmlns(:\w+)?="[^"]*"/g, '');
         const docAgy = new DOMParser().parseFromString(kmlText, "text/xml");
         
         tcAgencyLayerGroup.clearLayers();
-        let hasAgencyData = false; let foundAgencies = new Set(); let typhoonCenterCoords = null; 
+        let hasAgencyData = false; 
+        let foundAgencies = new Set(); 
+        let typhoonCenterCoords = null; 
         
         let placemarks = docAgy.getElementsByTagName("Placemark");
         let parsedAgencyTracks = {};
 
         for (let i = 0; i < placemarks.length; i++) {
             let pm = placemarks[i];
+            
+            // 安全獲取 Placemark 的名字
             let nameNode = pm.getElementsByTagName('name')[0];
             let pmName = nameNode ? nameNode.textContent : '';
             
+            // 安全獲取所屬 Folder 的名字
             let folderNode = pm.parentNode;
             while (folderNode && folderNode.nodeName !== 'Folder' && folderNode.nodeName !== 'Document') {
                 folderNode = folderNode.parentNode;
@@ -1163,12 +1203,15 @@ async function fetchAndRenderBothTyphoonMaps() {
             else if (combinedText.includes('NMC') || combinedText.includes('CMA')) agency = 'NMC';
             else if (combinedText.includes('CWA') || combinedText.includes('CWB')) agency = 'CWA';
             else if (combinedText.includes('PAGASA')) agency = 'PAGASA';
+            
             if (combinedText.includes('HKO')) continue; 
 
             if (!parsedAgencyTracks[agency]) parsedAgencyTracks[agency] = [];
             
+            // 抓取坐標 LineString
             let lineStrs = pm.getElementsByTagName('LineString');
-            for(let ls of lineStrs) {
+            for(let j = 0; j < lineStrs.length; j++) {
+                let ls = lineStrs[j];
                 let coordsNode = ls.getElementsByTagName('coordinates')[0];
                 if (coordsNode) {
                     let coordsText = coordsNode.textContent.trim().split(/\s+/);
@@ -1189,31 +1232,44 @@ async function fetchAndRenderBothTyphoonMaps() {
         Object.keys(parsedAgencyTracks).forEach(agency => {
             let pts = parsedAgencyTracks[agency];
             if (pts.length > 0) {
-                hasAgencyData = true; foundAgencies.add(agency);
+                hasAgencyData = true; 
+                foundAgencies.add(agency);
                 let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
+                
                 if (agency === 'JMA') {
                     typhoonCenterCoords = [pts[0].lat, pts[0].lon];
                     drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, true, true);
                 } else { 
                     drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, false, false); 
                 }
+                
                 if (globalLatestTcDist === null) globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], pts[0].lat, pts[0].lon);
             }
         });
 
-        if (!hasAgencyData) { agencyAlert.style.display = 'flex'; tcMapAgency.fitBounds(hkoBounds1200); } 
-        else {
+        if (!hasAgencyData) { 
+            agencyAlert.style.display = 'flex'; 
+            tcMapAgency.fitBounds(hkoBounds1200); 
+        } else {
             agencyAlert.style.display = 'none';
             if (foundAgencies.has('OTHER')) document.getElementById('legend-other').style.display = 'inline-block';
             
             if (!typhoonCenterCoords) {
                 let firstAgency = Object.keys(parsedAgencyTracks)[0];
-                if (firstAgency && parsedAgencyTracks[firstAgency].length > 0) typhoonCenterCoords = [parsedAgencyTracks[firstAgency][0].lat, parsedAgencyTracks[firstAgency][0].lon];
+                if (firstAgency && parsedAgencyTracks[firstAgency].length > 0) {
+                    typhoonCenterCoords = [parsedAgencyTracks[firstAgency][0].lat, parsedAgencyTracks[firstAgency][0].lon];
+                }
             }
-            if (typhoonCenterCoords) tcMapAgency.fitBounds(L.latLng(typhoonCenterCoords).toBounds(4000000), { padding: [20, 20] });
-            else tcMapAgency.fitBounds(hkoBounds1200);
+            if (typhoonCenterCoords) {
+                tcMapAgency.fitBounds(L.latLng(typhoonCenterCoords).toBounds(4000000), { padding: [20, 20] });
+            } else {
+                tcMapAgency.fitBounds(hkoBounds1200);
+            }
         }
-    } catch (err) { agencyAlert.style.display = 'flex'; tcMapAgency.fitBounds(hkoBounds1200); }
+    } catch (err) { 
+        agencyAlert.style.display = 'flex'; 
+        tcMapAgency.fitBounds(hkoBounds1200); 
+    }
 
     updateSmartThreatAlert();
 }
