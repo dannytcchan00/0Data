@@ -1,6 +1,5 @@
 // typhoon_api.js - 颱風預測路徑、淡黃色漏斗範圍與實時機構標籤模組
 
-// 各國氣象機構專屬顏色
 const agencyColorPalette = { 
     'JTWC': '#9b59b6',   // 美軍 (紫色)
     'JMA': '#f1c40f',    // 日本 (淡黃色 - 配合漏斗)
@@ -30,11 +29,21 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+// 嚴格獲取當前節點下最直接的 <name>，解決之前「全部變晒 JTWC」的 Bug
+function getDirectChildName(node) {
+    for (let i = 0; i < node.children.length; i++) {
+        if (node.children[i].tagName.toLowerCase() === 'name') {
+            return node.children[i].textContent.trim();
+        }
+    }
+    return '';
+}
+
 // 繪製颱風路徑、淡黃色漏斗與實時標籤
 function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, isHKO) {
     if (points.length === 0) return;
     
-    // 漏斗與覆蓋圈設定 (專為 JMA 基準而設)
+    // 淡黃色漏斗與覆蓋圈設定 (專為 JMA 基準而設)
     const coneColor = isHKO ? themeColors.red : '#f1c40f'; // HKO用紅色，JMA用淡黃色
     const coneFill = isHKO ? 'rgba(231, 76, 60, 0.15)' : 'rgba(241, 196, 15, 0.15)'; 
 
@@ -138,6 +147,7 @@ async function fetchAndRenderBothTyphoonMaps() {
                 if (!el.getAttribute('data-parsed')) {
                     let lat = parseFloat(latNode.textContent.trim()); 
                     let lon = parseFloat(lonNode.textContent.trim());
+                    
                     let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0];
                     let time = timeNode ? timeNode.textContent.trim() : '';
                     
@@ -155,7 +165,8 @@ async function fetchAndRenderBothTyphoonMaps() {
         } else {
             drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', true, true);
             globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
-            tcMapHko.setView([hkoPoints[0].lat, hkoPoints[0].lon], 5);
+            let bounds = L.latLngBounds(hkoPoints.map(p => [p.lat, p.lon]));
+            tcMapHko.fitBounds(bounds, { padding: [30, 30] });
         }
     } catch (err) { 
         console.error("HKO Typhoon parsing error:", err);
@@ -168,7 +179,6 @@ async function fetchAndRenderBothTyphoonMaps() {
     // ==========================================
     // 2. 讀取各國氣象機構 KML (右邊地圖)
     // ==========================================
-    let hasAgencyData = false; 
     try {
         const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
         if (!resAgy.ok) throw new Error("No KML response");
@@ -178,47 +188,46 @@ async function fetchAndRenderBothTyphoonMaps() {
         const docAgy = new DOMParser().parseFromString(kmlText, "text/xml");
         
         tcAgencyLayerGroup.clearLayers();
-        let foundAgencies = new Set(); 
-        let typhoonCenterCoords = null; 
         let parsedAgencyTracks = {};
         let agencyPointSet = {}; 
+        let allAgencyLatLngs = []; // 用作收集所有國家的坐標，完美置中地圖
 
         let placemarks = docAgy.getElementsByTagName("Placemark");
 
         for (let i = 0; i < placemarks.length; i++) {
             let pm = placemarks[i];
             
-            // 獨立尋找每個 Placemark 的名字
-            let pmNameNode = Array.from(pm.childNodes).find(n => n.nodeType === 1 && n.tagName.toLowerCase() === 'name');
-            let pmName = pmNameNode ? pmNameNode.textContent.trim() : '';
+            // 使用新寫法：精準獲取當前 Placemark 或 Folder 的名字，解決全部變 JTWC 嘅 Bug
+            let pmName = getDirectChildName(pm);
             
-            // 向上溯源：尋找所有父層級的名字，確保不會全部變成 JTWC
-            let parentPath = '';
-            let currNode = pm.parentNode;
-            while (currNode && currNode.nodeType === 1) { 
-                let pNameNode = Array.from(currNode.childNodes).find(n => n.nodeType === 1 && n.tagName.toLowerCase() === 'name');
-                if (pNameNode) {
-                    parentPath += ' ' + pNameNode.textContent.toUpperCase();
+            let folderNode = pm.parentNode;
+            let folderName = '';
+            while (folderNode && folderNode.nodeType === 1) { 
+                let tag = folderNode.tagName.toLowerCase();
+                if (tag === 'folder' || tag === 'document') {
+                    let fName = getDirectChildName(folderNode);
+                    if (fName) folderName = fName + " " + folderName;
                 }
-                currNode = currNode.parentNode;
+                folderNode = folderNode.parentNode;
             }
             
-            let combinedText = parentPath + ' ' + pmName.toUpperCase();
+            let combinedText = (pmName + " " + folderName).toUpperCase();
             
-            let agency = null;
+            let agency = 'OTHER';
             if (combinedText.includes('JTWC')) agency = 'JTWC';
             else if (combinedText.includes('JMA')) agency = 'JMA';
             else if (combinedText.includes('NMC') || combinedText.includes('CMA')) agency = 'NMC';
             else if (combinedText.includes('CWA') || combinedText.includes('CWB') || combinedText.includes('TAIWAN')) agency = 'CWA';
             else if (combinedText.includes('PAGASA')) agency = 'PAGASA';
             
-            if (!agency || combinedText.includes('HKO')) continue;
+            if (combinedText.includes('HKO') || agency === 'OTHER') continue;
 
             if (!parsedAgencyTracks[agency]) parsedAgencyTracks[agency] = [];
             if (!agencyPointSet[agency]) agencyPointSet[agency] = new Set();
             
-            // 嚴格只抽取 <Point> 的座標，解決亂線問題
+            // 嚴格只抽取 <Point> 的座標
             let ptNodes = pm.getElementsByTagName('Point');
+            let hasPoint = false;
             
             for(let j = 0; j < ptNodes.length; j++) {
                 let coordsNode = ptNodes[j].getElementsByTagName('coordinates')[0];
@@ -231,8 +240,31 @@ async function fetchAndRenderBothTyphoonMaps() {
                             if (!agencyPointSet[agency].has(coordKey)) {
                                 agencyPointSet[agency].add(coordKey);
                                 parsedAgencyTracks[agency].push({ lat, lon, time: pmName });
+                                allAgencyLatLngs.push([lat, lon]);
+                                hasPoint = true;
                             }
                         }
+                    }
+                }
+            }
+
+            // 後備方案
+            if (!hasPoint) {
+                let lsNodes = pm.getElementsByTagName('LineString');
+                for(let j = 0; j < lsNodes.length; j++) {
+                    let coordsNode = lsNodes[j].getElementsByTagName('coordinates')[0];
+                    if(coordsNode) {
+                        let pairs = coordsNode.textContent.trim().split(/\s+/);
+                        pairs.forEach((pair, idx) => {
+                            let parts = pair.split(',');
+                            if (parts.length >= 2) {
+                                let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+                                if (!isNaN(lat) && !isNaN(lon)) {
+                                    parsedAgencyTracks[agency].push({ lat, lon, time: `Pt ${idx+1}` });
+                                    allAgencyLatLngs.push([lat, lon]);
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -242,37 +274,28 @@ async function fetchAndRenderBothTyphoonMaps() {
         Object.keys(parsedAgencyTracks).forEach(agency => {
             let pts = parsedAgencyTracks[agency];
             if (pts.length > 0) {
-                hasAgencyData = true; 
-                foundAgencies.add(agency);
                 let color = agencyColorPalette[agency];
-                
-                // 判斷是否為日本氣象局基準
                 let isJMA = (agency === 'JMA');
-                
-                // 只有 JMA 會畫出淡黃色漏斗
                 drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isJMA, false);
-                
-                if (isJMA) typhoonCenterCoords = [pts[0].lat, pts[0].lon];
-                if (globalLatestTcDist === null) globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], pts[0].lat, pts[0].lon);
             }
         });
 
-        // 完美解決圖表縮放與警告的衝突
-        if (!hasAgencyData) { 
+        // 完美解決圖表縮放與出錯警告的衝突
+        if (allAgencyLatLngs.length === 0) { 
             agencyAlert.style.display = 'flex'; 
             tcMapAgency.setView(hkoCenter, 4); 
         } else {
             agencyAlert.style.display = 'none';
-            if (typhoonCenterCoords) {
-                tcMapAgency.setView(typhoonCenterCoords, 5);
-            } else {
-                tcMapAgency.setView(hkoCenter, 5);
+            try {
+                let bounds = L.latLngBounds(allAgencyLatLngs);
+                tcMapAgency.fitBounds(bounds, { padding: [40, 40] });
+            } catch (boundsErr) {
+                tcMapAgency.setView(hkoCenter, 4);
             }
         }
     } catch (err) { 
         console.error("Agency Typhoon KML Error:", err);
-        // 只有真係報錯或者冇數據時先彈字
-        if (!hasAgencyData) agencyAlert.style.display = 'flex'; 
+        agencyAlert.style.display = 'flex'; 
         tcMapAgency.setView(hkoCenter, 4); 
     }
 
