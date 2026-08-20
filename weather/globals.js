@@ -78,7 +78,6 @@ let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222
 const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
 const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
 
-// 初始化地圖 (中心點設於大嶼山 Zoom 9，一打開即可看清香港與澳門)
 let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
 L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
 let dataLayerGroup = L.layerGroup().addTo(map);
