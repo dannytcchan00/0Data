@@ -16,7 +16,6 @@ async function fetchAndRenderCSV(type) {
     else if (type === 'visibility') unit = ' km'; 
     else if (type === 'tide') unit = ' m';
 
-    // 🇭🇰 香港 CSV 數據讀取
     const loadHK = async () => {
         try {
             let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
@@ -76,7 +75,6 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
-    // 🇲🇴 澳門 XML 數據讀取
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
@@ -208,39 +206,6 @@ async function fetchRainList(fallbackData) {
         document.getElementById('rain-list-container').innerHTML = listHtml;
     } catch(e) { document.getElementById('rain-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">未能讀取雨量數據</div>`; }
     updateSmartThreatAlert();
-}
-
-async function fetchMeteoDataWithCache(lat, lon) {
-    const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`; const now = Date.now();
-    if (meteoCache[cacheKey] && (now - meteoCache[cacheKey].timestamp < 300000)) return meteoCache[cacheKey].data;
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=Asia%2FHong_Kong&past_days=1&forecast_days=1`);
-    const data = await res.json();
-    meteoCache[cacheKey] = { data: data, timestamp: now }; return data;
-}
-
-async function fetchAstroData() {
-    try {
-        const res = await fetch('https://wttr.in/HongKong?format=j1');
-        const wttr = await res.json();
-        const astro = wttr.weather[0].astronomy[0];
-        const to24 = (timeStr) => {
-            if(!timeStr) return '--:--';
-            const [time, mod] = timeStr.split(' ');
-            let [h, m] = time.split(':'); if (h === '12') h = '00';
-            if (mod === 'PM') h = (parseInt(h, 10) + 12).toString();
-            return `${h.padStart(2, '0')}:${m}`;
-        };
-        document.getElementById('hk-sunrise').innerText = to24(astro.sunrise);
-        document.getElementById('hk-sunset').innerText = to24(astro.sunset);
-        document.getElementById('hk-moonrise').innerText = to24(astro.moonrise);
-        document.getElementById('hk-moonset').innerText = to24(astro.moonset);
-
-        const mp = getMoonPhase();
-        document.getElementById('hk-moon').innerHTML = `<span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${mp.i}</span> <span>${mp.n}</span>`;
-    } catch(e) {
-        const mp = getMoonPhase();
-        document.getElementById('hk-moon').innerHTML = `<span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${mp.i}</span> <span>${mp.n}</span>`;
-    }
 }
 
 async function fetchTopOverview() {
