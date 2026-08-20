@@ -302,7 +302,7 @@ function updateLaundryIndex() {
 
         if (totalScore >= 80) {
             laundryLevel = 1;
-            dynamicHint = `陽光猛烈且有微風 (${wind}km/h)，強烈紫外線可天然殺菌除臭，衣物極速乾透！`;
+            dynamicHint = `陽猛烈且有微風 (${wind}km/h)，強烈紫外線可天然殺菌除臭，衣物極速乾透！`;
         } else if (totalScore >= 60) {
             laundryLevel = 2;
             dynamicHint = `天氣乾爽，狀況良好，適合一般戶外自然晾曬。`;
@@ -857,7 +857,6 @@ function getTempLevelInfo(val) {
 }
 
 async function fetchAndRenderCSV(type) {
-    // 1. 清空地圖 marker
     dataLayerGroup.clearLayers();
 
     let unit = '';
@@ -867,7 +866,6 @@ async function fetchAndRenderCSV(type) {
     else if (type === 'visibility') unit = ' km'; 
     else if (type === 'tide') unit = ' m';
 
-    // 2. 香港 CSV 數據讀取 (獨立封裝)
     const loadHK = async () => {
         try {
             let url = (type === 'max' || type === 'min') ? mapSources['maxmin'] : mapSources[type];
@@ -933,7 +931,6 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
-    // 3. 澳門 XML 數據讀取 (根據實際 XML 結構解析，精準讀取 <Value>)
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
@@ -962,101 +959,73 @@ async function fetchAndRenderCSV(type) {
             const xmlText = await res.text();
             
             const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
-            
-            // 讀取 XML 中的 <station> 標籤
             const stations = xmlDoc.getElementsByTagName("station");
 
             for (let i = 0; i < stations.length; i++) {
                 let st = stations[i];
-                let stationName = "";
-                let val = null;
-                let windDir = "";
-
-                // 遍歷 station 下的所有子節點
-                for (let j = 0; j < st.childNodes.length; j++) {
-                    let node = st.childNodes[j];
-                    if (node.nodeType !== 1) continue; // 只處理 Element 節點
-
-                    let tag = node.tagName.toLowerCase();
-
-                    // 1. 抓取 XML 原名 (例如 <stationname>紀念孫中山市政公園</stationname>)
-                    if (tag === "stationname" || tag === "name" || tag === "customaryname") {
-                        stationName = node.textContent.trim();
-                    } 
-                    // 2. 如果係溫度模式，深入 <Temperature> 搵 <Value>
-                    else if (type === "temp" && (tag === "temperature" || tag === "temp")) {
-                        for (let k = 0; k < node.childNodes.length; k++) {
-                            let subNode = node.childNodes[k];
-                            if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
-                                val = parseFloat(subNode.textContent.trim());
-                                break;
-                            }
-                        }
-                    } 
-                    // 3. 如果係風速模式，深入 <WindSpeed> 搵 <Value>，深入 <WindDirection> 搵 <Value>
-                    else if (type === "wind") {
-                        if (tag === "windspeed" || tag === "speed") {
-                            for (let k = 0; k < node.childNodes.length; k++) {
-                                let subNode = node.childNodes[k];
-                                if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
-                                    val = parseFloat(subNode.textContent.trim());
-                                    break;
-                                }
-                            }
-                        } else if (tag === "winddirection" || tag === "dir") {
-                            for (let k = 0; k < node.childNodes.length; k++) {
-                                let subNode = node.childNodes[k];
-                                if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
-                                    windDir = subNode.textContent.trim();
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 如果呢個站連名都冇，或者讀唔到數值（例如大橋冇溫度），就直接 Skip 唔畫
-                if (!stationName || val === null || isNaN(val)) continue;
-
-                // 配對坐標：直接搵 mapping 表
+                let nameNode = st.getElementsByTagName("stationname")[0];
+                if (!nameNode) continue;
+                
+                let stationName = nameNode.textContent.trim();
                 let coords = macauCoordsMap[stationName];
+                
                 if (!coords) {
                     for (let key in macauCoordsMap) {
-                        if (stationName.includes(key)) {
+                        if (stationName.includes(key) || key.includes(stationName)) {
                             coords = macauCoordsMap[key];
                             break;
                         }
                     }
                 }
+                
                 if (!coords) continue;
 
-                // 畫標記落地圖
-                let mUnit = (type === 'wind') ? ' km/h' : '°C';
-                let mColor = (type === 'wind') ? 
-                    `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
-                    `color: ${getTempColor(val)};`;
-
-                let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
-                
-                if (type === 'wind' && windDir) {
-                    let windAngle = getWindAngle([windDir]); 
-                    if (windAngle !== null) {
-                        mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
+                const getValueFromTag = (tagName) => {
+                    let tagNode = st.getElementsByTagName(tagName)[0];
+                    if (tagNode) {
+                        let valNode = tagNode.getElementsByTagName("Value")[0];
+                        return valNode ? valNode.textContent.trim() : null;
                     }
+                    return null;
+                };
+
+                let val = null;
+                let windDir = "";
+
+                if (type === 'temp') {
+                    let tempStr = getValueFromTag("Temperature");
+                    if (tempStr) val = parseFloat(tempStr);
+                } else if (type === 'wind') {
+                    let speedStr = getValueFromTag("WindSpeed");
+                    if (speedStr) val = parseFloat(speedStr);
+                    windDir = getValueFromTag("WindDirection") || "";
                 }
 
-                let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
-                let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
-                
-                // 完全原封不動使用 xml 內抓到的名字 (stationName)
-                mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                if (val !== null && !isNaN(val)) {
+                    let mUnit = (type === 'wind') ? ' km/h' : '°C';
+                    let mColor = (type === 'wind') ? 
+                        `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
+                        `color: ${getTempColor(val)};`;
+
+                    let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
+                    
+                    if (type === 'wind' && windDir) {
+                        let windAngle = getWindAngle([windDir]); 
+                        if (windAngle !== null) {
+                            mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
+                        }
+                    }
+
+                    let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
+                    let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                }
             }
         } catch (e) { 
             console.warn('Macau XML 數據讀取失敗:', e); 
         }
     };
 
-    // 4. 同步並行執行，確保即使一邊出錯都唔會干擾另一邊
     await Promise.allSettled([loadHK(), loadMacao()]);
 }
 
@@ -1126,22 +1095,29 @@ async function fetchAndRenderBothTyphoonMaps() {
     try {
         const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
         if (!resHko.ok) throw new Error("No XML response");
-        const xmlText = await resHko.text();
+        let xmlText = await resHko.text();
+        
+        xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/g, '');
         const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
 
         tcHkoLayerGroup.clearLayers();
         let hkoPoints = [];
         let elements = docHko.getElementsByTagName("*");
+        
         for (let i = 0; i < elements.length; i++) {
             let el = elements[i];
-            let latEl = el.querySelector(':scope > lat') || el.querySelector(':scope > latitude') || el.querySelector(':scope > cLat');
-            let lonEl = el.querySelector(':scope > lon') || el.querySelector(':scope > longitude') || el.querySelector(':scope > cLon');
+            let latEl = el.querySelector(':scope > lat') || el.querySelector(':scope > latitude') || el.querySelector(':scope > cLat') || el.getElementsByTagName('lat')[0];
+            let lonEl = el.querySelector(':scope > lon') || el.querySelector(':scope > longitude') || el.querySelector(':scope > cLon') || el.getElementsByTagName('lon')[0];
+            
             if (latEl && lonEl && !el.getAttribute('data-parsed')) {
                 let lat = parseFloat(latEl.textContent); let lon = parseFloat(lonEl.textContent);
-                let time = (el.querySelector(':scope > time') || el.querySelector(':scope > date'))?.textContent || '';
+                let timeEl = el.querySelector(':scope > time') || el.querySelector(':scope > date') || el.getElementsByTagName('time')[0];
+                let time = timeEl ? timeEl.textContent : '';
+                
                 if (!isNaN(lat) && !isNaN(lon)) { hkoPoints.push({ lat, lon, time }); el.setAttribute('data-parsed', 'true'); }
             }
         }
+        
         if (hkoPoints.length === 0) { hkoAlert.style.display = 'flex'; } 
         else {
             hkoAlert.style.display = 'none';
@@ -1156,19 +1132,29 @@ async function fetchAndRenderBothTyphoonMaps() {
     try {
         const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
         if (!resAgy.ok) throw new Error("No KML response");
-        const kmlText = await resAgy.text();
+        let kmlText = await resAgy.text();
+        
+        kmlText = kmlText.replace(/xmlns(:\w+)?="[^"]*"/g, '');
         const docAgy = new DOMParser().parseFromString(kmlText, "text/xml");
         
         tcAgencyLayerGroup.clearLayers();
         let hasAgencyData = false; let foundAgencies = new Set(); let typhoonCenterCoords = null; 
+        
         let placemarks = docAgy.getElementsByTagName("Placemark");
         let parsedAgencyTracks = {};
 
         for (let i = 0; i < placemarks.length; i++) {
             let pm = placemarks[i];
-            let pmName = pm.querySelector('name')?.textContent || '';
-            let folderNode = pm.closest('Folder');
-            let folderName = folderNode ? (folderNode.querySelector(':scope > name')?.textContent || '') : '';
+            let nameNode = pm.getElementsByTagName('name')[0];
+            let pmName = nameNode ? nameNode.textContent : '';
+            
+            let folderNode = pm.parentNode;
+            while (folderNode && folderNode.nodeName !== 'Folder' && folderNode.nodeName !== 'Document') {
+                folderNode = folderNode.parentNode;
+            }
+            let fNameNode = folderNode ? folderNode.getElementsByTagName('name')[0] : null;
+            let folderName = fNameNode ? fNameNode.textContent : '';
+            
             let combinedText = (pmName + " " + folderName).toUpperCase();
             
             let agency = 'OTHER';
@@ -1180,14 +1166,21 @@ async function fetchAndRenderBothTyphoonMaps() {
             if (combinedText.includes('HKO')) continue; 
 
             if (!parsedAgencyTracks[agency]) parsedAgencyTracks[agency] = [];
+            
             let lineStrs = pm.getElementsByTagName('LineString');
             for(let ls of lineStrs) {
-                let coordsNode = ls.querySelector('coordinates');
+                let coordsNode = ls.getElementsByTagName('coordinates')[0];
                 if (coordsNode) {
                     let coordsText = coordsNode.textContent.trim().split(/\s+/);
                     coordsText.forEach((c, index) => {
-                        let parts = c.split(','); let lon = parseFloat(parts[0]); let lat = parseFloat(parts[1]);
-                        if (!isNaN(lat) && !isNaN(lon)) { parsedAgencyTracks[agency].push({ lat, lon, name: `${agency} pt ${index + 1}` }); }
+                        let parts = c.split(','); 
+                        if (parts.length >= 2) {
+                            let lon = parseFloat(parts[0]); 
+                            let lat = parseFloat(parts[1]);
+                            if (!isNaN(lat) && !isNaN(lon)) { 
+                                parsedAgencyTracks[agency].push({ lat, lon, name: `${agency} pt ${index + 1}` }); 
+                            }
+                        }
                     });
                 }
             }
@@ -1201,7 +1194,9 @@ async function fetchAndRenderBothTyphoonMaps() {
                 if (agency === 'JMA') {
                     typhoonCenterCoords = [pts[0].lat, pts[0].lon];
                     drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, true, true);
-                } else { drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, false, false); }
+                } else { 
+                    drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, false, false); 
+                }
                 if (globalLatestTcDist === null) globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], pts[0].lat, pts[0].lon);
             }
         });
@@ -1210,6 +1205,7 @@ async function fetchAndRenderBothTyphoonMaps() {
         else {
             agencyAlert.style.display = 'none';
             if (foundAgencies.has('OTHER')) document.getElementById('legend-other').style.display = 'inline-block';
+            
             if (!typhoonCenterCoords) {
                 let firstAgency = Object.keys(parsedAgencyTracks)[0];
                 if (firstAgency && parsedAgencyTracks[firstAgency].length > 0) typhoonCenterCoords = [parsedAgencyTracks[firstAgency][0].lat, parsedAgencyTracks[firstAgency][0].lon];
