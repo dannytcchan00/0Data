@@ -84,16 +84,14 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
     }).addTo(mapLayerGroup);
     
     points.forEach((pt, idx) => {
-        // 如果沒有時間，就隱藏標籤文字，避免 120 個點嘅標籤重疊塞爆畫面
-        if (!pt.time) return; 
-
-        let timeStr = pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim();
+        // 【修正核心】無論有無時間，都一定會畫圖！只係控制有無文字標籤
+        let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim() : '';
         
-        let labelHtml = `
+        let labelHtml = timeStr !== '' ? `
             <div style="position:absolute; left:14px; top:-10px; background:rgba(18,18,18,0.9); color:${colorCode}; font-size:0.7rem; padding:2px 6px; border-radius:4px; white-space:nowrap; border:1px solid ${colorCode}; font-weight:900; z-index:1000; box-shadow: 2px 2px 0px rgba(0,0,0,0.8);">
                 ${agencyName} ${timeStr}
             </div>
-        `;
+        ` : '';
         
         if (idx === 0) {
             if (isJMA || isHKO) {
@@ -126,28 +124,6 @@ function drawHongKongRings(layerGroup) {
     L.marker(hkoCenter, { icon: hkIcon, zIndexOffset: 2000 }).addTo(layerGroup);
 }
 
-// 幫助函數：無視大細楷獲取特定子標籤內容
-function getChildNodeText(parentEl, possibleTags) {
-    for (let i = 0; i < parentEl.childNodes.length; i++) {
-        let child = parentEl.childNodes[i];
-        if (child.nodeType === 1 && possibleTags.includes(child.tagName.toLowerCase())) {
-            return child.textContent.trim();
-        }
-    }
-    return null;
-}
-
-// 幫助函數：向上尋找標題或時間
-function findParentName(node) {
-    let parent = node.parentNode;
-    while(parent && parent.nodeType === 1) {
-        let nameStr = getChildNodeText(parent, ['name', 'title', 'time', 'pubdate', 'date']);
-        if (nameStr) return nameStr;
-        parent = parent.parentNode;
-    }
-    return null;
-}
-
 async function fetchAndRenderBothTyphoonMaps() {
     const hkoAlert = document.getElementById('no-tc-hko-alert');
     const agencyAlert = document.getElementById('no-tc-agency-alert');
@@ -156,7 +132,7 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML (專屬結構解析法)
+    // 1. 香港天文台 XML (強效 HTML 解析模式)
     // ==========================================
     try {
         const hkoDirectUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
@@ -165,70 +141,60 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         let xmlText = await resHko.text();
         
-        // 確保移除 XML 命名空間，避免解析障礙
-        xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
-        xmlText = xmlText.replace(/(<\/?)[a-zA-Z0-9_-]+:/g, '$1');
-        
-        const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
+        // 【修正核心】用 text/html 解析，無視所有 XML 嚴格格式錯誤，並將標籤全部自動轉細楷
+        const docHko = new DOMParser().parseFromString(xmlText, "text/html");
 
         tcHkoLayerGroup.clearLayers();
         drawHongKongRings(tcHkoLayerGroup); 
 
         let hkoPoints = [];
 
-        // 針對你提供嘅專屬結構：抽出 AnalysisInformation 同 ForecastInformation
-        let analysisNodes = Array.from(docHko.getElementsByTagName("AnalysisInformation"));
-        let forecastNodes = Array.from(docHko.getElementsByTagName("ForecastInformation"));
-        let targetNodes = [...analysisNodes, ...forecastNodes];
+        // 鎖定所有包含經緯度嘅區塊
+        let infoNodes = docHko.querySelectorAll("analysisinformation, forecastinformation");
 
-        if (targetNodes.length > 0) {
-            targetNodes.forEach(node => {
-                let latNode = node.getElementsByTagName("Latitude")[0];
-                let lonNode = node.getElementsByTagName("Longitude")[0];
+        if (infoNodes.length > 0) {
+            infoNodes.forEach(node => {
+                let latNode = node.querySelector("latitude");
+                let lonNode = node.querySelector("longitude");
                 
                 if (latNode && lonNode) {
-                    let latStr = latNode.textContent.trim(); // 例如 "19.70N"
-                    let lonStr = lonNode.textContent.trim(); // 例如 "109.00E"
+                    let latStr = latNode.textContent.trim();
+                    let lonStr = lonNode.textContent.trim();
                     
                     let lat = parseFloat(latStr);
                     let lon = parseFloat(lonStr);
                     
-                    // 檢查有無 S (南半球) 或 W (西半球)，有的話轉為負數
                     if (latStr.toUpperCase().includes('S')) lat = -lat;
                     if (lonStr.toUpperCase().includes('W')) lon = -lon;
 
-                    let timeNode = node.getElementsByTagName("Time")[0];
+                    let timeNode = node.querySelector("time");
                     let time = timeNode ? timeNode.textContent.trim() : '';
 
                     if (!isNaN(lat) && !isNaN(lon)) {
                         hkoPoints.push({ lat, lon, time });
-                        node.setAttribute('data-parsed', 'true');
                     }
                 }
             });
         }
-
-        // 備用方案：如果上面搵唔到，再用通用掃描法 (確保萬無一失)
+        
+        // 終極備用：如果連 DOM 都搵唔到，直接用正則表達式硬抽字串
         if (hkoPoints.length === 0) {
-            let elements = docHko.getElementsByTagName("*");
-            for (let i = 0; i < elements.length; i++) {
-                let el = elements[i];
-                if (el.getAttribute('data-parsed')) continue;
-                
-                let tagName = el.tagName.toLowerCase();
-
-                let latStr = getChildNodeText(el, ['lat', 'latitude', 'clat']);
-                let lonStr = getChildNodeText(el, ['lon', 'longitude', 'clon']);
-                if (latStr && lonStr) {
-                    let lat = parseFloat(latStr), lon = parseFloat(lonStr);
-                    if (!isNaN(lat) && !isNaN(lon)) { 
-                        let time = getChildNodeText(el, ['time', 'date', 'pubdate', 'name', 'title']) || '';
-                        hkoPoints.push({ lat, lon, time }); 
-                        el.setAttribute('data-parsed', 'true'); 
-                        continue; 
-                    }
+            const blockRegex = /<Latitude>([^<]+)<\/Latitude>\s*<Longitude>([^<]+)<\/Longitude>/gi;
+            let match;
+            while ((match = blockRegex.exec(xmlText)) !== null) {
+                let lat = parseFloat(match[1]);
+                let lon = parseFloat(match[2]);
+                if (match[1].toUpperCase().includes('S')) lat = -lat;
+                if (match[2].toUpperCase().includes('W')) lon = -lon;
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    hkoPoints.push({ lat, lon, time: '' });
                 }
             }
+        }
+        
+        // 確保中心點一定有個標籤
+        if (hkoPoints.length > 0 && !hkoPoints[0].time) {
+            hkoPoints[0].time = "Current";
         }
         
         if (hkoPoints.length === 0) { 
