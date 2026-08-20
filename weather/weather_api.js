@@ -1,28 +1,4 @@
-// weather_api.js - 香港天文台 CSV 數據、澳門 XML 數據、雨量、風力、九天天氣預報與天文潮汐
-
-const warningDetailsDb = {
-    "WT": { name: "雷暴警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "雷暴正在發生或預料在短期內影響香港境內，可能伴隨猛烈陣風、強烈冰雹或局部地區大雨。", precautions: ["留在室內安全地方，切勿在戶外開闊地帶、高地或孤立大樹下躲避。", "遠離導電物體，切勿進行水上活動或游泳。", "提防猛烈陣風帶來的吹落物件。"] },
-    "WRA": { name: "黃色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainamber.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 30 毫米的大雨，且雨勢可能持續。", precautions: ["低窪地帶可能出現水浸，做好防浸措施。", "駕車人士減慢車速，提防路面積水。", "遠離河道、引水道及斜坡。"] },
-    "WRR": { name: "紅色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainred.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 50 毫米的暴雨，道路嚴重水浸及交通受阻。", precautions: ["遵循教育局及僱主發出的惡劣天氣指引，留在安全地方。", "切勿涉水穿過水浸道路，提防山洪暴發及山泥傾瀉。"] },
-    "WRB": { name: "黑色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainblack.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 70 毫米的特大暴雨，極端惡劣天氣將引發嚴重危險。", precautions: ["留在室內安全建築物內避難，切勿外出冒險。", "所有戶外工作應全面暫停。"] },
-    "TC1": { name: "一號戒備信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc1.png", meaning: "有一熱帶氣旋集結於香港約 800 公里內，可能影響本港。", precautions: ["計劃戶外活動人士提高警覺，留意風暴路徑變化。"] },
-    "TC3": { name: "三號強風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc3.png", meaning: "香港近海平面預料普遍吹強風，持續風速達每小時 41 至 62 公里，陣風可達每小時 110 公里以上。", precautions: ["綁緊容易被風吹倒的物件，停止水上活動。"] },
-    "TC8NE": { name: "八號東北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08ne.png", meaning: "香港普遍吹東北烈風或暴風，持續風速每小時 63 至 117 公里，陣風更強。", precautions: ["立即返家或前往安全避風處，鎖緊門窗。"] },
-    "TC8NW": { name: "八號西北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08nw.png", meaning: "香港普遍吹西北烈風或暴風，請立即做好防風措施。", precautions: ["立即返家避風，遠離迎風門窗。"] },
-    "TC8SE": { name: "八號東南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08se.png", meaning: "香港普遍吹東南烈風或暴風，伴隨風暴潮。", precautions: ["遠離低窪沿海地區，嚴防湧浪侵襲。"] },
-    "TC8SW": { name: "八號西南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08sw.png", meaning: "香港普遍吹西南烈風或暴風，請保持在室內安全地方。", precautions: ["留在室內避風，留意海水倒灌。"] },
-    "TC9": { name: "九號烈風或暴風風力增強信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc09.png", meaning: "風力正在顯著增強，颶風可能在短期內吹襲本港。", precautions: ["切勿外出，做好應對颶風侵襲準備。"] },
-    "TC10": { name: "十號颶風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc10.png", meaning: "颶風（持續風速超過每小時 118 公里）正在橫過本港，破壞力極大。", precautions: ["留在堅固建築物深處，遠離玻璃門窗。"] },
-    "WHOT": { name: "酷熱天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/hot.png", meaning: "受酷熱氣團籠罩，氣溫高達 33°C 或以上，極易中暑。", precautions: ["多喝水補充電解質，避免長時間烈日暴曬。"] },
-    "WCOLD": { name: "寒冷天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/cold.png", meaning: "受強烈冬季季候風影響，氣溫降至 12°C 或以下。", precautions: ["增添足夠保暖衣物，關顧長者及患者。"] },
-    "WLS": { name: "山泥傾瀉警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ls.png", meaning: "土壤水分極度飽和，發生山泥傾瀉風險極高。", precautions: ["遠離陡峭斜坡及擋土牆。"] },
-    "WNF": { name: "新界北部水浸特別報告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/northflood.png", meaning: "新界北部已錄得暴雨，低窪農地可能受嚴重水浸影響。", precautions: ["採取預防措施，切勿強行駛過水浸路段。"] },
-    "SMS": { name: "強烈季候風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/sms.png", meaning: "受季候風影響，香港普遍吹強風，平均風速超 40 km/h。", precautions: ["小型船隻返港避風，海面有大浪。"] },
-    "WFIREY": { name: "黃色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/fireyellow.png", meaning: "火災危險性偏高，相對濕度較低。", precautions: ["郊遊人士小心用火，切勿亂丟煙蒂。"] },
-    "WFIRER": { name: "紅色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/firered.png", meaning: "極度乾燥，火災危險性極高，山火蔓延速度極快。", precautions: ["嚴禁在郊野燃點香燭或生火。"] },
-    "WFROST": { name: "霜凍警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/frost.png", meaning: "高地或新界北部可能出現結霜。", precautions: ["農民做好防霜凍保護措施。"] },
-    "WTSUN": { name: "海嘯警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tsunami.png", meaning: "海嘯預料將抵達本港沿岸。", precautions: ["立即離開沿岸低窪地區及海灘，前往高處避難。"] }
-};
+// weather_api.js
 
 function switchMapData(type) {
     document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
@@ -130,13 +106,12 @@ async function fetchAndRenderCSV(type) {
 
                 let val = null; let windDir = "";
                 if (type === 'temp') {
-                    const tempNode = st.querySelector("Temperature > Value") || st.querySelector("Temperature > dValue");
+                    const tempNode = st.querySelector("Temperature > Value");
                     if (tempNode) val = parseFloat(tempNode.textContent.trim());
                 } else if (type === 'wind') {
-                    const speedNode = st.querySelector("WindSpeed > Value") || st.querySelector("WindSpeed > dValue");
+                    const speedNode = st.querySelector("WindSpeed > Value");
                     if (speedNode) val = parseFloat(speedNode.textContent.trim());
-                    
-                    const dirNode = st.querySelector("WindDirection > Value") || st.querySelector("WindDirection > WindDescription");
+                    const dirNode = st.querySelector("WindDirection > Value");
                     if (dirNode) windDir = dirNode.textContent.trim();
                 }
 
@@ -193,8 +168,8 @@ async function fetchAllStationData() {
             }
         }
     } catch (e) { console.error("Master Station Fetch Error:", e); }
-    if (typeof renderWindList === 'function') renderWindList();
-    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
+    renderWindList();
+    updateSmartThreatAlert();
 }
 
 async function fetchRainList(fallbackData) {
@@ -232,7 +207,7 @@ async function fetchRainList(fallbackData) {
         }
         document.getElementById('rain-list-container').innerHTML = listHtml;
     } catch(e) { document.getElementById('rain-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">未能讀取雨量數據</div>`; }
-    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
+    updateSmartThreatAlert();
 }
 
 async function fetchMeteoDataWithCache(lat, lon) {
@@ -243,18 +218,9 @@ async function fetchMeteoDataWithCache(lat, lon) {
     meteoCache[cacheKey] = { data: data, timestamp: now }; return data;
 }
 
-// 🌙 已經完美修復：無需等待外部 API，即時顯示月相！
 async function fetchAstroData() {
     try {
-        if (typeof getMoonPhase === 'function') {
-            const mp = getMoonPhase();
-            document.getElementById('hk-moon').innerHTML = `<span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${mp.i}</span> <span>${mp.n}</span>`;
-        }
-    } catch(e) { console.error("Moon phase error:", e); }
-
-    try {
         const res = await fetch('https://wttr.in/HongKong?format=j1');
-        if (!res.ok) return;
         const wttr = await res.json();
         const astro = wttr.weather[0].astronomy[0];
         const to24 = (timeStr) => {
@@ -268,7 +234,13 @@ async function fetchAstroData() {
         document.getElementById('hk-sunset').innerText = to24(astro.sunset);
         document.getElementById('hk-moonrise').innerText = to24(astro.moonrise);
         document.getElementById('hk-moonset').innerText = to24(astro.moonset);
-    } catch(e) { console.warn("Astro API Error:", e); }
+
+        const mp = getMoonPhase();
+        document.getElementById('hk-moon').innerHTML = `<span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${mp.i}</span> <span>${mp.n}</span>`;
+    } catch(e) {
+        const mp = getMoonPhase();
+        document.getElementById('hk-moon').innerHTML = `<span style="font-size: 2rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${mp.i}</span> <span>${mp.n}</span>`;
+    }
 }
 
 async function fetchTopOverview() {
@@ -304,8 +276,7 @@ async function fetchTopOverview() {
                     let name = item.place; let val = parseFloat(item.value);
                     if (name && !isNaN(val)) { tempList.push({ name: name, val: val }); if (!stationMasterData[name]) stationMasterData[name] = {}; stationMasterData[name].temp = val; }
                 });
-                tempList.sort((a, b) => b.val - a.val); 
-                if (typeof renderTempList === 'function') renderTempList(tempList);
+                tempList.sort((a, b) => b.val - a.val); renderTempList(tempList);
             }
             let rainfallData = (rtData.rainfall && rtData.rainfall.data) ? rtData.rainfall.data : null; fetchRainList(rainfallData);
         }
@@ -370,7 +341,7 @@ async function fetchTopOverview() {
                     else if (text.includes("海嘯")) finalCode = "WTSUN";
                     else { let c = warning.code || key; if (c === "WTS") c = "WT"; if (c === "WRAIN") c = "WRA"; if (c === "WMSL") c = "SMS"; finalCode = c; }
 
-                    if (warningDetailsDb && warningDetailsDb[finalCode]) {
+                    if (warningDetailsDb[finalCode]) {
                         activeWarningsHtml += `<div class="warning-badge active-blink" onclick="openWarningModal('${finalCode}')"><img class="warning-icon" src="${warningDetailsDb[finalCode].img}"><div class="warning-text">${warningDetailsDb[finalCode].name}</div><span class="warning-arrow">➔</span></div>`;
                     }
                 }
@@ -399,8 +370,8 @@ async function fetchTopOverview() {
         }
     } catch (error) { console.error("fetchTopOverview error:", error); }
     
-    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
-    if (typeof updatePetWalkingIndex === 'function') updatePetWalkingIndex();
-    if (typeof updateLaundryIndex === 'function') updateLaundryIndex();
-    if (typeof updateHikingIndex === 'function') updateHikingIndex();
+    updateSmartThreatAlert();
+    updatePetWalkingIndex();
+    updateLaundryIndex();
+    updateHikingIndex();
 }
