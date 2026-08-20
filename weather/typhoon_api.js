@@ -148,13 +148,13 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML/KML (左邊地圖) - 完美兩階段讀取修正版
+    // 1. 香港天文台 XML/KML (左邊地圖) - 完美兩階段讀取修正版 (current_typhoon.xml)
     // ==========================================
     try {
-        // 第一階段：讀取 tc_list.xml 以獲取真實數據網址
-        const listUrl = "https://dannytcchan00.github.io/0Data/data/tc_list.xml";
+        // 第一階段：讀取 current_typhoon.xml 以獲取真實數據網址
+        const listUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
         const resList = await fetch(`${listUrl}?_=${Date.now()}`);
-        if (!resList.ok) throw new Error("無法讀取 tc_list.xml");
+        if (!resList.ok) throw new Error("無法讀取 current_typhoon.xml");
         
         const listText = await resList.text();
         const listDoc = new DOMParser().parseFromString(listText, "text/xml");
@@ -184,7 +184,7 @@ async function fetchAndRenderBothTyphoonMaps() {
             if (match) targetUrl = match[0];
         }
         
-        if (!targetUrl) throw new Error("喺 tc_list.xml 入面搵唔到真正嘅颱風資料連結");
+        if (!targetUrl) throw new Error("喺 current_typhoon.xml 入面搵唔到真正嘅颱風資料連結");
         
         // 處理相對路徑，轉換為絕對路徑
         if (!targetUrl.startsWith('http')) {
