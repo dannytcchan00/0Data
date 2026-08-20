@@ -1,5 +1,3 @@
-// globals.js - 公用變數、地圖初始化與共用輔助函數
-
 Chart.defaults.color = '#9e9e9e';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -14,6 +12,11 @@ let rainChartInstance = null;
 let stationMasterData = {};
 let globalLatestTcDist = null;
 let globalMaxRain = 0;
+let radarFrames = [];
+let radarIdx = 0;
+let radarInterval = null;
+let isRadarPlaying = true;
+let currentRadarRange = '256'; 
 
 const mapSources = {
     'temp': 'https://dannytcchan00.github.io/0Data/data/temp_data.csv',
@@ -92,73 +95,26 @@ L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: 
 let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
 L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapAgency);
 
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return Math.round(R * c);
-}
-
-function parseCSVLine(text) {
-    let ret = [], keep = false, item = '';
-    for(let i=0; i<text.length; i++) {
-        if(text[i] === '"') { keep = !keep; }
-        else if(text[i] === ',' && !keep) { ret.push(item.trim()); item = ''; }
-        else { item += text[i]; }
-    }
-    ret.push(item.trim()); return ret;
-}
-
-function getWindAngle(translatedTextArr) {
-    let combined = translatedTextArr.join(' ').toUpperCase(); let angle = null;
-    if (combined.includes('NNE') || combined.includes('北北東')) angle = 22.5; else if (combined.includes('ENE') || combined.includes('東北東')) angle = 67.5; else if (combined.includes('ESE') || combined.includes('東南東')) angle = 112.5; else if (combined.includes('SSE') || combined.includes('南南東')) angle = 157.5; else if (combined.includes('SSW') || combined.includes('南南西')) angle = 202.5; else if (combined.includes('WSW') || combined.includes('西南西')) angle = 247.5; else if (combined.includes('WNW') || combined.includes('西北西')) angle = 292.5; else if (combined.includes('NNW') || combined.includes('北北西')) angle = 337.5; else if (combined.includes('NE') || combined.includes('東北')) angle = 45; else if (combined.includes('SE') || combined.includes('東南')) angle = 135; else if (combined.includes('SW') || combined.includes('西南')) angle = 225; else if (combined.includes('NW') || combined.includes('西北')) angle = 315; else if (combined.includes('N') || combined.includes('北')) angle = 0; else if (combined.includes('E') || combined.includes('東')) angle = 90; else if (combined.includes('S') || combined.includes('南')) angle = 180; else if (combined.includes('W') || combined.includes('西')) angle = 270;
-    return angle !== null ? (angle + 180) % 360 : null;
-}
-
-function getTempColor(val) {
-    if(isNaN(val)) return themeColors.gray;
-    if(val >= 33) return themeColors.red;
-    if(val >= 28) return themeColors.orange;
-    if(val >= 20) return themeColors.green;
-    if(val >= 13) return themeColors.blue;
-    return themeColors.purple;
-}
-
-function getTempLevelInfo(val) {
-    if (isNaN(val)) return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '未知' };
-    if (val >= 33) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '酷熱' };
-    if (val >= 28) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '炎熱' };
-    if (val >= 20) return { level: 3, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '溫暖' };
-    if (val >= 13) return { level: 2, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '清涼' };
-    return { level: 1, color: '#9b59b6', badgeBg: 'rgba(155,89,182,0.15)', name: '寒冷' };
-}
-
-function getWindLevelInfo(speed) {
-    if (speed >= 88) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '暴風/颶風' };
-    if (speed >= 63) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '烈風' };
-    if (speed >= 41) return { level: 3, color: '#f39c12', badgeBg: 'rgba(243,156,18,0.15)', name: '強風' };
-    if (speed >= 15) return { level: 2, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '清勁' };
-    if (speed > 0) return { level: 1, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '微風' };
-    return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '靜止' };
-}
-
-function degreesToCompass(deg) {
-    if (deg === null || isNaN(deg)) return { dir: '無定向', arrow: '•' };
-    const sectors = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
-    const arrows = ['⬇', '↙', '↙', '⬅', '⬅', '↖', '↖', '⬆', '⬆', '↗', '↗', '➡', '➡', '↘', '↘', '⬇'];
-    let idx = Math.round(deg / 22.5) % 16;
-    return { dir: sectors[idx], arrow: arrows[idx] };
-}
-
-function getRainLevel(rainVal) {
-    if (rainVal >= 70) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '黑雨級別特大暴雨', desc: '極度危險水浸' };
-    if (rainVal >= 50) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '紅雨級別大暴雨', desc: '嚴重水浸風險' };
-    if (rainVal >= 30) return { level: 3, color: '#f39c12', badgeBg: 'rgba(243,156,18,0.15)', name: '黃雨級別大雨', desc: '低窪地區水浸' };
-    if (rainVal >= 15) return { level: 2, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '中雨至大雨', desc: '局部地區驟雨' };
-    if (rainVal > 0) return { level: 1, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '微雨', desc: '輕微降雨' };
-    return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '無雨', desc: '未有降雨' };
-}
+const warningDetailsDb = {
+    "WT": { name: "雷暴警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "雷暴正在發生或預料在短期內影響香港境內，可能伴隨猛烈陣風、強烈冰雹或局部地區大雨。", precautions: ["留在室內安全地方，切勿在戶外開闊地帶、高地或孤立大樹下躲避。", "遠離導電物體，切勿進行水上活動或游泳。", "提防猛烈陣風帶來的吹落物件。"] },
+    "WRA": { name: "黃色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainamber.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 30 毫米的大雨，且雨勢可能持續。", precautions: ["低窪地帶可能出現水浸，做好防浸措施。", "駕車人士減慢車速，提防路面積水。", "遠離河道、引水道及斜坡。"] },
+    "WRR": { name: "紅色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainred.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 50 毫米的暴雨，道路嚴重水浸及交通受阻。", precautions: ["遵循教育局及僱主發出的惡劣天氣指引，留在安全地方。", "切勿涉水穿過水浸道路，提防山洪暴發及山泥傾瀉。"] },
+    "WRB": { name: "黑色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainblack.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 70 毫米的特大暴雨，極端惡劣天氣將引發嚴重危險。", precautions: ["留在室內安全建築物內避難，切勿外出冒險。", "所有戶外工作應全面暫停。"] },
+    "TC1": { name: "一號戒備信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc1.png", meaning: "有一熱帶氣旋集結於香港約 800 公里內，可能影響本港。", precautions: ["計劃戶外活動人士提高警覺，留意風暴路徑變化。"] },
+    "TC3": { name: "三號強風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc3.png", meaning: "香港近海平面預料普遍吹強風，持續風速達每小時 41 至 62 公里，陣風可達每小時 110 公里以上。", precautions: ["綁緊容易被風吹倒的物件，停止水上活動。"] },
+    "TC8NE": { name: "八號東北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08ne.png", meaning: "香港普遍吹東北烈風或暴風，持續風速每小時 63 至 117 公里，陣風更強。", precautions: ["立即返家或前往安全避風處，鎖緊門窗。"] },
+    "TC8NW": { name: "八號西北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08nw.png", meaning: "香港普遍吹西北烈風或暴風，請立即做好防風措施。", precautions: ["立即返家避風，遠離迎風門窗。"] },
+    "TC8SE": { name: "八號東南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08se.png", meaning: "香港普遍吹東南烈風或暴風，伴隨風暴潮。", precautions: ["遠離低窪沿海地區，嚴防湧浪侵襲。"] },
+    "TC8SW": { name: "八號西南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08sw.png", meaning: "香港普遍吹西南烈風或暴風，請保持在室內安全地方。", precautions: ["留在室內避風，留意海水倒灌。"] },
+    "TC9": { name: "九號烈風或暴風風力增強信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc09.png", meaning: "風力正在顯著增強，颶風可能在短期內吹襲本港。", precautions: ["切勿外出，做好應對颶風侵襲準備。"] },
+    "TC10": { name: "十號颶風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc10.png", meaning: "颶風（持續風速超過每小時 118 公里）正在橫過本港，破壞力極大。", precautions: ["留在堅固建築物深處，遠離玻璃門窗。"] },
+    "WHOT": { name: "酷熱天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/hot.png", meaning: "受酷熱氣團籠罩，氣溫高達 33°C 或以上，極易中暑。", precautions: ["多喝水補充電解質，避免長時間烈日暴曬。"] },
+    "WCOLD": { name: "寒冷天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/cold.png", meaning: "受強烈冬季季候風影響，氣溫降至 12°C 或以下。", precautions: ["增添足夠保暖衣物，關顧長者及患者。"] },
+    "WLS": { name: "山泥傾瀉警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ls.png", meaning: "土壤水分極度飽和，發生山泥傾瀉風險極高。", precautions: ["遠離陡峭斜坡及擋土牆。"] },
+    "WNF": { name: "新界北部水浸特別報告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/northflood.png", meaning: "新界北部已錄得暴雨，低窪農地可能受嚴重水浸影響。", precautions: ["採取預防措施，切勿強行駛過水浸路段。"] },
+    "SMS": { name: "強烈季候風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/sms.png", meaning: "受季候風影響，香港普遍吹強風，平均風速超 40 km/h。", precautions: ["小型船隻返港避風，海面有大浪。"] },
+    "WFIREY": { name: "黃色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/fireyellow.png", meaning: "火災危險性偏高，相對濕度較低。", precautions: ["郊遊人士小心用火，切勿亂丟煙蒂。"] },
+    "WFIRER": { name: "紅色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/firered.png", meaning: "極度乾燥，火災危險性極高，山火蔓延速度極快。", precautions: ["嚴禁在郊野燃點香燭或生火。"] },
+    "WFROST": { name: "霜凍警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/frost.png", meaning: "高地或新界北部可能出現結霜。", precautions: ["農民做好防霜凍保護措施。"] },
+    "WTSUN": { name: "海嘯警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tsunami.png", meaning: "海嘯預料將抵達本港沿岸。", precautions: ["立即離開沿岸低窪地區及海灘，前往高處避難。"] }
+};
