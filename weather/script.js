@@ -933,7 +933,7 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
-    // 3. 澳門 XML 數據讀取 (根據實際 XML 結構重新設計)
+    // 3. 澳門 XML 數據讀取 (根據實際 XML 結構解析，精準讀取 <Value>)
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
@@ -968,69 +968,88 @@ async function fetchAndRenderCSV(type) {
 
             for (let i = 0; i < stations.length; i++) {
                 let st = stations[i];
-                
-                // 讀取站名
-                let nameNode = st.getElementsByTagName("stationname")[0];
-                if (!nameNode) continue;
-                
-                let stationName = nameNode.textContent.trim();
+                let stationName = "";
+                let val = null;
+                let windDir = "";
+
+                // 遍歷 station 下的所有子節點
+                for (let j = 0; j < st.childNodes.length; j++) {
+                    let node = st.childNodes[j];
+                    if (node.nodeType !== 1) continue; // 只處理 Element 節點
+
+                    let tag = node.tagName.toLowerCase();
+
+                    // 1. 抓取 XML 原名 (例如 <stationname>紀念孫中山市政公園</stationname>)
+                    if (tag === "stationname" || tag === "name" || tag === "customaryname") {
+                        stationName = node.textContent.trim();
+                    } 
+                    // 2. 如果係溫度模式，深入 <Temperature> 搵 <Value>
+                    else if (type === "temp" && (tag === "temperature" || tag === "temp")) {
+                        for (let k = 0; k < node.childNodes.length; k++) {
+                            let subNode = node.childNodes[k];
+                            if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
+                                val = parseFloat(subNode.textContent.trim());
+                                break;
+                            }
+                        }
+                    } 
+                    // 3. 如果係風速模式，深入 <WindSpeed> 搵 <Value>，深入 <WindDirection> 搵 <Value>
+                    else if (type === "wind") {
+                        if (tag === "windspeed" || tag === "speed") {
+                            for (let k = 0; k < node.childNodes.length; k++) {
+                                let subNode = node.childNodes[k];
+                                if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
+                                    val = parseFloat(subNode.textContent.trim());
+                                    break;
+                                }
+                            }
+                        } else if (tag === "winddirection" || tag === "dir") {
+                            for (let k = 0; k < node.childNodes.length; k++) {
+                                let subNode = node.childNodes[k];
+                                if (subNode.nodeType === 1 && subNode.tagName.toLowerCase() === "value") {
+                                    windDir = subNode.textContent.trim();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 如果呢個站連名都冇，或者讀唔到數值（例如大橋冇溫度），就直接 Skip 唔畫
+                if (!stationName || val === null || isNaN(val)) continue;
+
+                // 配對坐標：直接搵 mapping 表
                 let coords = macauCoordsMap[stationName];
-                
-                // 保底：用關鍵字再做一次配對
                 if (!coords) {
                     for (let key in macauCoordsMap) {
-                        if (stationName.includes(key) || key.includes(stationName)) {
+                        if (stationName.includes(key)) {
                             coords = macauCoordsMap[key];
                             break;
                         }
                     }
                 }
-                
                 if (!coords) continue;
 
-                // 協助從指定的 parent tag 中獲取 <Value> 的數值
-                const getValueFromTag = (tagName) => {
-                    let tagNode = st.getElementsByTagName(tagName)[0];
-                    if (tagNode) {
-                        let valNode = tagNode.getElementsByTagName("Value")[0];
-                        return valNode ? valNode.textContent.trim() : null;
+                // 畫標記落地圖
+                let mUnit = (type === 'wind') ? ' km/h' : '°C';
+                let mColor = (type === 'wind') ? 
+                    `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
+                    `color: ${getTempColor(val)};`;
+
+                let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
+                
+                if (type === 'wind' && windDir) {
+                    let windAngle = getWindAngle([windDir]); 
+                    if (windAngle !== null) {
+                        mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
                     }
-                    return null;
-                };
-
-                let val = null;
-                let windDir = "";
-
-                if (type === 'temp') {
-                    let tempStr = getValueFromTag("Temperature");
-                    if (tempStr) val = parseFloat(tempStr);
-                } else if (type === 'wind') {
-                    let speedStr = getValueFromTag("WindSpeed");
-                    if (speedStr) val = parseFloat(speedStr);
-                    windDir = getValueFromTag("WindDirection") || "";
                 }
 
-                if (val !== null && !isNaN(val)) {
-                    let mUnit = (type === 'wind') ? ' km/h' : '°C';
-                    let mColor = (type === 'wind') ? 
-                        `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
-                        `color: ${getTempColor(val)};`;
-
-                    let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
-                    
-                    if (type === 'wind' && windDir) {
-                        let windAngle = getWindAngle([windDir]); 
-                        if (windAngle !== null) {
-                            mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
-                        }
-                    }
-
-                    let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
-                    let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
-                    
-                    // 完全原封不動使用 xml 內抓到的名字 (stationName)
-                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
-                }
+                let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
+                let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                
+                // 完全原封不動使用 xml 內抓到的名字 (stationName)
+                mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
             }
         } catch (e) { 
             console.warn('Macau XML 數據讀取失敗:', e); 
