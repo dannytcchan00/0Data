@@ -71,7 +71,6 @@ let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222
 const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
 const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
 
-// 將預設中心點設定為能同時看見香港與澳門 (Zoom 9)
 let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
 L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
 let dataLayerGroup = L.layerGroup().addTo(map);
@@ -934,34 +933,29 @@ async function fetchAndRenderCSV(type) {
         } catch(e) { console.error('HK CSV Map Error:', e); }
     };
 
-    // 3. 澳門 XML 數據讀取 (無差別全域掃描版)
+    // 3. 澳門 XML 數據讀取 (根據實際 XML 結構重新設計)
     const loadMacao = async () => {
         if (!['temp', 'wind'].includes(type)) return;
         try {
-            const macauCoordsMap = [
-                { keys: ["大潭山"], coords: [22.158, 113.560] },
-                { keys: ["大炮台", "大砲台"], coords: [22.197, 113.542] },
-                { keys: ["外港"], coords: [22.197, 113.558] },
-                { keys: ["海事", "媽閣"], coords: [22.185, 113.531] },
-                { keys: ["孫中山", "紀念孫中山"], coords: [22.214, 113.541] },
-                { keys: ["路環"], coords: [22.116, 113.552] },
-                { keys: ["澳門大學", "澳大"], coords: [22.128, 113.550] },
-                { keys: ["九澳"], coords: [22.133, 113.583] },
-                { keys: ["東亞運"], coords: [22.153, 113.542] },
-                { keys: ["友誼大橋(南)", "友誼大橋南", "友誼南", "友誼大橋 南"], coords: [22.164, 113.565] },
-                { keys: ["友誼大橋(北)", "友誼大橋北", "友誼北", "友誼大橋 北"], coords: [22.194, 113.562] },
-                { keys: ["友誼大橋"], coords: [22.179, 113.563] }, 
-                { keys: ["嘉樂庇"], coords: [22.179, 113.544] },
-                { keys: ["西灣大橋"], coords: [22.173, 113.535] },
-                { keys: ["蓮花大橋"], coords: [22.139, 113.543] },
-                { keys: ["澳門大橋(南)", "澳門大橋南", "澳門大橋 南"], coords: [22.162, 113.578] },
-                { keys: ["澳門大橋(北)", "澳門大橋北", "澳門大橋 北"], coords: [22.195, 113.568] },
-                { keys: ["澳門大橋"], coords: [22.178, 113.573] }, 
-                { keys: ["松山"], coords: [22.163, 113.550] },
-                { keys: ["黑沙環", "污水"], coords: [22.211, 113.555] },
-                { keys: ["橫琴"], coords: [22.139, 113.543] },
-                { keys: ["港珠澳"], coords: [22.201, 113.568] }
-            ];
+            const macauCoordsMap = {
+                "大潭山": [22.158, 113.560], 
+                "紀念孫中山市政公園": [22.214, 113.541],
+                "黑沙環": [22.211, 113.555], 
+                "大炮台": [22.197, 113.542],
+                "外港": [22.197, 113.558], 
+                "媽閣": [22.185, 113.531],
+                "東亞運大馬路": [22.153, 113.542], 
+                "九澳": [22.133, 113.583],
+                "澳門大學": [22.128, 113.550], 
+                "路環市區": [22.116, 113.552],
+                "澳門大橋北": [22.195, 113.568], 
+                "澳門大橋南": [22.162, 113.578],
+                "友誼大橋北": [22.194, 113.562], 
+                "友誼大橋南": [22.164, 113.565],
+                "嘉樂庇總督大橋": [22.179, 113.544], 
+                "西灣大橋": [22.173, 113.535],
+                "蓮花大橋": [22.139, 113.543]
+            };
 
             const res = await fetch(`https://dannytcchan00.github.io/0Data/data/macao_weather.xml?_=${Date.now()}`);
             if (!res.ok) return;
@@ -969,102 +963,75 @@ async function fetchAndRenderCSV(type) {
             
             const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
             
-            // 獲取所有元素，無視任何結構限制！
-            const allElements = xmlDoc.getElementsByTagName("*");
-            let stationsData = [];
+            // 讀取 XML 中的 <station> 標籤
+            const stations = xmlDoc.getElementsByTagName("station");
 
-            // 第一步：強制抽離所有可能係氣象站嘅資料
-            for (let i = 0; i < allElements.length; i++) {
-                let el = allElements[i];
-                let children = el.children;
+            for (let i = 0; i < stations.length; i++) {
+                let st = stations[i];
+                
+                // 讀取站名
+                let nameNode = st.getElementsByTagName("stationname")[0];
+                if (!nameNode) continue;
+                
+                let stationName = nameNode.textContent.trim();
+                let coords = macauCoordsMap[stationName];
+                
+                // 保底：用關鍵字再做一次配對
+                if (!coords) {
+                    for (let key in macauCoordsMap) {
+                        if (stationName.includes(key) || key.includes(stationName)) {
+                            coords = macauCoordsMap[key];
+                            break;
+                        }
+                    }
+                }
+                
+                if (!coords) continue;
 
-                // 嘗試從 attributes 中尋找
-                let name = el.getAttribute('name') || el.getAttribute('StationName') || el.getAttribute('CustomaryName');
+                // 協助從指定的 parent tag 中獲取 <Value> 的數值
+                const getValueFromTag = (tagName) => {
+                    let tagNode = st.getElementsByTagName(tagName)[0];
+                    if (tagNode) {
+                        let valNode = tagNode.getElementsByTagName("Value")[0];
+                        return valNode ? valNode.textContent.trim() : null;
+                    }
+                    return null;
+                };
+
                 let val = null;
                 let windDir = "";
 
                 if (type === 'temp') {
-                    val = el.getAttribute('temp') || el.getAttribute('Temperature') || el.getAttribute('value') || el.getAttribute('AirTemperature');
+                    let tempStr = getValueFromTag("Temperature");
+                    if (tempStr) val = parseFloat(tempStr);
                 } else if (type === 'wind') {
-                    val = el.getAttribute('windSpeed') || el.getAttribute('speed');
-                    windDir = el.getAttribute('windDir') || el.getAttribute('direction') || el.getAttribute('WindDirection');
+                    let speedStr = getValueFromTag("WindSpeed");
+                    if (speedStr) val = parseFloat(speedStr);
+                    windDir = getValueFromTag("WindDirection") || "";
                 }
 
-                // 嘗試從 child nodes 中尋找
-                if (children.length > 0) {
-                    for (let j = 0; j < children.length; j++) {
-                        let childTag = children[j].tagName.toLowerCase();
-                        // 移除所有的 XML namespaces (例如 smg:Temperature)
-                        if (childTag.includes(':')) childTag = childTag.split(':')[1];
-                        
-                        let text = children[j].textContent.trim();
-
-                        if (childTag === 'name' || childTag === 'customaryname' || childTag === 'stationname' || childTag === 'station') {
-                            if (!name) name = text;
-                        }
-                        
-                        if (type === 'temp') {
-                            if (childTag === 'temperature' || childTag === 'temp' || childTag === 'value' || childTag === 'airtemperature') {
-                                if (val === null) val = text;
-                            }
-                        } else if (type === 'wind') {
-                            if (childTag === 'windspeed' || childTag === 'speed' || childTag === 'wind_speed' || childTag === 'wind') {
-                                if (val === null) val = text;
-                            }
-                            if (childTag === 'winddirection' || childTag === 'winddir' || childTag === 'direction' || childTag === 'dir') {
-                                if (!windDir) windDir = text;
-                            }
-                        }
-                    }
-                }
-
-                if (name && val !== null && val !== "") {
-                    let parsedVal = parseFloat(val);
-                    if (!isNaN(parsedVal)) {
-                        stationsData.push({ name: name, val: parsedVal, windDir: windDir });
-                    }
-                }
-            }
-
-            // 第二步：驗證名字、匹配座標，然後直接使用抓出來的原名畫標記
-            let parsedNames = new Set();
-            stationsData.forEach(data => {
-                if (parsedNames.has(data.name)) return;
-                
-                let coords = null;
-                let searchName = data.name.toLowerCase();
-                for (let ms of macauCoordsMap) {
-                    for (let key of ms.keys) {
-                        if (searchName.includes(key.toLowerCase())) {
-                            coords = ms.coords;
-                            break;
-                        }
-                    }
-                    if (coords) break;
-                }
-
-                if (coords) {
-                    parsedNames.add(data.name);
+                if (val !== null && !isNaN(val)) {
                     let mUnit = (type === 'wind') ? ' km/h' : '°C';
                     let mColor = (type === 'wind') ? 
-                        `color: ${data.val >= 41 ? themeColors.red : (data.val >= 15 ? themeColors.orange : '#fff')};` : 
-                        `color: ${getTempColor(data.val)};`;
+                        `color: ${val >= 41 ? themeColors.red : (val >= 15 ? themeColors.orange : '#fff')};` : 
+                        `color: ${getTempColor(val)};`;
 
-                    let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${data.val}</div>`;
+                    let mIconHtml = `<div class="minimal-text-icon" style="${mColor}">${val}</div>`;
                     
-                    if (type === 'wind' && data.windDir) {
-                        let windAngle = getWindAngle([data.windDir]); 
+                    if (type === 'wind' && windDir) {
+                        let windAngle = getWindAngle([windDir]); 
                         if (windAngle !== null) {
-                            mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${data.val}</div>`;
+                            mIconHtml = `<div class="minimal-text-icon" style="${mColor} display:flex; align-items:center; gap:4px;"><span class="wind-arrow-icon" style="transform: rotate(${windAngle}deg); display:inline-block;">⬆</span> ${val}</div>`;
                         }
                     }
 
-                    // 這裡的 data.name 就是原封不動從 XML 抽出來的名字！
                     let mPin = L.divIcon({ className: '', html: mIconHtml, iconSize: null, iconAnchor: [15, 10] });
-                    let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(data.val)}).addTo(dataLayerGroup);
-                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${data.name}</div><div class="popup-value">${data.val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
+                    let mMarker = L.marker(coords, {icon: mPin, zIndexOffset: Math.round(val)}).addTo(dataLayerGroup);
+                    
+                    // 完全原封不動使用 xml 內抓到的名字 (stationName)
+                    mMarker.bindPopup(`<div class="popup-title">📍 澳門 - ${stationName}</div><div class="popup-value">${val} <span style="font-size:1rem; color:var(--text-muted);">${mUnit}</span></div>`, {className: 'brutal-popup', closeButton: false});
                 }
-            });
+            }
         } catch (e) { 
             console.warn('Macau XML 數據讀取失敗:', e); 
         }
