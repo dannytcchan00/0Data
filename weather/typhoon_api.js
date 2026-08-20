@@ -22,6 +22,16 @@ const agencyColorPalette = {
     'OTHER': '#9e9e9e'   // 其他 (灰色)
 };
 
+// 幫助函數：計算中心點向外擴張特定公里數嘅邊界範圍 (Bounds)
+function getBoundsFromCenter(lat, lon, radiusKm) {
+    const latDelta = radiusKm / 111.32; // 緯度 1 度大約 111.32 公里
+    const lonDelta = radiusKm / (111.32 * Math.cos(lat * (Math.PI / 180))); // 經度需考慮地球弧度
+    return [
+        [lat - latDelta, lon - lonDelta],
+        [lat + latDelta, lon + lonDelta]
+    ];
+}
+
 function getOffsetLatLng(lat, lon, distanceMeters, bearingDegrees) {
     const rad = bearingDegrees * Math.PI / 180;
     const deltaLat = (distanceMeters * Math.cos(rad)) / 111320;
@@ -58,7 +68,7 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
             radius: 150000, color: coneColor, weight: 2, fillColor: coneColor, fillOpacity: 0.2, dashArray: '6, 6'
         }).addTo(mapLayerGroup);
         
-        // 【修正核心】：停止 HKO 嘅無限圓圈膨脹！只准 JMA 畫擴散漏斗
+        // 停止 HKO 嘅無限圓圈膨脹！只准 JMA 畫擴散漏斗
         if (isJMA && points.length > 1) {
             let leftPoints = [], rightPoints = [];
             points.forEach((pt, idx) => {
@@ -133,7 +143,7 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML (強效 HTML 解析模式)
+    // 1. 香港天文台 XML (強效 HTML 解析模式) - 500公里聚焦
     // ==========================================
     try {
         const hkoDirectUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
@@ -141,14 +151,12 @@ async function fetchAndRenderBothTyphoonMaps() {
         if (!resHko.ok) throw new Error("無法讀取 current_typhoon.xml");
         
         let xmlText = await resHko.text();
-        
         const docHko = new DOMParser().parseFromString(xmlText, "text/html");
 
         tcHkoLayerGroup.clearLayers();
         drawHongKongRings(tcHkoLayerGroup); 
 
         let hkoPoints = [];
-
         let infoNodes = docHko.querySelectorAll("analysisinformation, forecastinformation");
 
         if (infoNodes.length > 0) {
@@ -196,15 +204,21 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         if (hkoPoints.length === 0) { 
             hkoAlert.style.display = 'flex'; 
+            if (typeof tcMapHko !== 'undefined' && typeof hkoCenter !== 'undefined') tcMapHko.setView(hkoCenter, 4);
         } else {
             hkoAlert.style.display = 'none';
             drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, '#ff3b30', 'HKO', false, true);
+            
             if (typeof hkoCenter !== 'undefined' && typeof calculateDistance === 'function') {
                 globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
             }
+
+            // 【最新修改】: 以颱風中心計 500 公里範圍自適應縮放
+            if (typeof tcMapHko !== 'undefined') {
+                let hkoBounds = getBoundsFromCenter(hkoPoints[0].lat, hkoPoints[0].lon, 500);
+                tcMapHko.fitBounds(hkoBounds);
+            }
         }
-        
-        if (typeof tcMapHko !== 'undefined' && typeof hkoCenter !== 'undefined') tcMapHko.setView(hkoCenter, 4);
         
     } catch (err) { 
         console.error("HKO Typhoon Error:", err);
@@ -215,7 +229,7 @@ async function fetchAndRenderBothTyphoonMaps() {
     await new Promise(r => setTimeout(r, 10));
 
     // ==========================================
-    // 2. 各國氣象機構 KML - 完美 Folder 解析法
+    // 2. 各國氣象機構 KML - 2000公里宏觀
     // ==========================================
     try {
         const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
@@ -276,6 +290,8 @@ async function fetchAndRenderBothTyphoonMaps() {
             }
         }
 
+        let refAgencyCenter = null;
+
         Object.keys(parsedAgencyTracks).forEach(agency => {
             let pts = parsedAgencyTracks[agency];
             if (pts.length > 0) {
@@ -283,16 +299,26 @@ async function fetchAndRenderBothTyphoonMaps() {
                 let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
                 let isJMA = (agency === 'JMA');
                 drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isJMA, false);
+                
+                // 決定中心點：優先用 JMA，無就用第一個搵到嘅機構
+                if (isJMA || !refAgencyCenter) {
+                    refAgencyCenter = pts[0];
+                }
             }
         });
 
         if (!hasAgencyData) { 
             agencyAlert.style.display = 'flex'; 
+            if (typeof tcMapAgency !== 'undefined' && typeof hkoCenter !== 'undefined') tcMapAgency.setView(hkoCenter, 4);
         } else {
             agencyAlert.style.display = 'none';
+            
+            // 【最新修改】: 以各國機構颱風中心計 2000 公里範圍自適應縮放
+            if (typeof tcMapAgency !== 'undefined' && refAgencyCenter) {
+                let agencyBounds = getBoundsFromCenter(refAgencyCenter.lat, refAgencyCenter.lon, 2000);
+                tcMapAgency.fitBounds(agencyBounds);
+            }
         }
-        
-        if (typeof tcMapAgency !== 'undefined' && typeof hkoCenter !== 'undefined') tcMapAgency.setView(hkoCenter, 4); 
 
     } catch (err) { 
         console.error("Agency Typhoon KML Error:", err);
