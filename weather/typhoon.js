@@ -1,80 +1,48 @@
 // typhoon.js
 
-window.setAgencyView = function(agency) {
-    currentSelectedAgency = agency;
-    
-    // UI 按鈕高光切換
-    document.querySelectorAll('#agency-legend-bar .legend-btn').forEach(btn => {
-        let btnAgency = btn.getAttribute('data-agency');
-        let color = btnAgency === 'ALL' ? '#ffffff' : (agencyColorPalette[btnAgency] || '#9e9e9e');
-        if (btnAgency === agency) {
-            btn.style.background = hexToRgba(color, 0.25);
-            btn.classList.add('active');
-        } else {
-            btn.style.background = 'transparent';
-            btn.classList.remove('active');
-        }
-    });
-    
-    renderAgencyMap();
+const agencyColorPalette = { 
+    'JTWC': '#9b59b6',   // 美軍 (紫)
+    'JMA': '#f1c40f',    // 日本 (淡黃)
+    'NMC': '#2ecc71',    // 中國 (綠)
+    'CWA': '#e67e22',    // 台灣 (橙)
+    'PAGASA': '#e84393', // 菲律賓 (粉紅)
+    'OTHER': '#9e9e9e'   // 其他 (灰)
+};
+
+function getOffsetLatLng(lat, lon, distanceMeters, bearingDegrees) {
+    const rad = bearingDegrees * Math.PI / 180;
+    const deltaLat = (distanceMeters * Math.cos(rad)) / 111320;
+    const deltaLon = (distanceMeters * Math.sin(rad)) / (111320 * Math.cos(lat * Math.PI / 180));
+    return [lat + deltaLat, lon + deltaLon];
 }
 
-function renderAgencyMap() {
-    tcAgencyLayerGroup.clearLayers();
-    let hasData = false;
-    let typhoonCenterCoords = null;
-    const agencyAlert = document.getElementById('no-tc-agency-alert');
+function calculateBearing(lat1, lon1, lat2, lon2) {
+    const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
 
-    if (currentSelectedAgency === 'ALL') {
-        // 如果選擇「全部」，以 JMA 作為基準畫出漏斗與 🌀
-        let baselineAgency = 'JMA';
-        if (!globalParsedAgencyTracks['JMA'] || globalParsedAgencyTracks['JMA'].length === 0) {
-            baselineAgency = Object.keys(globalParsedAgencyTracks)[0]; 
-        }
+function hexToRgba(hex, opacity) {
+    let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
 
-        Object.keys(globalParsedAgencyTracks).forEach(agency => {
-            let pts = globalParsedAgencyTracks[agency];
-            if (pts.length > 0) {
-                hasData = true;
-                let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
-                let isBaseline = (agency === baselineAgency);
-                drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isBaseline, false);
-                if (isBaseline) typhoonCenterCoords = [pts[0].lat, pts[0].lon];
-            }
-        });
-    } else {
-        // 單選一個氣象局：只畫該局，並將該局視為基準（畫出專屬顏色的漏斗與 🌀）
-        let agency = currentSelectedAgency;
-        let pts = globalParsedAgencyTracks[agency];
-        if (pts && pts.length > 0) {
-            hasData = true;
-            let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
-            drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, true, false);
-            typhoonCenterCoords = [pts[0].lat, pts[0].lon];
-        }
+function getDirectChildName(node) {
+    for (let i = 0; i < node.children.length; i++) {
+        if (node.children[i].tagName.toLowerCase() === 'name') { return node.children[i].textContent.trim(); }
     }
-
-    if (!hasData) { 
-        agencyAlert.style.display = 'flex'; 
-        tcMapAgency.setView(hkoCenter, 4); 
-    } else {
-        agencyAlert.style.display = 'none';
-        if (typhoonCenterCoords) {
-            tcMapAgency.setView(typhoonCenterCoords, 5);
-        } else {
-            tcMapAgency.setView(hkoCenter, 5);
-        }
-    }
+    return '';
 }
 
 function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isPrimary, isHKO) {
     if (points.length === 0) return;
     
-    // 漏斗與覆蓋圈顏色 (HKO固定紅色，其他根據是否為 Primary 使用對應機構顏色，或預設 JMA 淡黃色)
+    // 漏斗與覆蓋圈設定 (HKO固定紅色，其他根據是否為基準使用該國顏色)
     const coneColor = isHKO ? themeColors.red : colorCode; 
     const coneFill = hexToRgba(coneColor, 0.15); 
 
-    // 只有香港天文台 或 被選為基準的氣象局 才會畫出漏斗與覆蓋圈
     if (isPrimary || isHKO) {
         let currentPt = points[0]; 
         L.circle([currentPt.lat, currentPt.lon], { 
@@ -128,6 +96,81 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isPrimar
     });
 }
 
+window.setAgencyView = function(agency) {
+    currentSelectedAgency = agency;
+    
+    document.querySelectorAll('#agency-legend-bar .legend-btn').forEach(btn => {
+        let btnAgency = btn.getAttribute('data-agency');
+        let color = btnAgency === 'ALL' ? '#ffffff' : (agencyColorPalette[btnAgency] || '#9e9e9e');
+        if (btnAgency === agency) {
+            btn.style.background = hexToRgba(color, 0.25);
+            btn.classList.add('active');
+        } else {
+            btn.style.background = 'transparent';
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderAgencyMap();
+}
+
+function renderAgencyMap() {
+    tcAgencyLayerGroup.clearLayers();
+    let hasData = false;
+    let typhoonCenterCoords = null;
+    let allAgencyLatLngs = [];
+    const agencyAlert = document.getElementById('no-tc-agency-alert');
+
+    if (currentSelectedAgency === 'ALL') {
+        // 全部顯示，但只有 JMA 會有 🌀 同 漏斗
+        let baselineAgency = 'JMA';
+        if (!globalParsedAgencyTracks['JMA'] || globalParsedAgencyTracks['JMA'].length === 0) {
+            baselineAgency = Object.keys(globalParsedAgencyTracks)[0]; 
+        }
+
+        Object.keys(globalParsedAgencyTracks).forEach(agency => {
+            let pts = globalParsedAgencyTracks[agency];
+            if (pts && pts.length > 0) {
+                hasData = true;
+                let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
+                let isBaseline = (agency === baselineAgency);
+                drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isBaseline, false);
+                
+                pts.forEach(p => allAgencyLatLngs.push([p.lat, p.lon]));
+                if (isBaseline) typhoonCenterCoords = [pts[0].lat, pts[0].lon];
+            }
+        });
+    } else {
+        // 單選模式
+        let agency = currentSelectedAgency;
+        let pts = globalParsedAgencyTracks[agency];
+        if (pts && pts.length > 0) {
+            hasData = true;
+            let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
+            // 因為單選，所以它就是主角，畫出專屬顏色的 🌀 和 漏斗
+            drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, true, false);
+            
+            pts.forEach(p => allAgencyLatLngs.push([p.lat, p.lon]));
+            typhoonCenterCoords = [pts[0].lat, pts[0].lon];
+        }
+    }
+
+    if (!hasData) { 
+        agencyAlert.style.display = 'flex'; 
+        tcMapAgency.setView(hkoCenter, 4); 
+    } else {
+        agencyAlert.style.display = 'none';
+        try {
+            if (allAgencyLatLngs.length > 0) {
+                let bounds = L.latLngBounds(allAgencyLatLngs);
+                tcMapAgency.fitBounds(bounds, { padding: [40, 40] });
+            } else if (typhoonCenterCoords) {
+                tcMapAgency.setView(typhoonCenterCoords, 5);
+            }
+        } catch (e) { tcMapAgency.setView(hkoCenter, 4); }
+    }
+}
+
 async function fetchAndRenderBothTyphoonMaps() {
     const hkoAlert = document.getElementById('no-tc-hko-alert');
     const agencyAlert = document.getElementById('no-tc-agency-alert');
@@ -167,6 +210,7 @@ async function fetchAndRenderBothTyphoonMaps() {
             hkoAlert.style.display = 'flex'; 
             tcMapHko.setView(hkoCenter, 4);
         } else {
+            // 香港地圖永遠顯示 HKO 漏斗與 🌀
             drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', true, true);
             globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
             let bounds = L.latLngBounds(hkoPoints.map(p => [p.lat, p.lon]));
@@ -190,23 +234,18 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         globalParsedAgencyTracks = {};
         let agencyPointSet = {}; 
+
         let placemarks = docAgy.getElementsByTagName("Placemark");
 
         for (let i = 0; i < placemarks.length; i++) {
             let pm = placemarks[i];
-            
-            // 安全取得名稱
-            let pmName = '';
-            for (let child of pm.children) {
-                if (child.tagName.toLowerCase() === 'name') { pmName = child.textContent.trim(); break; }
-            }
+            let pmName = getDirectChildName(pm);
             
             let parentPath = '';
             let currNode = pm.parentNode;
             while (currNode && currNode.nodeType === 1) { 
-                for (let child of currNode.children) {
-                    if (child.tagName.toLowerCase() === 'name') { parentPath += ' ' + child.textContent.toUpperCase(); break; }
-                }
+                let pNameNode = Array.from(currNode.childNodes).find(n => n.nodeType === 1 && n.tagName.toLowerCase() === 'name');
+                if (pNameNode) parentPath += ' ' + pNameNode.textContent.toUpperCase();
                 currNode = currNode.parentNode;
             }
             
@@ -225,6 +264,7 @@ async function fetchAndRenderBothTyphoonMaps() {
             if (!agencyPointSet[agency]) agencyPointSet[agency] = new Set();
             
             let ptNodes = pm.getElementsByTagName('Point');
+            
             for(let j = 0; j < ptNodes.length; j++) {
                 let coordsNode = ptNodes[j].getElementsByTagName('coordinates')[0];
                 if(coordsNode) {
@@ -243,11 +283,14 @@ async function fetchAndRenderBothTyphoonMaps() {
             }
         }
         
+        // 渲染地圖
         renderAgencyMap();
         
     } catch (err) { 
         console.error("Agency Typhoon Error:", err);
-        agencyAlert.style.display = 'flex'; 
+        if (Object.keys(globalParsedAgencyTracks).length === 0) {
+            agencyAlert.style.display = 'flex'; 
+        }
         tcMapAgency.setView(hkoCenter, 4); 
     }
 
