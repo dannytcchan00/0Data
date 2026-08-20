@@ -1,4 +1,4 @@
-// globals.js
+// globals.js - 公用變數、地圖初始化與共用輔助函數
 
 Chart.defaults.color = '#9e9e9e';
 Chart.defaults.font.family = "'Inter', sans-serif";
@@ -73,12 +73,12 @@ const weatherTermTranslations = [
 const themeColors = { blue: '#3498db', green: '#2ecc71', orange: '#f39c12', red: '#e74c3c', gray: '#7f8c8d', purple: '#9b59b6' };
 const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-// 初始化地圖 (中心點設於大嶼山 Zoom 9，確保能一眼看清香港與澳門)
 const hkoCenter = [22.302, 114.174];
 let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222; color:#fff; font-size:0.65rem; font-weight:700; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 6px rgba(0,0,0,0.5);">香港天文台</div>`, iconAnchor: [12, 8] });
 const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
 const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
 
+// 初始化地圖 (中心點設於大嶼山 Zoom 9，一打開即可看清香港與澳門)
 let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
 L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
 let dataLayerGroup = L.layerGroup().addTo(map);
@@ -93,7 +93,6 @@ L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: 
 let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
 L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapAgency);
 
-// 公用輔助函數
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -139,10 +138,28 @@ function getTempLevelInfo(val) {
     return { level: 1, color: '#9b59b6', badgeBg: 'rgba(155,89,182,0.15)', name: '寒冷' };
 }
 
+function getWindLevelInfo(speed) {
+    if (speed >= 88) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '暴風/颶風' };
+    if (speed >= 63) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '烈風' };
+    if (speed >= 41) return { level: 3, color: '#f39c12', badgeBg: 'rgba(243,156,18,0.15)', name: '強風' };
+    if (speed >= 15) return { level: 2, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '清勁' };
+    if (speed > 0) return { level: 1, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '微風' };
+    return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '靜止' };
+}
+
 function degreesToCompass(deg) {
     if (deg === null || isNaN(deg)) return { dir: '無定向', arrow: '•' };
     const sectors = ['北', '北北東', '東北', '東北東', '東', '東南東', '東南', '南南東', '南', '南南西', '西南', '西南西', '西', '西北西', '西北', '北北西'];
     const arrows = ['⬇', '↙', '↙', '⬅', '⬅', '↖', '↖', '⬆', '⬆', '↗', '↗', '➡', '➡', '↘', '↘', '⬇'];
     let idx = Math.round(deg / 22.5) % 16;
     return { dir: sectors[idx], arrow: arrows[idx] };
+}
+
+function getRainLevel(rainVal) {
+    if (rainVal >= 70) return { level: 5, color: '#e74c3c', badgeBg: 'rgba(231,76,60,0.15)', name: '黑雨級別特大暴雨', desc: '極度危險水浸' };
+    if (rainVal >= 50) return { level: 4, color: '#e67e22', badgeBg: 'rgba(230,126,34,0.15)', name: '紅雨級別大暴雨', desc: '嚴重水浸風險' };
+    if (rainVal >= 30) return { level: 3, color: '#f39c12', badgeBg: 'rgba(243,156,18,0.15)', name: '黃雨級別大雨', desc: '低窪地區水浸' };
+    if (rainVal >= 15) return { level: 2, color: '#2ecc71', badgeBg: 'rgba(46,204,113,0.15)', name: '中雨至大雨', desc: '局部地區驟雨' };
+    if (rainVal > 0) return { level: 1, color: '#3498db', badgeBg: 'rgba(52,152,219,0.15)', name: '微雨', desc: '輕微降雨' };
+    return { level: 1, color: '#9e9e9e', badgeBg: 'rgba(255,255,255,0.05)', name: '無雨', desc: '未有降雨' };
 }
