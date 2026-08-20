@@ -148,53 +148,14 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML/KML (左邊地圖) - 完美兩階段讀取修正版 (current_typhoon.xml)
+    // 1. 香港天文台 XML/KML (左邊地圖) - 強制讀取 current_typhoon.xml
     // ==========================================
     try {
-        // 第一階段：讀取 current_typhoon.xml 以獲取真實數據網址
-        const listUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
-        const resList = await fetch(`${listUrl}?_=${Date.now()}`);
-        if (!resList.ok) throw new Error("無法讀取 current_typhoon.xml");
+        // 直接使用你提供嘅絕對路徑
+        const hkoDirectUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
+        const resHko = await fetch(`${hkoDirectUrl}?_=${Date.now()}`);
         
-        const listText = await resList.text();
-        const listDoc = new DOMParser().parseFromString(listText, "text/xml");
-        
-        let targetUrl = "";
-        
-        // 嘗試從可能嘅標籤提取網址
-        const urlTags = ["url", "link", "loc", "path", "file", "href"];
-        for (let tag of urlTags) {
-            let nodes = listDoc.getElementsByTagName(tag);
-            for (let i = 0; i < nodes.length; i++) {
-                let val = nodes[i].textContent.trim();
-                // 過濾掉 XML 預設嘅 xmlns 命名空間網址 (如 w3.org)
-                if (val && !val.includes("w3.org")) {
-                    targetUrl = val;
-                    break;
-                }
-            }
-            if (targetUrl) break;
-        }
-        
-        // 如果標籤解析唔到，用 Regex 喺檔案內直接抽取第一條 .xml / .kml 檔名或 http 網址
-        if (!targetUrl) {
-            let match = listText.match(/https?:\/\/[^<>\s"']+\.(xml|kml)/i) || 
-                        listText.match(/[^<>\s"']+\.(xml|kml)/i) || 
-                        listText.match(/https?:\/\/[^<>\s"']+/i);
-            if (match) targetUrl = match[0];
-        }
-        
-        if (!targetUrl) throw new Error("喺 current_typhoon.xml 入面搵唔到真正嘅颱風資料連結");
-        
-        // 處理相對路徑，轉換為絕對路徑
-        if (!targetUrl.startsWith('http')) {
-            targetUrl = new URL(targetUrl, "https://dannytcchan00.github.io/0Data/data/").href;
-        }
-
-        // 第二階段：讀取真正嘅颱風數據檔案
-        const cacheBuster = targetUrl.includes('?') ? `&_=${Date.now()}` : `?_=${Date.now()}`;
-        const resHko = await fetch(`${targetUrl}${cacheBuster}`);
-        if (!resHko.ok) throw new Error("無法讀取目標颱風數據");
+        if (!resHko.ok) throw new Error("無法讀取 current_typhoon.xml");
         
         let xmlText = await resHko.text();
         
@@ -263,14 +224,24 @@ async function fetchAndRenderBothTyphoonMaps() {
             hkoAlert.style.display = 'flex'; 
         } else {
             hkoAlert.style.display = 'none';
-            drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', false, true);
-            globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
+            // 將畫線顏色固定為紅色 (或者你可以改為 themeColors.red)
+            drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, '#ff3b30', 'HKO', false, true);
+            
+            if (typeof hkoCenter !== 'undefined' && typeof calculateDistance === 'function') {
+                globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
+            }
         }
-        tcMapHko.setView(hkoCenter, 4);
+        
+        if (typeof tcMapHko !== 'undefined' && typeof hkoCenter !== 'undefined') {
+            tcMapHko.setView(hkoCenter, 4);
+        }
+        
     } catch (err) { 
         console.error("HKO Typhoon Error:", err);
         hkoAlert.style.display = 'flex'; 
-        tcMapHko.setView(hkoCenter, 4); 
+        if (typeof tcMapHko !== 'undefined' && typeof hkoCenter !== 'undefined') {
+            tcMapHko.setView(hkoCenter, 4); 
+        }
     }
 
     await new Promise(r => setTimeout(r, 10));
@@ -363,12 +334,16 @@ async function fetchAndRenderBothTyphoonMaps() {
             agencyAlert.style.display = 'none';
         }
         
-        tcMapAgency.setView(hkoCenter, 4); 
+        if (typeof tcMapAgency !== 'undefined' && typeof hkoCenter !== 'undefined') {
+            tcMapAgency.setView(hkoCenter, 4); 
+        }
 
     } catch (err) { 
         console.error("Agency Typhoon KML Error:", err);
         agencyAlert.style.display = 'flex'; 
-        tcMapAgency.setView(hkoCenter, 4); 
+        if (typeof tcMapAgency !== 'undefined' && typeof hkoCenter !== 'undefined') {
+            tcMapAgency.setView(hkoCenter, 4); 
+        }
     }
 
     if (typeof updateSmartThreatAlert === "function") {
