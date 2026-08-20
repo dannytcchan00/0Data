@@ -1,4 +1,4 @@
-// typhoon_api.js - 香港天文台與各國氣象機構颱風路徑追蹤
+// typhoon.js - 香港天文台與各國氣象機構颱風路徑追蹤
 
 // 各國氣象機構專屬顏色
 const agencyColorPalette = { 
