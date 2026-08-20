@@ -1,5 +1,28 @@
 // weather_api.js
 
+// --- 新增：月相計算函數，修復 getMoonPhase 未定義的問題 ---
+function getMoonPhase(date = new Date()) {
+    const jd = (date.getTime() / 86400000) + 2440587.5;
+    const daysSinceNew = jd - 2451549.5; // 以 2000 年 1 月 6 日新月為基準
+    const newMoons = daysSinceNew / 29.53058867; // 月相週期
+    const phase = newMoons % 1;
+    const phaseIndex = Math.floor((phase * 8) + 0.5) % 8;
+    const index = phaseIndex < 0 ? phaseIndex + 8 : phaseIndex;
+    
+    const phases = [
+        { i: '🌑', n: '新月' },
+        { i: '🌒', n: '蛾眉月' },
+        { i: '🌓', n: '上弦月' },
+        { i: '🌔', n: '盈凸月' },
+        { i: '🌕', n: '滿月' },
+        { i: '🌖', n: '虧凸月' },
+        { i: '🌗', n: '下弦月' },
+        { i: '🌘', n: '殘月' }
+    ];
+    return phases[index];
+}
+// -------------------------------------------------------------
+
 function switchMapData(type) {
     document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`.map-btn[data-type="${type}"]`).classList.add('active');
