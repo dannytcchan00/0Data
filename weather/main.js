@@ -1,4 +1,4 @@
-// main.js - 系統啟動與定期背景更新引擎
+// main.js
 
 function silentBackgroundUpdate() {
     fetchTopOverview();
@@ -12,12 +12,14 @@ function silentBackgroundUpdate() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    // 延遲初始化確保 DOM 大小正確
     setTimeout(() => {
         map.invalidateSize(); 
         tcMapHko.invalidateSize(); 
         tcMapAgency.invalidateSize();
     }, 200);
 
+    // 啟動所有功能
     switchMapData('temp');
     fetchAllStationData(); 
     initRadarPlayer();     
