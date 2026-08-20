@@ -12,21 +12,24 @@ function silentBackgroundUpdate() {
 }
 
 // 系統啟動設定
-requestAnimationFrame(() => {
-    map.invalidateSize(); 
-    tcMapHko.invalidateSize(); 
-    tcMapAgency.invalidateSize();
+window.addEventListener('DOMContentLoaded', () => {
+    // 確保地圖正確載入比例
+    setTimeout(() => {
+        map.invalidateSize(); 
+        tcMapHko.invalidateSize(); 
+        tcMapAgency.invalidateSize();
+    }, 200);
 
+    // 啟動所有功能
     switchMapData('temp');
     fetchAllStationData(); 
     initRadarPlayer();     
     fetchTopOverview();
     fetchAstroData();
-});
-
-setTimeout(() => {
     fetchAndRenderBothTyphoonMaps();
-}, 800); 
 
-setInterval(silentBackgroundUpdate, 300000);
-setInterval(updateTick, 1000);
+    // 計時器設定
+    setInterval(silentBackgroundUpdate, 300000); // 每 5 分鐘刷新所有氣象與地圖數據
+    setInterval(updateTick, 1000);               // 每 1 秒刷新時鐘
+    updateTick();
+});
