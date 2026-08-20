@@ -1,100 +1,295 @@
-// globals.js - 公用變數、地圖初始化與共用輔助函數
+// typhoon_api.js - 香港天文台與各國氣象機構颱風路徑追蹤
 
-Chart.defaults.color = '#9e9e9e';
-Chart.defaults.font.family = "'Inter', sans-serif";
-
-let nineDayForecastData = [];
-let globalWxState = { temp: NaN, hum: NaN, uv: 0, psr: '低', psrRaw: '' };
-let activeSwtList = [];
-let meteoCache = {}; 
-let currentThreatState = {}; 
-let windChartInstance = null; 
-let stationChartInstance = null;
-let rainChartInstance = null;
-let stationMasterData = {};
-let globalLatestTcDist = null;
-let globalMaxRain = 0;
-let radarFrames = [];
-let radarIdx = 0;
-let radarInterval = null;
-let isRadarPlaying = true;
-let currentRadarRange = '256'; 
-
-const mapSources = {
-    'temp': 'https://dannytcchan00.github.io/0Data/data/temp_data.csv',
-    'maxmin': 'https://dannytcchan00.github.io/0Data/data/maxmin_data.csv',
-    'wind': 'https://dannytcchan00.github.io/0Data/data/wind_data.csv',
-    'pressure': 'https://dannytcchan00.github.io/0Data/data/pressure_data.csv',
-    'tide': 'https://dannytcchan00.github.io/0Data/data/tide_data.csv',
-    'visibility': 'https://dannytcchan00.github.io/0Data/data/visibility_data.csv'
+const agencyColorPalette = { 
+    'JTWC': '#9b59b6',   // 美軍 (紫色)
+    'JMA': '#f1c40f',    // 日本 (淡黃色 - 配合漏斗)
+    'NMC': '#2ecc71',    // 中國 (綠色)
+    'CWA': '#e67e22',    // 台灣 (橙色)
+    'PAGASA': '#e84393', // 菲律賓 (粉紅色)
+    'OTHER': '#9e9e9e'   // 其他 (灰色)
 };
 
-const tcXmlSource = 'https://dannytcchan00.github.io/0Data/data/tc_list.xml';
-const tcKmlSource = 'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml';
+function getOffsetLatLng(lat, lon, distanceMeters, bearingDegrees) {
+    const rad = bearingDegrees * Math.PI / 180;
+    const deltaLat = (distanceMeters * Math.cos(rad)) / 111320;
+    const deltaLon = (distanceMeters * Math.sin(rad)) / (111320 * Math.cos(lat * Math.PI / 180));
+    return [lat + deltaLat, lon + deltaLon];
+}
 
-const hkCoordinates = {
-    "京士柏": [22.311, 114.173], "香港天文台": [22.302, 114.174], "天文台": [22.302, 114.174], "黃竹坑": [22.248, 114.173],
-    "打鼓嶺": [22.528, 114.156], "流浮山": [22.468, 113.983], "大埔": [22.446, 114.178],
-    "沙田": [22.402, 114.207], "屯門": [22.390, 113.966], "將軍澳": [22.315, 114.259],
-    "西貢": [22.383, 114.274], "長洲": [22.201, 114.026], "赤鱲角": [22.311, 113.922],
-    "青衣": [22.348, 114.107], "石崗": [22.436, 114.084], "大老山": [22.358, 114.223],
-    "坪洲": [22.284, 114.038], "大美督": [22.473, 114.238], "啟德": [22.305, 114.216], "啟德跑道公園": [22.305, 114.216],
-    "九龍城": [22.331, 114.191], "跑馬地": [22.271, 114.182], "黃大仙": [22.341, 114.194],
-    "赤柱": [22.218, 114.214], "觀塘": [22.315, 114.224], "深水埗": [22.329, 114.162],
-    "荃灣": [22.381, 114.119], "荃灣可觀": [22.381, 114.119], "荃灣城門谷": [22.375, 114.128],
-    "元朗": [22.441, 114.018], "元朗公園": [22.441, 114.018], "大帽山": [22.411, 114.107],
-    "橫瀾島": [22.182, 114.301], "中環": [22.283, 114.158], "中西區": [22.283, 114.158], "香港公園": [22.277, 114.161],
-    "筲箕灣": [22.278, 114.227], "九龍灣": [22.323, 114.211], "大澳": [22.254, 113.862],
-    "昂坪": [22.255, 113.908], "大埔滘": [22.426, 114.183], "塔門": [22.471, 114.360],
-    "滘西洲": [22.373, 114.314], "北角": [22.292, 114.202], "大嶼山": [22.253, 113.931],
-    "大水坑": [22.408, 114.221], "石壁": [22.228, 113.896]
-};
+function calculateBearing(lat1, lon1, lat2, lon2) {
+    const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
 
-const stationEnglishNames = {
-    "京士柏": "King's Park", "香港天文台": "HKO", "天文台": "HKO", "黃竹坑": "W.C.H.", "打鼓嶺": "Ta Kwu Ling", 
-    "流浮山": "Lau Fau Shan", "大埔": "Tai Po", "沙田": "Sha Tin", "屯門": "Tuen Mun", 
-    "將軍澳": "T.K.O.", "西貢": "Sai Kung", "長洲": "Cheung Chau", "赤鱲角": "Airport",
-    "青衣": "Tsing Yi", "石崗": "Shek Kong", "大老山": "Tate's Cairn", "坪洲": "Peng Chau", 
-    "大美督": "Tai Mei Tuk", "啟德": "Kai Tak", "九龍城": "Kowloon City", "跑馬地": "Happy Valley", 
-    "黃大仙": "Wong Tai Sin", "赤柱": "Stanley", "觀塘": "Kwun Tong", "深水埗": "Sham Shui Po",
-    "荃灣": "Tsuen Wan", "元朗": "Yuen Long", "大帽山": "Tai Mo Shan", "橫瀾島": "Waglan Island", 
-    "中環": "Central", "香港公園": "HK Park", "筲箕灣": "Shau Kei Wan", "九龍灣": "Kowloon Bay", 
-    "大澳": "Tai O", "昂坪": "Ngong Ping", "大埔滘": "Tai Po Kau", "塔門": "Tap Mun",
-    "滘西洲": "Kau Sai Chau", "北角": "North Point", "大嶼山": "Lantau", "大水坑": "Tai Shui Hang", 
-    "石壁": "Shek Pik"
-};
+function hexToRgba(hex, opacity) {
+    let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
 
-const weatherTermTranslations = [
-    {c: "無定向風", e: "VRB"}, {c: "冇定向風", e: "VRB"}, {c: "無定向", e: "VRB"}, {c: "冇定向", e: "VRB"},
-    {c: "無方向", e: "VRB"}, {c: "變向", e: "VRB"}, {c: "北北東", e: "NNE"}, {c: "東北東", e: "ENE"}, 
-    {c: "東南東", e: "ESE"}, {c: "南南東", e: "SSE"}, {c: "南南西", e: "SSW"}, {c: "西南西", e: "WSW"}, 
-    {c: "西北西", e: "WNW"}, {c: "北北西", e: "NNW"}, {c: "無風", e: "Calm"}, {c: "靜止", e: "Calm"}, 
-    {c: "陣風", e: "Gust"}, {c: "微風", e: "Light"}, {c: "清勁", e: "Fresh"}, {c: "強風", e: "Strong"}, 
-    {c: "烈風", e: "Gale"}, {c: "暴風", e: "Storm"}, {c: "颶風", e: "Hurricane"}, {c: "東北", e: "NE"}, 
-    {c: "東南", e: "SE"}, {c: "西南", e: "SW"}, {c: "西北", e: "NW"}, {c: "北", e: "N"}, 
-    {c: "東", e: "E"}, {c: "南", e: "S"}, {c: "西", e: "W"}
-];
+// 核心繪圖函數：畫出路徑、節點、實時標籤以及「漏斗型影響範圍」
+function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, isHKO) {
+    if (points.length === 0) return;
+    
+    // 淡黃色漏斗與覆蓋圈設定 (專為 JMA 基準而設)
+    const coneColor = isHKO ? themeColors.red : '#f1c40f'; // HKO用紅色，JMA用淡黃色
+    const coneFill = isHKO ? 'rgba(231, 76, 60, 0.12)' : 'rgba(241, 196, 15, 0.12)'; 
 
-const themeColors = { blue: '#3498db', green: '#2ecc71', orange: '#f39c12', red: '#e74c3c', gray: '#7f8c8d', purple: '#9b59b6' };
-const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    // 只為香港天文台(左圖) 或 日本氣象局(右圖基準) 畫出漏斗與覆蓋圈
+    if (isJMA || isHKO) {
+        let currentPt = points[0]; 
+        
+        // 畫出當前颱風影響覆蓋範圍的圓圈 (半徑 150 公里)
+        L.circle([currentPt.lat, currentPt.lon], { 
+            radius: 150000, color: coneColor, weight: 2, fillColor: coneColor, fillOpacity: 0.15 
+        }).addTo(mapLayerGroup);
+        
+        // 畫出漏斗預測影響範圍
+        if (points.length > 1) {
+            let leftPoints = [], rightPoints = [];
+            points.forEach((pt, idx) => {
+                let radius = 60000 + (idx * 50000); // 模擬誤差範圍逐漸擴大
+                if (idx > 0) {
+                    L.circle([pt.lat, pt.lon], { radius: radius, color: hexToRgba(coneColor, 0.4), weight: 1, dashArray: '4, 4', fill: false }).addTo(mapLayerGroup);
+                }
+                let bearing = (idx < points.length - 1) ? calculateBearing(pt.lat, pt.lon, points[idx+1].lat, points[idx+1].lon) : calculateBearing(points[idx-1].lat, points[idx-1].lon, pt.lat, pt.lon);
+                leftPoints.push(getOffsetLatLng(pt.lat, pt.lon, radius, (bearing - 90 + 360) % 360));
+                rightPoints.push(getOffsetLatLng(pt.lat, pt.lon, radius, (bearing + 90) % 360));
+            });
+            let funnelPolygonCoords = [...leftPoints, ...rightPoints.reverse()];
+            L.polygon(funnelPolygonCoords, { 
+                color: coneColor, weight: 1.5, dashArray: '5, 5', fillColor: coneFill, fillOpacity: 0.25 
+            }).addTo(mapLayerGroup);
+        }
+    }
 
-const hkoCenter = [22.302, 114.174];
-const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
-const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
+    // 畫出各國預測路徑實線
+    let latlngs = points.map(p => [p.lat, p.lon]);
+    L.polyline(latlngs, { color: colorCode, weight: (isJMA || isHKO) ? 3.5 : 2.5, opacity: 0.9 }).addTo(mapLayerGroup);
+    
+    // 畫出每個點的「氣象局縮寫 + 時間」直觀標籤與圖示
+    points.forEach((pt, idx) => {
+        let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim() : '';
+        if (timeStr === '') timeStr = `Pt${idx}`;
+        
+        // 實時標籤 HTML 設計
+        let labelHtml = `
+            <div style="position:absolute; left:14px; top:-10px; background:rgba(20,20,20,0.85); color:${colorCode}; font-size:0.7rem; padding:2px 6px; border-radius:4px; white-space:nowrap; border:1px solid ${colorCode}; font-weight:800; z-index:1000; box-shadow: 0 2px 6px rgba(0,0,0,0.6);">
+                ${agencyName} ${timeStr}
+            </div>
+        `;
+        
+        if (idx === 0) {
+            // 當前位置點
+            if (isJMA || isHKO) {
+                // JMA & HKO 專屬：逆時針旋轉的 🌀
+                let spinningPin = L.divIcon({ className: '', html: `<div class="spinning-typhoon-icon">🌀</div>${labelHtml}`, iconSize: [40, 40], iconAnchor: [20, 20] });
+                L.marker([pt.lat, pt.lon], { icon: spinningPin, zIndexOffset: 1000 }).addTo(mapLayerGroup);
+            } else {
+                // 其他國家：實心大圓點
+                let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.8); position:relative;">${labelHtml}</div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
+                L.marker([pt.lat, pt.lon], { icon: dotPin, zIndexOffset: 900 }).addTo(mapLayerGroup);
+            }
+        } else {
+            // 預測位置點 (所有國家通用小圓點)
+            let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:8px; height:8px; border-radius:50%; border:1px solid rgba(255,255,255,0.9); box-shadow:0 1px 3px rgba(0,0,0,0.5); position:relative;">${labelHtml}</div>`, iconSize: [8, 8], iconAnchor: [4, 4] });
+            L.marker([pt.lat, pt.lon], { icon: dotPin }).addTo(mapLayerGroup);
+        }
+    });
+}
 
-// 初始化地圖 (中心點設於大嶼山 Zoom 9，一打開即可看清香港與澳門)
-let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
-L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
-let dataLayerGroup = L.layerGroup().addTo(map);
+async function fetchAndRenderBothTyphoonMaps() {
+    const hkoAlert = document.getElementById('no-tc-hko-alert');
+    const agencyAlert = document.getElementById('no-tc-agency-alert');
 
-// 初始化左邊颱風地圖 (HKO)
-let tcMapHko = L.map('tc-map-hko', { minZoom: 3, maxZoom: 10, zoomControl: false, preferCanvas: true });
-L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(tcMapHko);
-let tcHkoLayerGroup = L.layerGroup().addTo(tcMapHko);
-// 已將舊有的黑底白字「香港天文台」標籤刪除
+    // 初始隱藏警告字句
+    hkoAlert.style.display = 'none';
+    agencyAlert.style.display = 'none';
 
-// 初始化右邊颱風地圖 (各國氣象機構)
-let tcMapAgency = L.map('tc-map-agency', { minZoom: 3, maxZoom: 10, zoomControl: false, preferCanvas: true });
-L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(tcMapAgency);
-let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
-// 已將舊有的黑底白字「香港天文台」標籤刪除
+    // ==========================================
+    // 1. 香港天文台 XML 讀取
+    // ==========================================
+    try {
+        const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
+        if (!resHko.ok) throw new Error("No XML response");
+        let xmlText = await resHko.text();
+        xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, ''); // 防彈清理
+        const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
+
+        tcHkoLayerGroup.clearLayers();
+        let hkoPoints = [];
+        let elements = docHko.getElementsByTagName("*");
+        
+        for (let i = 0; i < elements.length; i++) {
+            let el = elements[i];
+            let latNode = el.getElementsByTagName('lat')[0] || el.getElementsByTagName('latitude')[0] || el.getElementsByTagName('cLat')[0];
+            let lonNode = el.getElementsByTagName('lon')[0] || el.getElementsByTagName('longitude')[0] || el.getElementsByTagName('cLon')[0];
+            
+            if (latNode && lonNode && latNode.parentNode === el) {
+                if (!el.getAttribute('data-parsed')) {
+                    let lat = parseFloat(latNode.textContent.trim()); 
+                    let lon = parseFloat(lonNode.textContent.trim());
+                    let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0];
+                    let time = timeNode ? timeNode.textContent.trim() : '';
+                    
+                    if (!isNaN(lat) && !isNaN(lon)) { 
+                        hkoPoints.push({ lat, lon, time }); 
+                        el.setAttribute('data-parsed', 'true'); 
+                    }
+                }
+            }
+        }
+        
+        if (hkoPoints.length === 0) { 
+            hkoAlert.style.display = 'flex'; 
+        } else {
+            drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', false, true);
+            globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
+            let bounds = L.latLngBounds(hkoPoints.map(p => [p.lat, p.lon]));
+            bounds.extend(hkoCenter); // 將香港納入視角
+            tcMapHko.fitBounds(bounds, { padding: [30, 30] });
+        }
+    } catch (err) { 
+        console.error("HKO Typhoon Error:", err);
+        hkoAlert.style.display = 'flex'; 
+    }
+
+    await new Promise(r => setTimeout(r, 10));
+
+    // ==========================================
+    // 2. 各國氣象機構 KML 讀取 (解決亂線問題)
+    // ==========================================
+    try {
+        const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
+        if (!resAgy.ok) throw new Error("No KML response");
+        let kmlText = await resAgy.text();
+        
+        kmlText = kmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, ''); // 防彈清理
+        const docAgy = new DOMParser().parseFromString(kmlText, "text/xml");
+        
+        tcAgencyLayerGroup.clearLayers();
+        let hasAgencyData = false; 
+        let foundAgencies = new Set(); 
+        let typhoonCenterCoords = null; 
+        let parsedAgencyTracks = {};
+
+        // 【參考了你的寫法】先搵 Folder 來判斷氣象局，保證不會撈亂國家！
+        let folders = docAgy.getElementsByTagName("Folder");
+
+        for (let f = 0; f < folders.length; f++) {
+            let folder = folders[f];
+            
+            // 獲取氣象局名稱
+            let fNameNode = folder.getElementsByTagName("name")[0];
+            let folderName = fNameNode ? fNameNode.textContent.trim().toUpperCase() : "";
+            
+            let agency = 'OTHER';
+            if (folderName.includes('JTWC')) agency = 'JTWC';
+            else if (folderName.includes('JMA')) agency = 'JMA';
+            else if (folderName.includes('NMC') || folderName.includes('CMA')) agency = 'NMC';
+            else if (folderName.includes('CWA') || folderName.includes('TAIWAN')) agency = 'CWA';
+            else if (folderName.includes('PAGASA')) agency = 'PAGASA';
+            
+            if (folderName.includes('HKO') || agency === 'OTHER') continue; 
+
+            if (!parsedAgencyTracks[agency]) parsedAgencyTracks[agency] = [];
+            
+            // 在該氣象局的 Folder 內尋找 Placemark
+            let placemarks = folder.getElementsByTagName("Placemark");
+            
+            for (let p = 0; p < placemarks.length; p++) {
+                let pm = placemarks[p];
+                let pmNameNode = pm.getElementsByTagName('name')[0];
+                let pmName = pmNameNode ? pmNameNode.textContent.trim() : '';
+
+                // 嚴格只抽取 <Point> 的座標，絕對不碰 LineString
+                let ptNodes = pm.getElementsByTagName('Point');
+                let hasPoint = false;
+                
+                for(let j = 0; j < ptNodes.length; j++) {
+                    let coordsNode = ptNodes[j].getElementsByTagName('coordinates')[0];
+                    if(coordsNode) {
+                        let parts = coordsNode.textContent.trim().split(',');
+                        if (parts.length >= 2) {
+                            let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                parsedAgencyTracks[agency].push({ lat, lon, time: pmName });
+                                hasPoint = true;
+                            }
+                        }
+                    }
+                }
+
+                // 後備方案：如果某個氣象局真的沒有 <Point>，才去抽 <LineString>
+                if (!hasPoint) {
+                    let lsNodes = pm.getElementsByTagName('LineString');
+                    for(let j = 0; j < lsNodes.length; j++) {
+                        let coordsNode = lsNodes[j].getElementsByTagName('coordinates')[0];
+                        if(coordsNode) {
+                            let pairs = coordsNode.textContent.trim().split(/\s+/);
+                            pairs.forEach((pair, idx) => {
+                                let parts = pair.split(',');
+                                if (parts.length >= 2) {
+                                    let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+                                    if (!isNaN(lat) && !isNaN(lon)) {
+                                        parsedAgencyTracks[agency].push({ lat, lon, time: pmName + " Pt" + (idx+1) });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        let allAgencyLatLngs = [];
+
+        // 開始將不同國家的路徑分別畫上地圖
+        Object.keys(parsedAgencyTracks).forEach(agency => {
+            let pts = parsedAgencyTracks[agency];
+            if (pts.length > 0) {
+                hasAgencyData = true; 
+                foundAgencies.add(agency);
+                let color = agencyColorPalette[agency];
+                
+                // 檢查是否為日本氣象局 (JMA) 以觸發淡黃色漏斗與 🌀
+                let isJMA = (agency === 'JMA');
+                
+                drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isJMA, false);
+                
+                if (isJMA) typhoonCenterCoords = [pts[0].lat, pts[0].lon];
+                pts.forEach(p => allAgencyLatLngs.push([p.lat, p.lon]));
+            }
+        });
+
+        // 處理地圖視角與警告字眼
+        if (!hasAgencyData) { 
+            agencyAlert.style.display = 'flex'; 
+        } else {
+            agencyAlert.style.display = 'none'; // 確保有數據時警告文字消失
+            if (foundAgencies.has('OTHER')) document.getElementById('legend-other').style.display = 'inline-block';
+            
+            // 視角置中
+            if (!typhoonCenterCoords) {
+                let firstAgency = Object.keys(parsedAgencyTracks)[0];
+                if (firstAgency && parsedAgencyTracks[firstAgency].length > 0) typhoonCenterCoords = [parsedAgencyTracks[firstAgency][0].lat, parsedAgencyTracks[firstAgency][0].lon];
+            }
+            
+            try {
+                let bounds = L.latLngBounds(allAgencyLatLngs);
+                bounds.extend(hkoCenter); // 將香港納入視角
+                tcMapAgency.fitBounds(bounds, { padding: [40, 40] });
+            } catch (boundsErr) {
+                if (typhoonCenterCoords) tcMapAgency.setView(typhoonCenterCoords, 5);
+                else tcMapAgency.setView(hkoCenter, 4);
+            }
+        }
+    } catch (err) { 
+        console.error("Agency Typhoon KML Error:", err);
+        agencyAlert.style.display = 'flex'; 
+    }
+
+    updateSmartThreatAlert();
+}
