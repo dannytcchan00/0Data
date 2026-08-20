@@ -148,16 +148,59 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML/KML (左邊地圖) - 完美修正版
+    // 1. 香港天文台 XML/KML (左邊地圖) - 完美兩階段讀取修正版
     // ==========================================
     try {
-        const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
-        if (!resHko.ok) throw new Error("No XML response");
+        // 第一階段：讀取 tc_list.xml 以獲取真實數據網址
+        const listUrl = "https://dannytcchan00.github.io/0Data/data/tc_list.xml";
+        const resList = await fetch(`${listUrl}?_=${Date.now()}`);
+        if (!resList.ok) throw new Error("無法讀取 tc_list.xml");
+        
+        const listText = await resList.text();
+        const listDoc = new DOMParser().parseFromString(listText, "text/xml");
+        
+        let targetUrl = "";
+        
+        // 嘗試從可能嘅標籤提取網址
+        const urlTags = ["url", "link", "loc", "path", "file", "href"];
+        for (let tag of urlTags) {
+            let nodes = listDoc.getElementsByTagName(tag);
+            for (let i = 0; i < nodes.length; i++) {
+                let val = nodes[i].textContent.trim();
+                // 過濾掉 XML 預設嘅 xmlns 命名空間網址 (如 w3.org)
+                if (val && !val.includes("w3.org")) {
+                    targetUrl = val;
+                    break;
+                }
+            }
+            if (targetUrl) break;
+        }
+        
+        // 如果標籤解析唔到，用 Regex 喺檔案內直接抽取第一條 .xml / .kml 檔名或 http 網址
+        if (!targetUrl) {
+            let match = listText.match(/https?:\/\/[^<>\s"']+\.(xml|kml)/i) || 
+                        listText.match(/[^<>\s"']+\.(xml|kml)/i) || 
+                        listText.match(/https?:\/\/[^<>\s"']+/i);
+            if (match) targetUrl = match[0];
+        }
+        
+        if (!targetUrl) throw new Error("喺 tc_list.xml 入面搵唔到真正嘅颱風資料連結");
+        
+        // 處理相對路徑，轉換為絕對路徑
+        if (!targetUrl.startsWith('http')) {
+            targetUrl = new URL(targetUrl, "https://dannytcchan00.github.io/0Data/data/").href;
+        }
+
+        // 第二階段：讀取真正嘅颱風數據檔案
+        const cacheBuster = targetUrl.includes('?') ? `&_=${Date.now()}` : `?_=${Date.now()}`;
+        const resHko = await fetch(`${targetUrl}${cacheBuster}`);
+        if (!resHko.ok) throw new Error("無法讀取目標颱風數據");
+        
         let xmlText = await resHko.text();
         
-        // 移除 XML 命名空間聲明
+        // 移除 XML 命名空間聲明，避免 DOM 解析失敗
         xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
-        // 移除標籤的前綴 (例如把 <edxml:cLat> 強制轉換成 <cLat>)，解決 HKO RSS 節點搵唔到嘅問題
+        // 移除標籤前綴 (例如把 <edxml:cLat> 強制轉換成 <cLat>)
         xmlText = xmlText.replace(/(<\/?)[a-zA-Z0-9_-]+:/g, '$1');
         
         const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
@@ -179,7 +222,6 @@ async function fetchAndRenderBothTyphoonMaps() {
             if (latNode && lonNode && latNode.parentNode === el) {
                 let lat = parseFloat(latNode.textContent.trim()); 
                 let lon = parseFloat(lonNode.textContent.trim());
-                // 加入對 pubDate 嘅支援
                 let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0] || el.getElementsByTagName('pubDate')[0];
                 let time = timeNode ? timeNode.textContent.trim() : '';
                 if (!isNaN(lat) && !isNaN(lon)) { 
@@ -198,7 +240,6 @@ async function fetchAndRenderBothTyphoonMaps() {
                         let lon = parseFloat(parts[0]);
                         let lat = parseFloat(parts[1]);
                         
-                        // 搵返上層 Placemark 嘅 name 作為時間/標籤
                         let time = '';
                         let parent = el.parentNode;
                         while(parent && parent.tagName && parent.tagName.toLowerCase() !== 'placemark') {
@@ -252,7 +293,7 @@ async function fetchAndRenderBothTyphoonMaps() {
         let parsedAgencyTracks = {};
         let agencyPointSet = {}; 
 
-        // 【參考網站寫法】從 Folder 層級開始解析，徹底解決混亂問題
+        // 從 Folder 層級開始解析，徹底解決混亂問題
         let folders = docAgy.getElementsByTagName("Folder");
         for (let i = 0; i < folders.length; i++) {
             let folder = folders[i];
@@ -316,14 +357,12 @@ async function fetchAndRenderBothTyphoonMaps() {
             }
         });
 
-        // 完美解決假警告問題
         if (!hasAgencyData) { 
             agencyAlert.style.display = 'flex'; 
         } else {
             agencyAlert.style.display = 'none';
         }
         
-        // 無論如何，保持香港在中心，以展示 1200km 圓圈範圍
         tcMapAgency.setView(hkoCenter, 4); 
 
     } catch (err) { 
