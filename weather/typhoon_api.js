@@ -84,8 +84,10 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
     }).addTo(mapLayerGroup);
     
     points.forEach((pt, idx) => {
-        let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim() : '';
-        if (timeStr === '') timeStr = `Pt${idx}`;
+        // 如果沒有時間，就隱藏標籤文字，避免 120 個點嘅標籤重疊塞爆畫面
+        if (!pt.time) return; 
+
+        let timeStr = pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim();
         
         let labelHtml = `
             <div style="position:absolute; left:14px; top:-10px; background:rgba(18,18,18,0.9); color:${colorCode}; font-size:0.7rem; padding:2px 6px; border-radius:4px; white-space:nowrap; border:1px solid ${colorCode}; font-weight:900; z-index:1000; box-shadow: 2px 2px 0px rgba(0,0,0,0.8);">
@@ -154,7 +156,7 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML/KML - 終極寬容解析法
+    // 1. 香港天文台 XML (專屬結構解析法)
     // ==========================================
     try {
         const hkoDirectUrl = "https://dannytcchan00.github.io/0Data/data/current_typhoon.xml";
@@ -163,7 +165,7 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         let xmlText = await resHko.text();
         
-        // 清理命名空間前綴 (強制變成乾淨嘅標籤)
+        // 確保移除 XML 命名空間，避免解析障礙
         xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
         xmlText = xmlText.replace(/(<\/?)[a-zA-Z0-9_-]+:/g, '$1');
         
@@ -173,54 +175,57 @@ async function fetchAndRenderBothTyphoonMaps() {
         drawHongKongRings(tcHkoLayerGroup); 
 
         let hkoPoints = [];
-        let elements = docHko.getElementsByTagName("*");
-        
-        for (let i = 0; i < elements.length; i++) {
-            let el = elements[i];
-            if (el.getAttribute('data-parsed')) continue;
-            
-            let tagName = el.tagName.toLowerCase();
 
-            // 方案 A：標準分開嘅經緯度 (無視大細楷搵 lat, cLat, lon 等等)
-            let latStr = getChildNodeText(el, ['lat', 'latitude', 'clat']);
-            let lonStr = getChildNodeText(el, ['lon', 'longitude', 'clon']);
-            if (latStr && lonStr) {
-                let lat = parseFloat(latStr), lon = parseFloat(lonStr);
-                if (!isNaN(lat) && !isNaN(lon)) { 
-                    let time = getChildNodeText(el, ['time', 'date', 'pubdate', 'name', 'title']) || '';
-                    hkoPoints.push({ lat, lon, time }); 
-                    el.setAttribute('data-parsed', 'true'); 
-                    continue; 
-                }
-            }
+        // 針對你提供嘅專屬結構：抽出 AnalysisInformation 同 ForecastInformation
+        let analysisNodes = Array.from(docHko.getElementsByTagName("AnalysisInformation"));
+        let forecastNodes = Array.from(docHko.getElementsByTagName("ForecastInformation"));
+        let targetNodes = [...analysisNodes, ...forecastNodes];
 
-            // 方案 B：KML / 逗號分隔格式 (<Point><coordinates>114.2,22.1</coordinates></Point>)
-            if (tagName === 'point' || tagName === 'coordinates') {
-                let coordsText = (tagName === 'coordinates') ? el.textContent.trim() : getChildNodeText(el, ['coordinates']);
-                if (coordsText && coordsText.includes(',')) {
-                    let parts = coordsText.split(',');
-                    if (parts.length >= 2) {
-                        let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            let time = findParentName(el) || '';
-                            hkoPoints.push({ lat, lon, time });
-                            el.setAttribute('data-parsed', 'true');
-                            continue;
-                        }
+        if (targetNodes.length > 0) {
+            targetNodes.forEach(node => {
+                let latNode = node.getElementsByTagName("Latitude")[0];
+                let lonNode = node.getElementsByTagName("Longitude")[0];
+                
+                if (latNode && lonNode) {
+                    let latStr = latNode.textContent.trim(); // 例如 "19.70N"
+                    let lonStr = lonNode.textContent.trim(); // 例如 "109.00E"
+                    
+                    let lat = parseFloat(latStr);
+                    let lon = parseFloat(lonStr);
+                    
+                    // 檢查有無 S (南半球) 或 W (西半球)，有的話轉為負數
+                    if (latStr.toUpperCase().includes('S')) lat = -lat;
+                    if (lonStr.toUpperCase().includes('W')) lon = -lon;
+
+                    let timeNode = node.getElementsByTagName("Time")[0];
+                    let time = timeNode ? timeNode.textContent.trim() : '';
+
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        hkoPoints.push({ lat, lon, time });
+                        node.setAttribute('data-parsed', 'true');
                     }
                 }
-            }
+            });
+        }
 
-            // 方案 C：HKO GeoRSS 格式 (例如 <georss:point>22.1 114.2</georss:point> - 用空格分隔)
-            if (tagName === 'point' || tagName === 'pos') {
-                let text = el.textContent.trim();
-                let parts = text.split(/\s+/); // 用空格劈開
-                if (parts.length === 2 && !text.includes(',')) {
-                    let lat = parseFloat(parts[0]), lon = parseFloat(parts[1]); // 留意 HKO 通常 Lat 放前面
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        let time = findParentName(el) || '';
-                        hkoPoints.push({ lat, lon, time });
-                        el.setAttribute('data-parsed', 'true');
+        // 備用方案：如果上面搵唔到，再用通用掃描法 (確保萬無一失)
+        if (hkoPoints.length === 0) {
+            let elements = docHko.getElementsByTagName("*");
+            for (let i = 0; i < elements.length; i++) {
+                let el = elements[i];
+                if (el.getAttribute('data-parsed')) continue;
+                
+                let tagName = el.tagName.toLowerCase();
+
+                let latStr = getChildNodeText(el, ['lat', 'latitude', 'clat']);
+                let lonStr = getChildNodeText(el, ['lon', 'longitude', 'clon']);
+                if (latStr && lonStr) {
+                    let lat = parseFloat(latStr), lon = parseFloat(lonStr);
+                    if (!isNaN(lat) && !isNaN(lon)) { 
+                        let time = getChildNodeText(el, ['time', 'date', 'pubdate', 'name', 'title']) || '';
+                        hkoPoints.push({ lat, lon, time }); 
+                        el.setAttribute('data-parsed', 'true'); 
+                        continue; 
                     }
                 }
             }
