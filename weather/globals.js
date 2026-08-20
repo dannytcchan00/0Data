@@ -1,3 +1,4 @@
+// globals.js
 Chart.defaults.color = '#9e9e9e';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -10,6 +11,7 @@ let windChartInstance = null;
 let stationChartInstance = null;
 let rainChartInstance = null;
 let stationMasterData = {};
+
 let globalLatestTcDist = null;
 let globalMaxRain = 0;
 let radarFrames = [];
@@ -17,6 +19,10 @@ let radarIdx = 0;
 let radarInterval = null;
 let isRadarPlaying = true;
 let currentRadarRange = '256'; 
+
+// 颱風模組全域變數
+let globalParsedAgencyTracks = {}; 
+let currentSelectedAgency = 'ALL'; 
 
 const mapSources = {
     'temp': 'https://dannytcchan00.github.io/0Data/data/temp_data.csv',
@@ -94,27 +100,3 @@ let tcMapAgency = L.map('tc-map-agency', { minZoom: 3, maxZoom: 10, zoomControl:
 L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(tcMapAgency);
 let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
 L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapAgency);
-
-const warningDetailsDb = {
-    "WT": { name: "雷暴警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ts.png", meaning: "雷暴正在發生或預料在短期內影響香港境內，可能伴隨猛烈陣風、強烈冰雹或局部地區大雨。", precautions: ["留在室內安全地方，切勿在戶外開闊地帶、高地或孤立大樹下躲避。", "遠離導電物體，切勿進行水上活動或游泳。", "提防猛烈陣風帶來的吹落物件。"] },
-    "WRA": { name: "黃色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainamber.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 30 毫米的大雨，且雨勢可能持續。", precautions: ["低窪地帶可能出現水浸，做好防浸措施。", "駕車人士減慢車速，提防路面積水。", "遠離河道、引水道及斜坡。"] },
-    "WRR": { name: "紅色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainred.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 50 毫米的暴雨，道路嚴重水浸及交通受阻。", precautions: ["遵循教育局及僱主發出的惡劣天氣指引，留在安全地方。", "切勿涉水穿過水浸道路，提防山洪暴發及山泥傾瀉。"] },
-    "WRB": { name: "黑色暴雨警告信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/rainblack.png", meaning: "香港廣泛地區已錄得或預料會有每小時雨量超過 70 毫米的特大暴雨，極端惡劣天氣將引發嚴重危險。", precautions: ["留在室內安全建築物內避難，切勿外出冒險。", "所有戶外工作應全面暫停。"] },
-    "TC1": { name: "一號戒備信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc1.png", meaning: "有一熱帶氣旋集結於香港約 800 公里內，可能影響本港。", precautions: ["計劃戶外活動人士提高警覺，留意風暴路徑變化。"] },
-    "TC3": { name: "三號強風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc3.png", meaning: "香港近海平面預料普遍吹強風，持續風速達每小時 41 至 62 公里，陣風可達每小時 110 公里以上。", precautions: ["綁緊容易被風吹倒的物件，停止水上活動。"] },
-    "TC8NE": { name: "八號東北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08ne.png", meaning: "香港普遍吹東北烈風或暴風，持續風速每小時 63 至 117 公里，陣風更強。", precautions: ["立即返家或前往安全避風處，鎖緊門窗。"] },
-    "TC8NW": { name: "八號西北烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08nw.png", meaning: "香港普遍吹西北烈風或暴風，請立即做好防風措施。", precautions: ["立即返家避風，遠離迎風門窗。"] },
-    "TC8SE": { name: "八號東南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08se.png", meaning: "香港普遍吹東南烈風或暴風，伴隨風暴潮。", precautions: ["遠離低窪沿海地區，嚴防湧浪侵襲。"] },
-    "TC8SW": { name: "八號西南烈風或暴風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc08sw.png", meaning: "香港普遍吹西南烈風或暴風，請保持在室內安全地方。", precautions: ["留在室內避風，留意海水倒灌。"] },
-    "TC9": { name: "九號烈風或暴風風力增強信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc09.png", meaning: "風力正在顯著增強，颶風可能在短期內吹襲本港。", precautions: ["切勿外出，做好應對颶風侵襲準備。"] },
-    "TC10": { name: "十號颶風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tc10.png", meaning: "颶風（持續風速超過每小時 118 公里）正在橫過本港，破壞力極大。", precautions: ["留在堅固建築物深處，遠離玻璃門窗。"] },
-    "WHOT": { name: "酷熱天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/hot.png", meaning: "受酷熱氣團籠罩，氣溫高達 33°C 或以上，極易中暑。", precautions: ["多喝水補充電解質，避免長時間烈日暴曬。"] },
-    "WCOLD": { name: "寒冷天氣警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/cold.png", meaning: "受強烈冬季季候風影響，氣溫降至 12°C 或以下。", precautions: ["增添足夠保暖衣物，關顧長者及患者。"] },
-    "WLS": { name: "山泥傾瀉警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/ls.png", meaning: "土壤水分極度飽和，發生山泥傾瀉風險極高。", precautions: ["遠離陡峭斜坡及擋土牆。"] },
-    "WNF": { name: "新界北部水浸特別報告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/northflood.png", meaning: "新界北部已錄得暴雨，低窪農地可能受嚴重水浸影響。", precautions: ["採取預防措施，切勿強行駛過水浸路段。"] },
-    "SMS": { name: "強烈季候風信號", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/sms.png", meaning: "受季候風影響，香港普遍吹強風，平均風速超 40 km/h。", precautions: ["小型船隻返港避風，海面有大浪。"] },
-    "WFIREY": { name: "黃色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/fireyellow.png", meaning: "火災危險性偏高，相對濕度較低。", precautions: ["郊遊人士小心用火，切勿亂丟煙蒂。"] },
-    "WFIRER": { name: "紅色火災危險警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/firered.png", meaning: "極度乾燥，火災危險性極高，山火蔓延速度極快。", precautions: ["嚴禁在郊野燃點香燭或生火。"] },
-    "WFROST": { name: "霜凍警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/frost.png", meaning: "高地或新界北部可能出現結霜。", precautions: ["農民做好防霜凍保護措施。"] },
-    "WTSUN": { name: "海嘯警告", img: "https://www.hko.gov.hk/tc/textonly/img/warn/images/tsunami.png", meaning: "海嘯預料將抵達本港沿岸。", precautions: ["立即離開沿岸低窪地區及海灘，前往高處避難。"] }
-};
