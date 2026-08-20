@@ -1,4 +1,5 @@
-// globals.js
+// globals.js - 公用變數與地圖初始化
+
 Chart.defaults.color = '#9e9e9e';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -20,7 +21,7 @@ let radarInterval = null;
 let isRadarPlaying = true;
 let currentRadarRange = '256'; 
 
-// 颱風模組全域變數
+// 颱風模組專用變數
 let globalParsedAgencyTracks = {}; 
 let currentSelectedAgency = 'ALL'; 
 
@@ -82,9 +83,23 @@ const weatherTermTranslations = [
 const themeColors = { blue: '#3498db', green: '#2ecc71', orange: '#f39c12', red: '#e74c3c', gray: '#7f8c8d', purple: '#9b59b6' };
 const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-let map, tcMapHko, tcMapAgency;
-let dataLayerGroup, tcHkoLayerGroup, tcAgencyLayerGroup;
-
+// 地圖容器初始化
 const hkoCenter = [22.302, 114.174];
 const hkBoundsLocal = L.latLngBounds([ [21.58, 113.39], [23.02, 114.95] ]);
 const hkoBounds1200 = L.latLng(hkoCenter).toBounds(2400000);
+
+let hkoCenterPin = L.divIcon({ className: '', html: `<div style="background:#222; color:#fff; font-size:0.65rem; font-weight:700; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 6px rgba(0,0,0,0.5);">香港天文台</div>`, iconAnchor: [12, 8] });
+
+let map = L.map('hk-map', { maxBounds: hkBoundsLocal, maxBoundsViscosity: 1.0, minZoom: 8, preferCanvas: true }).setView([22.25, 113.90], 9);
+L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(map);
+let dataLayerGroup = L.layerGroup().addTo(map);
+
+let tcMapHko = L.map('tc-map-hko', { minZoom: 3, maxZoom: 10, zoomControl: false, preferCanvas: true });
+L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(tcMapHko);
+let tcHkoLayerGroup = L.layerGroup().addTo(tcMapHko);
+L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapHko);
+
+let tcMapAgency = L.map('tc-map-agency', { minZoom: 3, maxZoom: 10, zoomControl: false, preferCanvas: true });
+L.tileLayer(darkTileUrl, { attribution: '&copy; OSM', maxZoom: 18, crossOrigin: true }).addTo(tcMapAgency);
+let tcAgencyLayerGroup = L.layerGroup().addTo(tcMapAgency);
+L.marker(hkoCenter, {icon: hkoCenterPin}).addTo(tcMapAgency);
