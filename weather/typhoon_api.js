@@ -148,13 +148,18 @@ async function fetchAndRenderBothTyphoonMaps() {
     clearOldHKOMarkers(tcMapAgency);
 
     // ==========================================
-    // 1. 香港天文台 XML (左邊地圖)
+    // 1. 香港天文台 XML/KML (左邊地圖) - 完美修正版
     // ==========================================
     try {
         const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
         if (!resHko.ok) throw new Error("No XML response");
         let xmlText = await resHko.text();
+        
+        // 移除 XML 命名空間聲明
         xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
+        // 移除標籤的前綴 (例如把 <edxml:cLat> 強制轉換成 <cLat>)，解決 HKO RSS 節點搵唔到嘅問題
+        xmlText = xmlText.replace(/(<\/?)[a-zA-Z0-9_-]+:/g, '$1');
+        
         const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
 
         tcHkoLayerGroup.clearLayers();
@@ -165,16 +170,50 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         for (let i = 0; i < elements.length; i++) {
             let el = elements[i];
+            if (el.getAttribute('data-parsed')) continue;
+
+            // 方案 A：支援標準 XML/RSS 格式 (含 HKO 特有的 cLat/cLon)
             let latNode = el.getElementsByTagName('lat')[0] || el.getElementsByTagName('latitude')[0] || el.getElementsByTagName('cLat')[0];
             let lonNode = el.getElementsByTagName('lon')[0] || el.getElementsByTagName('longitude')[0] || el.getElementsByTagName('cLon')[0];
             
             if (latNode && lonNode && latNode.parentNode === el) {
-                if (!el.getAttribute('data-parsed')) {
-                    let lat = parseFloat(latNode.textContent.trim()); 
-                    let lon = parseFloat(lonNode.textContent.trim());
-                    let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0];
-                    let time = timeNode ? timeNode.textContent.trim() : '';
-                    if (!isNaN(lat) && !isNaN(lon)) { hkoPoints.push({ lat, lon, time }); el.setAttribute('data-parsed', 'true'); }
+                let lat = parseFloat(latNode.textContent.trim()); 
+                let lon = parseFloat(lonNode.textContent.trim());
+                // 加入對 pubDate 嘅支援
+                let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0] || el.getElementsByTagName('pubDate')[0];
+                let time = timeNode ? timeNode.textContent.trim() : '';
+                if (!isNaN(lat) && !isNaN(lon)) { 
+                    hkoPoints.push({ lat, lon, time }); 
+                    el.setAttribute('data-parsed', 'true'); 
+                }
+                continue;
+            }
+
+            // 方案 B：支援 KML 格式 (<Point><coordinates>...</coordinates></Point>)
+            if (el.tagName.toLowerCase() === 'point') {
+                let coordsNode = el.getElementsByTagName('coordinates')[0];
+                if (coordsNode && coordsNode.parentNode === el) {
+                    let parts = coordsNode.textContent.trim().split(',');
+                    if (parts.length >= 2) {
+                        let lon = parseFloat(parts[0]);
+                        let lat = parseFloat(parts[1]);
+                        
+                        // 搵返上層 Placemark 嘅 name 作為時間/標籤
+                        let time = '';
+                        let parent = el.parentNode;
+                        while(parent && parent.tagName && parent.tagName.toLowerCase() !== 'placemark') {
+                            parent = parent.parentNode;
+                        }
+                        if (parent) {
+                            let nameNode = parent.getElementsByTagName('name')[0];
+                            if (nameNode) time = nameNode.textContent.trim();
+                        }
+                        
+                        if (!isNaN(lat) && !isNaN(lon)) { 
+                            hkoPoints.push({ lat, lon, time }); 
+                            el.setAttribute('data-parsed', 'true'); 
+                        }
+                    }
                 }
             }
         }
