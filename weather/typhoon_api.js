@@ -7,7 +7,6 @@ if (!document.getElementById('typhoon-styles')) {
     style.innerHTML = `
         @keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
         .spin-ccw-icon { animation: spin-ccw 1.5s linear infinite; display: inline-block; line-height: 1; }
-        .hk-marker-label { background: #121212; border: 2px solid #fff; color: #fff; font-size: 10px; font-weight: 900; padding: 2px 6px; box-shadow: 2px 2px 0px #121212; white-space: nowrap; font-family: 'Space Mono', monospace; }
     `;
     document.head.appendChild(style);
 }
@@ -127,11 +126,20 @@ function clearOldHKOMarkers(mapObj) {
     });
 }
 
+// 【更新】香港地標改為簡潔藍色小圓點
 function drawHongKongRings(layerGroup) {
+    // 距離圈
     L.circle(hkoCenter, { radius: 1200000, color: '#38b6ff', weight: 2, fillColor: '#38b6ff', fillOpacity: 0.05, dashArray: '8, 8' }).addTo(layerGroup);
     L.circle(hkoCenter, { radius: 800000, color: '#ffde59', weight: 2, fillColor: '#ffde59', fillOpacity: 0.08, dashArray: '8, 8' }).addTo(layerGroup);
     L.circle(hkoCenter, { radius: 400000, color: '#ff914d', weight: 3, fillColor: '#ff914d', fillOpacity: 0.08, dashArray: '6, 6' }).addTo(layerGroup);
-    let hkIcon = L.divIcon({ html: '<div class="hk-marker-label">HONG KONG</div>', className: '', iconSize: null, iconAnchor: [30, 10] });
+    
+    // 標明香港位置 (藍色圓點，帶白邊及陰影)
+    let hkIcon = L.divIcon({ 
+        className: '', 
+        html: '<div style="background:#38b6ff; width:12px; height:12px; border-radius:50%; border:2px solid #ffffff; box-shadow:1px 1px 3px rgba(0,0,0,0.6);"></div>', 
+        iconSize: [12, 12], 
+        iconAnchor: [6, 6] 
+    });
     L.marker(hkoCenter, { icon: hkIcon, zIndexOffset: 2000 }).addTo(layerGroup);
 }
 
@@ -213,7 +221,7 @@ async function fetchAndRenderBothTyphoonMaps() {
                 globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
             }
 
-            // 【最新修改】: 以颱風中心計 500 公里範圍自適應縮放
+            // 以颱風中心計 500 公里範圍自適應縮放
             if (typeof tcMapHko !== 'undefined') {
                 let hkoBounds = getBoundsFromCenter(hkoPoints[0].lat, hkoPoints[0].lon, 500);
                 tcMapHko.fitBounds(hkoBounds);
@@ -313,7 +321,7 @@ async function fetchAndRenderBothTyphoonMaps() {
         } else {
             agencyAlert.style.display = 'none';
             
-            // 【最新修改】: 以各國機構颱風中心計 2000 公里範圍自適應縮放
+            // 以各國機構颱風中心計 2000 公里範圍自適應縮放
             if (typeof tcMapAgency !== 'undefined' && refAgencyCenter) {
                 let agencyBounds = getBoundsFromCenter(refAgencyCenter.lat, refAgencyCenter.lon, 2000);
                 tcMapAgency.fitBounds(agencyBounds);
