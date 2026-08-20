@@ -193,8 +193,8 @@ async function fetchAllStationData() {
             }
         }
     } catch (e) { console.error("Master Station Fetch Error:", e); }
-    renderWindList();
-    updateSmartThreatAlert();
+    if (typeof renderWindList === 'function') renderWindList();
+    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
 }
 
 async function fetchRainList(fallbackData) {
@@ -232,7 +232,7 @@ async function fetchRainList(fallbackData) {
         }
         document.getElementById('rain-list-container').innerHTML = listHtml;
     } catch(e) { document.getElementById('rain-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">未能讀取雨量數據</div>`; }
-    updateSmartThreatAlert();
+    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
 }
 
 async function fetchMeteoDataWithCache(lat, lon) {
@@ -243,7 +243,7 @@ async function fetchMeteoDataWithCache(lat, lon) {
     meteoCache[cacheKey] = { data: data, timestamp: now }; return data;
 }
 
-// 已經完美修復：唔依賴外部 API，即時顯示月相
+// 🌙 已經完美修復：無需等待外部 API，即時顯示月相！
 async function fetchAstroData() {
     try {
         if (typeof getMoonPhase === 'function') {
@@ -304,7 +304,8 @@ async function fetchTopOverview() {
                     let name = item.place; let val = parseFloat(item.value);
                     if (name && !isNaN(val)) { tempList.push({ name: name, val: val }); if (!stationMasterData[name]) stationMasterData[name] = {}; stationMasterData[name].temp = val; }
                 });
-                tempList.sort((a, b) => b.val - a.val); renderTempList(tempList);
+                tempList.sort((a, b) => b.val - a.val); 
+                if (typeof renderTempList === 'function') renderTempList(tempList);
             }
             let rainfallData = (rtData.rainfall && rtData.rainfall.data) ? rtData.rainfall.data : null; fetchRainList(rainfallData);
         }
@@ -369,7 +370,7 @@ async function fetchTopOverview() {
                     else if (text.includes("海嘯")) finalCode = "WTSUN";
                     else { let c = warning.code || key; if (c === "WTS") c = "WT"; if (c === "WRAIN") c = "WRA"; if (c === "WMSL") c = "SMS"; finalCode = c; }
 
-                    if (warningDetailsDb[finalCode]) {
+                    if (warningDetailsDb && warningDetailsDb[finalCode]) {
                         activeWarningsHtml += `<div class="warning-badge active-blink" onclick="openWarningModal('${finalCode}')"><img class="warning-icon" src="${warningDetailsDb[finalCode].img}"><div class="warning-text">${warningDetailsDb[finalCode].name}</div><span class="warning-arrow">➔</span></div>`;
                     }
                 }
@@ -398,8 +399,8 @@ async function fetchTopOverview() {
         }
     } catch (error) { console.error("fetchTopOverview error:", error); }
     
-    updateSmartThreatAlert();
-    updatePetWalkingIndex();
-    updateLaundryIndex();
-    updateHikingIndex();
+    if (typeof updateSmartThreatAlert === 'function') updateSmartThreatAlert();
+    if (typeof updatePetWalkingIndex === 'function') updatePetWalkingIndex();
+    if (typeof updateLaundryIndex === 'function') updateLaundryIndex();
+    if (typeof updateHikingIndex === 'function') updateHikingIndex();
 }
