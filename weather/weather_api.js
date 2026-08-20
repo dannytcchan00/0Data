@@ -332,17 +332,14 @@ async function fetchTopOverview() {
             let currentIcon = rtData.icon ? rtData.icon[0] : null;
             if (currentIcon) document.getElementById('weather-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${currentIcon}.png`;
             
-            let t = rtData.temperature.data.find(x => x.place === '香港天文台') || rtData.temperature.data[0]; 
-            let h = rtData.humidity.data.find(x => x.place === '香港天文台') || rtData.humidity.data[0]; 
+            let t = rtData.temperature?.data?.find(x => x.place === '香港天文台') || rtData.temperature?.data?.[0]; 
+            let h = rtData.humidity?.data?.find(x => x.place === '香港天文台') || rtData.humidity?.data?.[0]; 
             
             if(t) document.getElementById('hk-temp').innerText = `${t.value}°C`;
             if(h) document.getElementById('hk-hum').innerText = `${h.value}%`;
             
-            let uvVal = null;
-            if (rtData.uvindex && rtData.uvindex.data && rtData.uvindex.data.length > 0) {
-                uvVal = parseFloat(rtData.uvindex.data[0].value);
-                document.getElementById('hk-uv').innerHTML = rtData.uvindex.data[0].value;
-            } else { document.getElementById('hk-uv').innerHTML = '--'; }
+            let uvVal = (rtData.uvindex && rtData.uvindex.data && rtData.uvindex.data.length > 0) ? parseFloat(rtData.uvindex.data[0].value) : 0;
+            document.getElementById('hk-uv').innerHTML = uvVal ? `${uvVal}` : '--';
 
             let tVal = t ? parseFloat(t.value) : NaN; let hVal = h ? parseFloat(h.value) : NaN;
             globalWxState.temp = tVal; globalWxState.hum = hVal; globalWxState.uv = uvVal;
@@ -362,21 +359,22 @@ async function fetchTopOverview() {
             const fnd = await fndRes.value.json();
             if (fnd.generalSituation) document.getElementById('general-situation').innerText = fnd.generalSituation;
 
-            let psrRaw = null;
-            if (fnd.weatherForecast) {
+            if (fnd.weatherForecast && fnd.weatherForecast.length > 0) {
                 nineDayForecastData = fnd.weatherForecast; 
                 document.getElementById('hk-max').innerText = `${fnd.weatherForecast[0].forecastMaxtemp.value}°C`;
                 document.getElementById('hk-min').innerText = `${fnd.weatherForecast[0].forecastMintemp.value}°C`;
                 
-                psrRaw = fnd.weatherForecast[0].PSR; globalWxState.psrRaw = psrRaw; globalWxState.psr = psrRaw;
-                document.getElementById('hk-psr').innerText = psrRaw;
+                let psrRaw = fnd.weatherForecast[0].PSR || fnd.weatherForecast[0].psr || '';
+                globalWxState.psrRaw = psrRaw; globalWxState.psr = psrRaw || '低';
+                document.getElementById('hk-psr').innerText = psrRaw || '--';
                 
                 let html = '';
                 fnd.weatherForecast.forEach((fc, idx) => {
                     let d = parseInt(fc.forecastDate.substring(6,8), 10); let m = parseInt(fc.forecastDate.substring(4,6), 10);
-                    let psrClass = ""; let psrText = fc.PSR;
-                    if (psrText.includes('高')) psrClass = 'psr-high'; else if (psrText.includes('中')) psrClass = 'psr-med'; else psrClass = 'psr-low';
-                    html += `<div class="forecast-item" onclick="openForecastModal(${idx})"><div class="fc-date">${d}/${m}<br><span class="fc-week">${fc.week.substring(0,3)}</span></div><img class="fc-icon" src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon}.png"><div class="fc-temp">${fc.forecastMintemp.value}° - ${fc.forecastMaxtemp.value}°</div><div class="fc-psr ${psrClass}">💧 概率: ${psrText}</div></div>`;
+                    let psrText = fc.PSR || fc.psr || '低';
+                    let psrClass = psrText.includes('高') ? 'psr-high' : (psrText.includes('中') ? 'psr-med' : 'psr-low');
+                    let iconCode = fc.forecastIcon || fc.ForecastIcon || '50';
+                    html += `<div class="forecast-item" onclick="openForecastModal(${idx})"><div class="fc-date">${d}/${m}<br><span class="fc-week">${fc.week.substring(0,3)}</span></div><img class="fc-icon" src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${iconCode}.png"><div class="fc-temp">${fc.forecastMintemp.value}° - ${fc.forecastMaxtemp.value}°</div><div class="fc-psr ${psrClass}">💧 概率: ${psrText}</div></div>`;
                 });
                 document.getElementById('forecast-container').innerHTML = html;
             }
@@ -457,13 +455,14 @@ function openForecastModal(idx) {
     const fc = nineDayForecastData[idx];
     let d = parseInt(fc.forecastDate.substring(6,8), 10); let m = parseInt(fc.forecastDate.substring(4,6), 10);
     document.getElementById('f-modal-title').innerText = `📅 ${d}日${m}月 (${fc.week})`;
-    document.getElementById('f-modal-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon}.png`;
+    let iconCode = fc.forecastIcon || fc.ForecastIcon || '50';
+    document.getElementById('f-modal-icon').src = `https://www.hko.gov.hk/images/HKOWxIconOutline/pic${iconCode}.png`;
     document.getElementById('f-modal-temp').innerText = `${fc.forecastMintemp.value}° - ${fc.forecastMaxtemp.value}°C`;
     document.getElementById('f-modal-rh').innerText = `相對濕度: ${fc.forecastMinrh.value}% - ${fc.forecastMaxrh.value}%`;
     document.getElementById('f-modal-wx').innerText = fc.forecastWeather;
     document.getElementById('f-modal-wind').innerText = fc.forecastWind;
-    let psrText = fc.PSR; let psrClass = "";
-    if (psrText.includes('高')) psrClass = 'psr-high'; else if (psrText.includes('中')) psrClass = 'psr-med'; else psrClass = 'psr-low';
+    let psrText = fc.PSR || fc.psr || '低';
+    let psrClass = psrText.includes('高') ? 'psr-high' : (psrText.includes('中') ? 'psr-med' : 'psr-low');
     const psrEl = document.getElementById('f-modal-psr');
     psrEl.className = `fc-psr ${psrClass}`; psrEl.innerText = `💧 降雨概率: ${psrText}`; psrEl.style.padding = "12px";
     document.getElementById('forecast-modal').classList.add('active');
@@ -598,42 +597,4 @@ function openSwtModal(index) {
     if (!activeSwtList || !activeSwtList[index]) return;
     document.getElementById('swt-modal-desc').innerText = activeSwtList[index].desc || activeSwtList[index];
     document.getElementById('swt-modal').classList.add('active');
-}
-
-function openLifestyleModal(type) {
-    const modal = document.getElementById('lifestyle-modal');
-    const titleEl = document.getElementById('lifestyle-modal-title');
-    const gridEl = document.getElementById('ls-metric-grid');
-    const evalEl = document.getElementById('ls-evaluation-text');
-    const tipsEl = document.getElementById('ls-tips-list');
-
-    const t = globalWxState.temp; const h = globalWxState.hum; const uv = globalWxState.uv !== null ? parseFloat(globalWxState.uv) : 0; const psr = globalWxState.psrRaw || '低';
-    const tcLvl = currentThreatState.tcLvl || 1; const windLvl = currentThreatState.windLvl || 1; const rainLvl = currentThreatState.rainLvl || 1; const threatLevel = currentThreatState.finalLevel || 1;
-
-    const tStr = isNaN(t) ? '--' : `${t}°C`; const hStr = isNaN(h) ? '--' : `${h}%`; const uvStr = globalWxState.uv !== null ? `${globalWxState.uv}` : '--';
-
-    gridEl.innerHTML = `<div class="s-stat-box"><div class="s-stat-label">現時氣溫</div><div class="s-stat-val">${tStr}</div></div><div class="s-stat-box"><div class="s-stat-label">相對濕度</div><div class="s-stat-val">${hStr}</div></div><div class="s-stat-box"><div class="s-stat-label">紫外線</div><div class="s-stat-val">${uvStr}</div></div><div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-
-    let evalText = ""; let tipsHtml = "";
-    if (type === 'pet') {
-        titleEl.innerText = "🐾 寵物散步適宜度詳情";
-        let heatIndex = currentThreatState.custom_heat_index !== undefined ? currentThreatState.custom_heat_index : t;
-        let rain = currentThreatState.r || 0; let wind = currentThreatState.maxOffshoreWind || 0;
-        gridEl.innerHTML = `
-            <div class="s-stat-box"><div class="s-stat-label">日式暑熱指數</div><div class="s-stat-val" style="color: ${heatIndex >= 30 ? 'var(--accent-danger)' : '#fff'}">${heatIndex}</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">即時最高雨量</div><div class="s-stat-val" style="color: ${rain >= 10 ? 'var(--accent-warning)' : '#fff'}">${rain} mm/h</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">離岸最高風速</div><div class="s-stat-val" style="color: ${wind >= 41 ? 'var(--accent-danger)' : '#fff'}">${wind} km/h</div></div>
-            <div class="s-stat-box"><div class="s-stat-label">降雨概率</div><div class="s-stat-val">${psr}</div></div>`;
-        evalText = `目前暑熱指數（${heatIndex}）、即時雨量（${rain} mm/h）及風速（${wind} km/h）綜合判定為當前風險級別。`;
-        tipsHtml = `<li>出門前注意路面溫度與補水。</li><li>大風大雨時請留在室內。</li>`;
-    } else if (type === 'laundry') {
-        titleEl.innerText = "👕 戶外晾衣指數詳情";
-        evalText = `目前相對濕度 ${hStr}。`;
-        tipsHtml = `<li>高濕度或降雨時建議室內抽濕。</li><li>陽光充沛時可進行戶外晾曬殺菌。</li>`;
-    } else if (type === 'hiking') {
-        titleEl.innerText = "⛰️ 戶外運動行山指數詳情";
-        evalText = `目前市區氣溫 ${tStr}。`;
-        tipsHtml = `<li>留意天氣突變與降雨機率。</li><li>帶備充足糧水與保暖防風衣物。</li>`;
-    }
-    evalEl.innerText = evalText; tipsEl.innerHTML = tipsHtml; modal.classList.add('active');
 }
