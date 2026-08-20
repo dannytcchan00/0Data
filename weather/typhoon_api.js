@@ -53,11 +53,13 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
     if (isJMA || isHKO) {
         let currentPt = points[0]; 
         
+        // 畫出當前颱風影響覆蓋範圍的圓圈 (半徑 150km)
         L.circle([currentPt.lat, currentPt.lon], { 
             radius: 150000, color: coneColor, weight: 2, fillColor: coneColor, fillOpacity: 0.2, dashArray: '6, 6'
         }).addTo(mapLayerGroup);
         
-        if (points.length > 1) {
+        // 【修正核心】：停止 HKO 嘅無限圓圈膨脹！只准 JMA 畫擴散漏斗
+        if (isJMA && points.length > 1) {
             let leftPoints = [], rightPoints = [];
             points.forEach((pt, idx) => {
                 let radius = 60000 + (idx * 50000); 
@@ -84,7 +86,6 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
     }).addTo(mapLayerGroup);
     
     points.forEach((pt, idx) => {
-        // 【修正核心】無論有無時間，都一定會畫圖！只係控制有無文字標籤
         let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim() : '';
         
         let labelHtml = timeStr !== '' ? `
@@ -141,7 +142,6 @@ async function fetchAndRenderBothTyphoonMaps() {
         
         let xmlText = await resHko.text();
         
-        // 【修正核心】用 text/html 解析，無視所有 XML 嚴格格式錯誤，並將標籤全部自動轉細楷
         const docHko = new DOMParser().parseFromString(xmlText, "text/html");
 
         tcHkoLayerGroup.clearLayers();
@@ -149,7 +149,6 @@ async function fetchAndRenderBothTyphoonMaps() {
 
         let hkoPoints = [];
 
-        // 鎖定所有包含經緯度嘅區塊
         let infoNodes = docHko.querySelectorAll("analysisinformation, forecastinformation");
 
         if (infoNodes.length > 0) {
@@ -177,7 +176,6 @@ async function fetchAndRenderBothTyphoonMaps() {
             });
         }
         
-        // 終極備用：如果連 DOM 都搵唔到，直接用正則表達式硬抽字串
         if (hkoPoints.length === 0) {
             const blockRegex = /<Latitude>([^<]+)<\/Latitude>\s*<Longitude>([^<]+)<\/Longitude>/gi;
             let match;
@@ -192,7 +190,6 @@ async function fetchAndRenderBothTyphoonMaps() {
             }
         }
         
-        // 確保中心點一定有個標籤
         if (hkoPoints.length > 0 && !hkoPoints[0].time) {
             hkoPoints[0].time = "Current";
         }
