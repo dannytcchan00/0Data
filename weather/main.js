@@ -12,7 +12,7 @@ function silentBackgroundUpdate() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // 延遲初始化確保 DOM 大小正確
+    // 延遲初始化確保 DOM 大小正確，不會出現地圖灰格
     setTimeout(() => {
         map.invalidateSize(); 
         tcMapHko.invalidateSize(); 
@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
         fetchAndRenderBothTyphoonMaps();
     }, 800);
 
-    setInterval(silentBackgroundUpdate, 300000);
-    setInterval(updateTick, 1000);
+    setInterval(silentBackgroundUpdate, 300000); // 5 分鐘背景自動刷新
+    setInterval(updateTick, 1000);               // 1 秒時鐘刷新
     updateTick(); 
 });
