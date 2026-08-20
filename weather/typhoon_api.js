@@ -1,5 +1,6 @@
 // typhoon_api.js - 颱風預測路徑、淡黃色漏斗範圍與實時機構標籤模組
 
+// 各國氣象機構專屬顏色
 const agencyColorPalette = { 
     'JTWC': '#9b59b6',   // 美軍 (紫色)
     'JMA': '#f1c40f',    // 日本 (淡黃色 - 配合漏斗)
@@ -29,14 +30,18 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-// 嚴格獲取當前節點下最直接的 <name>，解決之前「全部變晒 JTWC」的 Bug
-function getDirectChildName(node) {
-    for (let i = 0; i < node.children.length; i++) {
-        if (node.children[i].tagName.toLowerCase() === 'name') {
-            return node.children[i].textContent.trim();
-        }
+// 🛡️ 防彈 XML Node 搜尋器 (無視命名空間與大小寫)
+function findNodes(parent, tagName) {
+    let res = [];
+    if (!parent || !parent.getElementsByTagName) return res;
+    let tags = parent.getElementsByTagName("*");
+    let lowerTag = tagName.toLowerCase();
+    for(let i=0; i<tags.length; i++) {
+        let parts = tags[i].tagName.split(':');
+        let local = parts[parts.length-1].toLowerCase();
+        if(local === lowerTag) res.push(tags[i]);
     }
-    return '';
+    return res;
 }
 
 // 繪製颱風路徑、淡黃色漏斗與實時標籤
@@ -44,26 +49,22 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
     if (points.length === 0) return;
     
     // 淡黃色漏斗與覆蓋圈設定 (專為 JMA 基準而設)
-    const coneColor = isHKO ? themeColors.red : '#f1c40f'; // HKO用紅色，JMA用淡黃色
+    const coneColor = isHKO ? '#e74c3c' : '#f1c40f'; // HKO用紅色，JMA用淡黃色
     const coneFill = isHKO ? 'rgba(231, 76, 60, 0.15)' : 'rgba(241, 196, 15, 0.15)'; 
 
     if (isJMA || isHKO) {
         let currentPt = points[0]; 
         
-        // 畫出當前颱風影響覆蓋範圍的圓圈
+        // 畫出當前颱風影響覆蓋範圍的圓圈 (150公里)
         L.circle([currentPt.lat, currentPt.lon], { 
-            radius: 150000, 
-            color: coneColor, 
-            weight: 2, 
-            fillColor: coneColor, 
-            fillOpacity: 0.15 
+            radius: 150000, color: coneColor, weight: 2, fillColor: coneColor, fillOpacity: 0.15 
         }).addTo(mapLayerGroup);
         
-        // 畫出淡黃色/紅色的漏斗預測影響範圍
+        // 畫出漏斗預測影響範圍
         if (points.length > 1) {
             let leftPoints = [], rightPoints = [];
             points.forEach((pt, idx) => {
-                let radius = 60000 + (idx * 50000); 
+                let radius = 60000 + (idx * 50000); // 模擬誤差範圍逐漸擴大
                 if (idx > 0) {
                     L.circle([pt.lat, pt.lon], { radius: radius, color: hexToRgba(coneColor, 0.3), weight: 1, dashArray: '4, 4', fill: false }).addTo(mapLayerGroup);
                 }
@@ -73,43 +74,41 @@ function drawTyphoonTrack(points, mapLayerGroup, colorCode, agencyName, isJMA, i
             });
             let funnelPolygonCoords = [...leftPoints, ...rightPoints.reverse()];
             L.polygon(funnelPolygonCoords, { 
-                color: coneColor, 
-                weight: 1.5, 
-                dashArray: '5, 5', 
-                fillColor: coneFill, 
-                fillOpacity: 0.25 
+                color: coneColor, weight: 1.5, dashArray: '5, 5', fillColor: coneFill, fillOpacity: 0.25 
             }).addTo(mapLayerGroup);
         }
     }
 
-    // 畫出路徑實線
+    // 畫出各國預測路徑實線
     let latlngs = points.map(p => [p.lat, p.lon]);
     L.polyline(latlngs, { color: colorCode, weight: (isJMA || isHKO) ? 3.5 : 2.5, opacity: 0.9 }).addTo(mapLayerGroup);
     
-    // 畫出每個點的「氣象局縮寫 + 時間」直觀標籤
+    // 畫出每個點的「氣象局縮寫 + 時間」直觀標籤與圖示
     points.forEach((pt, idx) => {
-        let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line/gi, '').trim() : '';
+        let timeStr = pt.time ? pt.time.replace(/Forecast|預測|Center|Line|JMA|JTWC|CWA|NMC|PAGASA/gi, '').trim() : '';
         if (timeStr === '') timeStr = `Pt${idx}`;
         
+        // 實時標籤 HTML 設計
         let labelHtml = `
-            <div style="position:absolute; left:14px; top:-10px; background:rgba(20,20,20,0.85); color:${colorCode}; font-size:0.7rem; padding:2px 6px; border-radius:4px; white-space:nowrap; border:1px solid ${colorCode}; font-weight:800; z-index:1000; box-shadow: 0 2px 6px rgba(0,0,0,0.6);">
+            <div style="position:absolute; left:16px; top:-10px; background:rgba(20,20,20,0.85); color:${colorCode}; font-size:0.75rem; padding:2px 6px; border-radius:4px; white-space:nowrap; border:1px solid ${colorCode}; font-weight:800; z-index:1000; box-shadow: 0 2px 6px rgba(0,0,0,0.6);">
                 ${agencyName} ${timeStr}
             </div>
         `;
         
         if (idx === 0) {
+            // 當前位置點
             if (isJMA || isHKO) {
                 // JMA & HKO 專屬：逆時針旋轉的 🌀
                 let spinningPin = L.divIcon({ className: '', html: `<div class="spinning-typhoon-icon">🌀</div>${labelHtml}`, iconSize: [40, 40], iconAnchor: [20, 20] });
                 L.marker([pt.lat, pt.lon], { icon: spinningPin, zIndexOffset: 1000 }).addTo(mapLayerGroup);
             } else {
                 // 其他國家：實心大圓點
-                let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.8); position:relative;">${labelHtml}</div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
+                let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.8); position:relative;">${labelHtml}</div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
                 L.marker([pt.lat, pt.lon], { icon: dotPin, zIndexOffset: 900 }).addTo(mapLayerGroup);
             }
         } else {
-            // 預測位置點
-            let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:6px; height:6px; border-radius:50%; border:1px solid rgba(255,255,255,0.9); box-shadow:0 1px 3px rgba(0,0,0,0.5); position:relative;">${labelHtml}</div>`, iconSize: [6, 6], iconAnchor: [3, 3] });
+            // 預測位置點 (所有國家通用小圓點)
+            let dotPin = L.divIcon({ className: '', html: `<div style="background:${colorCode}; width:8px; height:8px; border-radius:50%; border:1px solid rgba(255,255,255,0.9); box-shadow:0 1px 3px rgba(0,0,0,0.5); position:relative;">${labelHtml}</div>`, iconSize: [8, 8], iconAnchor: [4, 4] });
             L.marker([pt.lat, pt.lon], { icon: dotPin }).addTo(mapLayerGroup);
         }
     });
@@ -119,178 +118,166 @@ async function fetchAndRenderBothTyphoonMaps() {
     const hkoAlert = document.getElementById('no-tc-hko-alert');
     const agencyAlert = document.getElementById('no-tc-agency-alert');
 
-    // 確保一開始先隱藏警告文字
-    hkoAlert.style.display = 'none';
-    agencyAlert.style.display = 'none';
-
     // ==========================================
-    // 1. 讀取香港天文台 XML (左邊地圖)
+    // 1. 香港天文台 XML (左邊地圖)
     // ==========================================
     try {
         const resHko = await fetch(`${tcXmlSource}?_=${Date.now()}`);
         if (!resHko.ok) throw new Error("No XML response");
-        let xmlText = await resHko.text();
-        
-        xmlText = xmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
+        const xmlText = await resHko.text();
         const docHko = new DOMParser().parseFromString(xmlText, "text/xml");
 
         tcHkoLayerGroup.clearLayers();
         let hkoPoints = [];
-        let elements = docHko.getElementsByTagName("*");
         
-        for (let i = 0; i < elements.length; i++) {
-            let el = elements[i];
-            let latNode = el.getElementsByTagName('lat')[0] || el.getElementsByTagName('latitude')[0] || el.getElementsByTagName('cLat')[0];
-            let lonNode = el.getElementsByTagName('lon')[0] || el.getElementsByTagName('longitude')[0] || el.getElementsByTagName('cLon')[0];
-            
-            if (latNode && lonNode && latNode.parentNode === el) {
-                if (!el.getAttribute('data-parsed')) {
-                    let lat = parseFloat(latNode.textContent.trim()); 
+        // 使用防彈搜尋器尋找 lat
+        let lats = findNodes(docHko, 'lat');
+        if (lats.length === 0) lats = findNodes(docHko, 'latitude');
+        if (lats.length === 0) lats = findNodes(docHko, 'cLat');
+
+        lats.forEach(latNode => {
+            let parent = latNode.parentNode;
+            if (parent && !parent.getAttribute('data-parsed')) {
+                let lonNode = findNodes(parent, 'lon')[0] || findNodes(parent, 'longitude')[0] || findNodes(parent, 'cLon')[0];
+                let timeNode = findNodes(parent, 'time')[0] || findNodes(parent, 'date')[0];
+                
+                if (lonNode) {
+                    let lat = parseFloat(latNode.textContent.trim());
                     let lon = parseFloat(lonNode.textContent.trim());
-                    
-                    let timeNode = el.getElementsByTagName('time')[0] || el.getElementsByTagName('date')[0];
                     let time = timeNode ? timeNode.textContent.trim() : '';
-                    
-                    if (!isNaN(lat) && !isNaN(lon)) { 
-                        hkoPoints.push({ lat, lon, time }); 
-                        el.setAttribute('data-parsed', 'true'); 
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        hkoPoints.push({ lat, lon, time });
+                        parent.setAttribute('data-parsed', 'true');
                     }
                 }
             }
-        }
+        });
         
         if (hkoPoints.length === 0) { 
             hkoAlert.style.display = 'flex'; 
-            tcMapHko.setView(hkoCenter, 4);
         } else {
-            drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', true, true);
+            hkoAlert.style.display = 'none';
+            drawTyphoonTrack(hkoPoints, tcHkoLayerGroup, themeColors.red, 'HKO', false, true);
             globalLatestTcDist = calculateDistance(hkoCenter[0], hkoCenter[1], hkoPoints[0].lat, hkoPoints[0].lon);
-            let bounds = L.latLngBounds(hkoPoints.map(p => [p.lat, p.lon]));
-            tcMapHko.fitBounds(bounds, { padding: [30, 30] });
         }
+        tcMapHko.fitBounds(hkoBounds1200);
     } catch (err) { 
-        console.error("HKO Typhoon parsing error:", err);
+        console.error("HKO Typhoon Error:", err);
         hkoAlert.style.display = 'flex'; 
-        tcMapHko.setView(hkoCenter, 4);
+        tcMapHko.setView(hkoCenter, 4); 
     }
 
     await new Promise(r => setTimeout(r, 10));
 
     // ==========================================
-    // 2. 讀取各國氣象機構 KML (右邊地圖)
+    // 2. 各國氣象機構 KML (右邊地圖) - 完美解決亂線與名稱混亂
     // ==========================================
     try {
         const resAgy = await fetch(`${tcKmlSource}?_=${Date.now()}`);
         if (!resAgy.ok) throw new Error("No KML response");
-        let kmlText = await resAgy.text();
-        
-        kmlText = kmlText.replace(/xmlns(:\w+)?="[^"]*"/gi, '');
+        const kmlText = await resAgy.text();
         const docAgy = new DOMParser().parseFromString(kmlText, "text/xml");
         
         tcAgencyLayerGroup.clearLayers();
+        let hasAgencyData = false; 
+        let foundAgencies = new Set(); 
+        let typhoonCenterCoords = null; 
         let parsedAgencyTracks = {};
-        let agencyPointSet = {}; 
-        let allAgencyLatLngs = []; // 用作收集所有國家的坐標，完美置中地圖
 
-        let placemarks = docAgy.getElementsByTagName("Placemark");
+        // 搜尋所有的 Placemark
+        let placemarks = findNodes(docAgy, 'Placemark');
 
-        for (let i = 0; i < placemarks.length; i++) {
-            let pm = placemarks[i];
+        placemarks.forEach(pm => {
+            let nameNode = findNodes(pm, 'name')[0];
+            let pmName = nameNode ? nameNode.textContent.trim() : '';
             
-            // 使用新寫法：精準獲取當前 Placemark 或 Folder 的名字，解決全部變 JTWC 嘅 Bug
-            let pmName = getDirectChildName(pm);
-            
+            // 往上尋找屬於哪個氣象機構的 Folder
             let folderNode = pm.parentNode;
             let folderName = '';
             while (folderNode && folderNode.nodeType === 1) { 
                 let tag = folderNode.tagName.toLowerCase();
-                if (tag === 'folder' || tag === 'document') {
-                    let fName = getDirectChildName(folderNode);
-                    if (fName) folderName = fName + " " + folderName;
+                if (tag.includes('folder') || tag.includes('document')) {
+                    let fNameNode = findNodes(folderNode, 'name')[0];
+                    if (fNameNode) folderName = fNameNode.textContent.trim() + " " + folderName;
                 }
                 folderNode = folderNode.parentNode;
             }
             
             let combinedText = (pmName + " " + folderName).toUpperCase();
+            let agency = null;
             
-            let agency = 'OTHER';
+            // 準確判斷所屬氣象局
             if (combinedText.includes('JTWC')) agency = 'JTWC';
             else if (combinedText.includes('JMA')) agency = 'JMA';
             else if (combinedText.includes('NMC') || combinedText.includes('CMA')) agency = 'NMC';
             else if (combinedText.includes('CWA') || combinedText.includes('CWB') || combinedText.includes('TAIWAN')) agency = 'CWA';
             else if (combinedText.includes('PAGASA')) agency = 'PAGASA';
             
-            if (combinedText.includes('HKO') || agency === 'OTHER') continue;
+            // 排除 HKO 或未能辨識的機構
+            if (!agency || combinedText.includes('HKO')) return; 
 
             if (!parsedAgencyTracks[agency]) parsedAgencyTracks[agency] = [];
-            if (!agencyPointSet[agency]) agencyPointSet[agency] = new Set();
             
-            // 嚴格只抽取 <Point> 的座標
-            let ptNodes = pm.getElementsByTagName('Point');
-            let hasPoint = false;
-            
-            for(let j = 0; j < ptNodes.length; j++) {
-                let coordsNode = ptNodes[j].getElementsByTagName('coordinates')[0];
-                if(coordsNode) {
+            // 【解決亂線】嚴格只抽取 <Point> 的座標，絕對不碰 LineString
+            let points = findNodes(pm, 'Point');
+            points.forEach(pt => {
+                let coordsNode = findNodes(pt, 'coordinates')[0];
+                if (coordsNode) {
                     let parts = coordsNode.textContent.trim().split(',');
                     if (parts.length >= 2) {
                         let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
                         if (!isNaN(lat) && !isNaN(lon)) {
-                            let coordKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
-                            if (!agencyPointSet[agency].has(coordKey)) {
-                                agencyPointSet[agency].add(coordKey);
+                            // 防重複過濾器
+                            let isDuplicate = parsedAgencyTracks[agency].some(p => Math.abs(p.lat - lat) < 0.001 && Math.abs(p.lon - lon) < 0.001);
+                            if (!isDuplicate) {
                                 parsedAgencyTracks[agency].push({ lat, lon, time: pmName });
-                                allAgencyLatLngs.push([lat, lon]);
-                                hasPoint = true;
                             }
                         }
                     }
                 }
-            }
+            });
+        });
 
-            // 後備方案
-            if (!hasPoint) {
-                let lsNodes = pm.getElementsByTagName('LineString');
-                for(let j = 0; j < lsNodes.length; j++) {
-                    let coordsNode = lsNodes[j].getElementsByTagName('coordinates')[0];
-                    if(coordsNode) {
-                        let pairs = coordsNode.textContent.trim().split(/\s+/);
-                        pairs.forEach((pair, idx) => {
-                            let parts = pair.split(',');
-                            if (parts.length >= 2) {
-                                let lon = parseFloat(parts[0]), lat = parseFloat(parts[1]);
-                                if (!isNaN(lat) && !isNaN(lon)) {
-                                    parsedAgencyTracks[agency].push({ lat, lon, time: `Pt ${idx+1}` });
-                                    allAgencyLatLngs.push([lat, lon]);
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-        }
+        let allAgencyLatLngs = [];
 
         // 開始將不同國家的路徑分別畫上地圖
         Object.keys(parsedAgencyTracks).forEach(agency => {
             let pts = parsedAgencyTracks[agency];
             if (pts.length > 0) {
-                let color = agencyColorPalette[agency];
+                hasAgencyData = true; 
+                foundAgencies.add(agency);
+                let color = agencyColorPalette[agency] || agencyColorPalette['OTHER'];
+                
+                // 檢查是否為日本氣象局 (JMA) 以觸發淡黃色漏斗
                 let isJMA = (agency === 'JMA');
+                
                 drawTyphoonTrack(pts, tcAgencyLayerGroup, color, agency, isJMA, false);
+                
+                if (isJMA) typhoonCenterCoords = [pts[0].lat, pts[0].lon];
+                pts.forEach(p => allAgencyLatLngs.push([p.lat, p.lon]));
             }
         });
 
-        // 完美解決圖表縮放與出錯警告的衝突
-        if (allAgencyLatLngs.length === 0) { 
+        // 完美解決圖表縮放與假 Error 警告
+        if (!hasAgencyData) { 
             agencyAlert.style.display = 'flex'; 
             tcMapAgency.setView(hkoCenter, 4); 
         } else {
             agencyAlert.style.display = 'none';
+            
+            if (!typhoonCenterCoords) {
+                let firstAgency = Object.keys(parsedAgencyTracks)[0];
+                if (firstAgency && parsedAgencyTracks[firstAgency].length > 0) {
+                    typhoonCenterCoords = [parsedAgencyTracks[firstAgency][0].lat, parsedAgencyTracks[firstAgency][0].lon];
+                }
+            }
+
             try {
                 let bounds = L.latLngBounds(allAgencyLatLngs);
                 tcMapAgency.fitBounds(bounds, { padding: [40, 40] });
             } catch (boundsErr) {
-                tcMapAgency.setView(hkoCenter, 4);
+                if (typhoonCenterCoords) tcMapAgency.setView(typhoonCenterCoords, 5);
+                else tcMapAgency.setView(hkoCenter, 4);
             }
         }
     } catch (err) { 
@@ -299,5 +286,8 @@ async function fetchAndRenderBothTyphoonMaps() {
         tcMapAgency.setView(hkoCenter, 4); 
     }
 
-    updateSmartThreatAlert();
+    // 觸發左側面板評估
+    if (typeof updateSmartThreatAlert === "function") {
+        updateSmartThreatAlert();
+    }
 }
