@@ -1,1 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typhoon Information Centre - Met Office</title>
+    
+    <!-- 引入 Leaflet 地圖庫 / Import Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <style>
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --bg-light: #f4f6f9;
+            --white: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --alert-red: #e74c3c;
+            --alert-orange: #e67e22;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* 移除 Header 後，整體向上推，留適當 padding */
+        body { background-color: var(--bg-light); color: var(--text-main); line-height: 1.5; padding: 25px; }
+
+        .dashboard-container { max-width: 1550px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+
+        /* ================= 上排三欄佈局 / Top Row 3 Columns ================= */
+        .top-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; }
+
+        /* ================= 下排雙地圖佈局 / Bottom Row 2 Columns ================= */
+        .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+
+        .box { 
+            background: var(--white); 
+            border-radius: 12px; 
+            padding: 22px; 
+            box-shadow: var(--card-shadow); 
+            border-top: 4px solid var(--brand-navy); 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
+        }
+        
+        .box-title { 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: var(--brand-navy); 
+            margin-bottom: 18px; 
+            display: flex; 
+            flex-direction: column;
+            gap: 2px;
+        }
+        .box-title small { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+
+        /* 1. 機率預測樣式 / Signal Probability */
+        .prob-container { display: flex; flex-direction: column; gap: 12px; }
+        .prob-item { display: flex; align-items: center; gap: 12px; }
+        .signal-icon { width: 38px; height: 38px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; font-size: 14px; flex-shrink: 0; }
+        .sig-1 { background-color: #555555; } 
+        .sig-3 { background-color: #27ae60; } 
+        .sig-8 { background-color: #e67e22; } 
+        .sig-9 { background-color: #c0392b; } 
+        .sig-10 { background-color: #8e44ad; }
+        
+        .progress-bar-bg { flex-grow: 1; background: #eee; height: 10px; border-radius: 5px; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; border-radius: 5px; transition: width 1s ease-in-out; }
+        .prob-text { width: 45px; text-align: right; font-weight: bold; color: var(--brand-navy); font-size: 13px; }
+        .typhoon-status { margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12.5px; border-left: 4px solid var(--brand-blue); line-height: 1.5; }
+
+        /* 2 & 3. 滾動清單樣式 / Scrollable Lists (Wind & Rain) */
+        .data-list { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; padding-right: 5px; }
+        .data-list::-webkit-scrollbar { width: 5px; }
+        .data-list::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+        .data-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 8px; background: var(--bg-light); font-size: 13.5px; }
+        .data-item strong { color: var(--brand-navy); }
+
+        /* 4 & 5. 地圖樣式 / Map Styles */
+        .map-container { width: 100%; height: 460px; background: #e2e8f0; border-radius: 8px; z-index: 1; }
+        
+        /* 動態 🌀 */
+        @keyframes spinReverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+        .typhoon-emoji { font-size: 28px; animation: spinReverse 1.5s linear infinite; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; text-shadow: 0 0 6px rgba(0,0,0,0.4); }
+
+        /* 各國機構路徑圖例 */
+        .map-legend {
+            position: absolute; bottom: 35px; left: 35px; background: rgba(255, 255, 255, 0.92);
+            padding: 10px 14px; border-radius: 6px; font-size: 11px; z-index: 1000;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15); border: 1px solid #ddd;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: bold; }
+        .legend-color { width: 14px; height: 4px; border-radius: 2px; }
+
+        /* 響應式佈局 / Responsive */
+        @media (max-width: 1200px) {
+            .top-row { grid-template-columns: 1fr; }
+            .bottom-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <!-- ================= 上排三欄 (Top Row) ================= -->
+        <div class="top-row">
+            
+            <!-- 框框 1：左上 / 智能風球生效機率預測 -->
+            <div class="box">
+                <div class="box-title">
+                    <span>📊 智能風球生效機率預測</span>
+                    <small>AI Signal Probability Prediction</small>
+                </div>
+                <div class="prob-container">
+                    <div class="prob-item"><div class="signal-icon sig-1">T1</div><div class="progress-bar-bg"><div class="progress-fill sig-1" id="bar-1" style="width: 0%;"></div></div><div class="prob-text" id="txt-1">0%</div></div>
+                    <div class="prob-item"><div class="signal-icon sig-3">T3</div><div class="progress-bar-bg"><div class="progress-fill sig-3" id="bar-3" style="width: 0%;"></div></div><div class="prob-text" id="txt-3">0%</div></div>
+                    <div class="prob-item"><div class="signal-icon sig-8">T8</div><div class="progress-bar-bg"><div class="progress-fill sig-8" id="bar-8" style="width: 0%;"></div></div><div class="prob-text" id="txt-8">0%</div></div>
+                    <div class="prob-item"><div class="signal-icon sig-9">T9</div><div class="progress-bar-bg"><div class="progress-fill sig-9" id="bar-9" style="width: 0%;"></div></div><div class="prob-text" id="txt-9">0%</div></div>
+                    <div class="prob-item"><div class="signal-icon sig-10">T10</div><div class="progress-bar-bg"><div class="progress-fill sig-10" id="bar-10" style="width: 0%;"></div></div><div class="prob-text" id="txt-10">0%</div></div>
+                </div>
+                <div class="typhoon-status" id="typhoon-status">🔄 正在讀取數據... <br>(Loading data...)</div>
+            </div>
+
+            <!-- 框框 2：中上 / 各區實時風速與風向 -->
+            <div class="box">
+                <div class="box-title">
+                    <span>💨 各區實時風速與風向</span>
+                    <small>Real-time Regional Wind Monitoring</small>
+                </div>
+                <div class="data-list" id="wind-list-container">
+                    <div style="text-align: center; padding: 25px; color: gray;">🔄 正在載入風力數據... <br>(Loading wind data...)</div>
+                </div>
+            </div>
+
+            <!-- 框框 3：右上 / 各區實時雨量監測 -->
+            <div class="box">
+                <div class="box-title">
+                    <span>🌧️ 各區實時雨量監測</span>
+                    <small>Real-time Regional Rainfall</small>
+                </div>
+                <div class="data-list" id="rain-list-container">
+                    <div style="text-align: center; padding: 25px; color: gray;">🔄 正在載入雨量數據... <br>(Loading rainfall data...)</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= 下排雙地圖 (Bottom Row) ================= -->
+        <div class="bottom-row">
+
+            <!-- 框框 4：左下 / 香港天文台預測路徑與影響範圍 -->
+            <div class="box">
+                <div class="box-title">
+                    <span>🇭🇰 香港天文台預測路徑與影響範圍</span>
+                    <small>HKO Forecast Track & Impact Area</small>
+                </div>
+                <div id="hko-map" class="map-container"></div>
+            </div>
+
+            <!-- 框框 5：右下 / 各國機構颱風預測路徑 -->
+            <div class="box">
+                <div class="box-title">
+                    <span>🌐 各國機構颱風預測路徑</span>
+                    <small>International Forecast Tracks (NCDR)</small>
+                </div>
+                <div id="ncdr-map" class="map-container"></div>
+                
+                <!-- 圖例 / Legend -->
+                <div class="map-legend">
+                    <div class="legend-item"><div class="legend-color" style="background:#e74c3c;"></div> JMA (Japan)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#3498db;"></div> JTWC (US)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#f39c12;"></div> CWA (Taiwan)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#2ecc71;"></div> KMA (South Korea)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#9b59b6;"></div> NMC (China)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#34495e;"></div> HKO (Hong Kong)</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // 香港天文台基準座標
+        const HK_LAT = 22.3027;
+        const HK_LON = 114.1772;
+        let hkoMap, ncdrMap;
+
+        // 計算距離 Formula / Haversine Distance Formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        }
+
+        // 解析 KML / XML 經緯度
+        function parseCoord(coordStr) {
+            if (!coordStr) return null;
+            let str = coordStr.trim().toUpperCase();
+            let num = parseFloat(str.replace(/[NSEW]/g, ''));
+            if (isNaN(num)) return null;
+            if (str.includes('S') || str.includes('W')) num = -num;
+            return num;
+        }
+
+        // 具有 CORS Bypass 的 Fetch 工具
+        async function fetchResource(url) {
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error("Direct fetch failed");
+                return await res.text();
+            } catch (e) {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
+                const json = await proxyRes.json();
+                return json.contents;
+            }
+        }
+
+        // ================= 1. 初始化雙地圖 =================
+        function initMaps() {
+            hkoMap = L.map('hko-map').setView([21.5, 112.0], 5);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(hkoMap);
+            
+            L.circleMarker([HK_LAT, HK_LON], { radius: 6, color: '#112a46', fillColor: '#ffffff', fillOpacity: 1, weight: 2 }).addTo(hkoMap).bindPopup("<b>Hong Kong Observatory (香港天文台)</b>");
+            L.circle([HK_LAT, HK_LON], { radius: 1200000, color: '#27ae60', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
+            L.circle([HK_LAT, HK_LON], { radius: 800000, color: '#e67e22', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
+            L.circle([HK_LAT, HK_LON], { radius: 400000, color: '#e74c3c', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
+
+            ncdrMap = L.map('ncdr-map').setView([21.5, 116.0], 4);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(ncdrMap);
+        }
+
+        // ================= 2. 解析 HKO XML =================
+        async function loadHKOTyphoonTrack() {
+            try {
+                const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/current_typhoon.xml');
+                const xml = new DOMParser().parseFromString(text, "text/xml");
+                const tcName = xml.querySelector('TropicalCycloneName')?.textContent.trim() || "Tropical Cyclone";
+                const analysisNode = xml.querySelector('AnalysisInformation');
+
+                if (analysisNode) {
+                    const curLat = parseCoord(analysisNode.querySelector('Latitude')?.textContent);
+                    const curLon = parseCoord(analysisNode.querySelector('Longitude')?.textContent);
+                    const curIntensity = analysisNode.querySelector('Intensity')?.textContent || 'Tropical Cyclone';
+                    const curWind = analysisNode.querySelector('MaximumWind')?.textContent || '--';
+                    const distance = calculateDistance(HK_LAT, HK_LON, curLat, curLon);
+
+                    document.getElementById('typhoon-status').innerHTML = `
+                        <strong>系統名稱 (System)：</strong> ${tcName} (${curIntensity})<br>
+                        <strong>中心位置 (Centre Pos)：</strong> 北緯(N) ${curLat.toFixed(2)}°, 東經(E) ${curLon.toFixed(2)}°<br>
+                        <strong>距港距離 (Distance)：</strong> 約 <strong>${Math.round(distance)}</strong> 公里 (km)
+                    `;
+
+                    let p1 = 0, p3 = 0, p8 = 0, p9 = 0, p10 = 0;
+                    let windNum = parseFloat(curWind.replace(/[^0-9.]/g, '')) || 65;
+
+                    if (distance <= 800) p1 = Math.min(100, Math.round(100 - (distance - 400) * 0.1));
+                    if (distance <= 500) { p1 = 98; p3 = Math.min(95, Math.round(90 - (distance - 250) * 0.2)); }
+                    if (distance <= 300) { p1 = 100; p3 = 95; p8 = Math.min(90, Math.round(75 + (windNum - 65) * 0.3)); }
+                    if (distance <= 150) { p3 = 100; p8 = 95; if (windNum >= 90) p9 = 65; if (windNum >= 118) p10 = 40; }
+                    if (distance <= 80) { p8 = 100; if (windNum >= 90) p9 = 85; if (windNum >= 118) p10 = 75; }
+
+                    document.getElementById('bar-1').style.width = p1 + '%'; document.getElementById('txt-1').innerText = p1 + '%';
+                    document.getElementById('bar-3').style.width = p3 + '%'; document.getElementById('txt-3').innerText = p3 + '%';
+                    document.getElementById('bar-8').style.width = p8 + '%'; document.getElementById('txt-8').innerText = p8 + '%';
+                    document.getElementById('bar-9').style.width = p9 + '%'; document.getElementById('txt-9').innerText = p9 + '%';
+                    document.getElementById('bar-10').style.width = p10 + '%'; document.getElementById('txt-10').innerText = p10 + '%';
+
+                    const typhoonIcon = L.divIcon({ className: 'custom-icon', html: "<div class='typhoon-emoji'>🌀</div>", iconSize: [34, 34], iconAnchor: [17, 17] });
+                    L.marker([curLat, curLon], { icon: typhoonIcon }).addTo(hkoMap).bindPopup(`<b>${tcName}</b><br>${curIntensity}`);
+
+                    const forecastNodes = xml.querySelectorAll('ForecastInformation');
+                    let forecastTrack = [[curLat, curLon]];
+                    forecastNodes.forEach((node, index) => {
+                        const fLat = parseCoord(node.querySelector('Latitude')?.textContent);
+                        const fLon = parseCoord(node.querySelector('Longitude')?.textContent);
+                        if (fLat !== null && fLon !== null) {
+                            forecastTrack.push([fLat, fLon]);
+                            if (index > 0 && (index % 12 === 0 || index === forecastNodes.length - 1)) {
+                                let errorRadius = 40000 + (index * 3500); 
+                                L.circle([fLat, fLon], { radius: errorRadius, color: '#f39c12', fillColor: '#f1c40f', fillOpacity: 0.12, weight: 1, dashArray: '3,3' }).addTo(hkoMap);
+                                L.circleMarker([fLat, fLon], { radius: 3.5, color: '#d35400', fillColor: '#e67e22', fillOpacity: 1 }).addTo(hkoMap);
+                            }
+                        }
+                    });
+                    L.polyline(forecastTrack, { color: '#d35400', weight: 3, dashArray: '5,5' }).addTo(hkoMap);
+                }
+            } catch (err) { console.error("HKO XML Loading Failed:", err); }
+        }
+
+        // ================= 3. 讀取實時風速風向 =================
+        async function fetchWindData() {
+            try {
+                const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/wind_data.csv');
+                let rows = text.split(/\r?\n/).map(r => r.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''))).filter(r => r.length >= 2 && r[0] !== "");
+                const container = document.getElementById('wind-list-container');
+                container.innerHTML = '';
+
+                rows.forEach(r => {
+                    const rowStr = r.join(" ");
+                    // 【終極防呆過濾】直接略過任何含有標題字眼的 CSV 行
+                    if (rowStr.includes("日期時間") || rowStr.includes("自動氣象站") || rowStr.includes("Date/Time") || rowStr.includes("Automatic Weather Station")) {
+                        return; 
+                    }
+
+                    let cleanedRow = r.filter(x => isNaN(parseFloat(x)) || Math.abs(parseFloat(x)) < 10000);
+                    let textItems = cleanedRow.filter(x => isNaN(parseFloat(x)) && x !== "");
+                    let speedStr = cleanedRow.find(x => !isNaN(parseFloat(x)) && x !== "");
+                    let speed = speedStr !== undefined ? parseFloat(speedStr).toString() : '--';
+                    let dir = '--', station = null;
+                    const dirWords = ["北", "東", "南", "西", "微風", "無風", "旋風", "N", "E", "S", "W", "VRB", "CALM"];
+                    
+                    if (textItems.length >= 2) {
+                        let dIdx = textItems.findIndex(x => dirWords.some(dw => x.toUpperCase().includes(dw)));
+                        if (dIdx !== -1) { dir = textItems[dIdx]; textItems.splice(dIdx, 1); station = textItems[0]; }
+                        else { station = textItems[0]; dir = textItems[1]; }
+                    } else if (textItems.length === 1) { station = textItems[0]; }
+
+                    // 最後把關，確保地名冇錯
+                    if (station && !station.includes("日期") && !station.includes("氣象站")) {
+                        let speedClass = (speed !== '--' && parseFloat(speed) >= 41) ? 'color: #e74c3c; font-weight: bold;' : 'color: var(--brand-navy); font-weight: bold;';
+                        container.innerHTML += `<div class="data-item"><span>${station}</span> <span style="${speedClass}">${dir} ${speed} km/h</span></div>`;
+                    }
+                });
+
+                if (container.innerHTML === '') {
+                    container.innerHTML = '<div style="text-align: center; padding: 25px; color: var(--text-muted);">暫無風速數據 (No wind data)</div>';
+                }
+            } catch (err) {
+                document.getElementById('wind-list-container').innerHTML = "風力數據載入失敗 (Failed to load wind data).";
+            }
+        }
+
+        // ================= 4. 讀取實時雨量 JSON 數據 =================
+        async function fetchRainData() {
+            try {
+                const raw = await fetchResource('https://dannytcchan00.github.io/0Data/data/rain_data.csv');
+                let data = null;
+                try {
+                    data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                } catch (e) {
+                    console.error("JSON parse error:", e);
+                }
+
+                const container = document.getElementById('rain-list-container');
+                container.innerHTML = '';
+
+                if (data && data.hourlyRainfall && Array.isArray(data.hourlyRainfall)) {
+                    data.hourlyRainfall.forEach(item => {
+                        const station = item.automaticWeatherStation;
+                        const rainVal = parseFloat(item.value);
+                        const unit = item.unit || 'mm';
+
+                        if (station && !isNaN(rainVal)) {
+                            let rainStyle = 'color: var(--text-muted); font-weight: normal;';
+                            if (rainVal >= 50) rainStyle = 'color: #e74c3c; font-weight: bold;';      // 紅雨/黑雨
+                            else if (rainVal >= 30) rainStyle = 'color: #e67e22; font-weight: bold;'; // 黃雨
+                            else if (rainVal > 0) rainStyle = 'color: #0984e3; font-weight: bold;';   // 有雨
+
+                            container.innerHTML += `
+                                <div class="data-item">
+                                    <span>${station}</span>
+                                    <span style="${rainStyle}">${rainVal} ${unit}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    container.innerHTML = '<div style="text-align: center; padding: 25px; color: var(--text-muted);">暫無降雨數據 (No rainfall data)</div>';
+                }
+            } catch (err) {
+                console.error("Rain data error:", err);
+                document.getElementById('rain-list-container').innerHTML = "雨量數據載入失敗 (Failed to load rainfall data).";
+            }
+        }
+
+        // ================= 5. 解析各國機構 KML =================
+        async function loadNCDRKMLTrack() {
+            try {
+                const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml');
+                const xml = new DOMParser().parseFromString(text, "text/xml");
+                
+                const agencyColors = {
+                    'JMA': '#e74c3c', 'JTWC': '#3498db', 'CWA': '#f39c12',
+                    'KMA': '#2ecc71', 'NMC': '#9b59b6', 'HKO': '#34495e'
+                };
+
+                const folders = xml.getElementsByTagName('Folder');
+                let allBounds = [];
+
+                for (let i = 0; i < folders.length; i++) {
+                    const folder = folders[i];
+                    const agencyName = folder.getElementsByTagName('name')[0]?.textContent || 'Unknown';
+                    const color = agencyColors[agencyName] || '#7f8c8d';
+
+                    // 畫路徑線
+                    const lineStrings = folder.getElementsByTagName('LineString');
+                    if (lineStrings.length > 0) {
+                        const coordsStr = lineStrings[0].getElementsByTagName('coordinates')[0].textContent;
+                        const coordsArray = coordsStr.trim().split(/\s+/);
+                        let latLngs = [];
+
+                        coordsArray.forEach(coord => {
+                            const parts = coord.split(',');
+                            if (parts.length >= 2) {
+                                const lon = parseFloat(parts[0]);
+                                const lat = parseFloat(parts[1]);
+                                if (!isNaN(lat) && !isNaN(lon)) {
+                                    latLngs.push([lat, lon]);
+                                    allBounds.push([lat, lon]);
+                                }
+                            }
+                        });
+
+                        L.polyline(latLngs, { color: color, weight: 3, opacity: 0.9 }).addTo(ncdrMap).bindTooltip(`<b>${agencyName}</b> Forecast Track`, {sticky: true});
+                    }
+
+                    // 畫預測標記點
+                    const placemarks = folder.getElementsByTagName('Placemark');
+                    for (let j = 0; j < placemarks.length; j++) {
+                        const point = placemarks[j].getElementsByTagName('Point');
+                        if (point.length > 0) {
+                            const pCoords = point[0].getElementsByTagName('coordinates')[0].textContent.split(',');
+                            const pLon = parseFloat(pCoords[0]);
+                            const pLat = parseFloat(pCoords[1]);
+                            
+                            L.circleMarker([pLat, pLon], { radius: 3, color: color, fillColor: '#fff', fillOpacity: 1, weight: 1 }).addTo(ncdrMap);
+                            
+                            // 第一點為最新位置
+                            if (j === 0) {
+                                L.circleMarker([pLat, pLon], { radius: 6, color: color, fillColor: color, fillOpacity: 0.7, weight: 2 }).addTo(ncdrMap).bindPopup(`<b>${agencyName}</b> Latest Position`);
+                            }
+                        }
+                    }
+                }
+
+                if (allBounds.length > 0) {
+                    ncdrMap.fitBounds(allBounds, { padding: [30, 30] });
+                }
+            } catch (err) { console.error("NCDR KML Parse Failed:", err); }
+        }
+
+        // ================= 啟動與定時刷新 =================
+        window.onload = () => {
+            initMaps();
+            loadHKOTyphoonTrack();
+            fetchWindData();
+            fetchRainData();
+            loadNCDRKMLTrack();
+
+            // 每 3 分鐘自動刷新
+            setInterval(() => {
+                loadHKOTyphoonTrack();
+                fetchWindData();
+                fetchRainData();
+            }, 180000);
+        };
+    </script>
+</body>
+</html>
