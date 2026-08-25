@@ -34,11 +34,12 @@
         .header-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap;}
         .logo img { height: 60px; mix-blend-mode: multiply; }
         
+        /* 標頭資訊區靠左對齊，分兩行 */
         .header-info { display: flex; flex-direction: column; gap: 5px; justify-content: center; align-items: flex-start; }
         .header-date { font-size: 15px; font-weight: bold; color: var(--brand-navy); display: flex; align-items: baseline; gap: 8px; margin-bottom: 0;}
         .header-lunar { font-size: 13px; color: var(--text-muted); font-weight: normal; }
         
-        .header-status-row { display: flex; gap: 8px; height: 24px; align-items: center; justify-content: flex-start; }
+        .header-status-row { display: flex; gap: 10px; height: 28px; align-items: center; justify-content: flex-start; }
         
         .header-threat-badge { 
             padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #fff; 
@@ -210,10 +211,12 @@
                 <img src="logo.jpg" alt="Met Office Logo">
             </div>
             <div class="header-info" id="header-info">
+                <!-- 上層：西曆 + 農曆日期 (精緻字體) -->
                 <div class="header-date">
                     <span id="header-gregorian">--</span>
                     <span id="header-lunar" class="header-lunar"></span>
                 </div>
+                <!-- 下層：先 Threat Level 徽章，後警告 Icon -->
                 <div class="header-status-row">
                     <div id="header-threat-badge" class="header-threat-badge">Level 1</div>
                     <div class="header-warnings-container" id="header-warnings-container"></div>
@@ -308,7 +311,8 @@
                 <div class="custom-desc" id="threat-desc">現時並無重大天氣威脅，適合進行戶外活動。</div>
             </div>
 
-            <div class="info-box wbgt-box" id="wbgt-box">
+            <!-- 💡 暑熱指數卡片（加入點擊 Modal 功能） -->
+            <div class="info-box wbgt-box clickable" id="wbgt-box" onclick="openWbgtModal()">
                 <div class="box-title" style="justify-content: center;" data-i18n="title_wbgt">🛡️ Met Office 暑熱指數</div>
                 <div class="wbgt-circle" id="wbgt-val" style="background-color: #2ecc71;">--</div>
                 <div class="wbgt-label" id="wbgt-label" style="color: #2ecc71;">計算中...</div>
@@ -448,6 +452,38 @@
         </div>
     </div>
 
+    <!-- 💡 新增：暑熱指數詳情 Modal -->
+    <div id="wbgt-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <button class="close-btn" onclick="closeModal('wbgt-modal')">×</button>
+            <div class="modal-header" data-i18n="title_wbgt_detail">🛡️ 暑熱指數詳情</div>
+            
+            <div style="display:flex; align-items:center; gap:20px; margin-bottom: 20px;">
+                <div id="wbgt-modal-circle" style="width:70px; height:70px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:bold; background-color:#2ecc71;">--</div>
+                <div>
+                    <div id="wbgt-modal-badge" class="threat-badge-lg" style="margin-bottom:5px; font-size:16px; padding:4px 14px;">安全</div>
+                    <div style="color:var(--text-muted); font-size:13px;" id="wbgt-modal-sub"></div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h4 style="margin-bottom:8px; color:var(--brand-navy);" data-i18n="wbgt_advice_title">💡 健康及防暑指引：</h4>
+                <p id="wbgt-modal-advice" style="font-size:14px; line-height:1.6; margin:0;"></p>
+            </div>
+
+            <div class="info-panel">
+                <h4 style="margin-bottom:8px; color:var(--brand-navy);" data-i18n="wbgt_scale_title">📊 Met Office 暑熱分級標準：</h4>
+                <ul class="threat-ul" style="font-size:13px; margin:0; padding-left:18px;">
+                    <li><strong>&lt; 30 (安全 / Safe)</strong>：中暑風險極低，適合進行各類戶外活動。</li>
+                    <li><strong>30.0 - 31.9 (注意 / Note)</strong>：天氣悶熱，進行戶外活動時請補充足夠水分。</li>
+                    <li><strong>32.0 - 33.9 (黃色 / Yellow)</strong>：工作暑熱威脅提高，重勞動工作者建議每小時安排適度休息。</li>
+                    <li><strong>34.0 - 35.9 (紅色 / Red)</strong>：中暑風險極高，大部分高強度戶外工作應暫停並適時降溫。</li>
+                    <li><strong>&ge; 36.0 (黑色 / Black)</strong>：極端危險！應立即停止所有戶外勞動及劇烈運動。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ================= 多語言系統 =================
         let currentLang = 'tc';
@@ -478,7 +514,8 @@
                 "lbl_sun": "☀️ 日出 / 日落", "lbl_moon": "🌙 月出 / 月落", "lbl_phase": "相 (Moon Phase)",
                 "map_temp": "🌡️ 氣溫", "map_rain": "🌧️ 雨量", "map_press": "🧭 氣壓", "map_vis": "👁️ 能見度", "map_solar": "☀️ 太陽/UV", "map_tide": "🌊 潮汐", "map_wind": "💨 風力",
                 "lbl_mod_hl": "高 / 低溫", "lbl_mod_rh": "相對濕度", "lbl_mod_ws": "風速", "lbl_mod_wd": "風向", "ui_moon": "🌖 虧凸月",
-                "title_threat_detail": "🛡️ 綜合威脅級別詳情", "title_threat_factors": "主要威脅觸發因素："
+                "title_threat_detail": "🛡️ 綜合威脅級別詳情", "title_threat_factors": "主要威脅觸發因素：",
+                "title_wbgt_detail": "🛡️ Met Office 暑熱指數詳情", "wbgt_advice_title": "💡 健康及防暑指引：", "wbgt_scale_title": "📊 Met Office 暑熱分級標準："
             },
             "en": {
                 "nav_home": "Home", "nav_weather": "Weather & Climate ▼", "nav_sub_local": "Local Weather", "nav_sub_9day": "9-Day Forecast", "nav_sub_typhoon": "Typhoon Info", "nav_sub_radar": "Radar & Satellite",
@@ -493,7 +530,8 @@
                 "lbl_sun": "☀️ Sunrise / Set", "lbl_moon": "🌙 Moonrise / Set", "lbl_phase": "Moon Phase",
                 "map_temp": "🌡️ Temp", "map_rain": "🌧️ Rain", "map_press": "🧭 Pressure", "map_vis": "👁️ Visibility", "map_solar": "☀️ Solar/UV", "map_tide": "🌊 Tide", "map_wind": "💨 Wind",
                 "lbl_mod_hl": "Max / Min", "lbl_mod_rh": "Humidity", "lbl_mod_ws": "Wind Spd", "lbl_mod_wd": "Wind Dir", "ui_moon": "🌖 Waning Gibbous",
-                "title_threat_detail": "🛡️ Threat Level Details", "title_threat_factors": "Key Trigger Factors:"
+                "title_threat_detail": "🛡️ Threat Level Details", "title_threat_factors": "Key Trigger Factors:",
+                "title_wbgt_detail": "🛡️ Met Office Heat Index Details", "wbgt_advice_title": "💡 Health & Heat Prevention Advice:", "wbgt_scale_title": "📊 Met Office Heat Index Scale:"
             }
         };
 
@@ -614,11 +652,12 @@
             "寒冷天氣警告": "cold", "Cold Weather Warning": "cold", "酷熱天氣警告": "hot", "Very Hot Weather Warning": "hot", "海嘯警告": "tsunami", "Tsunami Warning": "tsunami"
         };
 
-        const hkStationCoords = { "香港天文台":[22.3022, 114.1747], "京士柏":[22.3114, 114.1728], "赤鱲角":[22.3094, 113.9219], "長洲":[22.2011, 114.0267], "流浮山":[22.4689, 113.9836], "打鼓嶺":[22.5286, 114.1567], "沙田":[22.4025, 114.2100], "大埔":[22.4456, 114.1789], "屯門":[22.3858, 113.9642], "西貢":[22.3836, 114.2708], "將軍澳":[22.3158, 114.2556], "黃竹坑":[22.2478, 114.1736], "橫瀾島":[22.1828, 114.3014], "啟德":[22.3225, 114.2056], "坪洲":[22.2858, 114.0433], "昂坪":[22.2561, 113.9056], "大帽山":[22.4106, 114.1242], "跑馬地":[22.2706, 114.1831], "筲箕灣":[22.2819, 114.2253], "觀塘":[22.3131, 114.2247], "荃灣城門谷":[22.3758, 114.1256], "荃灣可觀":[22.3853, 114.1097], "元朗公園":[22.4419, 114.0183], "上水":[22.5019, 114.1289], "大美督":[22.4753, 114.2375], "北潭涌":[22.3956, 114.3217], "滘西洲":[22.3653, 114.3106], "青衣":[22.3442, 114.1089], "石崗":[22.4361, 114.0847], "中環":[22.2869, 114.1611], "中環碼頭":[22.2869, 114.1611], "鰂魚涌":[22.2889, 114.2125], "尖鼻咀":[22.4883, 114.0108], "大廟灣":[22.2667, 114.2917], "石壁":[22.2222, 113.8944], "大埔滘":[22.4283, 114.1856], "馬灣":[22.3536, 114.0603] };
+        const hkStationCoords = { "香港天文台":[22.3022, 114.1747], "天文台":[22.3022, 114.1747], "京士柏":[22.3114, 114.1728], "赤鱲角":[22.3094, 113.9219], "長洲":[22.2011, 114.0267], "流浮山":[22.4689, 113.9836], "打鼓嶺":[22.5286, 114.1567], "沙田":[22.4025, 114.2100], "大埔":[22.4456, 114.1789], "屯門":[22.3858, 113.9642], "西貢":[22.3836, 114.2708], "將軍澳":[22.3158, 114.2556], "黃竹坑":[22.2478, 114.1736], "橫瀾島":[22.1828, 114.3014], "啟德":[22.3225, 114.2056], "坪洲":[22.2858, 114.0433], "昂坪":[22.2561, 113.9056], "大帽山":[22.4106, 114.1242], "跑馬地":[22.2706, 114.1831], "筲箕灣":[22.2819, 114.2253], "觀塘":[22.3131, 114.2247], "荃灣城門谷":[22.3758, 114.1256], "荃灣可觀":[22.3853, 114.1097], "元朗公園":[22.4419, 114.0183], "上水":[22.5019, 114.1289], "大美督":[22.4753, 114.2375], "北潭涌":[22.3956, 114.3217], "滘西洲":[22.3653, 114.3106], "青衣":[22.3442, 114.1089], "石崗":[22.4361, 114.0847], "中環":[22.2869, 114.1611], "中環碼頭":[22.2869, 114.1611], "鰂魚涌":[22.2889, 114.2125], "尖鼻咀":[22.4883, 114.0108], "大廟灣":[22.2667, 114.2917], "石壁":[22.2222, 113.8944], "大埔滘":[22.4283, 114.1856], "馬灣":[22.3536, 114.0603], "大隴":[22.4967, 114.1167] };
 
         let globalRhrreadData = null; let globalWindData = {}; let masterStationMap = {}; 
         let currentMapMetric = 'temp'; let leafletMap = null; let mapMarkersLayer = null; let stationChartInstance = null;
         let threatModalData = { html: "", badgeText: "", badgeColor: "", summary: "" };
+        let wbgtModalData = { val: "--", badgeText: "安全", badgeColor: "#2ecc71", sub: "", advice: "" };
 
         function updateTime() {
             try {
@@ -699,7 +738,7 @@
                 }
             }
 
-            // 2. 九天預報 (支援點擊 Popup)
+            // 2. 九天預報
             const forecastResult = await fetchHKO(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${apiLang}`);
             const nineDayContainer = document.getElementById('nine-day-forecast-list');
             if (forecastResult.success && forecastResult.data.weatherForecast) {
@@ -907,7 +946,6 @@
             } else { swtBox.style.display = 'none'; swtBox.classList.remove('blinking'); }
 
             // ================= 7. 綜合威脅級別 (動態解說) =================
-            // 💡 修正宣告遺漏問題，確保不會再發生 ReferenceError 卡死情況
             let threatLevel = 1; 
             let reasons = []; 
             let detailedReasons = []; 
@@ -922,7 +960,6 @@
             else if (warnNamesStr.includes("紅") || warnNamesStr.includes("三") || warnNamesStr.includes("新界北部") || warnNamesStr.includes("Red") || warnNamesStr.includes("No. 3") || warnNamesStr.includes("Flooding")) { threatLevel = Math.max(threatLevel, 3); reasons.push(checkEn ? "Bad Weather" : "受惡劣天氣影響"); let w = activeWarnNames.find(n => n.includes("紅") || n.includes("三") || n.includes("新界北部") || n.includes("Red") || n.includes("No. 3") || n.includes("Flooding")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出三級警告。天文台已發出中度惡劣警告信號（如三號風球、紅色暴雨）。需保持警覺。`); detailedReasonsEN.push(`Due to [${w}], moderate weather warnings are active.`); }
             else if (warnNamesStr.includes("黃") || warnNamesStr.includes("雷暴") || warnNamesStr.includes("季候風") || warnNamesStr.includes("火災") || warnNamesStr.includes("寒冷") || warnNamesStr.includes("酷熱") || warnNamesStr.includes("Yellow") || warnNamesStr.includes("Thunderstorm") || warnNamesStr.includes("Monsoon") || warnNamesStr.includes("Cold") || warnNamesStr.includes("Hot")) { threatLevel = Math.max(threatLevel, 2); reasons.push(checkEn ? "Unstable Weather" : "天氣不穩定"); let w = activeWarnNames.find(n => n.includes("黃") || n.includes("雷暴") || n.includes("季候風") || n.includes("火災") || n.includes("寒冷") || n.includes("酷熱") || n.includes("Yellow") || n.includes("Thunderstorm") || n.includes("Monsoon") || n.includes("Cold") || n.includes("Hot")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出二級警告。天氣狀況轉壞或容易引發意外。`); detailedReasonsEN.push(`Due to [${w}], basic weather warnings are in force.`); }
 
-            // 💡 確保 currentTemp 是數字，防止字串相加導致 NaN 報錯
             let numTemp = parseFloat(currentTemp);
             let numHum = parseFloat(currentHum);
             if (!isNaN(numTemp)) {
@@ -935,13 +972,29 @@
             let vaporPressure = (numHum / 100) * 6.105 * Math.exp((17.27 * numTemp) / (237.7 + numTemp));
             let wbgtValue = (0.567 * numTemp + 0.393 * vaporPressure + 3.94).toFixed(1);
             let wbgtLevel = 1; let wbgtText = checkEn ? "Safe" : "安全"; let wbgtColor = "#2ecc71";
+            let wbgtAdvice = checkEn ? "Heat stroke risk is very low. Suitable for normal outdoor activities." : "中暑風險極低，適合進行各類正常戶外活動。";
 
             if (!isNaN(parseFloat(wbgtValue))) {
-                if (wbgtValue >= 36.0) { wbgtLevel = 5; wbgtText = checkEn ? "Black" : "黑色"; wbgtColor = "#2c3e50"; }
-                else if (wbgtValue >= 34.0) { wbgtLevel = 4; wbgtText = checkEn ? "Red" : "紅色"; wbgtColor = "#e74c3c"; }
-                else if (wbgtValue >= 32.0) { wbgtLevel = 3; wbgtText = checkEn ? "Yellow" : "黃色"; wbgtColor = "#f1c40f"; }
-                else if (wbgtValue >= 30.0) { wbgtLevel = 2; wbgtText = checkEn ? "Note" : "注意"; wbgtColor = "#e67e22"; }
-                else { wbgtLevel = 1; wbgtText = checkEn ? "Safe" : "安全"; wbgtColor = "#2ecc71"; }
+                if (wbgtValue >= 36.0) { 
+                    wbgtLevel = 5; wbgtText = checkEn ? "Black" : "黑色"; wbgtColor = "#2c3e50"; 
+                    wbgtAdvice = checkEn ? "Extreme danger! Stop all outdoor labor, heavy work, and strenuous exercise immediately. Rest in cool/air-conditioned indoor areas." : "極端危險！應立即全面停止所有戶外勞動、重體力工作及劇烈運動。請留在陰涼或有冷氣的室內地方休息並多喝水。";
+                }
+                else if (wbgtValue >= 34.0) { 
+                    wbgtLevel = 4; wbgtText = checkEn ? "Red" : "紅色"; wbgtColor = "#e74c3c"; 
+                    wbgtAdvice = checkEn ? "High heat stroke risk. Suspend heavy outdoor labor, take at least 30 mins rest per hour, and stay well hydrated." : "中暑風險極高！大部分高強度戶外勞動應暫停，戶外工作者每小時應安排至少30分鐘休息，定時補充水分及電解質。";
+                }
+                else if (wbgtValue >= 32.0) { 
+                    wbgtLevel = 3; wbgtText = checkEn ? "Yellow" : "黃色"; wbgtColor = "#f1c40f"; 
+                    wbgtAdvice = checkEn ? "Moderate heat stress. Outdoor workers should take at least 15 mins rest per hour under shaded areas." : "工作暑熱威脅提高，重勞動工作者建議每小時安排適度休息（約15分鐘），避免長時間受陽光直射。";
+                }
+                else if (wbgtValue >= 30.0) { 
+                    wbgtLevel = 2; wbgtText = checkEn ? "Note" : "注意"; wbgtColor = "#e67e22"; 
+                    wbgtAdvice = checkEn ? "Weather is warm and humid. Drink plenty of water and avoid over-exertion under the sun." : "天氣較為悶熱，進行戶外活動時請補充足夠水分，並留意身體狀況。";
+                }
+                else { 
+                    wbgtLevel = 1; wbgtText = checkEn ? "Safe" : "安全"; wbgtColor = "#2ecc71"; 
+                    wbgtAdvice = checkEn ? "Heat stroke risk is very low. Suitable for normal outdoor activities." : "中暑風險極低，適合進行各類正常戶外活動。";
+                }
             }
 
             if (wbgtLevel >= 5) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Black Heat Stress" : "黑色暑熱指標"); dominantReason = `黑色暑熱指數`; dominantReasonEN = `Black Heat Index`; detailedReasons.push(`因為暑熱指數達 ${wbgtValue}（黑色級別），所以發出五級警告。極端危險，應全面暫停戶外勞動。`); detailedReasonsEN.push(`Heat index reached Black level. Stop all outdoor works.`); }
@@ -980,11 +1033,17 @@
             threatModalData.badgeColor = threatColor;
             threatModalData.summary = threatDesc;
             
-            // 💡 確保陣列有資料，防止 mapping 空白
             if (detailedReasons.length === 0) detailedReasons.push("因為各項氣象指數及天氣狀況正常，所以評定為一級（安全）。適合進行正常戶外活動。");
             if (detailedReasonsEN.length === 0) detailedReasonsEN.push("All indices normal. Safe for outdoor activities.");
             
             threatModalData.html = (checkEn ? detailedReasonsEN : detailedReasons).map(r => `<li>${r}</li>`).join("");
+
+            // 💡 儲存 WBGT Modal 數據
+            wbgtModalData.val = wbgtValue;
+            wbgtModalData.badgeText = wbgtText;
+            wbgtModalData.badgeColor = wbgtColor;
+            wbgtModalData.sub = checkEn ? `Current Temp: ${numTemp}°C | Relative Humidity: ${numHum}%` : `當前氣溫：${numTemp}°C ｜ 相對濕度：${numHum}%`;
+            wbgtModalData.advice = wbgtAdvice;
 
             if (!isNaN(parseFloat(wbgtValue))) {
                 document.getElementById('wbgt-val').innerText = wbgtValue;
@@ -1010,6 +1069,18 @@
             document.getElementById('threat-modal-summary').innerText = threatModalData.summary;
             document.getElementById('threat-modal-reasons').innerHTML = threatModalData.html;
             const modal = document.getElementById('threat-modal');
+            modal.style.display = 'flex'; setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function openWbgtModal() {
+            document.getElementById('wbgt-modal-circle').innerText = wbgtModalData.val;
+            document.getElementById('wbgt-modal-circle').style.backgroundColor = wbgtModalData.badgeColor;
+            document.getElementById('wbgt-modal-badge').innerText = wbgtModalData.badgeText;
+            document.getElementById('wbgt-modal-badge').style.backgroundColor = wbgtModalData.badgeColor;
+            document.getElementById('wbgt-modal-sub').innerText = wbgtModalData.sub;
+            document.getElementById('wbgt-modal-advice').innerText = wbgtModalData.advice;
+            
+            const modal = document.getElementById('wbgt-modal');
             modal.style.display = 'flex'; setTimeout(() => modal.classList.add('show'), 10);
         }
 
