@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="page_title">香港即時天氣資訊總覽</title>
+    <title data-i18n="page_title">Hong Kong Real-Time Weather</title>
     
     <style>
         :root {
@@ -20,7 +20,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-light); color: var(--text-main); line-height: 1.5; padding-top: 25px; }
 
-        .container { max-width: 800px; /* 收窄闊度令雷達圖置中更好睇 */ margin: 0 auto 25px auto; padding: 0 25px; display: flex; flex-direction: column; gap: 25px; }
+        .container { max-width: 800px; margin: 0 auto 25px auto; padding: 0 25px; display: flex; flex-direction: column; gap: 20px; }
 
         .table-section { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); }
         .section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
@@ -78,7 +78,8 @@
 
     <script>
         // ================= 多語言系統 (i18n) =================
-        let currentLang = localStorage.getItem('met_lang') || 'en';
+        // 可在此更改預設語言：'en' 為英文，'tc' 為繁體中文
+        let currentLang = 'en'; 
 
         const i18nDict = {
             "tc": {
@@ -98,12 +99,21 @@
         };
 
         function applyLanguageUI() {
+            // 更新靜態文字
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18nDict[currentLang] && i18nDict[currentLang][key]) { 
                     el.innerHTML = i18nDict[currentLang][key]; 
                 }
             });
+            
+            // 更新播放/暫停按鈕狀態
+            const playBtn = document.getElementById('play-btn');
+            if (playing) {
+                playBtn.innerHTML = i18nDict[currentLang]["radar_pause"];
+            } else {
+                playBtn.innerHTML = i18nDict[currentLang]["radar_play"];
+            }
         }
 
         // ================= 雷達圖系統 =================
@@ -126,7 +136,6 @@
                 const dd = String(t.getDate()).padStart(2, '0');
                 const HH = String(t.getHours()).padStart(2, '0');
                 const mm = String(t.getMinutes()).padStart(2, '0');
-                // unshift 確保陣列由舊到新排列 (index 0 係最舊，index 19 係最新)
                 times.unshift(`${yyyy}${MM}${dd}${HH}${mm}`);
             }
             return times;
@@ -176,10 +185,10 @@
             playing = !playing;
             const btn = document.getElementById('play-btn');
             if (playing) {
-                btn.innerHTML = i18nDict[currentLang]["radar_pause"] || "⏸ Pause";
+                btn.innerHTML = i18nDict[currentLang]["radar_pause"];
                 playInterval = setInterval(nextFrame, 400); 
             } else {
-                btn.innerHTML = i18nDict[currentLang]["radar_play"] || "▶️ Play";
+                btn.innerHTML = i18nDict[currentLang]["radar_play"];
                 clearInterval(playInterval);
             }
         }
