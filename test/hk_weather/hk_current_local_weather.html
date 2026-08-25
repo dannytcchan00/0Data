@@ -177,6 +177,20 @@
             return currentLang === 'en' && stationDictEN[tcName] ? stationDictEN[tcName] : tcName; 
         }
 
+        // ================= 新增：風向中英轉換 =================
+        function getDisplayWindDir(dir) {
+            if (!dir || dir === '--') return '--';
+            const toEn = { "北": "N", "東": "E", "南": "S", "西": "W", "東北": "NE", "東南": "SE", "西北": "NW", "西南": "SW", "微風": "Light", "無風": "Calm", "旋風": "VRB" };
+            const toTc = { "N": "北", "E": "東", "S": "南", "W": "西", "NE": "東北", "SE": "東南", "NW": "西北", "SW": "西南", "NNE": "東北偏北", "ENE": "東北偏東", "ESE": "東南偏東", "SSE": "東南偏南", "SSW": "西南偏南", "WSW": "西南偏西", "WNW": "西北偏西", "NNW": "西北偏北", "VRB": "旋風", "CALM": "無風" };
+            
+            if (currentLang === 'en') {
+                return toEn[dir] || dir;
+            } else {
+                return toTc[dir.toUpperCase()] || dir;
+            }
+        }
+        // =====================================================
+
         function applyLanguageUI() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -318,7 +332,8 @@
                     s.windDir = dir; 
                     s.windSpeed = speed;
                     if (s.name.includes("京士柏") || s.name.includes("天文台")) {
-                        document.getElementById('kpi-wind').innerText = `${s.windDir} ${s.windSpeed} km/h`;
+                        // 使用 getDisplayWindDir 自動翻譯頂部卡片風向
+                        document.getElementById('kpi-wind').innerText = `${getDisplayWindDir(s.windDir)} ${s.windSpeed} km/h`;
                         document.getElementById('kpi-wind-station').innerText = getStationName(s.name);
                     }
                 }
@@ -382,7 +397,6 @@
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             
-            // 增強過濾條件：加入常見的 CSV 標題字眼，防止被當成氣象站顯示
             const list = Object.values(masterStationMap).filter(s => {
                 if (!s.name) return false;
                 const invalidKeywords = ["測站", "Station", "地區", "日期", "時間", "Date", "Time", "Wind Dir", "風向", "風速", "自動氣象站", "氣象站", "Wind Speed"];
@@ -408,6 +422,7 @@
                 const dispTemp = s.temp !== '--' ? s.temp + '°C' : '--';
                 const dispMaxMin = s.max !== '--' && s.min !== '--' ? `${s.max}°C / ${s.min}°C` : '--';
                 const dispRH = s.rh !== '--' ? s.rh + '%' : '--';
+                const dispWindDir = getDisplayWindDir(s.windDir); // 這裡應用翻譯
                 const dispRain = s.rain !== '--' ? s.rain + ' mm' : '--';
                 const dispPress = s.pressure !== '--' ? s.pressure + ' hPa' : '--';
                 const dispVis = s.vis !== '--' ? s.vis + ' km' : '--';
@@ -422,7 +437,7 @@
                         <td><span class="temp-badge ${badgeClass}" id="${safeId}-temp">${dispTemp}</span></td>
                         <td id="${safeId}-maxmin">${dispMaxMin}</td>
                         <td id="${safeId}-rh">${dispRH}</td>
-                        <td id="${safeId}-windDir">${s.windDir}</td>
+                        <td id="${safeId}-windDir">${dispWindDir}</td>
                         <td id="${safeId}-windSpeed">${s.windSpeed}</td>
                         <td id="${safeId}-rain">${dispRain}</td>
                         <td id="${safeId}-press">${dispPress}</td>
@@ -441,7 +456,7 @@
                     
                     document.getElementById(`${safeId}-maxmin`).innerText = dispMaxMin;
                     document.getElementById(`${safeId}-rh`).innerText = dispRH;
-                    document.getElementById(`${safeId}-windDir`).innerText = s.windDir;
+                    document.getElementById(`${safeId}-windDir`).innerText = dispWindDir;
                     document.getElementById(`${safeId}-windSpeed`).innerText = s.windSpeed;
                     document.getElementById(`${safeId}-rain`).innerText = dispRain;
                     document.getElementById(`${safeId}-press`).innerText = dispPress;
