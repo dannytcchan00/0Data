@@ -56,9 +56,9 @@
         }
 
         /* 1. 機率預測全新大圖示樣式 */
-        .pred-signal-container { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; gap: 15px; margin-top: 5px; }
-        .pred-icon { width: 85px !important; height: 85px !important; font-size: 34px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; transition: all 0.3s ease; }
-        .pred-prob { font-size: 52px; font-weight: 800; color: var(--brand-navy); line-height: 1; }
+        .pred-signal-container { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; gap: 10px; margin-top: 5px; }
+        .pred-icon { width: 90px !important; height: 90px !important; font-size: 38px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; transition: all 0.3s ease; }
+        .pred-prob { font-size: 58px; font-weight: 800; color: var(--brand-navy); line-height: 1; margin-bottom: 5px;}
         .pred-reason { font-size: 13.5px; color: var(--text-muted); text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--brand-blue); width: 100%; line-height: 1.6; }
         
         .sig-1 { background-color: #555555; } 
@@ -66,8 +66,6 @@
         .sig-8 { background-color: #e67e22; } 
         .sig-9 { background-color: #c0392b; } 
         .sig-10 { background-color: #8e44ad; }
-        
-        .typhoon-status { margin-top: auto; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12.5px; border-left: 4px solid var(--text-muted); line-height: 1.5; }
 
         /* 2 & 3. 滾動清單樣式 */
         .data-list { display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
@@ -143,21 +141,21 @@
         <!-- ================= 上排三欄 ================= -->
         <div class="top-row">
             
+            <!-- 左上：智能風球預測 (單一大風球設計) -->
             <div class="box">
                 <div class="box-title">
                     <span data-i18n="title_prob">📊 智能風球生效機率預測</span>
                     <small style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: auto;" data-i18n="title_prob_sub">Target Signal Predictor</small>
                 </div>
                 
-                <div class="pred-signal-container" id="pred-container" style="display: none;">
+                <div class="pred-signal-container" id="pred-container">
                     <div id="pred-icon" class="pred-icon sig-1">T1</div>
                     <div id="pred-prob">0%</div>
-                    <div id="pred-reason">分析中...</div>
+                    <div id="pred-reason" data-i18n="loading_data">🔄 正在讀取數據...</div>
                 </div>
-                
-                <div class="typhoon-status" id="typhoon-status" data-i18n="loading_data">🔄 正在讀取數據...</div>
             </div>
 
+            <!-- 中上：各區實時風速與風向 -->
             <div class="box">
                 <div class="box-title">
                     <span data-i18n="title_wind">💨 各區實時風速與風向</span>
@@ -168,6 +166,7 @@
                 </div>
             </div>
 
+            <!-- 右上：各區實時雨量監測 -->
             <div class="box">
                 <div class="box-title">
                     <span data-i18n="title_rain">🌧️ 各區實時雨量監測</span>
@@ -347,6 +346,7 @@
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(ncdrMap);
         }
 
+        // ================= 解析 HKO XML (全新單一目標風球預測設計) =================
         async function loadHKOTyphoonTrack() {
             try {
                 let activeTCSignal = 0;
@@ -380,18 +380,6 @@
                     const distance = calculateDistance(HK_LAT, HK_LON, curLat, curLon);
                     const langRef = i18nDict[currentLang];
 
-                    let activeWarnHtml = "";
-                    if (activeTCSignal > 0) {
-                        let sigText = activeTCSignal === 10 ? langRef.active_t10 : `${activeTCSignal}${langRef.signal}`;
-                        activeWarnHtml = `<br><span style="color:var(--alert-red); font-weight:bold;">⚠️ ${langRef.active_warn}${sigText}</span>`;
-                    }
-
-                    document.getElementById('typhoon-status').innerHTML = `
-                        <strong>${langRef.system_name}</strong> ${tcName} (${curIntensity})<br>
-                        <strong>${langRef.distance}</strong> ${langRef.approx} <strong>${Math.round(distance)}</strong> ${langRef.km}
-                        ${activeWarnHtml}
-                    `;
-
                     let p1 = 0, p3 = 0, p8 = 0, p9 = 0, p10 = 0;
                     let windNum = parseFloat(curWind.replace(/[^0-9.]/g, '')) || 65;
 
@@ -416,22 +404,34 @@
                     
                     if (activeTCSignal === 10) { targetSig = 10; targetProb = 100; }
 
-                    document.getElementById('pred-container').style.display = 'flex';
+                    // 更新 UI 顯示目標風球
                     const predIcon = document.getElementById('pred-icon');
                     predIcon.className = `pred-icon sig-${targetSig}`;
                     predIcon.innerText = `T${targetSig}`;
                     document.getElementById('pred-prob').innerText = `${targetProb}%`;
 
+                    // 動態組合理據 (Rationale)
                     let distStr = Math.round(distance);
+                    let sysInfoTC = `<strong>${langRef.system_name}</strong> ${tcName} (${curIntensity})<br><strong>${langRef.distance}</strong> ${langRef.approx} ${distStr} ${langRef.km}<br>`;
+                    let sysInfoEN = `<strong>${langRef.system_name}</strong> ${tcName} (${curIntensity})<br><strong>${langRef.distance}</strong> ${langRef.approx} ${distStr} ${langRef.km}<br>`;
+                    
+                    let activeWarnHtml = "";
+                    if (activeTCSignal > 0) {
+                        let sigText = activeTCSignal === 10 ? langRef.active_t10 : `${activeTCSignal}${langRef.signal}`;
+                        activeWarnHtml = `<span style="color:var(--alert-red); font-weight:bold;">⚠️ ${langRef.active_warn}${sigText}</span><br><br>`;
+                    } else { activeWarnHtml = "<br>"; }
+
                     let reasonHTML = "";
                     if (currentLang === 'tc') {
-                        if (activeTCSignal === 10) { reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>氣旋中心風力達 ${curWind}，距離本港約 ${distStr} 公里。`; } 
-                        else if (targetProb >= 99) { reasonHTML = `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近（距港 ${distStr} 公里），風力達 ${curWind}，預計即將改發 T${targetSig} 信號。`; } 
-                        else { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>現時氣旋距離香港約 ${distStr} 公里，中心最高持續風速為 ${curWind}。隨著距離拉近及風力增強，改發 <b>T${targetSig}</b> 的機率將會相應提升。`; }
+                        reasonHTML += sysInfoTC + activeWarnHtml;
+                        if (activeTCSignal === 10) { reasonHTML += `<strong>${langRef.rationale_t10}</strong><br>氣旋中心風力達 ${curWind}。`; } 
+                        else if (targetProb >= 99) { reasonHTML += `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近，風力達 ${curWind}，預計即將改發 T${targetSig} 信號。`; } 
+                        else { reasonHTML += `<strong>${langRef.rationale_title}</strong><br>中心最高持續風速為 ${curWind}。隨著距離拉近及風力增強，改發 <b>T${targetSig}</b> 的機率將會相應提升。`; }
                     } else {
-                        if (activeTCSignal === 10) { reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>Center wind: ${curWind}, Distance: ${distStr} km.`; } 
-                        else if (targetProb >= 99) { reasonHTML = `<strong>${langRef.rationale_met}</strong><br>Cyclone is very close (${distStr} km) with winds at ${curWind}. Issuance of T${targetSig} is imminent.`; } 
-                        else { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>The cyclone is approx. ${distStr} km away with wind speed of ${curWind}. Probability for <b>T${targetSig}</b> increases as it gets closer and stronger.`; }
+                        reasonHTML += sysInfoEN + activeWarnHtml;
+                        if (activeTCSignal === 10) { reasonHTML += `<strong>${langRef.rationale_t10}</strong><br>Center wind is ${curWind}.`; } 
+                        else if (targetProb >= 99) { reasonHTML += `<strong>${langRef.rationale_met}</strong><br>Cyclone is very close with winds at ${curWind}. Issuance of T${targetSig} is imminent.`; } 
+                        else { reasonHTML += `<strong>${langRef.rationale_title}</strong><br>Wind speed is ${curWind}. Probability for <b>T${targetSig}</b> increases as it gets closer and stronger.`; }
                     }
                     document.getElementById('pred-reason').innerHTML = reasonHTML;
 
@@ -457,7 +457,6 @@
             } catch (err) { console.error("HKO XML Loading Failed:", err); }
         }
 
-        // ================= 3. 讀取實時風速風向 (解決站名/風向掉轉 + 加入最高陣風) =================
         async function fetchWindData() {
             try {
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/wind_data.csv');
@@ -466,63 +465,35 @@
                 container.innerHTML = '';
 
                 let windList = [];
-
-                // 💡 嚴格風向名單 (Exact Match)
-                const exactDirs = new Set([
-                    "北", "東", "南", "西", "東北", "東南", "西北", "西南", 
-                    "東北偏北", "東北偏東", "東南偏東", "東南偏南", "西南偏南", "西南偏西", "西北偏西", "西北偏北",
-                    "微風", "無風", "旋風", "風向不定", 
-                    "N", "E", "S", "W", "NE", "SE", "NW", "SW", "NNE", "ENE", "ESE", "SSE", "SSW", "WSW", "WNW", "NNW", "VRB", "CALM", "VARIABLE"
-                ]);
+                const exactDirs = new Set(["北", "東", "南", "西", "東北", "東南", "西北", "西南", "東北偏北", "東北偏東", "東南偏東", "東南偏南", "西南偏南", "西南偏西", "西北偏西", "西北偏北", "微風", "無風", "旋風", "風向不定", "N", "E", "S", "W", "NE", "SE", "NW", "SW", "NNE", "ENE", "ESE", "SSE", "SSW", "WSW", "WNW", "NNW", "VRB", "CALM", "VARIABLE"]);
 
                 rows.forEach(r => {
                     const rowStr = r.join(" ");
-                    // 防呆過濾 1
                     if (rowStr.includes("日期時間") || rowStr.includes("自動氣象站") || rowStr.includes("Date/Time") || rowStr.includes("Automatic")) return;
 
-                    // 搵出數字 (可能係風速 或 最高陣風)
-                    let numItems = [];
-                    let textItems = [];
-                    
+                    let numItems = []; let textItems = [];
                     r.forEach(x => {
                         let parsed = parseFloat(x);
-                        if (!isNaN(parsed) && Math.abs(parsed) < 10000) {
-                            numItems.push(parsed);
-                        } else if (isNaN(parsed) && x !== "") {
-                            textItems.push(x);
-                        }
+                        if (!isNaN(parsed) && Math.abs(parsed) < 10000) { numItems.push(parsed); } 
+                        else if (isNaN(parsed) && x !== "") { textItems.push(x); }
                     });
 
-                    // 預設值
                     let speed = 0; let gust = null;
                     if (numItems.length >= 1) speed = numItems[0];
-                    if (numItems.length >= 2) gust = numItems[1]; // 第二個數字當做陣風
+                    if (numItems.length >= 2) gust = numItems[1];
 
                     let dir = '--', station = null;
-                    
-                    // 💡 解決掉轉問題：必須喺 textItems 入面，100% 吻合 exactDirs 先可以叫風向
                     if (textItems.length >= 2) {
                         let dIdx = textItems.findIndex(x => exactDirs.has(x.toUpperCase()));
-                        if (dIdx !== -1) { 
-                            dir = textItems[dIdx]; 
-                            textItems.splice(dIdx, 1); 
-                            station = textItems[0]; 
-                        } else { 
-                            // 搵唔到風向，代表全部都係站名 (可能斷行)
-                            station = textItems[0]; 
-                        }
-                    } else if (textItems.length === 1) { 
-                        // 得一個字串，一定係站名
-                        station = textItems[0]; 
-                    }
+                        if (dIdx !== -1) { dir = textItems[dIdx]; textItems.splice(dIdx, 1); station = textItems[0]; } 
+                        else { station = textItems[0]; }
+                    } else if (textItems.length === 1) { station = textItems[0]; }
 
-                    // 防呆過濾 2：站名唔可以係風向，亦唔可以包含標題字眼
                     if (station && !exactDirs.has(station.toUpperCase()) && !station.includes("日期") && !station.includes("氣象站") && !station.includes("Wind")) {
                         windList.push({ station: station, dir: dir, speed: speed, gust: gust });
                     }
                 });
 
-                // 按最高風速排序
                 windList.sort((a, b) => b.speed - a.speed);
 
                 windList.forEach(item => {
@@ -530,7 +501,6 @@
                     let displayStation = getStationName(item.station);
                     let displayDir = getWindDir(item.dir);
                     
-                    // 顯示格式：風速 (最高陣風) km/h
                     let speedDisplay = item.speed;
                     if (item.gust !== null && item.gust > item.speed) {
                         speedDisplay = `${item.speed} <small style="color:var(--text-muted);">(${item.gust})</small>`;
@@ -664,10 +634,7 @@
             const ctx = document.getElementById('detailChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
-            const labels = [];
-            const dataValues = [];
-            const gustValues = []; // 用於儲存陣風曲線
-            const windDirs = []; 
+            const labels = []; const dataValues = []; const gustValues = []; const windDirs = []; 
             const now = new Date();
             
             for (let i = 23; i >= 0; i--) {
@@ -678,8 +645,6 @@
                     let simulatedSpd = currentVal > 0 ? Math.max(0, currentVal - 5 + Math.random() * 10 + Math.sin(i / 2) * 8) : 0;
                     dataValues.push(simulatedSpd.toFixed(1));
                     windDirs.push(extraData);
-                    
-                    // 陣風數學推算 (通常比持續風速高 30% - 50%)
                     if (maxGustVal && maxGustVal > currentVal) {
                         let simGust = simulatedSpd * (maxGustVal / currentVal);
                         gustValues.push(simGust.toFixed(1));
@@ -701,47 +666,28 @@
                 fill: type === 'wind'
             }];
 
-            // 如果有陣風，加上一條虛線陣風線
             if (type === 'wind' && gustValues.length > 0) {
                 datasetsConfig.push({
                     label: currentLang === 'en' ? 'Max Gust (km/h)' : '最高陣風 (km/h)',
                     data: gustValues,
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    borderDash: [5, 5],
-                    tension: 0.4,
-                    fill: false
+                    borderColor: '#e74c3c', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [5, 5], tension: 0.4, fill: false
                 });
             }
 
             const chartConfig = {
                 type: type === 'wind' ? 'line' : 'bar',
-                data: {
-                    labels: labels,
-                    datasets: datasetsConfig
-                },
+                data: { labels: labels, datasets: datasetsConfig },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     scales: {
                         x: { grid: { display: false } },
-                        y: { 
-                            beginAtZero: true,
-                            title: { display: true, text: type === 'wind' ? langRef.label_wind_spd : langRef.label_rain_vol }
-                        }
+                        y: { beginAtZero: true, title: { display: true, text: type === 'wind' ? langRef.label_wind_spd : langRef.label_rain_vol } }
                     },
                     plugins: { 
                         legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                afterLabel: function(context) {
-                                    if (type === 'wind' && context.datasetIndex === 0) {
-                                        return `${currentLang === 'en' ? 'Wind Dir' : '風向'}: ${windDirs[context.dataIndex]}`;
-                                    }
-                                }
-                            }
-                        }
+                        tooltip: { callbacks: { afterLabel: function(context) { if (type === 'wind' && context.datasetIndex === 0) return `${currentLang === 'en' ? 'Wind Dir' : '風向'}: ${windDirs[context.dataIndex]}`; } } }
                     }
                 }
             };
@@ -750,18 +696,9 @@
         }
 
         window.onload = () => {
-            applyLanguageUI();
-            initMaps();
-            loadHKOTyphoonTrack();
-            fetchWindData();
-            fetchRainData();
-            loadNCDRKMLTrack();
-
-            setInterval(() => {
-                loadHKOTyphoonTrack();
-                fetchWindData();
-                fetchRainData();
-            }, 180000);
+            applyLanguageUI(); initMaps(); loadHKOTyphoonTrack();
+            fetchWindData(); fetchRainData(); loadNCDRKMLTrack();
+            setInterval(() => { loadHKOTyphoonTrack(); fetchWindData(); fetchRainData(); }, 180000);
         };
     </script>
 </body>
