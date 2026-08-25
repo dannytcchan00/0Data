@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">9-Day Weather Forecast - Met Office</title>
+    
+    <!-- 引入 Chart.js 走勢圖表庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ================= 品牌與色彩配置 ================= */
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --bg-light: #f4f6f9;
+            --white: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+            
+            /* PSR 降雨機率標籤色系 */
+            --psr-low: #2ecc71;
+            --psr-med-low: #3498db;
+            --psr-med: #f1c40f;
+            --psr-med-high: #e67e22;
+            --psr-high: #e74c3c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* 針對無 Header 及 iframe 內嵌優化 */
+        body { 
+            background-color: var(--bg-light); 
+            color: var(--text-main); 
+            line-height: 1.6; 
+            padding: 20px; 
+        }
+
+        .container { 
+            max-width: 1450px; 
+            margin: 0 auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+        }
+
+        /* 通用卡片結構 */
+        .box {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: var(--card-shadow);
+            border-top: 4px solid var(--brand-navy);
+        }
+        .box-title { 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: var(--brand-navy); 
+            margin-bottom: 16px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+        }
+        .update-tag { font-size: 12px; font-weight: normal; color: var(--text-muted); }
+
+        /* ================= 概況與走勢圖雙欄 ================= */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr;
+            gap: 20px;
+        }
+        .general-situation-text {
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 8px;
+            border-left: 4px solid var(--brand-blue);
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.75;
+            margin-bottom: 18px;
+            min-height: 100px;
+        }
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .stat-item {
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-item span { font-size: 11.5px; color: var(--text-muted); display: block; }
+        .stat-item strong { font-size: 18px; color: var(--brand-navy); }
+
+        .chart-container { position: relative; height: 250px; width: 100%; }
+
+        /* ================= 9 天逐日詳細天氣卡片列表 ================= */
+        .forecast-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+        }
+
+        .day-detail-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .day-detail-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(17, 42, 70, 0.1);
+        }
+
+        /* 卡片頂部：日期、圖標、氣溫 */
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10px;
+        }
+        .date-badge { display: flex; flex-direction: column; }
+        .date-badge .day-txt { font-size: 16px; font-weight: 700; color: var(--brand-navy); }
+        .date-badge .week-txt { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+        
+        .header-icon-temp { display: flex; align-items: center; gap: 10px; }
+        .header-icon-temp img { width: 45px; height: 45px; object-fit: contain; }
+        .temp-range-big { font-size: 18px; font-weight: 800; color: var(--brand-navy); }
+
+        /* 卡片中段：指標網格 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12.5px;
+        }
+        .m-box {
+            background: var(--bg-light);
+            padding: 8px 10px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .m-box span { color: var(--text-muted); font-size: 11px; }
+        .m-box strong { color: var(--brand-navy); font-weight: 600; font-size: 12.5px; }
+        .m-box.full-width { grid-column: span 2; }
+
+        /* PSR 降雨機率標籤 */
+        .psr-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            width: fit-content;
+        }
+        .psr-low { background-color: var(--psr-low); }
+        .psr-med-low { background-color: var(--psr-med-low); }
+        .psr-med { background-color: var(--psr-med); color: #333; }
+        .psr-med-high { background-color: var(--psr-med-high); }
+        .psr-high { background-color: var(--psr-high); }
+
+        /* 卡片底部：詳細文字預測 */
+        .card-desc-text {
+            font-size: 12.5px;
+            color: var(--text-main);
+            background: #fafbfc;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #cbd5e1;
+            line-height: 1.55;
+        }
+
+        @media (max-width: 992px) {
+            .overview-grid { grid-template-columns: 1fr; }
+            .forecast-cards-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- 頂部：天氣概況 + 9日走勢圖 -->
+        <div class="overview-grid">
+            
+            <!-- 天氣概況與摘要 -->
+            <div class="box">
+                <div class="box-title">
+                    <span data-i18n="situation_title">📝 General Situation</span>
+                </div>
+                <div class="general-situation-text" id="general-situation" data-i18n="loading_situation">
+                    🔄 Syncing latest weather situation from HKO...
+                </div>
+                <div class="quick-stats">
+                    <div class="stat-item">
+                        <span data-i18n="stat_max_temp">Forecast Max Temp</span>
+                        <strong id="stat-max-temp">--°C</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span data-i18n="stat_min_temp">Forecast Min Temp</span>
+                        <strong id="stat-min-temp">--°C</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span data-i18n="stat_max_rh">Forecast Max RH</span>
+                        <strong id="stat-max-rh">--%</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9 天氣溫及濕度趨勢圖表 -->
+            <div class="box">
+                <div class="box-title">
+                    <span data-i18n="trend_title">📈 9-Day Weather Trend Analysis</span>
+                    <span class="update-tag" id="last-update-time">--</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 下方：9 天逐日詳細報告清單 -->
+        <div class="box">
+            <div class="box-title">
+                <span data-i18n="nine_day_title">📅 9-Day Detailed Weather Forecast</span>
+                <span class="update-tag" data-i18n="sub_title">100% Synced with Official HKO Data</span>
+            </div>
+            <div class="forecast-cards-grid" id="forecast-cards-container">
+                <div style="text-align: center; padding: 40px; color: var(--text-muted); grid-column: 1 / -1;" data-i18n="loading_cards">
+                    🔄 Loading detailed weather forecast...
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 系統核心 JavaScript -->
+    <script>
+        // ================= 1. 雙語設定與網址參數讀取 =================
+        const urlParams = new URLSearchParams(window.location.search);
+        // 預設為英文版 (en)，若網址帶有 ?lang=tc 則切換至繁體中文
+        const currentLang = urlParams.get('lang') === 'tc' ? 'tc' : 'en';
+
+        const i18nDict = {
+            "en": {
+                "page_title": "9-Day Weather Forecast - Met Office",
+                "situation_title": "📝 General Situation",
+                "stat_max_temp": "Forecast Max Temp",
+                "stat_min_temp": "Forecast Min Temp",
+                "stat_max_rh": "Forecast Max RH",
+                "trend_title": "📈 9-Day Weather Trend Analysis",
+                "update_prefix": "Updated: ",
+                "nine_day_title": "📅 9-Day Detailed Weather Forecast",
+                "sub_title": "Official HKO Data Synchronised",
+                "lbl_humidity": "💧 Relative Humidity",
+                "lbl_psr": "🌧️ Significant Rain Prob.",
+                "lbl_wind": "💨 Forecast Wind",
+                "loading_situation": "🔄 Syncing latest weather situation from HKO...",
+                "loading_cards": "🔄 Loading detailed weather forecast...",
+                "err_connect": "❌ Unable to connect to HKO server. Please refresh or check connection.",
+                "chart_max_temp": "Max Temp (°C)",
+                "chart_min_temp": "Min Temp (°C)",
+                "chart_max_rh": "Max RH (%)",
+                "chart_temp_axis": "Temperature (°C)",
+                "chart_rh_axis": "Humidity (%)",
+                "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            },
+            "tc": {
+                "page_title": "未來九日詳細天氣預報 - Met Office",
+                "situation_title": "📝 本港天氣概況 (General Situation)",
+                "stat_max_temp": "預測最高氣溫",
+                "stat_min_temp": "預測最低氣溫",
+                "stat_max_rh": "最高相對濕度",
+                "trend_title": "📈 未來九天天氣趨勢分析",
+                "update_prefix": "更新時間: ",
+                "nine_day_title": "📅 香港天文台未來九天天氣詳細預報",
+                "sub_title": "官方數據 100% 同步",
+                "lbl_humidity": "💧 相對濕度",
+                "lbl_psr": "🌧️ 顯著降雨概率",
+                "lbl_wind": "💨 預測風向與風力",
+                "loading_situation": "🔄 正在同步香港天文台最新概況...",
+                "loading_cards": "🔄 正在載入詳細天氣報告...",
+                "err_connect": "❌ 無法連接香港天文台伺服器，請檢查網絡連線後重新整理。",
+                "chart_max_temp": "最高氣溫 (°C)",
+                "chart_min_temp": "最低氣溫 (°C)",
+                "chart_max_rh": "最高濕度 (%)",
+                "chart_temp_axis": "氣溫 (°C)",
+                "chart_rh_axis": "濕度 (%)",
+                "months": []
+            }
+        };
+
+        // 應用靜態 UI 語言
+        function applyLanguageUI() {
+            document.title = i18nDict[currentLang].page_title;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18nDict[currentLang][key]) {
+                    el.innerHTML = i18nDict[currentLang][key];
+                }
+            });
+        }
+
+        // PSR 統一化轉換 (樣式 Class 及 顯示文字)
+        function formatPSR(rawPSR) {
+            const psrLower = (rawPSR || '').toLowerCase();
+            let levelClass = 'psr-low';
+            let labelText = rawPSR || (currentLang === 'en' ? 'Low' : '低');
+
+            if (psrLower.includes('high') || psrLower.includes('高') && !psrLower.includes('中高') && !psrLower.includes('medium high')) {
+                levelClass = 'psr-high';
+                labelText = currentLang === 'en' ? 'High' : '高';
+            } else if (psrLower.includes('medium high') || psrLower.includes('中高')) {
+                levelClass = 'psr-med-high';
+                labelText = currentLang === 'en' ? 'Med-High' : '中高';
+            } else if (psrLower.includes('medium low') || psrLower.includes('中低')) {
+                levelClass = 'psr-med-low';
+                labelText = currentLang === 'en' ? 'Med-Low' : '中低';
+            } else if (psrLower.includes('medium') || psrLower.includes('中')) {
+                levelClass = 'psr-med';
+                labelText = currentLang === 'en' ? 'Medium' : '中';
+            } else {
+                levelClass = 'psr-low';
+                labelText = currentLang === 'en' ? 'Low' : '低';
+            }
+
+            return { levelClass, labelText };
+        }
+
+        // ================= 2. 數據獲取與解析 =================
+        let forecastChartInstance = null;
+
+        async function fetchHKO(url) {
+            try {
+                const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime(), { cache: 'no-store' });
+                if (!res.ok) throw new Error("Direct fetch failed");
+                const json = await res.json();
+                return { success: true, data: json };
+            } catch (err1) {
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                    const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
+                    const proxyJson = await proxyRes.json();
+                    return { success: true, data: JSON.parse(proxyJson.contents) };
+                } catch (err2) {
+                    return { success: false };
+                }
+            }
+        }
+
+        async function loadNineDayForecast() {
+            applyLanguageUI();
+            
+            // 根據 currentLang 動態調用天文台對應語言 API (en 或 tc)
+            const hkoLang = currentLang === 'en' ? 'en' : 'tc';
+            const result = await fetchHKO(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${hkoLang}`);
+            
+            if (!result.success || !result.data) {
+                document.getElementById('general-situation').innerText = i18nDict[currentLang].err_connect;
+                return;
+            }
+
+            const data = result.data;
+            const langDict = i18nDict[currentLang];
+
+            // 1. 填入天氣概況
+            if (data.generalSituation) {
+                document.getElementById('general-situation').innerText = data.generalSituation;
+            }
+
+            // 2. 更新時間
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: currentLang === 'en' };
+            const timeLocale = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+            document.getElementById('last-update-time').innerText = `${langDict.update_prefix}${now.toLocaleTimeString(timeLocale, timeOptions)}`;
+
+            // 3. 處理 9 天預報卡片與圖表數據
+            if (data.weatherForecast && data.weatherForecast.length > 0) {
+                const fList = data.weatherForecast;
+                const container = document.getElementById('forecast-cards-container');
+                container.innerHTML = '';
+
+                const chartLabels = [];
+                const maxTemps = [];
+                const minTemps = [];
+                const maxRHs = [];
+
+                let globalMaxT = -99;
+                let globalMinT = 99;
+                let globalMaxRH = 0;
+
+                fList.forEach((day, index) => {
+                    const year = day.forecastDate.substring(0, 4);
+                    const month = parseInt(day.forecastDate.substring(4, 6), 10);
+                    const dateNum = parseInt(day.forecastDate.substring(6, 8), 10);
+                    
+                    // 日期文字格式化
+                    let dateFormatted = '';
+                    let chartLabelFormatted = '';
+                    if (currentLang === 'en') {
+                        const monthName = langDict.months[month - 1];
+                        dateFormatted = `${dateNum} ${monthName}`;
+                        const weekShort = (day.week || '').substring(0, 3);
+                        chartLabelFormatted = `${dateNum} ${monthName} (${weekShort})`;
+                    } else {
+                        dateFormatted = `${month}月${dateNum}日`;
+                        const weekShort = (day.week || '').replace('星期', '周');
+                        chartLabelFormatted = `${dateNum}日 (${weekShort})`;
+                    }
+
+                    const maxT = day.forecastMaxtemp.value;
+                    const minT = day.forecastMintemp.value;
+                    const maxR = day.forecastMaxrh.value;
+                    const minR = day.forecastMinrh.value;
+                    const psrInfo = formatPSR(day.PSR);
+
+                    if (maxT > globalMaxT) globalMaxT = maxT;
+                    if (minT < globalMinT) globalMinT = minT;
+                    if (maxR > globalMaxRH) globalMaxRH = maxR;
+
+                    chartLabels.push(chartLabelFormatted);
+                    maxTemps.push(maxT);
+                    minTemps.push(minT);
+                    maxRHs.push(maxR);
+
+                    // 建立逐日詳細報告卡片
+                    const card = document.createElement('div');
+                    card.className = 'day-detail-card';
+                    card.innerHTML = `
+                        <div class="card-header-row">
+                            <div class="date-badge">
+                                <span class="day-txt">${dateFormatted}</span>
+                                <span class="week-txt">${day.week}</span>
+                            </div>
+                            <div class="header-icon-temp">
+                                <img src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${day.ForecastIcon}.png" alt="Weather Icon">
+                                <div class="temp-range-big">${minT}°C - ${maxT}°C</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="m-box">
+                                <span>${langDict.lbl_humidity}</span>
+                                <strong>${minR}% - ${maxR}%</strong>
+                            </div>
+                            <div class="m-box">
+                                <span>${langDict.lbl_psr}</span>
+                                <div><span class="psr-tag ${psrInfo.levelClass}">${psrInfo.labelText}</span></div>
+                            </div>
+                            <div class="m-box full-width">
+                                <span>${langDict.lbl_wind}</span>
+                                <strong>${day.forecastWind}</strong>
+                            </div>
+                        </div>
+
+                        <div class="card-desc-text">
+                            ${day.forecastWeather}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                // 更新頂部快速統計
+                document.getElementById('stat-max-temp').innerText = `${globalMaxT}°C`;
+                document.getElementById('stat-min-temp').innerText = `${globalMinT}°C`;
+                document.getElementById('stat-max-rh').innerText = `${globalMaxRH}%`;
+
+                // 繪製走勢圖
+                renderForecastChart(chartLabels, maxTemps, minTemps, maxRHs);
+            }
+        }
+
+        // ================= 3. Chart.js 趨勢走勢圖 =================
+        function renderForecastChart(labels, maxTemps, minTemps, maxRHs) {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            if (forecastChartInstance) forecastChartInstance.destroy();
+
+            const langDict = i18nDict[currentLang];
+
+            forecastChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: langDict.chart_max_temp,
+                            data: maxTemps,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            borderWidth: 2.2,
+                            tension: 0.35,
+                            fill: '+1',
+                            yAxisID: 'yTemp'
+                        },
+                        {
+                            label: langDict.chart_min_temp,
+                            data: minTemps,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.05)',
+                            borderWidth: 2.2,
+                            tension: 0.35,
+                            fill: false,
+                            yAxisID: 'yTemp'
+                        },
+                        {
+                            label: langDict.chart_max_rh,
+                            data: maxRHs,
+                            borderColor: '#2ecc71',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            tension: 0.3,
+                            fill: false,
+                            yAxisID: 'yRh'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                        yTemp: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: langDict.chart_temp_axis, font: { size: 11 } },
+                            grid: { borderDash: [2, 2] }
+                        },
+                        yRh: {
+                            type: 'linear',
+                            position: 'right',
+                            min: 40,
+                            max: 100,
+                            title: { display: true, text: langDict.chart_rh_axis, font: { size: 11 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 初始化並每 10 分鐘自動更新
+        loadNineDayForecast();
+        setInterval(loadNineDayForecast, 600000);
+    </script>
+</body>
+</html>
