@@ -40,9 +40,9 @@
             border-top: 6px solid var(--brand-navy);
         }
 
-        /* ================= 指針時鐘設計 (已放大) ================= */
+        /* ================= 指針時鐘設計 ================= */
         .analog-clock {
-            width: 350px; /* 從 280px 放大到 350px */
+            width: 350px; 
             height: 350px;
             background-color: var(--white);
             border: 14px solid var(--brand-navy);
@@ -58,14 +58,12 @@
             width: 100%;
             height: 100%;
             text-align: center;
-            /* 利用 CSS 變數動態旋轉每一個數字的容器 */
             transform: rotate(calc(var(--rot) * 30deg));
-            padding-top: 12px; /* 數字距離外框的邊距 */
+            padding-top: 12px;
         }
 
         .number span {
             display: inline-block;
-            /* 將數字本身反向旋轉，確保字體永遠垂直向上 */
             transform: rotate(calc(var(--rot) * -30deg));
             font-size: 28px;
             font-weight: 700;
@@ -94,27 +92,26 @@
             transform-origin: bottom;
             border-radius: 10px;
             z-index: 10;
-            /* 加上彈性動畫令秒針跳動更平滑 */
             transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
         }
 
         .hour-hand {
             width: 8px;
-            height: 95px; /* 按比例拉長 */
+            height: 95px;
             background-color: var(--brand-navy);
             margin-left: -4px; 
         }
 
         .minute-hand {
             width: 6px;
-            height: 130px; /* 按比例拉長 */
+            height: 130px;
             background-color: var(--text-main);
             margin-left: -3px; 
         }
 
         .second-hand {
             width: 4px;
-            height: 145px; /* 按比例拉長 */
+            height: 145px;
             background-color: var(--alert-red);
             margin-left: -2px; 
             z-index: 20;
@@ -145,7 +142,7 @@
         .hk-lunar {
             font-size: 18px;
             color: var(--text-main);
-            background-color: #e8ebf0; /* 輕微加深底色突出農曆 */
+            background-color: #e8ebf0; 
             padding: 10px 24px;
             border-radius: 20px;
             display: inline-block;
@@ -157,11 +154,10 @@
 <body>
 
     <div class="clock-card">
-        <div class="hk-title">Hong Kong Standard Time</div>
+        <!-- 加入了 id="hk-title" 方便 JS 動態翻譯 -->
+        <div class="hk-title" id="hk-title">Hong Kong Standard Time</div>
         
-        <!-- 指針時鐘結構 -->
         <div class="analog-clock">
-            <!-- 鐘面數字 (1至12) -->
             <div class="number" style="--rot: 1;"><span>1</span></div>
             <div class="number" style="--rot: 2;"><span>2</span></div>
             <div class="number" style="--rot: 3;"><span>3</span></div>
@@ -175,25 +171,51 @@
             <div class="number" style="--rot: 11;"><span>11</span></div>
             <div class="number" style="--rot: 12;"><span>12</span></div>
 
-            <!-- 指針 -->
             <div class="hand hour-hand" id="hour-hand"></div>
             <div class="hand minute-hand" id="minute-hand"></div>
             <div class="hand second-hand" id="second-hand"></div>
             <div class="clock-center"></div>
         </div>
 
-        <!-- 文本日期結構 -->
         <div class="date-info">
-            <div class="hk-date" id="gregorian-date">載入中...</div>
-            <div class="hk-lunar" id="lunar-date">載入中...</div>
+            <div class="hk-date" id="gregorian-date">Loading...</div>
+            <div class="hk-lunar" id="lunar-date">Loading...</div>
         </div>
     </div>
 
     <script>
+        // ================= 1. 隱藏式語言偵測 =================
+        // 從網址讀取 lang 參數 (例如：?lang=en)，如果無，預設為 tc (繁體中文)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = urlParams.get('lang') || 'tc';
+
+        // 翻譯字典
+        const i18n = {
+            tc: {
+                title: "香港標準時間",
+                lunarPrefix: "農曆 "
+            },
+            en: {
+                title: "Hong Kong Standard Time",
+                lunarPrefix: "Lunar: "
+            }
+        };
+
+        // 即時設定頁面標題
+        document.getElementById('hk-title').innerText = i18n[currentLang].title;
+        document.title = currentLang === 'en' ? "Hong Kong Standard Time" : "香港標準時間";
+
+        // 根據語言設定 DateFormatter 的地區代碼 (Locale)
+        // 英文用 en-GB (日-月-年 格式)，中文用 zh-HK
+        const localeGregorian = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+        // 農曆引擎設定：英文用 en-US 搭配 chinese calendar，中文用 zh-HK 搭配 chinese calendar
+        const localeLunar = currentLang === 'en' ? 'en-US-u-ca-chinese' : 'zh-HK-u-ca-chinese';
+
+        // ================= 2. 時鐘與日期運作邏輯 =================
         function updateClock() {
             const now = new Date();
 
-            // 1. 強制設定為香港時區 (Asia/Hong_Kong)
+            // 強制設定為香港時區計算指針
             const timeFormatter = new Intl.DateTimeFormat('en-US', {
                 timeZone: 'Asia/Hong_Kong',
                 hour: 'numeric',
@@ -207,7 +229,7 @@
             const minutes = parseInt(timeParts.find(p => p.type === 'minute').value);
             const seconds = parseInt(timeParts.find(p => p.type === 'second').value);
 
-            // 2. 計算指針旋轉角度
+            // 計算指針旋轉角度
             const hourDeg = (hours % 12) * 30 + (minutes * 0.5); 
             const minuteDeg = minutes * 6 + (seconds * 0.1);    
             const secondDeg = seconds * 6;                      
@@ -217,8 +239,8 @@
             document.getElementById('minute-hand').style.transform = `rotate(${minuteDeg}deg)`;
             document.getElementById('second-hand').style.transform = `rotate(${secondDeg}deg)`;
 
-            // 3. 更新今日西曆日子
-            const gregorianFormatter = new Intl.DateTimeFormat('zh-HK', {
+            // 更新今日西曆日子 (會自動跟隨 currentLang 變換語言)
+            const gregorianFormatter = new Intl.DateTimeFormat(localeGregorian, {
                 timeZone: 'Asia/Hong_Kong',
                 year: 'numeric',
                 month: 'long',
@@ -227,15 +249,15 @@
             });
             document.getElementById('gregorian-date').innerText = gregorianFormatter.format(now);
 
-            // 4. 更新農曆日子 (包含年份)
-            const lunarFormatter = new Intl.DateTimeFormat('zh-HK-u-ca-chinese', {
+            // 更新農曆日子 (會自動跟隨 currentLang 將天干地支及月份轉做英文拼音/格式)
+            const lunarFormatter = new Intl.DateTimeFormat(localeLunar, {
                 timeZone: 'Asia/Hong_Kong',
                 year: 'numeric', 
                 month: 'long',
                 day: 'numeric'
             });
             
-            document.getElementById('lunar-date').innerText = `農曆 ${lunarFormatter.format(now)}`;
+            document.getElementById('lunar-date').innerText = `${i18n[currentLang].lunarPrefix}${lunarFormatter.format(now)}`;
         }
 
         // 初始化並每秒更新一次
