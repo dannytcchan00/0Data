@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="page_title">香港即時天氣資訊總覽</title>
+    
+    <style>
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --bg-light: #f4f6f9;
+            --white: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-main); line-height: 1.5; padding-top: 25px; }
+
+        .container { max-width: 800px; /* 收窄闊度令雷達圖置中更好睇 */ margin: 0 auto 25px auto; padding: 0 25px; display: flex; flex-direction: column; gap: 25px; }
+
+        .table-section { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .section-title { font-size: 18px; font-weight: 700; color: var(--brand-navy); display: flex; align-items: center; gap: 8px; }
+        
+        /* Buttons & Controls for Radar */
+        .btn {
+            background: var(--white); color: var(--text-main);
+            border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px;
+            cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;
+        }
+        .btn:hover { background: #f8fafc; border-color: var(--brand-blue); color: var(--brand-blue); }
+        .btn.active { background: var(--brand-blue); color: var(--white); border-color: var(--brand-blue); }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: var(--brand-blue); cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: var(--border-color); border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- 雷達圖區塊 -->
+        <div class="table-section">
+            <div class="section-header">
+                <div class="section-title" data-i18n="radar_title">📡 Weather Radar Animation (Latest 2 Hours)</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn active radar-btn" id="btn-064" onclick="loadRadarImages('064')">64 km</button>
+                    <button class="btn radar-btn" id="btn-128" onclick="loadRadarImages('128')">128 km</button>
+                    <button class="btn radar-btn" id="btn-256" onclick="loadRadarImages('256')">256 km</button>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                <div id="radar-timestamp" style="margin-bottom: 15px; color: var(--brand-navy); font-weight: 600; font-size: 15px;" data-i18n="radar_loading">Loading Radar Data...</div>
+                
+                <div style="position: relative; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); background: #f8fafc;">
+                    <img id="radar-image" src="" alt="Radar Loop" style="width: 100%; aspect-ratio: 1/1; object-fit: contain; display: block;">
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 20px; justify-content: center; align-items: center; width: 100%; max-width: 600px;">
+                    <button id="play-btn" class="btn" style="min-width: 100px;" onclick="togglePlay()" data-i18n="radar_pause">⏸ Pause</button>
+                    <input type="range" id="frame-slider" min="0" max="19" value="0" style="flex-grow: 1;">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ================= 多語言系統 (i18n) =================
+        let currentLang = localStorage.getItem('met_lang') || 'en';
+
+        const i18nDict = {
+            "tc": {
+                "page_title": "香港即時天氣資訊總覽",
+                "radar_title": "📡 天氣雷達動態圖 (過去兩小時)", 
+                "radar_pause": "⏸ 暫停", 
+                "radar_play": "▶️ 播放", 
+                "radar_loading": "載入雷達數據中..."
+            },
+            "en": {
+                "page_title": "Hong Kong Real-Time Weather",
+                "radar_title": "📡 Weather Radar Animation (Latest 2 Hours)", 
+                "radar_pause": "⏸ Pause", 
+                "radar_play": "▶️ Play", 
+                "radar_loading": "Loading Radar Data..."
+            }
+        };
+
+        function applyLanguageUI() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18nDict[currentLang] && i18nDict[currentLang][key]) { 
+                    el.innerHTML = i18nDict[currentLang][key]; 
+                }
+            });
+        }
+
+        // ================= 雷達圖系統 =================
+        let radarFrames = [];
+        let currentFrameIndex = 0;
+        let playing = true;
+        let playInterval;
+
+        function generateRadarTimes() {
+            const times = [];
+            const now = new Date();
+            const min = now.getMinutes();
+            // 計算最接近嘅 6 分鐘倍數，並往後推一格(減6分鐘)確保天文台已經出圖
+            now.setMinutes(min - (min % 6) - 6); 
+            
+            for (let i = 0; i < 20; i++) {
+                const t = new Date(now.getTime() - i * 6 * 60000);
+                const yyyy = t.getFullYear();
+                const MM = String(t.getMonth() + 1).padStart(2, '0');
+                const dd = String(t.getDate()).padStart(2, '0');
+                const HH = String(t.getHours()).padStart(2, '0');
+                const mm = String(t.getMinutes()).padStart(2, '0');
+                // unshift 確保陣列由舊到新排列 (index 0 係最舊，index 19 係最新)
+                times.unshift(`${yyyy}${MM}${dd}${HH}${mm}`);
+            }
+            return times;
+        }
+
+        function loadRadarImages(range) {
+            document.querySelectorAll('.radar-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${range}`).classList.add('active');
+            
+            const times = generateRadarTimes();
+            radarFrames = times.map(time => {
+                const timeLabel = `${time.substring(6,8)}/${time.substring(4,6)}/${time.substring(0,4)} ${time.substring(8,10)}:${time.substring(10,12)}`;
+                return {
+                    timeStr: timeLabel,
+                    url: `https://www.hko.gov.hk/wxinfo/radars/rad_${range}_png/2d${range}iradar_${time}.jpg`
+                };
+            });
+            
+            // 預載圖片
+            radarFrames.forEach(frame => {
+                const img = new Image();
+                img.src = frame.url;
+            });
+
+            currentFrameIndex = radarFrames.length - 1; // 從最新一張開始
+            updateRadarDisplay();
+            
+            if (!playing) togglePlay(); 
+        }
+
+        function updateRadarDisplay() {
+            if(radarFrames.length === 0) return;
+            const frame = radarFrames[currentFrameIndex];
+            
+            document.getElementById('radar-image').src = frame.url;
+            const timePrefix = currentLang === 'en' ? 'Observation Time: ' : '觀測時間: ';
+            document.getElementById('radar-timestamp').innerText = `${timePrefix}${frame.timeStr}`;
+            document.getElementById('frame-slider').value = currentFrameIndex;
+        }
+
+        function nextFrame() {
+            currentFrameIndex = (currentFrameIndex + 1) % radarFrames.length;
+            updateRadarDisplay();
+        }
+
+        function togglePlay() {
+            playing = !playing;
+            const btn = document.getElementById('play-btn');
+            if (playing) {
+                btn.innerHTML = i18nDict[currentLang]["radar_pause"] || "⏸ Pause";
+                playInterval = setInterval(nextFrame, 400); 
+            } else {
+                btn.innerHTML = i18nDict[currentLang]["radar_play"] || "▶️ Play";
+                clearInterval(playInterval);
+            }
+        }
+
+        document.getElementById('frame-slider').addEventListener('input', function(e) {
+            if (playing) togglePlay(); // 拖拉時間軸時自動暫停
+            currentFrameIndex = parseInt(e.target.value);
+            updateRadarDisplay();
+        });
+
+        // ================= 初始化 =================
+        window.addEventListener('DOMContentLoaded', () => {
+            applyLanguageUI();
+            loadRadarImages('064'); // 初始載入 64 公里雷達圖
+            playInterval = setInterval(nextFrame, 400); // 400 毫秒切換一張圖
+        });
+        
+    </script>
+</body>
+</html>
