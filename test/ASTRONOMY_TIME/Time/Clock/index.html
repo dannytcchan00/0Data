@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港標準時間 - 網上時鐘</title>
+    <style>
+        /* ================= 沿用 Met Office 品牌顏色 ================= */
+        :root {
+            --brand-navy: #112a46;
+            --bg-light: #f0f2f5;
+            --white: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --alert-red: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-light);
+        }
+
+        /* 主容器卡片 */
+        .clock-card {
+            background-color: var(--white);
+            padding: 50px 60px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(17, 42, 70, 0.1);
+            text-align: center;
+            border-top: 6px solid var(--brand-navy);
+        }
+
+        /* ================= 指針時鐘設計 (已放大) ================= */
+        .analog-clock {
+            width: 350px; /* 從 280px 放大到 350px */
+            height: 350px;
+            background-color: var(--white);
+            border: 14px solid var(--brand-navy);
+            border-radius: 50%;
+            margin: 0 auto 35px auto;
+            position: relative;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.05), 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        /* 鐘面刻度數字 */
+        .number {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            /* 利用 CSS 變數動態旋轉每一個數字的容器 */
+            transform: rotate(calc(var(--rot) * 30deg));
+            padding-top: 12px; /* 數字距離外框的邊距 */
+        }
+
+        .number span {
+            display: inline-block;
+            /* 將數字本身反向旋轉，確保字體永遠垂直向上 */
+            transform: rotate(calc(var(--rot) * -30deg));
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--brand-navy);
+        }
+
+        /* 鐘面中心點 */
+        .clock-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 18px;
+            height: 18px;
+            background-color: var(--alert-red);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+
+        /* 指針共用設定 */
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            border-radius: 10px;
+            z-index: 10;
+            /* 加上彈性動畫令秒針跳動更平滑 */
+            transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+        }
+
+        .hour-hand {
+            width: 8px;
+            height: 95px; /* 按比例拉長 */
+            background-color: var(--brand-navy);
+            margin-left: -4px; 
+        }
+
+        .minute-hand {
+            width: 6px;
+            height: 130px; /* 按比例拉長 */
+            background-color: var(--text-main);
+            margin-left: -3px; 
+        }
+
+        .second-hand {
+            width: 4px;
+            height: 145px; /* 按比例拉長 */
+            background-color: var(--alert-red);
+            margin-left: -2px; 
+            z-index: 20;
+        }
+
+        /* ================= 日期顯示區 ================= */
+        .date-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .hk-title {
+            font-size: 16px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .hk-date {
+            font-size: 26px;
+            font-weight: bold;
+            color: var(--brand-navy);
+        }
+
+        .hk-lunar {
+            font-size: 18px;
+            color: var(--text-main);
+            background-color: #e8ebf0; /* 輕微加深底色突出農曆 */
+            padding: 10px 24px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 0 auto;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="clock-card">
+        <div class="hk-title">Hong Kong Standard Time</div>
+        
+        <!-- 指針時鐘結構 -->
+        <div class="analog-clock">
+            <!-- 鐘面數字 (1至12) -->
+            <div class="number" style="--rot: 1;"><span>1</span></div>
+            <div class="number" style="--rot: 2;"><span>2</span></div>
+            <div class="number" style="--rot: 3;"><span>3</span></div>
+            <div class="number" style="--rot: 4;"><span>4</span></div>
+            <div class="number" style="--rot: 5;"><span>5</span></div>
+            <div class="number" style="--rot: 6;"><span>6</span></div>
+            <div class="number" style="--rot: 7;"><span>7</span></div>
+            <div class="number" style="--rot: 8;"><span>8</span></div>
+            <div class="number" style="--rot: 9;"><span>9</span></div>
+            <div class="number" style="--rot: 10;"><span>10</span></div>
+            <div class="number" style="--rot: 11;"><span>11</span></div>
+            <div class="number" style="--rot: 12;"><span>12</span></div>
+
+            <!-- 指針 -->
+            <div class="hand hour-hand" id="hour-hand"></div>
+            <div class="hand minute-hand" id="minute-hand"></div>
+            <div class="hand second-hand" id="second-hand"></div>
+            <div class="clock-center"></div>
+        </div>
+
+        <!-- 文本日期結構 -->
+        <div class="date-info">
+            <div class="hk-date" id="gregorian-date">載入中...</div>
+            <div class="hk-lunar" id="lunar-date">載入中...</div>
+        </div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+
+            // 1. 強制設定為香港時區 (Asia/Hong_Kong)
+            const timeFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Hong_Kong',
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric',
+                hour12: false 
+            });
+
+            const timeParts = timeFormatter.formatToParts(now);
+            const hours = parseInt(timeParts.find(p => p.type === 'hour').value);
+            const minutes = parseInt(timeParts.find(p => p.type === 'minute').value);
+            const seconds = parseInt(timeParts.find(p => p.type === 'second').value);
+
+            // 2. 計算指針旋轉角度
+            const hourDeg = (hours % 12) * 30 + (minutes * 0.5); 
+            const minuteDeg = minutes * 6 + (seconds * 0.1);    
+            const secondDeg = seconds * 6;                      
+
+            // 應用 CSS 旋轉
+            document.getElementById('hour-hand').style.transform = `rotate(${hourDeg}deg)`;
+            document.getElementById('minute-hand').style.transform = `rotate(${minuteDeg}deg)`;
+            document.getElementById('second-hand').style.transform = `rotate(${secondDeg}deg)`;
+
+            // 3. 更新今日西曆日子
+            const gregorianFormatter = new Intl.DateTimeFormat('zh-HK', {
+                timeZone: 'Asia/Hong_Kong',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            document.getElementById('gregorian-date').innerText = gregorianFormatter.format(now);
+
+            // 4. 更新農曆日子 (包含年份)
+            const lunarFormatter = new Intl.DateTimeFormat('zh-HK-u-ca-chinese', {
+                timeZone: 'Asia/Hong_Kong',
+                year: 'numeric', 
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            document.getElementById('lunar-date').innerText = `農曆 ${lunarFormatter.format(now)}`;
+        }
+
+        // 初始化並每秒更新一次
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+
+</body>
+</html>
