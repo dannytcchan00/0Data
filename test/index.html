@@ -49,14 +49,13 @@
         .header-warnings-container { display: flex; gap: 6px; height: 100%; align-items: center; }
         .header-warnings-container img { height: 100%; width: auto; object-fit: contain; }
 
-        /* ================= 多層下拉式選單 (Multi-level Dropdown) ================= */
+        /* ================= 多層下拉式選單 ================= */
         .menu-wrapper { display: flex; align-items: center; gap: 30px; }
         .menu-bar ul { list-style: none; display: flex; gap: 25px; align-items: center; margin: 0; padding: 0; }
         .menu-bar > ul > li { position: relative; padding: 10px 0; cursor: pointer; }
         .menu-bar a { color: var(--brand-navy); text-decoration: none; font-size: 15px; font-weight: 600; text-transform: uppercase; transition: color 0.2s; }
         .menu-bar a:hover { color: var(--alert-red); }
         
-        /* 第一層及第二層 Dropdown 共用樣式 */
         .dropdown-menu, .sub-dropdown-menu {
             opacity: 0; visibility: hidden; 
             position: absolute; 
@@ -67,28 +66,17 @@
             z-index: 5001; pointer-events: none;
         }
         
-        /* 第一層 Dropdown (向下彈出) */
         .dropdown-menu { top: 100%; left: 0; transform: translateY(10px); }
         .menu-bar > ul > li:hover > .dropdown-menu, 
-        .menu-bar > ul > li.active > .dropdown-menu { 
-            opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; 
-        }
+        .menu-bar > ul > li.active > .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
         
-        /* 第二層 Sub-Dropdown (向右彈出) */
         .has-sub-dropdown { position: relative; }
         .sub-dropdown-menu { top: -5px; left: 100%; transform: translateX(10px); }
         .has-sub-dropdown:hover > .sub-dropdown-menu, 
-        .has-sub-dropdown.active > .sub-dropdown-menu { 
-            opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; 
-        }
+        .has-sub-dropdown.active > .sub-dropdown-menu { opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; }
         
         .dropdown-menu li, .sub-dropdown-menu li { width: 100%; padding: 0; list-style: none; }
-        .dropdown-menu a, .sub-dropdown-menu a { 
-            padding: 12px 20px; font-size: 14px; font-weight: 500; 
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #f5f5f5; color: var(--brand-navy); 
-            text-transform: none; /* 子選單保持原本大小階 */
-        }
+        .dropdown-menu a, .sub-dropdown-menu a { padding: 12px 20px; font-size: 14px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; color: var(--brand-navy); text-transform: none; }
         .dropdown-menu a:hover, .sub-dropdown-menu a:hover { background: #f8f9fa; color: var(--brand-navy); padding-left: 25px; }
 
         .lang-btn { background: var(--brand-navy); color: var(--white); border: none; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -222,12 +210,10 @@
                 <img src="logo.jpg" alt="Met Office Logo">
             </div>
             <div class="header-info" id="header-info">
-                <!-- 上層：西曆 + 農曆日期 (精緻字體) -->
                 <div class="header-date">
                     <span id="header-gregorian">--</span>
                     <span id="header-lunar" class="header-lunar"></span>
                 </div>
-                <!-- 下層：先 Threat Level 徽章，後警告 Icon -->
                 <div class="header-status-row">
                     <div id="header-threat-badge" class="header-threat-badge">Level 1</div>
                     <div class="header-warnings-container" id="header-warnings-container"></div>
@@ -247,7 +233,6 @@
                             <li><a href="#" data-i18n="nav_sub_9day">九天天氣預報</a></li>
                             <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/hk_weather/typhoon.html', event)" data-i18n="nav_sub_typhoon">颱風資訊</a></li>
                             
-                            <!-- 💡 新增：多層子選單 - 天氣圖像 -> 天氣雷達 -->
                             <li class="has-sub-dropdown">
                                 <a href="#" data-i18n="nav_sub_imagery" onclick="event.preventDefault();">天氣圖像 <span style="font-size:10px; color:#aaa;">▶</span></a>
                                 <ul class="sub-dropdown-menu">
@@ -585,7 +570,6 @@
             window.location.href = url.toString();
         }
 
-        // ================= SPA 無縫切換 =================
         function loadInIframe(baseUrl, e) {
             if (e) e.preventDefault();
             document.getElementById('main-dashboard').style.display = 'none';
@@ -604,20 +588,15 @@
             if (leafletMap) { setTimeout(() => { leafletMap.invalidateSize(); }, 100); }
         }
 
-        // 💡 多層下拉選單點擊邏輯
         document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => {
             item.addEventListener('click', (e) => {
-                // 如果點擊嘅係觸發 iframe 嘅實質連結，就唔好阻擋佢
                 if (e.target.tagName.toLowerCase() === 'a' && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('loadInIframe')) return;
-                
                 e.stopPropagation();
-                
                 if (item.classList.contains('has-dropdown')) {
                     document.querySelectorAll('.has-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
                 } else if (item.classList.contains('has-sub-dropdown')) {
                     document.querySelectorAll('.has-sub-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
                 }
-                
                 item.classList.toggle('active');
             });
         });
@@ -635,7 +614,7 @@
             "寒冷天氣警告": "cold", "Cold Weather Warning": "cold", "酷熱天氣警告": "hot", "Very Hot Weather Warning": "hot", "海嘯警告": "tsunami", "Tsunami Warning": "tsunami"
         };
 
-        const hkStationCoords = { "香港天文台":[22.3022, 114.1747], "天文台":[22.3022, 114.1747], "京士柏":[22.3114, 114.1728], "赤鱲角":[22.3094, 113.9219], "長洲":[22.2011, 114.0267], "流浮山":[22.4689, 113.9836], "打鼓嶺":[22.5286, 114.1567], "沙田":[22.4025, 114.2100], "大埔":[22.4456, 114.1789], "屯門":[22.3858, 113.9642], "西貢":[22.3836, 114.2708], "將軍澳":[22.3158, 114.2556], "黃竹坑":[22.2478, 114.1736], "橫瀾島":[22.1828, 114.3014], "啟德":[22.3225, 114.2056], "坪洲":[22.2858, 114.0433], "昂坪":[22.2561, 113.9056], "大帽山":[22.4106, 114.1242], "跑馬地":[22.2706, 114.1831], "筲箕灣":[22.2819, 114.2253], "觀塘":[22.3131, 114.2247], "荃灣城門谷":[22.3758, 114.1256], "荃灣可觀":[22.3853, 114.1097], "元朗公園":[22.4419, 114.0183], "上水":[22.5019, 114.1289], "大美督":[22.4753, 114.2375], "北潭涌":[22.3956, 114.3217], "滘西洲":[22.3653, 114.3106], "青衣":[22.3442, 114.1089], "石崗":[22.4361, 114.0847], "中環":[22.2869, 114.1611], "中環碼頭":[22.2869, 114.1611], "鰂魚涌":[22.2889, 114.2125], "尖鼻咀":[22.4883, 114.0108], "大廟灣":[22.2667, 114.2917], "石壁":[22.2222, 113.8944], "大埔滘":[22.4283, 114.1856], "馬灣":[22.3536, 114.0603], "大隴":[22.4967, 114.1167] };
+        const hkStationCoords = { "香港天文台":[22.3022, 114.1747], "京士柏":[22.3114, 114.1728], "赤鱲角":[22.3094, 113.9219], "長洲":[22.2011, 114.0267], "流浮山":[22.4689, 113.9836], "打鼓嶺":[22.5286, 114.1567], "沙田":[22.4025, 114.2100], "大埔":[22.4456, 114.1789], "屯門":[22.3858, 113.9642], "西貢":[22.3836, 114.2708], "將軍澳":[22.3158, 114.2556], "黃竹坑":[22.2478, 114.1736], "橫瀾島":[22.1828, 114.3014], "啟德":[22.3225, 114.2056], "坪洲":[22.2858, 114.0433], "昂坪":[22.2561, 113.9056], "大帽山":[22.4106, 114.1242], "跑馬地":[22.2706, 114.1831], "筲箕灣":[22.2819, 114.2253], "觀塘":[22.3131, 114.2247], "荃灣城門谷":[22.3758, 114.1256], "荃灣可觀":[22.3853, 114.1097], "元朗公園":[22.4419, 114.0183], "上水":[22.5019, 114.1289], "大美督":[22.4753, 114.2375], "北潭涌":[22.3956, 114.3217], "滘西洲":[22.3653, 114.3106], "青衣":[22.3442, 114.1089], "石崗":[22.4361, 114.0847], "中環":[22.2869, 114.1611], "中環碼頭":[22.2869, 114.1611], "鰂魚涌":[22.2889, 114.2125], "尖鼻咀":[22.4883, 114.0108], "大廟灣":[22.2667, 114.2917], "石壁":[22.2222, 113.8944], "大埔滘":[22.4283, 114.1856], "馬灣":[22.3536, 114.0603] };
 
         let globalRhrreadData = null; let globalWindData = {}; let masterStationMap = {}; 
         let currentMapMetric = 'temp'; let leafletMap = null; let mapMarkersLayer = null; let stationChartInstance = null;
@@ -720,7 +699,7 @@
                 }
             }
 
-            // 2. 九天預報
+            // 2. 九天預報 (支援點擊 Popup)
             const forecastResult = await fetchHKO(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${apiLang}`);
             const nineDayContainer = document.getElementById('nine-day-forecast-list');
             if (forecastResult.success && forecastResult.data.weatherForecast) {
@@ -928,33 +907,46 @@
             } else { swtBox.style.display = 'none'; swtBox.classList.remove('blinking'); }
 
             // ================= 7. 綜合威脅級別 (動態解說) =================
-            let threatLevel = 1; let reasons = []; let detailedReasons = [];
+            // 💡 修正宣告遺漏問題，確保不會再發生 ReferenceError 卡死情況
+            let threatLevel = 1; 
+            let reasons = []; 
+            let detailedReasons = []; 
+            let detailedReasonsEN = []; 
+            let dominantReason = ""; 
+            let dominantReasonEN = "";
             const checkEn = currentLang === 'en';
             const warnNamesStr = activeWarnNames.join("");
 
-            if (warnNamesStr.includes("九") || warnNamesStr.includes("十") || warnNamesStr.includes("海嘯") || warnNamesStr.includes("No. 9") || warnNamesStr.includes("No. 10") || warnNamesStr.includes("Tsunami")) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Weather" : "受極端天氣破壞"); detailedReasons.push(checkEn ? "Destructive winds or tsunami threat in force." : "天文台已發出具破壞性之極端警告信號（如九號/十號風球或海嘯）。"); }
-            else if (warnNamesStr.includes("黑") || warnNamesStr.includes("八") || warnNamesStr.includes("山泥") || warnNamesStr.includes("Black") || warnNamesStr.includes("No. 8") || warnNamesStr.includes("Landslip")) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Weather" : "受嚴重天氣影響"); detailedReasons.push(checkEn ? "Severe warnings (e.g. Typhoon No.8, Black Rainstorm, Landslip) are active." : "天文台已發出嚴重警告信號（如八號風球、黑色暴雨、山泥傾瀉）。市面有顯著危險。"); }
-            else if (warnNamesStr.includes("紅") || warnNamesStr.includes("三") || warnNamesStr.includes("新界北部") || warnNamesStr.includes("Red") || warnNamesStr.includes("No. 3") || warnNamesStr.includes("Flooding")) { threatLevel = Math.max(threatLevel, 3); reasons.push(checkEn ? "Bad Weather" : "受惡劣天氣影響"); detailedReasons.push(checkEn ? "Moderate warnings (e.g. Typhoon No.3, Red Rainstorm) are active." : "天文台已發出中度惡劣警告信號（如三號風球、紅色暴雨）。需保持警覺。"); }
-            else if (warnNamesStr.includes("黃") || warnNamesStr.includes("雷暴") || warnNamesStr.includes("季候風") || warnNamesStr.includes("火災") || warnNamesStr.includes("寒冷") || warnNamesStr.includes("酷熱") || warnNamesStr.includes("Yellow") || warnNamesStr.includes("Thunderstorm") || warnNamesStr.includes("Monsoon") || warnNamesStr.includes("Cold") || warnNamesStr.includes("Hot")) { threatLevel = Math.max(threatLevel, 2); reasons.push(checkEn ? "Unstable Weather" : "天氣不穩定"); detailedReasons.push(checkEn ? "Basic weather warnings are currently in force." : "天文台已發出初級天氣警告，天氣狀況轉壞或容易引發意外。"); }
+            if (warnNamesStr.includes("九") || warnNamesStr.includes("十") || warnNamesStr.includes("海嘯") || warnNamesStr.includes("No. 9") || warnNamesStr.includes("No. 10") || warnNamesStr.includes("Tsunami")) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Weather" : "受極端天氣破壞"); let w = activeWarnNames.find(n => n.includes("九") || n.includes("十") || n.includes("No. 9") || n.includes("No. 10") || n.includes("Hurricane") || n.includes("Tsunami")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出五級警告。天文台已發出具破壞性之極端警告信號（如九號/十號風球或海嘯）。`); detailedReasonsEN.push(`Due to [${w}], destructive winds or tsunami threat in force.`); }
+            else if (warnNamesStr.includes("黑") || warnNamesStr.includes("八") || warnNamesStr.includes("山泥") || warnNamesStr.includes("Black") || warnNamesStr.includes("No. 8") || warnNamesStr.includes("Landslip")) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Weather" : "受嚴重天氣影響"); let w = activeWarnNames.find(n => n.includes("八") || n.includes("黑") || n.includes("山泥") || n.includes("Black") || n.includes("No. 8") || n.includes("Landslip")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出四級警告。天文台已發出嚴重警告信號（如八號風球、黑色暴雨、山泥傾瀉）。市面有顯著危險。`); detailedReasonsEN.push(`Due to [${w}], severe weather conditions are active.`); }
+            else if (warnNamesStr.includes("紅") || warnNamesStr.includes("三") || warnNamesStr.includes("新界北部") || warnNamesStr.includes("Red") || warnNamesStr.includes("No. 3") || warnNamesStr.includes("Flooding")) { threatLevel = Math.max(threatLevel, 3); reasons.push(checkEn ? "Bad Weather" : "受惡劣天氣影響"); let w = activeWarnNames.find(n => n.includes("紅") || n.includes("三") || n.includes("新界北部") || n.includes("Red") || n.includes("No. 3") || n.includes("Flooding")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出三級警告。天文台已發出中度惡劣警告信號（如三號風球、紅色暴雨）。需保持警覺。`); detailedReasonsEN.push(`Due to [${w}], moderate weather warnings are active.`); }
+            else if (warnNamesStr.includes("黃") || warnNamesStr.includes("雷暴") || warnNamesStr.includes("季候風") || warnNamesStr.includes("火災") || warnNamesStr.includes("寒冷") || warnNamesStr.includes("酷熱") || warnNamesStr.includes("Yellow") || warnNamesStr.includes("Thunderstorm") || warnNamesStr.includes("Monsoon") || warnNamesStr.includes("Cold") || warnNamesStr.includes("Hot")) { threatLevel = Math.max(threatLevel, 2); reasons.push(checkEn ? "Unstable Weather" : "天氣不穩定"); let w = activeWarnNames.find(n => n.includes("黃") || n.includes("雷暴") || n.includes("季候風") || n.includes("火災") || n.includes("寒冷") || n.includes("酷熱") || n.includes("Yellow") || n.includes("Thunderstorm") || n.includes("Monsoon") || n.includes("Cold") || n.includes("Hot")); dominantReason = w; dominantReasonEN = w; detailedReasons.push(`因為【${w}】，所以發出二級警告。天氣狀況轉壞或容易引發意外。`); detailedReasonsEN.push(`Due to [${w}], basic weather warnings are in force.`); }
 
-            if (currentTemp >= 36) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Heat" : "極端酷熱"); detailedReasons.push(checkEn ? `Temperature reached extreme danger level (${currentTemp}°C).` : `氣溫高達 ${currentTemp}°C，達極端危險水平，極易中暑。`); }
-            else if (currentTemp <= 5) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Cold" : "嚴寒"); detailedReasons.push(checkEn ? `Temperature extremely low (${currentTemp}°C).` : `氣溫低至 ${currentTemp}°C，達極端危險水平。`); }
-            else if (currentTemp >= 34) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Heat" : "嚴重酷熱"); detailedReasons.push(checkEn ? `Temperature reached severe level (${currentTemp}°C).` : `氣溫達 ${currentTemp}°C，具有顯著中暑危險性。`); }
-            else if (currentTemp <= 8) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Cold" : "嚴重寒冷"); detailedReasons.push(checkEn ? `Temperature reached severe level (${currentTemp}°C).` : `氣溫低至 ${currentTemp}°C，具有顯著失溫危險性。`); }
+            // 💡 確保 currentTemp 是數字，防止字串相加導致 NaN 報錯
+            let numTemp = parseFloat(currentTemp);
+            let numHum = parseFloat(currentHum);
+            if (!isNaN(numTemp)) {
+                if (numTemp >= 36) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Heat" : "極端酷熱"); dominantReason = `極端酷熱氣溫 (${numTemp}°C)`; dominantReasonEN = `Extreme Heat (${numTemp}°C)`; detailedReasons.push(`因為氣溫高達 ${numTemp}°C，所以發出五級警告。達極端危險水平，極易中暑。`); detailedReasonsEN.push(`Temperature reached ${numTemp}°C, extreme danger level.`); }
+                else if (numTemp <= 5) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Extreme Cold" : "嚴寒"); dominantReason = `極端嚴寒氣溫 (${numTemp}°C)`; dominantReasonEN = `Extreme Cold (${numTemp}°C)`; detailedReasons.push(`因為氣溫低至 ${numTemp}°C，所以發出五級警告。達極端危險水平。`); detailedReasonsEN.push(`Temperature dropped to ${numTemp}°C, extreme danger level.`); }
+                else if (numTemp >= 34) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Heat" : "嚴重酷熱"); dominantReason = `嚴重酷熱氣溫 (${numTemp}°C)`; dominantReasonEN = `Severe Heat (${numTemp}°C)`; detailedReasons.push(`因為氣溫達 ${numTemp}°C，所以發出四級警告。具有顯著中暑危險性。`); detailedReasonsEN.push(`Temperature reached ${numTemp}°C, severe risk.`); }
+                else if (numTemp <= 8) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Severe Cold" : "嚴重寒冷"); dominantReason = `嚴重寒冷氣溫 (${numTemp}°C)`; dominantReasonEN = `Severe Cold (${numTemp}°C)`; detailedReasons.push(`因為氣溫低至 ${numTemp}°C，所以發出四級警告。具有顯著失溫危險性。`); detailedReasonsEN.push(`Temperature dropped to ${numTemp}°C, severe risk.`); }
+            }
 
-            let vaporPressure = (currentHum / 100) * 6.105 * Math.exp((17.27 * currentTemp) / (237.7 + currentTemp));
-            let wbgtValue = (0.567 * currentTemp + 0.393 * vaporPressure + 3.94).toFixed(1);
+            let vaporPressure = (numHum / 100) * 6.105 * Math.exp((17.27 * numTemp) / (237.7 + numTemp));
+            let wbgtValue = (0.567 * numTemp + 0.393 * vaporPressure + 3.94).toFixed(1);
             let wbgtLevel = 1; let wbgtText = checkEn ? "Safe" : "安全"; let wbgtColor = "#2ecc71";
 
-            if (wbgtValue >= 36.0) { wbgtLevel = 5; wbgtText = checkEn ? "Black" : "黑色"; wbgtColor = "#2c3e50"; }
-            else if (wbgtValue >= 34.0) { wbgtLevel = 4; wbgtText = checkEn ? "Red" : "紅色"; wbgtColor = "#e74c3c"; }
-            else if (wbgtValue >= 32.0) { wbgtLevel = 3; wbgtText = checkEn ? "Yellow" : "黃色"; wbgtColor = "#f1c40f"; }
-            else if (wbgtValue >= 30.0) { wbgtLevel = 2; wbgtText = checkEn ? "Note" : "注意"; wbgtColor = "#e67e22"; }
-            else { wbgtLevel = 1; wbgtText = checkEn ? "Safe" : "安全"; wbgtColor = "#2ecc71"; }
+            if (!isNaN(parseFloat(wbgtValue))) {
+                if (wbgtValue >= 36.0) { wbgtLevel = 5; wbgtText = checkEn ? "Black" : "黑色"; wbgtColor = "#2c3e50"; }
+                else if (wbgtValue >= 34.0) { wbgtLevel = 4; wbgtText = checkEn ? "Red" : "紅色"; wbgtColor = "#e74c3c"; }
+                else if (wbgtValue >= 32.0) { wbgtLevel = 3; wbgtText = checkEn ? "Yellow" : "黃色"; wbgtColor = "#f1c40f"; }
+                else if (wbgtValue >= 30.0) { wbgtLevel = 2; wbgtText = checkEn ? "Note" : "注意"; wbgtColor = "#e67e22"; }
+                else { wbgtLevel = 1; wbgtText = checkEn ? "Safe" : "安全"; wbgtColor = "#2ecc71"; }
+            }
 
-            if (wbgtLevel >= 5) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Black Heat Stress" : "黑色暑熱指標"); detailedReasons.push(checkEn ? "Heat index reached Black level. Stop all outdoor works." : "暑熱指數達黑色級別，極端危險，應全面暫停戶外勞動。"); }
-            else if (wbgtLevel === 4) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Red Heat Stress" : "紅色暑熱指標"); detailedReasons.push(checkEn ? "Heat index reached Red level." : "暑熱指數達紅色級別，大部分戶外勞動應暫停。"); }
-            else if (wbgtLevel === 3) { threatLevel = Math.max(threatLevel, 3); reasons.push(checkEn ? "Yellow Heat Stress" : "黃色暑熱指標"); detailedReasons.push(checkEn ? "Heat index reached Yellow level." : "暑熱指數達黃色級別，部分工作需安排休息。"); }
+            if (wbgtLevel >= 5) { threatLevel = Math.max(threatLevel, 5); reasons.push(checkEn ? "Black Heat Stress" : "黑色暑熱指標"); dominantReason = `黑色暑熱指數`; dominantReasonEN = `Black Heat Index`; detailedReasons.push(`因為暑熱指數達 ${wbgtValue}（黑色級別），所以發出五級警告。極端危險，應全面暫停戶外勞動。`); detailedReasonsEN.push(`Heat index reached Black level. Stop all outdoor works.`); }
+            else if (wbgtLevel === 4) { threatLevel = Math.max(threatLevel, 4); reasons.push(checkEn ? "Red Heat Stress" : "紅色暑熱指標"); dominantReason = `紅色暑熱指數`; dominantReasonEN = `Red Heat Index`; detailedReasons.push(`因為暑熱指數達 ${wbgtValue}（紅色級別），所以發出四級警告。大部分戶外勞動應暫停。`); detailedReasonsEN.push(`Heat index reached Red level.`); }
+            else if (wbgtLevel === 3) { threatLevel = Math.max(threatLevel, 3); reasons.push(checkEn ? "Yellow Heat Stress" : "黃色暑熱指標"); dominantReason = `黃色暑熱指數`; dominantReasonEN = `Yellow Heat Index`; detailedReasons.push(`因為暑熱指數達 ${wbgtValue}（黃色級別），所以發出三級警告。部分工作需安排休息。`); detailedReasonsEN.push(`Heat index reached Yellow level.`); }
 
             let finalReasonText = reasons.length > 0 ? (checkEn ? "Due to " + Array.from(new Set(reasons)).slice(0, 2).join(" & ") : "基於" + Array.from(new Set(reasons)).slice(0, 2).join("及")) : (checkEn ? "All indices normal" : "現時各項指數正常");
             let threatLabel = checkEn ? "Level 1: Safe" : "級別 1：安全"; let threatDesc = finalReasonText + (checkEn ? ", suitable for outdoor activities." : "，適合進行戶外活動。"); let threatColor = "#2ecc71";
@@ -974,7 +966,7 @@
             document.getElementById('threat-label').style.color = threatColor;
             document.getElementById('threat-desc').innerText = threatDesc;
 
-            // 💡 標頭威脅徽章同步
+            // 標頭威脅徽章同步
             const hdrBadge = document.getElementById('header-threat-badge');
             if (threatLevel > 1) {
                 hdrBadge.style.display = 'flex';
@@ -987,13 +979,22 @@
             threatModalData.badgeText = threatLabel;
             threatModalData.badgeColor = threatColor;
             threatModalData.summary = threatDesc;
-            if (detailedReasons.length === 0) detailedReasons.push(checkEn ? "No active threats." : "目前並無任何惡劣天氣或氣溫威脅。");
-            threatModalData.html = detailedReasons.map(r => `<li>${r}</li>`).join("");
+            
+            // 💡 確保陣列有資料，防止 mapping 空白
+            if (detailedReasons.length === 0) detailedReasons.push("因為各項氣象指數及天氣狀況正常，所以評定為一級（安全）。適合進行正常戶外活動。");
+            if (detailedReasonsEN.length === 0) detailedReasonsEN.push("All indices normal. Safe for outdoor activities.");
+            
+            threatModalData.html = (checkEn ? detailedReasonsEN : detailedReasons).map(r => `<li>${r}</li>`).join("");
 
-            document.getElementById('wbgt-val').innerText = wbgtValue;
-            document.getElementById('wbgt-val').style.backgroundColor = wbgtColor;
-            document.getElementById('wbgt-label').innerText = wbgtText;
-            document.getElementById('wbgt-label').style.color = wbgtColor;
+            if (!isNaN(parseFloat(wbgtValue))) {
+                document.getElementById('wbgt-val').innerText = wbgtValue;
+                document.getElementById('wbgt-val').style.backgroundColor = wbgtColor;
+                document.getElementById('wbgt-label').innerText = wbgtText;
+                document.getElementById('wbgt-label').style.color = wbgtColor;
+            } else {
+                document.getElementById('wbgt-val').innerText = '--';
+                document.getElementById('wbgt-label').innerText = '無數據';
+            }
         }
 
         // ================= 彈出視窗 (Modals) =================
