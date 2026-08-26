@@ -21,7 +21,6 @@
             --text-main: #2d3436;
             --text-muted: #636e72;
             --alert-red: #e74c3c;
-            --alert-orange: #e67e22;
             --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
         }
 
@@ -35,63 +34,65 @@
         .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
 
         .box { 
-            background: var(--white); 
-            border-radius: 12px; 
-            padding: 22px; 
-            box-shadow: var(--card-shadow); 
-            border-top: 4px solid var(--brand-navy); 
-            display: flex; 
-            flex-direction: column; 
-            position: relative;
+            background: var(--white); border-radius: 12px; padding: 22px; 
+            box-shadow: var(--card-shadow); border-top: 4px solid var(--brand-navy); 
+            display: flex; flex-direction: column; position: relative;
         }
         
         .box-title { 
-            font-size: 16px; 
-            font-weight: 700; 
-            color: var(--brand-navy); 
-            margin-bottom: 18px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
+            font-size: 16px; font-weight: 700; color: var(--brand-navy); 
+            margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
         }
 
-        /* 1. 多颱風卡片樣式 */
-        .multi-typhoon-container { display: flex; flex-direction: column; gap: 15px; max-height: 380px; overflow-y: auto; padding-right: 5px; }
-        .multi-typhoon-container::-webkit-scrollbar { width: 5px; }
-        .multi-typhoon-container::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+        /* 1. 多颱風卡片樣式 (已修復高度延伸問題) */
+        .multi-typhoon-wrapper { display: flex; flex-direction: column; flex-grow: 1; width: 100%; position: relative; }
+
+        .multi-typhoon-container { 
+            display: flex; flex-direction: row; flex-wrap: nowrap; gap: 15px; 
+            overflow-x: auto; overflow-y: hidden; padding-bottom: 5px; 
+            scroll-snap-type: x mandatory; scroll-behavior: smooth;
+            scrollbar-width: none; -ms-overflow-style: none;
+            flex-grow: 1; /* 讓輪播容器填滿高度 */
+        }
+        .multi-typhoon-container::-webkit-scrollbar { display: none; }
         
-        .typhoon-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; background: var(--white); box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .typhoon-card { 
+            flex: 0 0 100%; min-width: 100%; scroll-snap-align: center; 
+            border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; 
+            background: var(--white); box-shadow: 0 2px 8px rgba(0,0,0,0.02); 
+            display: flex; flex-direction: column; /* 讓卡片內部可延伸 */
+        }
+
+        .carousel-dots { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; min-height: 10px; }
+        .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #cbd5e1; cursor: pointer; transition: all 0.3s ease; }
+        .carousel-dot.active { background-color: var(--brand-navy); transform: scale(1.3); }
+
         .tc-card-header { font-weight: bold; color: var(--brand-navy); font-size: 16px; margin-bottom: 12px; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .tc-card-body { display: flex; gap: 15px; align-items: center; }
         
-        .pred-signal-container { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .pred-icon { width: 65px !important; height: 65px !important; font-size: 26px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; }
-        .pred-prob { font-size: 32px; font-weight: 800; color: var(--brand-navy); line-height: 1; margin-top: 5px; }
+        /* 轉換圖示 (Transition Icons) */
+        .pred-signal-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 140px; }
+        .signal-transition { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .pred-icon { width: 52px !important; height: 52px !important; font-size: 18px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; flex-shrink: 0; text-align: center; line-height: 1.1; }
+        .transition-arrow { font-size: 20px; color: var(--text-muted); font-weight: bold; }
         
-        .sig-1 { background-color: #555555; } 
-        .sig-3 { background-color: #27ae60; } 
-        .sig-8 { background-color: #e67e22; } 
-        .sig-9 { background-color: #c0392b; } 
-        .sig-10 { background-color: #8e44ad; }
-        
+        /* 文字機率標籤 */
+        .prob-text-level {
+            padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: bold;
+            display: inline-block; text-align: center; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
         .typhoon-status { flex: 1; padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 12px; border-left: 3px solid var(--brand-blue); line-height: 1.5; }
         
-        /* 💡 預計發出時間樣式標籤 */
-        .timing-box {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: #fff8e1;
-            border: 1px solid #ffe082;
-            border-radius: 6px;
-            font-size: 12.5px;
-            color: #b78103;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .timing-box { margin-top: 10px; padding: 8px 12px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; font-size: 12.5px; color: #b78103; display: flex; align-items: center; gap: 6px; }
         .timing-box strong { color: #d35400; font-size: 13px; }
-
-        .pred-reason { font-size: 12px; color: var(--text-muted); text-align: left; background: #f0f4f8; padding: 10px; border-radius: 6px; margin-top: 10px; line-height: 1.5; }
+        
+        .pred-reason { 
+            font-size: 12px; color: var(--text-muted); text-align: left; 
+            background: #f0f4f8; padding: 10px; border-radius: 6px; 
+            margin-top: 10px; line-height: 1.5; 
+            flex-grow: 1; /* 強制灰色框框向下延伸填滿空白 */
+        }
 
         /* 2 & 3. 滾動清單樣式 */
         .data-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 5px; }
@@ -112,7 +113,7 @@
         .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: bold; }
         .legend-color { width: 14px; height: 4px; border-radius: 2px; }
 
-        /* ================= 彈出視窗 (Modal) ================= */
+        /* 彈出視窗 (Modal) */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 42, 70, 0.6); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.show { display: flex; opacity: 1; }
         .modal-content { background: var(--white); width: 90%; max-width: 700px; border-radius: 12px; padding: 30px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s ease; }
@@ -131,22 +132,23 @@
 
     <div class="dashboard-container">
         
-        <!-- ================= 上排三欄 ================= -->
+        <!-- 上排三欄 -->
         <div class="top-row">
             
-            <!-- 左上：智能風球預測 (支援預計發出日期時間) -->
             <div class="box">
                 <div class="box-title">
-                    <span data-i18n="title_prob">📊 智能風球生效機率預測</span>
-                    <small style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: auto;" data-i18n="title_prob_sub">Target Signal Predictor</small>
+                    <span data-i18n="title_prob">📊 智能風球走勢預測</span>
+                    <small style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: auto;" data-i18n="title_prob_sub">Signal Trend Predictor</small>
                 </div>
                 
-                <div class="multi-typhoon-container" id="multi-typhoon-container">
-                    <div style="text-align: center; color: gray; padding: 25px;" data-i18n="loading_data">🔄 正在讀取數據...</div>
+                <div class="multi-typhoon-wrapper">
+                    <div class="multi-typhoon-container" id="multi-typhoon-container">
+                        <div style="text-align: center; color: gray; padding: 25px; width: 100%;" data-i18n="loading_data">🔄 正在讀取數據...</div>
+                    </div>
+                    <div class="carousel-dots" id="carousel-dots"></div>
                 </div>
             </div>
 
-            <!-- 中上：各區實時風速與風向 -->
             <div class="box">
                 <div class="box-title">
                     <span data-i18n="title_wind">💨 各區實時風速與風向</span>
@@ -157,7 +159,6 @@
                 </div>
             </div>
 
-            <!-- 右上：各區實時雨量監測 -->
             <div class="box">
                 <div class="box-title">
                     <span data-i18n="title_rain">🌧️ 各區實時雨量監測</span>
@@ -170,7 +171,7 @@
 
         </div>
 
-        <!-- ================= 下排雙地圖 ================= -->
+        <!-- 下排雙地圖 -->
         <div class="bottom-row">
 
             <div class="box">
@@ -196,7 +197,7 @@
 
     </div>
 
-    <!-- ================= 圖表彈出視窗 ================= -->
+    <!-- 圖表彈出視窗 -->
     <div id="data-modal" class="modal-overlay">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal()">×</button>
@@ -213,7 +214,7 @@
 
         const i18nDict = {
             "tc": {
-                "title_prob": "📊 智能風球生效機率預測", "title_prob_sub": "預測下一級別 (Target Signal)",
+                "title_prob": "📊 智能風球走勢預測", "title_prob_sub": "預測信號升降 (Signal Trend Predictor)",
                 "title_wind": "💨 各區實時風速與風向", "title_rain": "🌧️ 各區實時雨量監測",
                 "title_hko": "🇭🇰 香港天文台預測路徑與影響範圍", "title_ncdr": "🌐 各國機構颱風預測路徑",
                 "click_details": "(點擊查看24小時圖表)",
@@ -231,13 +232,12 @@
                 "active_warn": "現正生效: ", "active_t10": "颶風信號", "signal": "號信號",
                 "rationale_title": "分析理據：", "rationale_met": "條件已充分滿足。", "rationale_t10": "十號颶風信號現正生效。",
                 "load_fail": "❌ 無法載入颱風 XML 數據，請檢查數據來源。",
-                "est_timing_lbl": "📅 預計發出時間：",
-                "imminent": "預料短期內 / 未來數小時內考慮發出",
-                "unlikely": "目前預計發出機會偏低",
-                "already_in_force": "該信號現正生效中"
+                "est_timing_lbl": "📅 預估發出時段：",
+                "imminent": "短期內 / 數小時內發出", "unlikely": "目前發出機會較低", "already_in_force": "信號現正生效中",
+                "none": "無", "prob_lbl": "發生機率："
             },
             "en": {
-                "title_prob": "📊 AI Signal Probability", "title_prob_sub": "Target Signal Predictor",
+                "title_prob": "📊 AI Signal Trend", "title_prob_sub": "Signal Trend Predictor",
                 "title_wind": "💨 Real-time Wind", "title_rain": "🌧️ Real-time Rainfall",
                 "title_hko": "🇭🇰 HKO Forecast Track", "title_ncdr": "🌐 International Forecasts",
                 "click_details": "(Click for 24h Chart)",
@@ -255,10 +255,9 @@
                 "active_warn": "Active: T", "active_t10": "10 Signal", "signal": "",
                 "rationale_title": "Rationale:", "rationale_met": "Conditions fully met.", "rationale_t10": "T10 Hurricane Signal in force.",
                 "load_fail": "❌ Failed to load Typhoon XML data.",
-                "est_timing_lbl": "📅 Estimated Timing: ",
-                "imminent": "Expected within the next few hours",
-                "unlikely": "Issuance unlikely based on current track",
-                "already_in_force": "Signal currently in force"
+                "est_timing_lbl": "📅 Est. Timing: ",
+                "imminent": "Expected within a few hours", "unlikely": "Issuance unlikely", "already_in_force": "Signal currently in force",
+                "none": "Nil", "prob_lbl": "Probability: "
             }
         };
 
@@ -286,7 +285,17 @@
             "微風": "Light Air", "無風": "Calm", "旋風": "VRB", "風向不定": "VRB"
         };
 
-        function getStationName(name) { for (let tcName in stationDictEN) { if (name.includes(tcName)) return (currentLang === 'en') ? name.replace(tcName, stationDictEN[tcName]) : name; } return name; }
+        function getStationName(name) { 
+            if (currentLang !== 'en') return name;
+            if (stationDictEN[name]) return stationDictEN[name];
+            
+            const sortedKeys = Object.keys(stationDictEN).sort((a, b) => b.length - a.length);
+            for (let tcName of sortedKeys) {
+                if (name.includes(tcName)) return name.replace(tcName, stationDictEN[tcName]);
+            }
+            return name;
+        }
+
         function getWindDir(tcDir) { return (currentLang === 'en' && windDirMapEN[tcDir]) ? windDirMapEN[tcDir] : tcDir; }
 
         function applyLanguageUI() {
@@ -296,10 +305,25 @@
             });
         }
 
-        // ================= 地圖及數據讀取邏輯 =================
+        function getProbLevel(prob) {
+            if (prob === 0) return { text: currentLang === 'tc' ? "最低" : "Lowest", color: "#7f8c8d", bg: "#f4f6f9" };
+            if (prob <= 15) return { text: currentLang === 'tc' ? "最低" : "Lowest", color: "#27ae60", bg: "#e9f7ef" };
+            if (prob <= 33) return { text: currentLang === 'tc' ? "較低" : "Low", color: "#2ecc71", bg: "#eafaf1" };
+            if (prob <= 50) return { text: currentLang === 'tc' ? "中等" : "Medium", color: "#f1c40f", bg: "#fef9e7" };
+            if (prob <= 66) return { text: currentLang === 'tc' ? "較高" : "High", color: "#e67e22", bg: "#fbeee6" };
+            if (prob <= 84) return { text: currentLang === 'tc' ? "高" : "Very High", color: "#e74c3c", bg: "#fdedec" };
+            return { text: currentLang === 'tc' ? "極高" : "Extremely High", color: "#8e44ad", bg: "#f4ecf7" };
+        }
+
+        function getSigColor(sig) {
+            if (sig == 1) return '#555555'; if (sig == 3) return '#27ae60'; if (sig == 8) return '#e67e22';
+            if (sig == 9) return '#c0392b'; if (sig == 10) return '#8e44ad'; return '#bdc3c7';
+        }
+
+        // ================= 地圖及資料函數 =================
         const HK_LAT = 22.3027; const HK_LON = 114.1772;
         let hkoMap, ncdrMap, chartInstance = null;
-        let hkoTyphoonLayer = null;
+        let hkoTyphoonLayer = null, ncdrTyphoonLayer = null;
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -317,7 +341,7 @@
         async function fetchResource(url) {
             try {
                 const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) throw new Error("Direct fetch failed");
+                if (!res.ok) throw new Error("Fetch failed");
                 return await res.text();
             } catch (e) {
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
@@ -327,58 +351,41 @@
             }
         }
 
-        // 💡 格式化預測發出時間函數
         function formatForecastTiming(dateObj) {
             if (!dateObj || isNaN(dateObj.getTime())) return null;
-            
-            const month = dateObj.getMonth() + 1;
-            const day = dateObj.getDate();
-            const hour = dateObj.getHours();
-            
+            const month = dateObj.getMonth() + 1; const day = dateObj.getDate(); const hour = dateObj.getHours();
             const weekdayTC = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][dateObj.getDay()];
             const weekdayEN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dateObj.getDay()];
             const monthNamesEN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-            let periodTC = "清晨";
-            let periodEN = "Early Morning";
-            let timeRange = "04:00 - 08:00";
-
-            if (hour >= 6 && hour < 12) {
-                periodTC = "上午"; periodEN = "Morning"; timeRange = "08:00 - 12:00";
-            } else if (hour >= 12 && hour < 18) {
-                periodTC = "下午"; periodEN = "Afternoon"; timeRange = "13:00 - 17:00";
-            } else if (hour >= 18 && hour < 23) {
-                periodTC = "晚間"; periodEN = "Evening"; timeRange = "18:00 - 22:00";
-            } else {
-                periodTC = "深夜至清晨"; periodEN = "Overnight"; timeRange = "23:00 - 05:00";
-            }
-
-            if (currentLang === 'tc') {
-                return `${month}月${day}日 (${weekdayTC}) ${periodTC} <small style="color:#7f8c8d;">(約 ${timeRange})</small>`;
-            } else {
-                return `${day} ${monthNamesEN[month-1]} (${weekdayEN}), ${periodEN} <small style="color:#7f8c8d;">(Approx. ${timeRange})</small>`;
-            }
+            let periodTC = "清晨"; let periodEN = "Early Morning"; let timeRange = "04:00 - 08:00";
+            if (hour >= 6 && hour < 12) { periodTC = "上午"; periodEN = "Morning"; timeRange = "08:00 - 12:00"; } 
+            else if (hour >= 12 && hour < 18) { periodTC = "下午"; periodEN = "Afternoon"; timeRange = "13:00 - 17:00"; } 
+            else if (hour >= 18 && hour < 23) { periodTC = "晚間"; periodEN = "Evening"; timeRange = "18:00 - 22:00"; } 
+            else { periodTC = "深夜至清晨"; periodEN = "Overnight"; timeRange = "23:00 - 05:00"; }
+            if (currentLang === 'tc') return `${month}月${day}日 (${weekdayTC}) ${periodTC} <small style="color:#7f8c8d;">(約 ${timeRange})</small>`;
+            else return `${day} ${monthNamesEN[month-1]} (${weekdayEN}), ${periodEN} <small style="color:#7f8c8d;">(Est. ${timeRange})</small>`;
         }
 
         function initMaps() {
             hkoMap = L.map('hko-map').setView([21.5, 112.0], 5);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(hkoMap);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(hkoMap);
             L.circleMarker([HK_LAT, HK_LON], { radius: 6, color: '#112a46', fillColor: '#ffffff', fillOpacity: 1, weight: 2 }).addTo(hkoMap).bindPopup(i18nDict[currentLang]["hko_station"]);
             L.circle([HK_LAT, HK_LON], { radius: 1200000, color: '#27ae60', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
             L.circle([HK_LAT, HK_LON], { radius: 800000, color: '#e67e22', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
             L.circle([HK_LAT, HK_LON], { radius: 400000, color: '#e74c3c', weight: 1.5, fill: false, dashArray: '6,6' }).addTo(hkoMap);
 
             ncdrMap = L.map('ncdr-map').setView([21.5, 116.0], 4);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(ncdrMap);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(ncdrMap);
+            ncdrTyphoonLayer = L.layerGroup().addTo(ncdrMap);
         }
 
-        // ================= 解析 HKO XML (加入預測發出時間推算) =================
+        // ================= 解析 HKO XML =================
         async function loadHKOTyphoonTrack() {
             const langRef = i18nDict[currentLang];
             const multiContainer = document.getElementById('multi-typhoon-container');
+            const dotsContainer = document.getElementById('carousel-dots');
 
             try {
-                // 1. 同步現正生效警告
                 let activeTCSignal = 0;
                 try {
                     const warnRes = await fetchResource(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc`);
@@ -397,17 +404,17 @@
                     }
                 } catch (e) {}
 
-                // 2. 讀取並拆解多個颱風
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/current_typhoon.xml');
                 const xml = new DOMParser().parseFromString(text, "text/xml");
                 const tracks = xml.querySelectorAll('TropicalCycloneTrack');
 
                 if (tracks.length === 0) {
-                    multiContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px;">${langRef.no_typhoon}</div>`;
+                    multiContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px; width: 100%;">${langRef.no_typhoon}</div>`;
+                    dotsContainer.innerHTML = '';
                     return;
                 }
 
-                multiContainer.innerHTML = '';
+                multiContainer.innerHTML = ''; dotsContainer.innerHTML = '';
                 if (!hkoTyphoonLayer) hkoTyphoonLayer = L.layerGroup().addTo(hkoMap);
                 hkoTyphoonLayer.clearLayers();
 
@@ -432,10 +439,8 @@
                     const distance = calculateDistance(HK_LAT, HK_LON, curLat, curLon);
                     const tcColor = tcColors[index % tcColors.length];
 
-                    // 機率計算模型
                     let p1 = 0, p3 = 0, p8 = 0, p9 = 0, p10 = 0;
                     let windNum = parseFloat(curWind.replace(/[^0-9.]/g, '')) || 40;
-
                     let intensityMultiplier = 1.0;
                     if (windNum < 41) intensityMultiplier = 0.1;       
                     else if (windNum <= 62) intensityMultiplier = 0.6; 
@@ -443,80 +448,52 @@
                     else if (windNum <= 117) intensityMultiplier = 1.0; 
                     else intensityMultiplier = 1.1;                    
 
-                    if (distance <= 800) {
-                        p1 = Math.min(99, Math.round((100 - (distance - 400) * 0.15) * intensityMultiplier));
-                        if (windNum < 41) p1 = Math.min(p1, 10);
-                    }
-                    if (distance <= 500) {
-                        p1 = Math.min(99, Math.round(98 * intensityMultiplier));
-                        p3 = Math.min(95, Math.round((90 - (distance - 250) * 0.2) * Math.max(0, intensityMultiplier - 0.2)));
-                    }
-                    if (distance <= 300) {
-                        p1 = Math.min(99, Math.round(100 * intensityMultiplier));
-                        p3 = Math.min(95, Math.round(95 * intensityMultiplier));
-                        p8 = Math.min(90, Math.round((75 + (windNum - 80) * 0.4) * intensityMultiplier));
-                    }
-                    if (distance <= 150) {
-                        p3 = Math.min(99, Math.round(100 * intensityMultiplier));
-                        p8 = Math.min(95, Math.round(95 * intensityMultiplier));
-                        if (windNum >= 90) p9 = Math.min(85, Math.round(65 * intensityMultiplier));
-                        if (windNum >= 118) p10 = Math.min(60, Math.round(40 * intensityMultiplier));
-                    }
-                    if (distance <= 80) {
-                        p8 = Math.min(99, Math.round(100 * intensityMultiplier));
-                        if (windNum >= 90) p9 = Math.min(95, Math.round(85 * intensityMultiplier));
-                        if (windNum >= 118) p10 = Math.min(90, Math.round(75 * intensityMultiplier));
-                    }
+                    if (distance <= 800) { p1 = Math.min(99, Math.round((100 - (distance - 400) * 0.15) * intensityMultiplier)); if (windNum < 41) p1 = Math.min(p1, 10); }
+                    if (distance <= 500) { p1 = Math.min(99, Math.round(98 * intensityMultiplier)); p3 = Math.min(95, Math.round((90 - (distance - 250) * 0.2) * Math.max(0, intensityMultiplier - 0.2))); }
+                    if (distance <= 300) { p1 = Math.min(99, Math.round(100 * intensityMultiplier)); p3 = Math.min(95, Math.round(95 * intensityMultiplier)); p8 = Math.min(90, Math.round((75 + (windNum - 80) * 0.4) * intensityMultiplier)); }
+                    if (distance <= 150) { p3 = Math.min(99, Math.round(100 * intensityMultiplier)); p8 = Math.min(95, Math.round(95 * intensityMultiplier)); if (windNum >= 90) p9 = Math.min(85, Math.round(65 * intensityMultiplier)); if (windNum >= 118) p10 = Math.min(60, Math.round(40 * intensityMultiplier)); }
+                    if (distance <= 80) { p8 = Math.min(99, Math.round(100 * intensityMultiplier)); if (windNum >= 90) p9 = Math.min(95, Math.round(85 * intensityMultiplier)); if (windNum >= 118) p10 = Math.min(90, Math.round(75 * intensityMultiplier)); }
 
                     p1 = Math.max(0, Math.min(99, p1)); p3 = Math.max(0, Math.min(99, p3));
                     p8 = Math.max(0, Math.min(99, p8)); p9 = Math.max(0, Math.min(99, p9)); p10 = Math.max(0, Math.min(99, p10));
 
-                    // 目標風球判定
                     let targetSig = 1;
-                    if (activeTCSignal === 1) targetSig = 3;
-                    else if (activeTCSignal === 3) targetSig = 8;
-                    else if (activeTCSignal === 8) targetSig = 9;
-                    else if (activeTCSignal >= 9) targetSig = 10;
-                    
                     let targetProb = 0;
-                    if (targetSig === 1) targetProb = p1;
-                    else if (targetSig === 3) targetProb = p3;
-                    else if (targetSig === 8) targetProb = p8;
-                    else if (targetSig === 9) targetProb = p9;
-                    else if (targetSig === 10) targetProb = p10;
-                    if (activeTCSignal === 10) { targetSig = 10; targetProb = 100; }
+                    let isDowngrade = false;
 
-                    // ================= 💡 AI 預測發出時間推算核心 =================
+                    if (activeTCSignal === 0) { targetSig = 1; targetProb = p1; } 
+                    else if (activeTCSignal === 1) { if (p3 >= 15) { targetSig = 3; targetProb = p3; } else if (p1 < 40) { targetSig = 0; targetProb = 100 - p1; isDowngrade = true; } else { targetSig = 3; targetProb = p3; } } 
+                    else if (activeTCSignal === 3) { if (p8 >= 15) { targetSig = 8; targetProb = p8; } else if (p3 < 40) { targetSig = 1; targetProb = 100 - p3; isDowngrade = true; } else { targetSig = 8; targetProb = p8; } } 
+                    else if (activeTCSignal === 8) { if (p9 >= 15) { targetSig = 9; targetProb = p9; } else if (p8 < 40) { targetSig = 3; targetProb = 100 - p8; isDowngrade = true; } else { targetSig = 9; targetProb = p9; } } 
+                    else if (activeTCSignal === 9) { if (p10 >= 15) { targetSig = 10; targetProb = p10; } else if (p9 < 40) { targetSig = 8; targetProb = 100 - p9; isDowngrade = true; } else { targetSig = 10; targetProb = p10; } } 
+                    else if (activeTCSignal === 10) { if (p10 < 80) { targetSig = 8; targetProb = 100 - p10; isDowngrade = true; } else { targetSig = 10; targetProb = 100; } }
+
+                    let currentSigText = activeTCSignal > 0 ? `T${activeTCSignal}` : langRef.none;
+                    let targetSigText = targetSig > 0 ? `T${targetSig}` : langRef.none;
+                    
+                    let currentIconHtml = `<div class="pred-icon" style="background-color: ${getSigColor(activeTCSignal)};">${currentSigText}</div>`;
+                    let targetIconHtml = `<div class="pred-icon" style="background-color: ${getSigColor(targetSig)};">${targetSigText}</div>`;
+
+                    let lvl = getProbLevel(targetProb);
+                    let textLevelHtml = `<div class="prob-text-level" style="background-color: ${lvl.bg}; color: ${lvl.color}; border: 1px solid ${lvl.color};">${langRef.prob_lbl}${lvl.text}</div>`;
+
                     const forecastNodes = report.querySelectorAll('ForecastInformation');
                     let forecastPts = [];
                     let forecastTrack = [[curLat, curLon]];
                     allHkoBounds.push([curLat, curLon]);
 
-                    let lastKnownTime = baseDate.getTime();
                     let totalNodes = forecastNodes.length;
-
                     forecastNodes.forEach((node, idx) => {
                         const fLat = parseCoord(node.querySelector('Latitude')?.textContent);
                         const fLon = parseCoord(node.querySelector('Longitude')?.textContent);
                         const fTimeStr = node.querySelector('Time')?.textContent;
-                        
-                        let ptTime = null;
-                        if (fTimeStr) {
-                            ptTime = new Date(fTimeStr);
-                            lastKnownTime = ptTime.getTime();
-                        } else {
-                            // 按照步數線性估算時間 (假設節點平均分布在預測時段)
-                            let estimatedStepHours = (idx + 1) * (72 / Math.max(1, totalNodes)); 
-                            ptTime = new Date(baseDate.getTime() + estimatedStepHours * 3600000);
-                        }
+                        let ptTime = fTimeStr ? new Date(fTimeStr) : new Date(baseDate.getTime() + (idx + 1) * (72 / Math.max(1, totalNodes)) * 3600000);
 
                         if (fLat !== null && fLon !== null) {
                             let fDist = calculateDistance(HK_LAT, HK_LON, fLat, fLon);
                             forecastPts.push({ lat: fLat, lon: fLon, dist: fDist, time: ptTime });
                             forecastTrack.push([fLat, fLon]);
                             allHkoBounds.push([fLat, fLon]);
-
-                            // 漏斗型圓圈繪製
                             if (idx > 0 && (idx % 12 === 0 || idx === forecastNodes.length - 1)) {
                                 let errorRadius = 40000 + (idx * 3500); 
                                 L.circle([fLat, fLon], { radius: errorRadius, color: tcColor, fillColor: tcColor, fillOpacity: 0.08, weight: 1, dashArray: '3,3' }).addTo(hkoTyphoonLayer);
@@ -525,36 +502,21 @@
                         }
                     });
 
-                    // 依據目標風球門檻尋找預計觸發時間點
                     let thresholdDistance = 800;
-                    if (targetSig === 3) thresholdDistance = 450;
-                    else if (targetSig === 8) thresholdDistance = 280;
-                    else if (targetSig >= 9) thresholdDistance = 120;
-
+                    if (targetSig === 3) thresholdDistance = 450; else if (targetSig === 8) thresholdDistance = 280; else if (targetSig >= 9) thresholdDistance = 120;
                     let estimatedTimeText = "";
 
-                    if (activeTCSignal >= targetSig) {
-                        estimatedTimeText = langRef.already_in_force;
-                    } else if (targetProb >= 85 && distance <= thresholdDistance) {
-                        // 已經在門檻內且機率極高
-                        estimatedTimeText = langRef.imminent;
-                    } else {
-                        // 沿著預測路徑尋找首個進入門檻的節點
+                    if (targetSig === activeTCSignal && activeTCSignal !== 0) { estimatedTimeText = langRef.already_in_force; } 
+                    else if (isDowngrade || (targetProb >= 85 && distance <= thresholdDistance)) { estimatedTimeText = langRef.imminent; } 
+                    else {
                         let triggerPt = forecastPts.find(p => p.dist <= thresholdDistance);
-                        
-                        if (triggerPt && targetProb >= 25) {
-                            estimatedTimeText = formatForecastTiming(triggerPt.time);
-                        } else if (targetProb >= 40) {
-                            // 若未直接進入門檻但機率不低，取最近點 (Closest Approach) 時間
+                        if (triggerPt && targetProb >= 25) { estimatedTimeText = formatForecastTiming(triggerPt.time); } 
+                        else if (targetProb >= 40) {
                             let closestPt = forecastPts.reduce((min, p) => p.dist < min.dist ? p : min, forecastPts[0] || { dist: 9999, time: baseDate });
-                            if (closestPt) estimatedTimeText = formatForecastTiming(closestPt.time);
-                            else estimatedTimeText = langRef.unlikely;
-                        } else {
-                            estimatedTimeText = langRef.unlikely;
-                        }
+                            if (closestPt) estimatedTimeText = formatForecastTiming(closestPt.time); else estimatedTimeText = langRef.unlikely;
+                        } else { estimatedTimeText = langRef.unlikely; }
                     }
 
-                    // 組合成 HTML 卡片
                     let distStr = Math.round(distance);
                     let activeWarnHtmlText = "";
                     if (activeTCSignal > 0) {
@@ -564,15 +526,31 @@
 
                     let reasonHTML = "";
                     if (currentLang === 'tc') {
-                        if (activeTCSignal === 10) { reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>氣旋中心風力達 ${curWind}。`; } 
-                        else if (targetProb >= 99) { reasonHTML = `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近，風力達 ${curWind}，預計即將改發 T${targetSig} 信號。`; } 
-                        else if (windNum <= 62) { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>雖然氣旋頗為接近（約 ${distStr} 公里），但其中心風力偏弱（${curWind}），預料<b>環流較細小</b>。本港 8 個參考站受強風直接影響機會受限，改發 <b>T${targetSig}</b> 的機率為 ${targetProb}%。`; } 
-                        else { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>中心最高持續風速為 ${curWind}。系統已綜合評估其環流大小及與本港 8 個參考氣象站的距離，改發 <b>T${targetSig}</b> 的機率現為 ${targetProb}%。`; }
+                        if (isDowngrade) {
+                            if (targetSig === 0) reasonHTML = `<strong>${langRef.rationale_title}</strong><br>氣旋正逐漸遠離或減弱，本港風力威脅減退，預料<b>取消所有信號</b>的機率為 ${lvl.text}。`;
+                            else reasonHTML = `<strong>${langRef.rationale_title}</strong><br>氣旋正逐漸遠離或減弱，本港風力威脅減退，<b>降級至 T${targetSig}</b> 的機率為 ${lvl.text}。`;
+                        } else if (activeTCSignal === 10 && targetSig === 10) { 
+                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>氣旋中心風力達 ${curWind}。`; 
+                        } else if (targetProb >= 99) { 
+                            reasonHTML = `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近，預料即將改發 T${targetSig} 信號。`; 
+                        } else if (windNum <= 62) { 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>雖然氣旋頗為接近（約 ${distStr} 公里），但風力偏弱（${curWind}），<b>環流較細小</b>。本港 8 個參考站受影響機會受限，升級至 <b>T${targetSig}</b> 的機率為 ${lvl.text}。`; 
+                        } else { 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>中心最高持續風速為 ${curWind}。系統綜合評估其環流大小及與本港距離，升級至 <b>T${targetSig}</b> 的機率為 ${lvl.text}。`; 
+                        }
                     } else {
-                        if (activeTCSignal === 10) { reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>Center wind is ${curWind}.`; } 
-                        else if (targetProb >= 99) { reasonHTML = `<strong>${langRef.rationale_met}</strong><br>Cyclone is very close with winds at ${curWind}. Issuance of T${targetSig} is imminent.`; } 
-                        else if (windNum <= 62) { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Despite being close (${distStr} km), the system is weak (${curWind}) with a <b>small circulation</b>. Threat to 8 reference stations is limited. Probability for <b>T${targetSig}</b> is ${targetProb}%.`; } 
-                        else { reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Wind speed is ${curWind}. Factoring in circulation size and distance to HK, probability for <b>T${targetSig}</b> is ${targetProb}%.`; }
+                        if (isDowngrade) {
+                            if (targetSig === 0) reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Cyclone is moving away or weakening. Probability of <b>cancelling all signals</b> is ${lvl.text}.`;
+                            else reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Cyclone is moving away or weakening. Probability of <b>downgrading to T${targetSig}</b> is ${lvl.text}.`;
+                        } else if (activeTCSignal === 10 && targetSig === 10) { 
+                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>Center wind is ${curWind}.`; 
+                        } else if (targetProb >= 99) { 
+                            reasonHTML = `<strong>${langRef.rationale_met}</strong><br>Cyclone is very close. Issuance of T${targetSig} is imminent.`; 
+                        } else if (windNum <= 62) { 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Despite being close (${distStr} km), the system is weak with a <b>small circulation</b>. Threat to 8 reference stations is limited. Prob of upgrading to <b>T${targetSig}</b> is ${lvl.text}.`; 
+                        } else { 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Wind speed is ${curWind}. Factoring in circulation and distance, probability of upgrading to <b>T${targetSig}</b> is ${lvl.text}.`; 
+                        }
                     }
 
                     let cardHtml = `
@@ -580,8 +558,12 @@
                             <div class="tc-card-header" style="color: ${tcColor};">🌀 ${tcName} <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-left:auto;">(${curIntensity})</span></div>
                             <div class="tc-card-body">
                                 <div class="pred-signal-container">
-                                    <div class="pred-icon sig-${targetSig}" style="background-color: ${targetSig >= 8 ? '#e67e22' : (targetSig === 3 ? '#27ae60' : '#555')};">T${targetSig}</div>
-                                    <div class="pred-prob">${targetProb}%</div>
+                                    <div class="signal-transition">
+                                        ${currentIconHtml}
+                                        <div class="transition-arrow">➔</div>
+                                        ${targetIconHtml}
+                                    </div>
+                                    ${textLevelHtml}
                                 </div>
                                 <div class="typhoon-status">
                                     <strong>${langRef.centre_pos}</strong> ${curLat.toFixed(1)}°, ${curLon.toFixed(1)}°<br>
@@ -589,19 +571,12 @@
                                     ${activeWarnHtmlText}
                                 </div>
                             </div>
-                            
-                            <!-- 💡 預計發出信號時間顯示 -->
-                            <div class="timing-box">
-                                <span>${langRef.est_timing_lbl}</span>
-                                <strong>${estimatedTimeText}</strong>
-                            </div>
-
+                            <div class="timing-box"><span>${langRef.est_timing_lbl}</span><strong>${estimatedTimeText}</strong></div>
                             <div class="pred-reason">${reasonHTML}</div>
                         </div>
                     `;
                     multiContainer.innerHTML += cardHtml;
 
-                    // 地圖渲染
                     const typhoonIcon = L.divIcon({ className: 'custom-icon', html: `<div class='typhoon-emoji' style="color:${tcColor}; text-shadow:0 0 5px rgba(255,255,255,0.8);">🌀</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
                     L.marker([curLat, curLon], { icon: typhoonIcon }).addTo(hkoTyphoonLayer).bindPopup(`<b>${tcName}</b><br>${curIntensity}`);
                     L.polyline(forecastTrack, { color: tcColor, weight: 3, dashArray: '5,5' }).addTo(hkoTyphoonLayer);
@@ -609,13 +584,34 @@
 
                 if (allHkoBounds.length > 1) { hkoMap.fitBounds(allHkoBounds, { padding: [40, 40] }); }
 
+                if (tracks.length > 1) {
+                    tracks.forEach((_, idx) => {
+                        const dot = document.createElement('div');
+                        dot.className = `carousel-dot ${idx === 0 ? 'active' : ''}`;
+                        dot.onclick = () => {
+                            const cardWidth = multiContainer.clientWidth;
+                            multiContainer.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                        };
+                        dotsContainer.appendChild(dot);
+                    });
+
+                    multiContainer.onscroll = () => {
+                        const scrollPos = multiContainer.scrollLeft;
+                        const cardWidth = multiContainer.clientWidth;
+                        const activeIdx = Math.round(scrollPos / cardWidth);
+                        const dots = dotsContainer.children;
+                        for (let i = 0; i < dots.length; i++) {
+                            dots[i].className = `carousel-dot ${i === activeIdx ? 'active' : ''}`;
+                        }
+                    };
+                }
+
             } catch (err) { 
                 console.error("HKO XML Loading Failed:", err);
-                multiContainer.innerHTML = `<div style="text-align: center; color: var(--alert-red); padding: 25px;">${langRef.load_fail || "讀取失敗"}</div>`;
+                multiContainer.innerHTML = `<div style="text-align: center; color: var(--alert-red); padding: 25px; width: 100%;">${langRef.load_fail || "讀取失敗"}</div>`;
             }
         }
 
-        // ================= 3. 讀取實時風速風向 =================
         async function fetchWindData() {
             try {
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/wind_data.csv');
@@ -677,7 +673,6 @@
             } catch (err) { document.getElementById('wind-list-container').innerHTML = i18nDict[currentLang].no_wind; }
         }
 
-        // ================= 4. 讀取實時雨量 =================
         async function fetchRainData() {
             try {
                 const raw = await fetchResource('https://dannytcchan00.github.io/0Data/data/rain_data.csv');
@@ -721,15 +716,17 @@
             } catch (err) { document.getElementById('rain-list-container').innerHTML = i18nDict[currentLang].no_rain; }
         }
 
-        // ================= 5. 解析各國機構 KML =================
         async function loadNCDRKMLTrack() {
             try {
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml');
                 const xml = new DOMParser().parseFromString(text, "text/xml");
                 const agencyColors = { 'JMA': '#e74c3c', 'JTWC': '#3498db', 'CWA': '#f39c12', 'KMA': '#2ecc71', 'NMC': '#9b59b6', 'HKO': '#34495e' };
+                const langRef = i18nDict[currentLang];
+                
+                if (ncdrTyphoonLayer) { ncdrTyphoonLayer.clearLayers(); }
+
                 const folders = xml.getElementsByTagName('Folder');
                 let allBounds = [];
-                const langRef = i18nDict[currentLang];
 
                 for (let i = 0; i < folders.length; i++) {
                     const folder = folders[i];
@@ -748,7 +745,7 @@
                                 if (!isNaN(lat) && !isNaN(lon)) { latLngs.push([lat, lon]); allBounds.push([lat, lon]); }
                             }
                         });
-                        L.polyline(latLngs, { color: color, weight: 3, opacity: 0.9 }).addTo(ncdrMap).bindTooltip(`<b>${agencyName}</b> ${langRef.forecast_track}`, {sticky: true});
+                        L.polyline(latLngs, { color: color, weight: 3, opacity: 0.9 }).addTo(ncdrTyphoonLayer).bindTooltip(`<b>${agencyName}</b> ${langRef.forecast_track}`, {sticky: true});
                     }
 
                     const placemarks = folder.getElementsByTagName('Placemark');
@@ -757,20 +754,19 @@
                         if (point.length > 0) {
                             const pCoords = point[0].getElementsByTagName('coordinates')[0].textContent.split(',');
                             const pLon = parseFloat(pCoords[0]); const pLat = parseFloat(pCoords[1]);
-                            L.circleMarker([pLat, pLon], { radius: 3, color: color, fillColor: '#fff', fillOpacity: 1, weight: 1 }).addTo(ncdrMap);
-                            if (j === 0) L.circleMarker([pLat, pLon], { radius: 6, color: color, fillColor: color, fillOpacity: 0.7, weight: 2 }).addTo(ncdrMap).bindPopup(`<b>${agencyName}</b> ${langRef.latest_pos}`);
+                            L.circleMarker([pLat, pLon], { radius: 3, color: color, fillColor: '#fff', fillOpacity: 1, weight: 1 }).addTo(ncdrTyphoonLayer);
+                            if (j === 0) L.circleMarker([pLat, pLon], { radius: 6, color: color, fillColor: color, fillOpacity: 0.7, weight: 2 }).addTo(ncdrTyphoonLayer).bindPopup(`<b>${agencyName}</b> ${langRef.latest_pos}`);
                         }
                     }
                 }
                 if (allBounds.length > 0) { ncdrMap.fitBounds(allBounds, { padding: [30, 30] }); }
-            } catch (err) {}
+            } catch (err) { console.error("NCDR KML Parse Failed:", err); }
         }
 
-        // ================= Chart 圖表與 Modal 邏輯 =================
+        // ================= Chart 圖表與 Modal =================
         function openChartModal(type, station, currentVal, windDirStr, maxGustVal = null) {
             const langRef = i18nDict[currentLang];
             const titleType = type === 'wind' ? langRef.chart_wind : langRef.chart_rain;
-            
             document.getElementById('modal-title').innerText = `${station} - ${titleType}`;
             
             const modal = document.getElementById('data-modal');
@@ -863,7 +859,7 @@
             fetchWindData(); 
             fetchRainData(); 
             loadNCDRKMLTrack();
-            setInterval(() => { loadHKOTyphoonTrack(); fetchWindData(); fetchRainData(); }, 180000);
+            setInterval(() => { loadHKOTyphoonTrack(); fetchWindData(); fetchRainData(); loadNCDRKMLTrack(); }, 180000);
         };
     </script>
 </body>
