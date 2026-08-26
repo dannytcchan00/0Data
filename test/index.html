@@ -249,9 +249,63 @@
             </div>
         </div>
 
-        <!-- 呢度將會透過 JS 動態載入 menu.html -->
-        <div class="menu-wrapper" id="menu-container">
-            <div style="font-size: 12px; color: var(--text-muted);">載入選單中...</div>
+        <div class="menu-wrapper">
+            <nav class="menu-bar">
+                <ul>
+                    <li><a href="#" onclick="showDashboard(event)" data-i18n="nav_home">主頁</a></li>
+                    
+                    <li class="has-dropdown">
+                        <a href="#" data-i18n="nav_weather" onclick="event.preventDefault();">天氣氣候 ▼</a>
+                        <ul class="dropdown-menu">
+                            <li class="has-sub-dropdown">
+                                <a href="#" data-i18n="nav_sub_hkweather" onclick="event.preventDefault();">本港天氣 <span style="font-size:10px; color:#aaa;">▶</span></a>
+                                <ul class="sub-dropdown-menu">
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/hk_weather/hk_current_local_weather.html', event)" data-i18n="nav_sub_local">本港地區天氣</a></li>
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/hk_weather/9days/', event)" data-i18n="nav_sub_9day">九天天氣預報</a></li>
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/hk_weather/typhoon.html', event)" data-i18n="nav_sub_typhoon">颱風資訊</a></li>
+                                </ul>
+                            </li>
+                            
+                            <li class="has-sub-dropdown">
+                                <a href="#" data-i18n="nav_sub_imagery" onclick="event.preventDefault();">天氣圖像 <span style="font-size:10px; color:#aaa;">▶</span></a>
+                                <ul class="sub-dropdown-menu">
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/hk_weather/Imagery/Radar/', event)" data-i18n="nav_sub_radar_only">天氣雷達</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="has-dropdown">
+                        <a href="#" data-i18n="nav_astro" onclick="event.preventDefault();">天文授時 ▼</a>
+                        <ul class="dropdown-menu">
+                            <li class="has-sub-dropdown">
+                                <a href="#" data-i18n="nav_sub_observation" onclick="event.preventDefault();">天文觀測 <span style="font-size:10px; color:#aaa;">▶</span></a>
+                                <ul class="sub-dropdown-menu">
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/ASTRONOMY_TIME/Observation/sun/', event)" data-i18n="nav_sub_obs_sun">日出日落</a></li>
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/ASTRONOMY_TIME/Observation/moon/', event)" data-i18n="nav_sub_obs_moon">月出月落</a></li>
+                                </ul>
+                            </li>
+                            <li><a href="#" data-i18n="nav_sub_sunmoon">日出日落時間</a></li>
+                            <li><a href="#" data-i18n="nav_sub_tide">潮汐資料</a></li>
+                            <li class="has-sub-dropdown">
+                                <a href="#" data-i18n="nav_sub_timeservice" onclick="event.preventDefault();">授時服務 <span style="font-size:10px; color:#aaa;">▶</span></a>
+                                <ul class="sub-dropdown-menu">
+                                    <li><a href="#" onclick="loadInIframe('https://dannytcchan00.github.io/0Data/test/ASTRONOMY_TIME/Time/Clock/', event)" data-i18n="nav_sub_webclock">網上時鐘</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#" data-i18n="nav_geo">地球物理</a></li>
+                    <li class="has-dropdown">
+                        <a href="#" data-i18n="nav_eservice" onclick="event.preventDefault();">電子服務 ▼</a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" data-i18n="nav_sub_api">數據 API</a></li>
+                            <li><a href="#" data-i18n="nav_sub_rss">RSS 頻道</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#" data-i18n="nav_about">關於我們</a></li>
+                </ul>
+            </nav>
+            <button class="lang-btn" id="lang-btn" onclick="toggleLanguage()">ENG</button>
         </div>
     </header>
 
@@ -583,20 +637,15 @@
         }
 
         function applyLanguageUI() {
-            // 安全檢查：確保元素存在先更改，防止報錯
-            const langBtn = document.getElementById('lang-btn');
-            if (langBtn) { langBtn.innerText = currentLang === 'tc' ? 'ENG' : '繁體'; }
-            
+            document.getElementById('lang-btn').innerText = currentLang === 'tc' ? 'ENG' : '繁體';
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18nDict[currentLang] && i18nDict[currentLang][key]) { el.innerHTML = i18nDict[currentLang][key]; }
             });
-            
-            const moonPhaseEl = document.getElementById('ui-moon-phase');
-            if (moonPhaseEl) { moonPhaseEl.innerText = i18nDict[currentLang]["ui_moon"]; }
+            document.getElementById('ui-moon-phase').innerText = i18nDict[currentLang]["ui_moon"];
             
             const iframe = document.getElementById('app-frame');
-            if (iframe && iframe.src && iframe.src !== window.location.href && iframe.src !== "") {
+            if (iframe.src && iframe.src !== window.location.href && iframe.src !== "") {
                 const baseUrl = iframe.src.split('?')[0];
                 iframe.src = `${baseUrl}?lang=${currentLang}`;
             }
@@ -628,39 +677,21 @@
             if (leafletMap) { setTimeout(() => { leafletMap.invalidateSize(); }, 100); }
         }
 
-        // ================= 動態載入 Menu Bar =================
-        async function loadMenu() {
-            try {
-                // 發送請求獲取 menu.html (加上時間戳防止快取影響測試，放上伺服器後可自行移除)
-                const response = await fetch('menu.html?v=' + new Date().getTime());
-                if (response.ok) {
-                    const menuHtml = await response.text();
-                    document.getElementById('menu-container').innerHTML = menuHtml;
-                    
-                    // Menu 載入後，立即套用目前語言設定
-                    applyLanguageUI();
-                    
-                    // 重新為新載入嘅 DOM 綁定 Dropdown 點擊事件
-                    document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => {
-                        item.addEventListener('click', (e) => {
-                            if (e.target.tagName.toLowerCase() === 'a' && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('loadInIframe')) return;
-                            e.stopPropagation();
-                            if (item.classList.contains('has-dropdown')) {
-                                document.querySelectorAll('.has-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
-                            } else if (item.classList.contains('has-sub-dropdown')) {
-                                document.querySelectorAll('.has-sub-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
-                            }
-                            item.classList.toggle('active');
-                        });
-                    });
+        document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName.toLowerCase() === 'a' && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('loadInIframe')) return;
+                e.stopPropagation();
+                if (item.classList.contains('has-dropdown')) {
+                    document.querySelectorAll('.has-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
+                } else if (item.classList.contains('has-sub-dropdown')) {
+                    document.querySelectorAll('.has-sub-dropdown').forEach(other => { if (other !== item) other.classList.remove('active'); });
                 }
-            } catch (error) {
-                console.error("載入 menu.html 失敗:", error);
-            }
-        }
-
+                item.classList.toggle('active');
+            });
+        });
         document.addEventListener('click', () => { document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => item.classList.remove('active')); });
 
+        // 完美還原返天文台 textonly img 最穩定嘅檔案名對應
         const hkoWarningData = [
             { codes: ["WRAINA", "黃色暴雨"], nameTC: "黃色暴雨警告信號", nameEN: "Amber Rainstorm Warning Signal", icon: "rainamber" },
             { codes: ["WRAINR", "紅色暴雨"], nameTC: "紅色暴雨警告信號", nameEN: "Red Rainstorm Warning Signal", icon: "rainred" },
@@ -1328,13 +1359,9 @@
             });
         }
 
-        // ================= 初始化執行 =================
-        // 先載入 Menu，確保載入完成後先拉取天氣資料，防止介面閃爍
-        loadMenu().then(() => {
-            fetchWeatherSystem();
-            setInterval(fetchWeatherSystem, 180000); 
-        });
-
+        // 初始化
+        fetchWeatherSystem();
+        setInterval(fetchWeatherSystem, 180000); 
     </script>
 </body>
 </html>
