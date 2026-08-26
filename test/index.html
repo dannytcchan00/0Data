@@ -678,28 +678,28 @@
         });
         document.addEventListener('click', () => { document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => item.classList.remove('active')); });
 
-        // 全新及標準化嘅天氣警告數據庫 (強制修正非官方簡稱及對齊最新 Icon)
+        // 完美還原返天文台 textonly img 最穩定嘅檔案名對應
         const hkoWarningData = [
             { codes: ["WRAINA", "黃色暴雨"], nameTC: "黃色暴雨警告信號", nameEN: "Amber Rainstorm Warning Signal", icon: "rainamber" },
             { codes: ["WRAINR", "紅色暴雨"], nameTC: "紅色暴雨警告信號", nameEN: "Red Rainstorm Warning Signal", icon: "rainred" },
             { codes: ["WRAINB", "黑色暴雨"], nameTC: "黑色暴雨警告信號", nameEN: "Black Rainstorm Warning Signal", icon: "rainblack" },
             { codes: ["TC1", "一號"], nameTC: "一號戒備信號", nameEN: "Standby Signal, No. 1", icon: "tc1" },
             { codes: ["TC3", "三號"], nameTC: "三號強風信號", nameEN: "Strong Wind Signal, No. 3", icon: "tc3" },
-            { codes: ["TC8NE", "八號東北"], nameTC: "八號東北烈風或暴風信號", nameEN: "No. 8 Northeast Gale or Storm Signal", icon: "tc8ne" },
-            { codes: ["TC8NW", "八號西北"], nameTC: "八號西北烈風或暴風信號", nameEN: "No. 8 Northwest Gale or Storm Signal", icon: "tc8nw" },
-            { codes: ["TC8SE", "八號東南"], nameTC: "八號東南烈風或暴風信號", nameEN: "No. 8 Southeast Gale or Storm Signal", icon: "tc8se" },
-            { codes: ["TC8SW", "八號西南"], nameTC: "八號西南烈風或暴風信號", nameEN: "No. 8 Southwest Gale or Storm Signal", icon: "tc8sw" },
-            { codes: ["TC9", "九號"], nameTC: "九號烈風或暴風風力增強信號", nameEN: "Increasing Gale or Storm Signal, No. 9", icon: "tc9" },
+            { codes: ["TC8NE", "八號東北"], nameTC: "八號東北烈風或暴風信號", nameEN: "No. 8 Northeast Gale or Storm Signal", icon: "tc08ne" },
+            { codes: ["TC8NW", "八號西北"], nameTC: "八號西北烈風或暴風信號", nameEN: "No. 8 Northwest Gale or Storm Signal", icon: "tc08nw" },
+            { codes: ["TC8SE", "八號東南"], nameTC: "八號東南烈風或暴風信號", nameEN: "No. 8 Southeast Gale or Storm Signal", icon: "tc08se" },
+            { codes: ["TC8SW", "八號西南"], nameTC: "八號西南烈風或暴風信號", nameEN: "No. 8 Southwest Gale or Storm Signal", icon: "tc08sw" },
+            { codes: ["TC9", "九號"], nameTC: "九號烈風或暴風風力增強信號", nameEN: "Increasing Gale or Storm Signal, No. 9", icon: "tc09" },
             { codes: ["TC10", "十號"], nameTC: "十號颶風信號", nameEN: "Hurricane Signal, No. 10", icon: "tc10" },
             { codes: ["WTS", "雷暴"], nameTC: "雷暴警告", nameEN: "Thunderstorm Warning", icon: "ts" },
-            { codes: ["WFNTSA", "新界北部水浸"], nameTC: "新界北部水浸特別報告", nameEN: "Special Announcement on Flooding in the northern New Territories", icon: "ntfl" },
-            { codes: ["WGMD", "山泥傾瀉"], nameTC: "山泥傾瀉警告", nameEN: "Landslip Warning", icon: "landslip" },
+            { codes: ["WFNTSA", "新界北部水浸"], nameTC: "新界北部水浸特別報告", nameEN: "Special Announcement on Flooding in the northern New Territories", icon: "northflood" },
+            { codes: ["WGMD", "山泥傾瀉"], nameTC: "山泥傾瀉警告", nameEN: "Landslip Warning", icon: "ls" },
             { codes: ["WMSGNL", "WSMS", "季候風"], nameTC: "強烈季候風信號", nameEN: "Strong Monsoon Signal", icon: "sms" },
             { codes: ["WFROST", "霜凍"], nameTC: "霜凍警告", nameEN: "Frost Warning", icon: "frost" },
-            { codes: ["WFIREY", "黃色火災"], nameTC: "黃色火災危險警告", nameEN: "Yellow Fire Danger Warning", icon: "firey" },
-            { codes: ["WFIRER", "紅色火災"], nameTC: "紅色火災危險警告", nameEN: "Red Fire Danger Warning", icon: "firer" },
+            { codes: ["WFIREY", "黃色火災"], nameTC: "黃色火災危險警告", nameEN: "Yellow Fire Danger Warning", icon: "fireyellow" },
+            { codes: ["WFIRER", "紅色火災"], nameTC: "紅色火災危險警告", nameEN: "Red Fire Danger Warning", icon: "firered" },
             { codes: ["WCOLD", "寒冷"], nameTC: "寒冷天氣警告", nameEN: "Cold Weather Warning", icon: "cold" },
-            { codes: ["WHOT", "酷熱"], nameTC: "酷熱天氣警告", nameEN: "Very Hot Weather Warning", icon: "vhot" },
+            { codes: ["WHOT", "酷熱"], nameTC: "酷熱天氣警告", nameEN: "Very Hot Weather Warning", icon: "hot" },
             { codes: ["WTMW", "海嘯"], nameTC: "海嘯警告", nameEN: "Tsunami Warning", icon: "tsunami" }
         ];
 
@@ -829,12 +829,13 @@
                             for (const data of hkoWarningData) {
                                 if ((warning.code && data.codes.includes(warning.code)) || data.codes.some(c => warning.name.includes(c))) {
                                     officialName = currentLang === 'en' ? data.nameEN : data.nameTC;
-                                    imageUrl = `https://www.hko.gov.hk/tc/wxinfo/currwx/images/${data.icon}.png`;
+                                    // 完美對齊舊版最穩定嘅 textonly img 路徑
+                                    imageUrl = `https://www.hko.gov.hk/tc/textonly/img/warn/images/${data.icon}.png`;
                                     break;
                                 }
                             }
                             
-                            warning.name = officialName; // 確保強制顯示全稱（例如「黃色暴雨警告信號」）
+                            warning.name = officialName; 
                             
                             const tag = document.createElement('div'); tag.className = 'warning-tag';
                             tag.innerHTML = imageUrl ? `<img src="${imageUrl}" alt="${warning.name}"> <span>${warning.name}</span>` : `⚠️ <span>${warning.name}</span>`;
