@@ -678,17 +678,30 @@
         });
         document.addEventListener('click', () => { document.querySelectorAll('.has-dropdown, .has-sub-dropdown').forEach(item => item.classList.remove('active')); });
 
-        const hkoWarningImages = {
-            "一號戒備信號": "tc1", "Standby Signal, No. 1": "tc1", "三號強風信號": "tc3", "Strong Wind Signal, No. 3": "tc3",
-            "八號東北烈風或暴風信號": "tc08ne", "No. 8 Northeast Gale or Storm Signal": "tc08ne", "八號西北烈風或暴風信號": "tc08nw", "No. 8 Northwest Gale or Storm Signal": "tc08nw",
-            "八號東南烈風或暴風信號": "tc08se", "No. 8 Southeast Gale or Storm Signal": "tc08se", "八號西南烈風或暴風信號": "tc08sw", "No. 8 Southwest Gale or Storm Signal": "tc08sw",
-            "九號烈風或暴風風力增強信號": "tc09", "Increasing Gale or Storm Signal, No. 9": "tc09", "十號颶風信號": "tc10", "Hurricane Signal, No. 10": "tc10",
-            "黃色暴雨警告信號": "rainamber", "Amber Rainstorm Warning Signal": "rainamber", "紅色暴雨警告信號": "rainred", "Red Rainstorm Warning Signal": "rainred", "黑色暴雨警告信號": "rainblack", "Black Rainstorm Warning Signal": "rainblack",
-            "雷暴警告": "ts", "Thunderstorm Warning": "ts", "新界北部水浸特別報告": "northflood", "Special Announcement on Flooding in the northern New Territories": "northflood",
-            "山泥傾瀉警告": "ls", "Landslip Warning": "ls", "強烈季候風信號": "sms", "Strong Monsoon Signal": "sms",
-            "霜凍警告": "frost", "Frost Warning": "frost", "黃色火災危險警告": "fireyellow", "Yellow Fire Danger Warning": "fireyellow", "紅色火災危險警告": "firered", "Red Fire Danger Warning": "firered",
-            "寒冷天氣警告": "cold", "Cold Weather Warning": "cold", "酷熱天氣警告": "hot", "Very Hot Weather Warning": "hot", "海嘯警告": "tsunami", "Tsunami Warning": "tsunami"
-        };
+        // 全新及標準化嘅天氣警告數據庫 (強制修正非官方簡稱及對齊最新 Icon)
+        const hkoWarningData = [
+            { codes: ["WRAINA", "黃色暴雨"], nameTC: "黃色暴雨警告信號", nameEN: "Amber Rainstorm Warning Signal", icon: "rainamber" },
+            { codes: ["WRAINR", "紅色暴雨"], nameTC: "紅色暴雨警告信號", nameEN: "Red Rainstorm Warning Signal", icon: "rainred" },
+            { codes: ["WRAINB", "黑色暴雨"], nameTC: "黑色暴雨警告信號", nameEN: "Black Rainstorm Warning Signal", icon: "rainblack" },
+            { codes: ["TC1", "一號"], nameTC: "一號戒備信號", nameEN: "Standby Signal, No. 1", icon: "tc1" },
+            { codes: ["TC3", "三號"], nameTC: "三號強風信號", nameEN: "Strong Wind Signal, No. 3", icon: "tc3" },
+            { codes: ["TC8NE", "八號東北"], nameTC: "八號東北烈風或暴風信號", nameEN: "No. 8 Northeast Gale or Storm Signal", icon: "tc8ne" },
+            { codes: ["TC8NW", "八號西北"], nameTC: "八號西北烈風或暴風信號", nameEN: "No. 8 Northwest Gale or Storm Signal", icon: "tc8nw" },
+            { codes: ["TC8SE", "八號東南"], nameTC: "八號東南烈風或暴風信號", nameEN: "No. 8 Southeast Gale or Storm Signal", icon: "tc8se" },
+            { codes: ["TC8SW", "八號西南"], nameTC: "八號西南烈風或暴風信號", nameEN: "No. 8 Southwest Gale or Storm Signal", icon: "tc8sw" },
+            { codes: ["TC9", "九號"], nameTC: "九號烈風或暴風風力增強信號", nameEN: "Increasing Gale or Storm Signal, No. 9", icon: "tc9" },
+            { codes: ["TC10", "十號"], nameTC: "十號颶風信號", nameEN: "Hurricane Signal, No. 10", icon: "tc10" },
+            { codes: ["WTS", "雷暴"], nameTC: "雷暴警告", nameEN: "Thunderstorm Warning", icon: "ts" },
+            { codes: ["WFNTSA", "新界北部水浸"], nameTC: "新界北部水浸特別報告", nameEN: "Special Announcement on Flooding in the northern New Territories", icon: "ntfl" },
+            { codes: ["WGMD", "山泥傾瀉"], nameTC: "山泥傾瀉警告", nameEN: "Landslip Warning", icon: "landslip" },
+            { codes: ["WMSGNL", "WSMS", "季候風"], nameTC: "強烈季候風信號", nameEN: "Strong Monsoon Signal", icon: "sms" },
+            { codes: ["WFROST", "霜凍"], nameTC: "霜凍警告", nameEN: "Frost Warning", icon: "frost" },
+            { codes: ["WFIREY", "黃色火災"], nameTC: "黃色火災危險警告", nameEN: "Yellow Fire Danger Warning", icon: "firey" },
+            { codes: ["WFIRER", "紅色火災"], nameTC: "紅色火災危險警告", nameEN: "Red Fire Danger Warning", icon: "firer" },
+            { codes: ["WCOLD", "寒冷"], nameTC: "寒冷天氣警告", nameEN: "Cold Weather Warning", icon: "cold" },
+            { codes: ["WHOT", "酷熱"], nameTC: "酷熱天氣警告", nameEN: "Very Hot Weather Warning", icon: "vhot" },
+            { codes: ["WTMW", "海嘯"], nameTC: "海嘯警告", nameEN: "Tsunami Warning", icon: "tsunami" }
+        ];
 
         const hkStationCoords = { "香港天文台":[22.3022, 114.1747], "天文台":[22.3022, 114.1747], "京士柏":[22.3114, 114.1728], "赤鱲角":[22.3094, 113.9219], "長洲":[22.2011, 114.0267], "流浮山":[22.4689, 113.9836], "打鼓嶺":[22.5286, 114.1567], "沙田":[22.4025, 114.2100], "大埔":[22.4456, 114.1789], "屯門":[22.3858, 113.9642], "西貢":[22.3836, 114.2708], "將軍澳":[22.3158, 114.2556], "黃竹坑":[22.2478, 114.1736], "橫瀾島":[22.1828, 114.3014], "啟德":[22.3225, 114.2056], "坪洲":[22.2858, 114.0433], "昂坪":[22.2561, 113.9056], "大帽山":[22.4106, 114.1242], "跑馬地":[22.2706, 114.1831], "筲箕灣":[22.2819, 114.2253], "觀塘":[22.3131, 114.2247], "荃灣城門谷":[22.3758, 114.1256], "荃灣可觀":[22.3853, 114.1097], "元朗公園":[22.4419, 114.0183], "上水":[22.5019, 114.1289], "大美督":[22.4753, 114.2375], "北潭涌":[22.3956, 114.3217], "滘西洲":[22.3653, 114.3106], "青衣":[22.3442, 114.1089], "石崗":[22.4361, 114.0847], "中環":[22.2869, 114.1611], "中環碼頭":[22.2869, 114.1611], "鰂魚涌":[22.2889, 114.2125], "尖鼻咀":[22.4883, 114.0108], "大廟灣":[22.2667, 114.2917], "石壁":[22.2222, 113.8944], "大埔滘":[22.4283, 114.1856], "馬灣":[22.3536, 114.0603], "大隴":[22.4967, 114.1167] };
 
@@ -804,14 +817,24 @@
                     activeWarnings = activeWarnings.filter(w => w && w.name && typeof w.name === 'string');
                     
                     if (activeWarnings.length > 0) {
-                        activeWarnNames = activeWarnings.map(w => w.name);
                         warnBox.classList.add('blinking'); 
                         warnList.innerHTML = ''; 
                         headerWarnContainer.innerHTML = ''; 
                         
                         activeWarnings.forEach(warning => {
+                            let officialName = warning.name;
                             let imageUrl = '';
-                            for (const [key, url] of Object.entries(hkoWarningImages)) { if (warning.name.includes(key)) { imageUrl = `https://www.hko.gov.hk/tc/textonly/img/warn/images/${url}.png`; break; } }
+                            
+                            // 強制修正官方名稱及設定對應最新 Icon
+                            for (const data of hkoWarningData) {
+                                if ((warning.code && data.codes.includes(warning.code)) || data.codes.some(c => warning.name.includes(c))) {
+                                    officialName = currentLang === 'en' ? data.nameEN : data.nameTC;
+                                    imageUrl = `https://www.hko.gov.hk/tc/wxinfo/currwx/images/${data.icon}.png`;
+                                    break;
+                                }
+                            }
+                            
+                            warning.name = officialName; // 確保強制顯示全稱（例如「黃色暴雨警告信號」）
                             
                             const tag = document.createElement('div'); tag.className = 'warning-tag';
                             tag.innerHTML = imageUrl ? `<img src="${imageUrl}" alt="${warning.name}"> <span>${warning.name}</span>` : `⚠️ <span>${warning.name}</span>`;
@@ -819,10 +842,17 @@
                             
                             if (imageUrl) {
                                 const headerImg = document.createElement('img');
-                                headerImg.src = imageUrl; headerImg.title = warning.name;
+                                headerImg.src = imageUrl; 
+                                headerImg.title = warning.name;
+                                headerImg.style.height = '100%';
+                                headerImg.style.width = 'auto';
+                                headerImg.style.objectFit = 'contain';
                                 headerWarnContainer.appendChild(headerImg);
                             }
                         });
+                        
+                        // 統一更新活躍名單畀綜合威脅計算用
+                        activeWarnNames = activeWarnings.map(w => w.name);
                     } else { 
                         warnBox.classList.remove('blinking'); 
                         warnList.innerHTML = `<div class="warning-tag" style="justify-content: center; color: #2ecc71; border: none; box-shadow: none; background: transparent;">${safeText}</div>`; 
