@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日出日落與太陽軌跡 - Met Office</title>
+    
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* 沿用 Met Office 專業 Dashboard 設計風格 */
+        :root {
+            --brand-navy: #112a46;
+            --brand-gold: #f39c12;
+            --bg-light: #f0f2f5;
+            --white: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-main); padding: 30px; }
+
+        /* 標題與容器 */
+        .page-header { margin-bottom: 25px; display: flex; align-items: center; gap: 15px; }
+        .page-header h1 { color: var(--brand-navy); font-size: 24px; }
+        
+        .box { 
+            background: var(--white); 
+            border-radius: 12px; 
+            padding: 30px; 
+            box-shadow: var(--card-shadow); 
+            border-top: 4px solid var(--brand-navy); 
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* 頂部時間資訊卡片 */
+        .time-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .info-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s;
+        }
+        .info-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        
+        .card-icon { font-size: 32px; margin-bottom: 10px; }
+        .card-label { font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 5px; }
+        .card-time { font-size: 28px; font-weight: bold; color: var(--brand-navy); }
+        .card-desc { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+
+        /* 圖表容器 */
+        .chart-container {
+            width: 100%;
+            height: 350px;
+            position: relative;
+        }
+
+        .chart-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--brand-navy);
+            margin-bottom: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="page-header">
+        <h1 id="page-title">☀️ 日出日落與太陽軌跡</h1>
+    </div>
+
+    <div class="box">
+        <!-- 頂部三個重要時間 -->
+        <div class="time-info-grid">
+            <div class="info-card">
+                <div class="card-icon">🌅</div>
+                <div class="card-label" id="lbl-sunrise">日出時間 (Sunrise)</div>
+                <div class="card-time" id="val-sunrise">--:--</div>
+                <div class="card-desc" id="desc-sunrise">破曉，迎接新一日</div>
+            </div>
+            <div class="info-card" style="border-bottom: 3px solid var(--brand-gold);">
+                <div class="card-icon">🌞</div>
+                <div class="card-label" id="lbl-noon">最高點 (Solar Noon)</div>
+                <div class="card-time" id="val-noon">--:--</div>
+                <div class="card-desc" id="desc-noon">太陽到達正南方，仰角最高</div>
+            </div>
+            <div class="info-card">
+                <div class="card-icon">🌇</div>
+                <div class="card-label" id="lbl-sunset">日落時間 (Sunset)</div>
+                <div class="card-time" id="val-sunset">--:--</div>
+                <div class="card-desc" id="desc-sunset">黃昏，黑夜即將降臨</div>
+            </div>
+        </div>
+
+        <!-- 太陽軌跡圖表 -->
+        <div class="chart-title" id="chart-title-text">今日太陽仰角軌跡圖</div>
+        <div class="chart-container">
+            <canvas id="sunPathChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // ================= 1. 隱藏式語言偵測與設定 =================
+        // 從 URL 讀取 lang 參數 (例如：?lang=en)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = urlParams.get('lang') || 'tc';
+
+        // 翻譯字典
+        const i18n = {
+            'tc': {
+                'pageTitle': '☀️ 日出日落與太陽軌跡',
+                'lblSunrise': '日出時間 (Sunrise)',
+                'descSunrise': '破曉，迎接新一日',
+                'lblNoon': '最高點 (Solar Noon)',
+                'descNoon': '太陽到達正南方，仰角最高',
+                'lblSunset': '日落時間 (Sunset)',
+                'descSunset': '黃昏，黑夜即將降臨',
+                'chartTitle': '今日太陽仰角軌跡圖',
+                'datasetNoon': '太陽最高點 (Solar Noon)',
+                'datasetPath': '太陽軌跡',
+                'tooltipNoon': '最高點到達',
+                'tooltipPath': '太陽仰角狀態'
+            },
+            'en': {
+                'pageTitle': '☀️ Sunrise, Sunset & Sun Path',
+                'lblSunrise': 'Sunrise Time',
+                'descSunrise': 'Dawn breaks, a new day begins',
+                'lblNoon': 'Solar Noon',
+                'descNoon': 'Sun is at its highest elevation',
+                'lblSunset': 'Sunset Time',
+                'descSunset': 'Dusk, night is falling',
+                'chartTitle': 'Today\\'s Sun Elevation Path',
+                'datasetNoon': 'Solar Noon',
+                'datasetPath': 'Sun Path',
+                'tooltipNoon': 'Highest Point Reached',
+                'tooltipPath': 'Sun Elevation Level'
+            }
+        };
+
+        const t = i18n[currentLang];
+
+        // 應用翻譯到 HTML UI
+        document.getElementById('page-title').innerText = t.pageTitle;
+        document.title = t.pageTitle + ' - Met Office';
+        document.getElementById('lbl-sunrise').innerText = t.lblSunrise;
+        document.getElementById('desc-sunrise').innerText = t.descSunrise;
+        document.getElementById('lbl-noon').innerText = t.lblNoon;
+        document.getElementById('desc-noon').innerText = t.descNoon;
+        document.getElementById('lbl-sunset').innerText = t.lblSunset;
+        document.getElementById('desc-sunset').innerText = t.descSunset;
+        document.getElementById('chart-title-text').innerText = t.chartTitle;
+
+
+        // ================= 2. 參數設定 =================
+        // 呢度可以第時接駁天文台 API，而家暫時用固定時間做示範
+        const sunriseTimeStr = "06:15"; 
+        const sunsetTimeStr = "18:45";
+        
+        function timeToDecimal(timeStr) {
+            const parts = timeStr.split(':');
+            return parseInt(parts[0]) + parseInt(parts[1]) / 60;
+        }
+
+        function decimalToTime(decimal) {
+            const hrs = Math.floor(decimal);
+            const mins = Math.round((decimal - hrs) * 60);
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        const sunriseDec = timeToDecimal(sunriseTimeStr);
+        const sunsetDec = timeToDecimal(sunsetTimeStr);
+        const noonDec = (sunriseDec + sunsetDec) / 2; 
+
+        document.getElementById('val-sunrise').innerText = sunriseTimeStr;
+        document.getElementById('val-sunset').innerText = sunsetTimeStr;
+        document.getElementById('val-noon').innerText = decimalToTime(noonDec);
+
+        // ================= 3. 準備圖表數據 =================
+        const labels = [];
+        const pathData = [];     
+        const highestPoint = []; 
+
+        const startHour = Math.floor(sunriseDec) - 1;
+        const endHour = Math.ceil(sunsetDec) + 1;
+
+        for (let i = startHour; i <= endHour; i += 0.5) {
+            labels.push(decimalToTime(i));
+            
+            if (i < sunriseDec || i > sunsetDec) {
+                pathData.push(0);
+                highestPoint.push(null);
+            } else {
+                const progress = (i - sunriseDec) / (sunsetDec - sunriseDec);
+                const elevation = Math.sin(progress * Math.PI) * 100; 
+                pathData.push(elevation);
+                
+                if (Math.abs(i - noonDec) < 0.25) {
+                    highestPoint.push(elevation);
+                } else {
+                    highestPoint.push(null);
+                }
+            }
+        }
+
+        // ================= 4. 繪製 Chart.js (帶動態翻譯) =================
+        const ctx = document.getElementById('sunPathChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: t.datasetNoon, // 使用翻譯變數
+                        data: highestPoint,
+                        borderColor: '#e74c3c',
+                        backgroundColor: '#e74c3c',
+                        pointStyle: 'star',
+                        pointRadius: 10,
+                        pointHoverRadius: 12,
+                        showLine: false 
+                    },
+                    {
+                        label: t.datasetPath, // 使用翻譯變數
+                        data: pathData,
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.15)', 
+                        borderWidth: 3,
+                        tension: 0.4, 
+                        fill: true,
+                        pointRadius: 0, 
+                        pointHitRadius: 10
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#666' }
+                    },
+                    y: {
+                        display: false, 
+                        min: -5,
+                        max: 110
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                // 根據 datasetIndex 判斷，並使用翻譯變數
+                                if (context.datasetIndex === 0) {
+                                    return ` ${t.tooltipNoon}`;
+                                }
+                                return ` ${t.tooltipPath}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
