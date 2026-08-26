@@ -21,16 +21,34 @@ jobs:
           
           # 1. HKO Data (Hong Kong Observatory)
           curl -sL "https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml" -o data/tc_list.xml
-          RAW_PATH=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' | head -n 1 || echo "")
           
-          if [ ! -z "$RAW_PATH" ]; then
-            if [[ "$RAW_PATH" == http* ]]; then
-              DOWNLOAD_URL="$RAW_PATH"
-            else
-              DOWNLOAD_URL="https://www.weather.gov.hk/wxinfo/currwx/$RAW_PATH"
-            fi
-            curl -sL "$DOWNLOAD_URL" -o "data/current_typhoon.xml"
-            echo "✅ Successfully saved HKO typhoon data."
+          # 搵出所有颱風嘅 xml 網址
+          RAW_PATHS=$(grep -oE '[a-zA-Z0-9_:./-]+\.xml' data/tc_list.xml | grep -v 'tc_list.xml' || echo "")
+          
+          if [ ! -z "$RAW_PATHS" ]; then
+            # 建立一個新嘅 current_typhoon.xml，加上自訂嘅根節點 <ActiveTyphoons> 確保 XML 格式正確
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > data/current_typhoon.xml
+            echo '<ActiveTyphoons>' >> data/current_typhoon.xml
+            
+            # 用 for loop 逐個下載並合併
+            for RAW_PATH in $RAW_PATHS; do
+              if [[ "$RAW_PATH" == http* ]]; then
+                DOWNLOAD_URL="$RAW_PATH"
+              else
+                DOWNLOAD_URL="https://www.weather.gov.hk/wxinfo/currwx/$RAW_PATH"
+              fi
+              
+              echo "⬇️ Downloading $DOWNLOAD_URL..."
+              curl -sL "$DOWNLOAD_URL" -o data/temp_typhoon.xml
+              
+              # 移除獨立 XML 檔案嘅 xml header，將內容合併入 current_typhoon.xml
+              grep -v '<?xml' data/temp_typhoon.xml >> data/current_typhoon.xml
+            done
+            
+            # 閂返個根節點
+            echo '</ActiveTyphoons>' >> data/current_typhoon.xml
+            rm -f data/temp_typhoon.xml
+            echo "✅ Successfully merged all active HKO typhoon data into current_typhoon.xml."
           else
             echo "No active HKO typhoon data found."
             rm -f data/current_typhoon.xml
