@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">METAR Widget - Met Office</title>
+    <style>
+        /* 完美對應 Met Office 的 CSS 變數與風格 */
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --bg-light: #f0f2f5;
+            --white: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+            --alert-red: #e74c3c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* 移除多餘邊距，確保在 Iframe 內完美貼合 */
+        body { background-color: var(--bg-light); color: var(--text-main); padding: 25px; line-height: 1.6; }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* 核心 Info Box 框框設計 */
+        .info-box { background: var(--white); border-radius: 12px; padding: 25px 30px; box-shadow: var(--card-shadow); border-top: 4px solid var(--brand-navy); margin-bottom: 25px; }
+        
+        .box-title-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .box-title { font-size: 16px; color: var(--brand-navy); text-transform: uppercase; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .status-info { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px; }
+        
+        .live-dot { height: 8px; width: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* 終端機風格 */
+        .terminal-box { background: #1e1e1e; color: #00ff00; padding: 18px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 18px; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 25px; word-wrap: break-word; box-shadow: inset 0 3px 10px rgba(0,0,0,0.5); border-left: 5px solid #00ff00; }
+
+        /* 數據網格 */
+        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .w-item { display: flex; flex-direction: column; background: var(--bg-light); padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; transition: transform 0.2s; }
+        .w-item:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .w-item span { font-size: 12px; color: var(--text-muted); font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+        .w-item strong { font-size: 20px; color: var(--brand-navy); margin-bottom: 4px; }
+        .w-desc { font-size: 12px; color: var(--brand-blue); font-weight: 600; }
+
+        /* AI 綜合報告 */
+        .ai-summary { background: #eaf2f8; border-left: 5px solid var(--brand-blue); padding: 20px; border-radius: 0 8px 8px 0; font-size: 14px; color: var(--brand-navy); line-height: 1.8; }
+        .ai-summary h3 { margin-bottom: 10px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        
+        .error-msg { color: var(--alert-red); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 淨係保留核心框框 -->
+        <div class="info-box">
+            <div class="box-title-bar">
+                <div class="box-title" data-i18n="box_title">✈️ 香港國際機場 (VHHH) - 實時航空氣象解碼</div>
+                <div class="status-info">
+                    <span id="last-update" data-i18n="connecting">系統連線中...</span>
+                    <span class="live-dot" id="live-indicator"></span>
+                </div>
+            </div>
+            
+            <div class="terminal-box" id="raw-metar" data-i18n="fetching">正在連接 VATSIM 全球航空氣象網絡...</div>
+
+            <div class="weather-grid">
+                <div class="w-item">
+                    <span data-i18n="lbl_time">🕒 觀察時間</span>
+                    <strong id="val-time">--</strong>
+                    <div class="w-desc" id="desc-time">--</div>
+                </div>
+                <div class="w-item">
+                    <span data-i18n="lbl_wind">💨 風向與風速</span>
+                    <strong id="val-wind">--</strong>
+                    <div class="w-desc" id="desc-wind">--</div>
+                </div>
+                <div class="w-item">
+                    <span data-i18n="lbl_vis">👁️ 能見度</span>
+                    <strong id="val-vis">--</strong>
+                    <div class="w-desc" id="desc-vis">--</div>
+                </div>
+                <div class="w-item">
+                    <span data-i18n="lbl_temp">🌡️ 氣溫 / 露點</span>
+                    <strong id="val-temp">--</strong>
+                    <div class="w-desc" id="desc-temp">--</div>
+                </div>
+                <div class="w-item">
+                    <span data-i18n="lbl_clouds">☁️ 雲層分佈</span>
+                    <strong id="val-clouds" style="font-size: 16px;">--</strong>
+                    <div class="w-desc" id="desc-clouds">--</div>
+                </div>
+                <div class="w-item">
+                    <span data-i18n="lbl_qnh">⏱️ 海平面氣壓</span>
+                    <strong id="val-qnh">--</strong>
+                    <div class="w-desc" data-i18n="desc_qnh">高度計設定 (QNH)</div>
+                </div>
+            </div>
+
+            <div class="ai-summary">
+                <h3 data-i18n="summary_title">🤖 自動翻譯綜合報告</h3>
+                <p id="summary-text" data-i18n="summary_waiting">等待數據解析中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 1. 隱藏式語言偵測與設定 =================
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = urlParams.get('lang') === 'tc' ? 'tc' : (urlParams.get('lang') === 'en' ? 'en' : 'tc'); // 預設保留為繁體中文
+
+        // 動態更改 HTML 語言屬性
+        document.documentElement.lang = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+
+        const i18nDict = {
+            "tc": {
+                "page_title": "METAR 解碼 - Met Office",
+                "box_title": "✈️ 香港國際機場 (VHHH) - 實時航空氣象解碼",
+                "connecting": "系統連線中...",
+                "fetching": "正在連接 VATSIM 全球航空氣象網絡...",
+                "update_prefix": "最後更新: ",
+                "err_connect": "❌ 讀取失敗：無法連接至航空氣象伺服器，請檢查網絡連線。",
+                "lbl_time": "🕒 觀察時間",
+                "lbl_wind": "💨 風向與風速",
+                "lbl_vis": "👁️ 能見度",
+                "lbl_temp": "🌡️ 氣溫 / 露點",
+                "lbl_clouds": "☁️ 雲層分佈",
+                "lbl_qnh": "⏱️ 海平面氣壓",
+                "desc_qnh": "高度計設定 (QNH)",
+                "summary_title": "🤖 自動翻譯綜合報告",
+                "summary_waiting": "等待數據解析中...",
+                
+                // 動態數據翻譯
+                "hk_time_prefix": "香港時間 ",
+                "calm": "無風 (平靜)",
+                "var_wind": "風向不定，風速 ",
+                "knots": " 節",
+                "wind_blow": "吹 ",
+                "wind_deg": "° 風，平均風速 ",
+                "gust": "，陣風高達 ",
+                "vis_good": "> 10 公里",
+                "vis_m": " 米",
+                "vis_desc_good": "視野極佳",
+                "vis_desc_poor": "能見度受限",
+                "temp_humid": "高濕度 / 空氣侷促",
+                "temp_normal": "相對濕度正常",
+                "clouds_cavok": "天氣及能見度極佳",
+                "clouds_none": "無顯著雲層",
+                "clouds_clear": "視野清晰",
+                "few": "疏雲", "sct": "裂雲", "bkn": "密雲", "ovc": "滿天雲",
+                "ft": "呎",
+                
+                // AI 報告前綴
+                "ai_intro": "根據最新 METAR 報告，香港國際機場目前狀況如下：<br>",
+                "ai_wind": "🔹 **風力**：機場目前",
+                "ai_vis": "🔹 **能見度**：",
+                "ai_vis_good": "非常良好，達 10 公里或以上。<br>",
+                "ai_vis_poor": "受限，只有 ",
+                "ai_temp": "🔹 **氣溫**：目前氣溫為 ",
+                "ai_dew": "°C（露點 ",
+                "ai_sky": "🔹 **天空狀況**：",
+                "ai_sky_cavok": "CAVOK（天氣及能見度極佳，無顯著雲層）。<br>",
+                "ai_sky_clear": "天空視野清晰，無顯著低雲。<br>",
+                "ai_clouds": "🔹 **雲量**：觀測到 ",
+                "ai_trend": "🔹 **預測**：預計未來兩小時內天氣",
+                "ai_trend_none": "🔹 **預測**：未提供顯著變化預測。"
+            },
+            "en": {
+                "page_title": "METAR Decoder - Met Office",
+                "box_title": "✈️ HKIA (VHHH) - Real-time METAR Decoder",
+                "connecting": "Connecting...",
+                "fetching": "Fetching data from VATSIM Aviation Weather Network...",
+                "update_prefix": "Last Updated: ",
+                "err_connect": "❌ Fetch failed: Unable to connect to aviation weather server. Please check your connection.",
+                "lbl_time": "🕒 Observation Time",
+                "lbl_wind": "💨 Wind Dir & Speed",
+                "lbl_vis": "👁️ Visibility",
+                "lbl_temp": "🌡️ Temp / Dew Point",
+                "lbl_clouds": "☁️ Cloud Coverage",
+                "lbl_qnh": "⏱️ QNH Pressure",
+                "desc_qnh": "Altimeter Setting (QNH)",
+                "summary_title": "🤖 AI Translation Summary",
+                "summary_waiting": "Awaiting data parsing...",
+
+                // 動態數據翻譯
+                "hk_time_prefix": "HK Time ",
+                "calm": "Calm",
+                "var_wind": "Variable wind at ",
+                "knots": " kt",
+                "wind_blow": "Wind from ",
+                "wind_deg": "°, average speed ",
+                "gust": ", gusting to ",
+                "vis_good": "> 10 km",
+                "vis_m": " m",
+                "vis_desc_good": "Excellent Visibility",
+                "vis_desc_poor": "Reduced Visibility",
+                "temp_humid": "High Humidity / Muggy",
+                "temp_normal": "Normal Humidity",
+                "clouds_cavok": "Ceiling and Visibility OK",
+                "clouds_none": "No Significant Clouds",
+                "clouds_clear": "Clear Skies",
+                "few": "Few", "sct": "Scattered", "bkn": "Broken", "ovc": "Overcast",
+                "ft": " ft",
+
+                // AI 報告前綴
+                "ai_intro": "According to the latest METAR, current conditions at HKIA are:<br>",
+                "ai_wind": "🔹 **Wind** : Currently ",
+                "ai_vis": "🔹 **Visibility** : ",
+                "ai_vis_good": "Excellent, 10 km or more.<br>",
+                "ai_vis_poor": "Reduced, currently at ",
+                "ai_temp": "🔹 **Temperature** : Currently ",
+                "ai_dew": "°C (Dew Point ",
+                "ai_sky": "🔹 **Sky Condition** : ",
+                "ai_sky_cavok": "CAVOK (Ceiling and visibility OK, no significant clouds).<br>",
+                "ai_sky_clear": "Clear skies, no significant low clouds.<br>",
+                "ai_clouds": "🔹 **Clouds** : Observed ",
+                "ai_trend": "🔹 **Trend** : Weather expected to be ",
+                "ai_trend_none": "🔹 **Trend** : No significant change (NOSIG) forecasted."
+            }
+        };
+
+        const t = i18nDict[currentLang];
+
+        // 應用靜態翻譯到 UI
+        function applyStaticTranslations() {
+            document.title = t.page_title;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) { el.innerHTML = t[key]; }
+            });
+        }
+        applyStaticTranslations();
+
+        // ================= 2. 數據獲取機制 =================
+        async function fetchSafeMETAR() {
+            const url = `https://metar.vatsim.net/metar.php?id=VHHH&t=${new Date().getTime()}`;
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error("Network Error");
+                return await res.text();
+            } catch (err) {
+                console.error("Fetch failed:", err);
+                return null;
+            }
+        }
+
+        async function fetchAndParseMETAR() {
+            const rawMetar = await fetchSafeMETAR();
+            const liveIndicator = document.getElementById('live-indicator');
+
+            if (!rawMetar || rawMetar.trim() === "") {
+                document.getElementById('raw-metar').innerHTML = `<span class="error-msg">${t.err_connect}</span>`;
+                document.getElementById('last-update').innerText = currentLang === 'en' ? "Disconnected" : "連線中斷";
+                liveIndicator.style.backgroundColor = "#e74c3c"; 
+                return;
+            }
+
+            liveIndicator.style.backgroundColor = "#2ecc71"; 
+            const metarText = rawMetar.trim().replace(/^METAR\s+/, '');
+            document.getElementById('raw-metar').innerText = metarText;
+            
+            const now = new Date();
+            const timeLocale = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+            document.getElementById('last-update').innerText = `${t.update_prefix}${now.toLocaleTimeString(timeLocale)}`;
+
+            // ================= 3. Parser Engine =================
+            const parts = metarText.split(/\s+/);
+            let data = { time: '', wind: '', vis: '', clouds: [], temp: '', dew: '', qnh: '', trend: '' };
+
+            parts.forEach(p => {
+                if (p.endsWith('Z') && p.length >= 7 && p !== 'NOSIG') data.time = p; 
+                else if (p.endsWith('KT')) data.wind = p; 
+                else if (p.match(/^\d{4}$/) && !p.startsWith('Q') && !p.startsWith('A')) data.vis = p; 
+                else if (p.match(/^(FEW|SCT|BKN|OVC|CB|TCU)/) || p === 'CAVOK') data.clouds.push(p); 
+                else if (p.match(/^(M?\d{2})\/(M?\d{2})$/)) { 
+                    let m = p.match(/^(M?\d{2})\/(M?\d{2})$/);
+                    data.temp = m[1].replace('M', '-');
+                    data.dew = m[2].replace('M', '-');
+                }
+                else if (p.startsWith('Q') && p.length === 5) data.qnh = p.substring(1); 
+                else if (p === 'NOSIG') data.trend = 'NOSIG';
+            });
+
+            renderUI(data);
+        }
+
+        // ================= 4. 動態渲染與翻譯 UI =================
+        function renderUI(data) {
+            let summaryText = t.ai_intro;
+
+            // 處理時間
+            if (data.time) {
+                let timeMatch = data.time.match(/(\d{2})(\d{2})(\d{2})Z/);
+                if (timeMatch) {
+                    const hr = timeMatch[2];
+                    const min = timeMatch[3];
+                    let hkHr = (parseInt(hr) + 8) % 24;
+                    document.getElementById('val-time').innerText = `${hr}:${min}Z`;
+                    document.getElementById('desc-time').innerText = `${t.hk_time_prefix}${hkHr.toString().padStart(2, '0')}:${min}`;
+                }
+            }
+
+            // 處理風向
+            if (data.wind) {
+                document.getElementById('val-wind').innerText = data.wind;
+                let windStr = "";
+                if (data.wind === '00000KT') {
+                    windStr = t.calm;
+                } else if (data.wind.startsWith('VRB')) {
+                    windStr = `${t.var_wind}${parseInt(data.wind.substring(3, 5))}${t.knots}`;
+                } else {
+                    const dir = data.wind.substring(0, 3);
+                    const speed = parseInt(data.wind.substring(3, 5));
+                    let gust = data.wind.includes('G') ? `${t.gust}${parseInt(data.wind.match(/G(\d{2,3})/)[1])}${t.knots}` : "";
+                    windStr = `${t.wind_blow}${dir}${t.wind_deg}${speed}${t.knots}${gust}`;
+                }
+                document.getElementById('desc-wind').innerText = windStr;
+                summaryText += `${t.ai_wind}${windStr.toLowerCase()}.<br>`;
+            }
+
+            // 處理能見度
+            if (data.vis) {
+                let visValue = data.vis === '9999' ? t.vis_good : `${parseInt(data.vis)}${t.vis_m}`;
+                document.getElementById('val-vis').innerText = visValue;
+                document.getElementById('desc-vis').innerText = data.vis === '9999' ? t.vis_desc_good : t.vis_desc_poor;
+                summaryText += `${t.ai_vis}${data.vis === '9999' ? t.ai_vis_good : `${t.ai_vis_poor}${visValue}.<br>`}`;
+            }
+
+            // 處理氣溫
+            if (data.temp && data.dew) {
+                document.getElementById('val-temp').innerText = `${data.temp}°C / ${data.dew}°C`;
+                let tempDiff = parseInt(data.temp) - parseInt(data.dew);
+                document.getElementById('desc-temp').innerText = tempDiff <= 3 ? t.temp_humid : t.temp_normal;
+                summaryText += `${t.ai_temp}${data.temp}${t.ai_dew}${data.dew}°C).<br>`;
+            }
+
+            // 處理雲層
+            if (data.clouds.length > 0) {
+                if (data.clouds.includes('CAVOK')) {
+                    document.getElementById('val-clouds').innerText = "CAVOK";
+                    document.getElementById('desc-clouds').innerText = t.clouds_cavok;
+                    summaryText += `${t.ai_sky}${t.ai_sky_cavok}`;
+                } else {
+                    const cDict = { 'FEW': t.few, 'SCT': t.sct, 'BKN': t.bkn, 'OVC': t.ovc };
+                    let html = "", descs = [];
+                    data.clouds.forEach(c => {
+                        html += `<div>${c}</div>`;
+                        let type = c.substring(0, 3);
+                        let heightStr = c.substring(3, 6);
+                        if (!isNaN(heightStr)) {
+                            let height = parseInt(heightStr) * 100;
+                            if (cDict[type]) descs.push(`${cDict[type]} (${height}${t.ft})`);
+                        }
+                    });
+                    document.getElementById('val-clouds').innerHTML = html;
+                    
+                    // 英文版用 'and' 串聯，中文版用 '及' 串聯
+                    const joiner = currentLang === 'en' ? ' and ' : ' 及 ';
+                    document.getElementById('desc-clouds').innerText = descs.join(joiner);
+                    summaryText += `${t.ai_clouds}${descs.join(joiner)}.<br>`;
+                }
+            } else {
+                document.getElementById('val-clouds').innerText = t.clouds_none;
+                document.getElementById('desc-clouds').innerText = t.clouds_clear;
+                summaryText += `${t.ai_sky}${t.ai_sky_clear}`;
+            }
+
+            // 處理氣壓
+            if (data.qnh) document.getElementById('val-qnh').innerText = `${data.qnh} hPa`;
+
+            // 結尾預測
+            if (data.trend === 'NOSIG') {
+                summaryText += t.ai_trend_none;
+            } else if (data.trend) {
+                summaryText += `${t.ai_trend}${data.trend}.`;
+            } else {
+                summaryText += currentLang === 'en' ? "🔹 **Trend** : Not provided." : "🔹 **預測** : 未提供顯著變化預測。";
+            }
+
+            document.getElementById('summary-text').innerHTML = summaryText;
+        }
+
+        // ================= 5. 啟動 =================
+        fetchAndParseMETAR();
+        setInterval(fetchAndParseMETAR, 120000); // 兩分鐘刷新
+    </script>
+</body>
+</html>
