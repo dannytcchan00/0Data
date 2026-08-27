@@ -220,6 +220,7 @@
                 "chart_wind": "風力數據", "chart_rain": "雨量數據",
                 "modal_subtitle": "過去 24 小時數據趨勢分析 (Open-Meteo API)",
                 "active_warn": "現正生效: ", "active_t10": "颶風信號", "signal": "號信號",
+                "rationale_title": "分析理據：", "rationale_met": "條件已充分滿足。", "rationale_t10": "十號颶風信號現正生效。",
                 "load_fail": "❌ 無法載入颱風 XML 數據，請檢查數據來源。",
                 "est_timing_lbl": "📅 預估發出時段：",
                 "imminent": "短期內 / 數小時內發出", "unlikely": "目前發出機會較低", "already_in_force": "信號現正生效中",
@@ -241,6 +242,7 @@
                 "chart_wind": "Wind Data", "chart_rain": "Rainfall Data",
                 "modal_subtitle": "Past 24 Hours Data Trend (Open-Meteo API)",
                 "active_warn": "Active: T", "active_t10": "10 Signal", "signal": "",
+                "rationale_title": "Rationale:", "rationale_met": "Conditions fully met.", "rationale_t10": "T10 Hurricane Signal in force.",
                 "load_fail": "❌ Failed to load Typhoon XML data.",
                 "est_timing_lbl": "📅 Est. Timing: ",
                 "imminent": "Expected within a few hours", "unlikely": "Issuance unlikely", "already_in_force": "Signal currently in force",
@@ -331,12 +333,13 @@
         }
 
         function getProbLevel(prob) {
-            if (prob === 0) return { text: currentLang === 'tc' ? "最低" : "Lowest", color: "#7f8c8d", bg: "#f4f6f9" };
-            if (prob <= 15) return { text: currentLang === 'tc' ? "極低" : "Very Low", color: "#27ae60", bg: "#e9f7ef" };
-            if (prob <= 33) return { text: currentLang === 'tc' ? "較低" : "Low", color: "#2ecc71", bg: "#eafaf1" };
-            if (prob <= 50) return { text: currentLang === 'tc' ? "中等" : "Medium", color: "#f1c40f", bg: "#fef9e7" };
-            if (prob <= 66) return { text: currentLang === 'tc' ? "較高" : "High", color: "#e67e22", bg: "#fbeee6" };
-            if (prob <= 84) return { text: currentLang === 'tc' ? "高" : "Very High", color: "#e74c3c", bg: "#fdedec" };
+            if (prob === 0) return { text: currentLang === 'tc' ? "極低" : "Extremely Low", color: "#7f8c8d", bg: "#f4f6f9" };
+            if (prob <= 14) return { text: currentLang === 'tc' ? "極低" : "Extremely Low", color: "#27ae60", bg: "#e9f7ef" };
+            if (prob <= 28) return { text: currentLang === 'tc' ? "很低" : "Very Low", color: "#2ecc71", bg: "#eafaf1" };
+            if (prob <= 42) return { text: currentLang === 'tc' ? "較低" : "Low", color: "#f1c40f", bg: "#fef9e7" };
+            if (prob <= 57) return { text: currentLang === 'tc' ? "中等" : "Medium", color: "#f39c12", bg: "#fdebd0" };
+            if (prob <= 71) return { text: currentLang === 'tc' ? "較高" : "High", color: "#e67e22", bg: "#fbeee6" };
+            if (prob <= 85) return { text: currentLang === 'tc' ? "很高" : "Very High", color: "#e74c3c", bg: "#fdedec" };
             return { text: currentLang === 'tc' ? "極高" : "Extremely High", color: "#8e44ad", bg: "#f4ecf7" };
         }
 
@@ -412,12 +415,11 @@
             ncdrTyphoonLayer = L.layerGroup().addTo(ncdrMap);
         }
 
-        // ================= 解析 HKO XML (7 大進階氣象因素演算法) =================
+        // ================= 解析 HKO XML (7大進階氣象因素演算法) =================
         async function loadHKOTyphoonTrack() {
             const langRef = i18nDict[currentLang];
             const multiContainer = document.getElementById('multi-typhoon-container');
 
-            // 實況資料預載 (用於 8 個參考站檢測)
             let qual41Count = 0; let qual63Count = 0;
             try {
                 const windText = await fetchResource('https://dannytcchan00.github.io/0Data/data/wind_data.csv');
@@ -498,7 +500,6 @@
 
                     let windNum = parseFloat(curWind.replace(/[^0-9.]/g, '')) || 40;
                     
-                    // ================= 7大進階因素演算法 (Advanced Algorithm) =================
                     const forecastNodes = report.querySelectorAll('ForecastInformation');
                     let closestDist = distance;
                     let isWestLandfall = false;
@@ -529,7 +530,7 @@
                                 
                                 if (d < closestDist) {
                                     closestDist = d;
-                                    if (fln < HK_LON) isWestLandfall = true; // 預測喺香港以西掠過/登陸
+                                    if (fln < HK_LON) isWestLandfall = true; 
                                 }
 
                                 if (idx > 0 && (idx % 12 === 0 || idx === forecastNodes.length - 1)) {
@@ -541,26 +542,23 @@
                         });
                     }
 
-                    // 強度與環流乘數
                     let intensityMultiplier = 1.0;
                     if (windNum < 41) intensityMultiplier = 0.1;       
-                    else if (windNum <= 62) intensityMultiplier = 0.5; // TD
-                    else if (windNum <= 87) intensityMultiplier = 0.8; // TS
-                    else if (windNum <= 117) intensityMultiplier = 1.0; // STS
-                    else intensityMultiplier = 1.2; // TY+
+                    else if (windNum <= 62) intensityMultiplier = 0.5; 
+                    else if (windNum <= 87) intensityMultiplier = 0.8; 
+                    else if (windNum <= 117) intensityMultiplier = 1.0; 
+                    else intensityMultiplier = 1.2; 
 
-                    // 地形與環境乘數
                     let factorMod = 1.0;
                     if (isWestLandfall) factorMod += 0.25; 
-                    else factorMod -= 0.15; // 東登扣減
+                    else factorMod -= 0.15; 
 
-                    if (isAutumn && distance > 300 && distance < 700) factorMod += 0.2; // 季候風疊加
+                    if (isAutumn && distance > 300 && distance < 700) factorMod += 0.2; 
                     if (speedKmh > 25) factorMod += 0.1; 
                     if (speedKmh < 10) factorMod -= 0.1;
 
                     let finalMultiplier = intensityMultiplier * factorMod;
 
-                    // 基礎機率計算
                     let p1 = 0, p3 = 0, p8 = 0, p9 = 0, p10 = 0;
                     if (distance <= 800) { p1 = Math.min(99, Math.round((100 - (distance - 400) * 0.15) * finalMultiplier)); if (windNum < 41) p1 = Math.min(p1, 10); }
                     if (distance <= 500) { p1 = Math.min(99, Math.round(98 * finalMultiplier)); p3 = Math.min(95, Math.round((90 - (distance - 250) * 0.2) * Math.max(0, finalMultiplier - 0.2))); }
@@ -568,18 +566,15 @@
                     if (distance <= 150) { p3 = Math.min(99, Math.round(100 * finalMultiplier)); p8 = Math.min(95, Math.round(95 * finalMultiplier)); if (windNum >= 90) p9 = Math.min(85, Math.round(65 * finalMultiplier)); if (windNum >= 118) p10 = Math.min(60, Math.round(40 * finalMultiplier)); }
                     if (distance <= 80) { p8 = Math.min(99, Math.round(100 * finalMultiplier)); if (windNum >= 90) p9 = Math.min(95, Math.round(85 * finalMultiplier)); if (windNum >= 118) p10 = Math.min(90, Math.round(75 * finalMultiplier)); }
 
-                    // 8站實況加乘
                     if (qual41Count >= 4 && p3 > 0) p3 += 30;
                     if (qual63Count >= 4 && p8 > 0) p8 += 30;
 
-                    // 核心眼壁防呆 (T9/T10)
                     if (closestDist > 80 && p9 > 0) { p9 = Math.round(p9 * 0.3); p10 = 0; }
                     if (windNum < 118) p10 = 0;
 
                     p1 = Math.max(0, Math.min(99, p1)); p3 = Math.max(0, Math.min(99, p3));
                     p8 = Math.max(0, Math.min(99, p8)); p9 = Math.max(0, Math.min(99, p9)); p10 = Math.max(0, Math.min(99, p10));
 
-                    // ================= 雙向升降級演算法 =================
                     let targetSig = 1; let targetProb = 0; let isDowngrade = false;
                     if (activeTCSignal === 0) { targetSig = 1; targetProb = p1; } 
                     else if (activeTCSignal === 1) { if (p3 >= 15) { targetSig = 3; targetProb = p3; } else if (p1 < 40) { targetSig = 0; targetProb = 100 - p1; isDowngrade = true; } else { targetSig = 3; targetProb = p3; } } 
@@ -596,7 +591,6 @@
                     let lvl = getProbLevel(targetProb);
                     let textLevelHtml = `<div class="prob-text-level" style="background-color: ${lvl.bg}; color: ${lvl.color}; border: 1px solid ${lvl.color};">${langRef.prob_lbl}${lvl.text}</div>`;
 
-                    // ================= 時間推算 =================
                     let thresholdDistance = 800;
                     if (targetSig === 3) thresholdDistance = 450; else if (targetSig === 8) thresholdDistance = 280; else if (targetSig >= 9) thresholdDistance = 120;
                     let estimatedTimeText = "";
@@ -612,7 +606,6 @@
                         } else { estimatedTimeText = langRef.unlikely; }
                     }
 
-                    // ================= 智能分析理據 (Advanced Rationale) =================
                     let distStr = Math.round(distance);
                     let activeWarnHtmlText = activeTCSignal > 0 ? `<div style="margin-top:5px; color:var(--alert-red); font-weight:bold;">⚠️ ${langRef.active_warn}${activeTCSignal === 10 ? langRef.active_t10 : `${activeTCSignal}${langRef.signal}`}</div>` : "";
 
@@ -626,7 +619,7 @@
                             reasonHTML = `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近，預料即將改發 T${targetSig} 信號。`; 
                         } else { 
                             let analysisPts = [];
-                            if (isWestLandfall) analysisPts.push("預測於香港以西掠過 (處於危險半圓)，轉吹東南風後風力將顯著急升");
+                            if (isWestLandfall) analysisPts.push("預測於香港以西掠過 (危險半圓)，轉吹東南風後風力將顯著急升");
                             else analysisPts.push("預測於以東登陸，受內陸地形屏蔽，風力影響相對較細");
                             
                             if (isAutumn && distance > 300) analysisPts.push("結合東北季候風效應，氣壓梯度大增");
@@ -759,8 +752,11 @@
                         speedDisplay = `${item.speed} <small style="color:var(--text-muted);">(${item.gust})</small>`;
                     }
                     
+                    // 💡 修復 Chart 彈出 bug (脫逸單引號)
+                    let safeStation = displayStation.replace(/'/g, "\\'");
+                    
                     container.innerHTML += `
-                        <div class="data-item clickable" onclick="openChartModal('wind', '${displayStation}')">
+                        <div class="data-item clickable" onclick="openChartModal('wind', '${safeStation}')">
                             <span>${displayStation}</span>
                             <span style="${speedClass}">${displayDir} ${speedDisplay} km/h</span>
                         </div>
@@ -771,7 +767,6 @@
             } catch (err) { document.getElementById('wind-list-container').innerHTML = i18nDict[currentLang].no_wind; }
         }
 
-        // ================= 讀取實時雨量 =================
         async function fetchRainData() {
             try {
                 const raw = await fetchResource('https://dannytcchan00.github.io/0Data/data/rain_data.csv');
@@ -825,8 +820,11 @@
                     
                     let displayStation = getStationName(item.station);
                     
+                    // 💡 修復 Chart 彈出 bug (脫逸單引號)
+                    let safeStation = displayStation.replace(/'/g, "\\'");
+                    
                     container.innerHTML += `
-                        <div class="data-item clickable" onclick="openChartModal('rain', '${displayStation}')">
+                        <div class="data-item clickable" onclick="openChartModal('rain', '${safeStation}')">
                             <span>${displayStation}</span>
                             <span style="${rainStyle}">${item.rainVal} mm</span>
                         </div>
@@ -901,8 +899,16 @@
 
             if (chartInstance) chartInstance.destroy();
 
-            let coords = [22.3027, 114.1772]; // Default HKO
-            if (stationCoords[station]) { coords = stationCoords[station]; }
+            let coords = [22.3027, 114.1772];
+            // 由於傳過來嘅 station 係經過 getStationName 翻譯嘅，要轉返做預設嘅找尋 Key (或者我哋字典支援雙向)
+            // 只要 stationDictEN 嘅 Key 或者 Value 吻合就可以搵到。但為安全起見，我哋直接 loop
+            let matchedCoords = stationCoords[station];
+            if (!matchedCoords) {
+                for (let k in stationCoords) {
+                    if (station.includes(k) || k.includes(station)) { matchedCoords = stationCoords[k]; break; }
+                }
+            }
+            if (matchedCoords) coords = matchedCoords;
 
             try {
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords[0]}&longitude=${coords[1]}&past_hours=24&forecast_hours=1&hourly=windspeed_10m,winddirection_10m,windgusts_10m,precipitation&timezone=Asia%2FHong_Kong`;
