@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAF Widget</title>
+    <style>
+        /* 沿用 Met Office 系統風格 */
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --bg-light: #f4f6f9;
+            --white: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --alert-red: #e74c3c;
+            --warning-orange: #f39c12;
+            --safe-green: #2ecc71;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-main); padding: 15px; line-height: 1.6; }
+
+        .info-box { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); border-top: 4px solid var(--brand-navy); }
+        .box-title-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 20px; }
+        .box-title { font-size: 16px; color: var(--brand-navy); font-weight: bold; }
+        
+        .terminal-box { background: #1e1e1e; color: #f39c12; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; border-left: 5px solid var(--warning-orange); }
+
+        .section-title { font-size: 14px; font-weight: 700; color: var(--brand-navy); margin-bottom: 12px; }
+        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .w-item { background: var(--bg-light); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .w-item span { font-size: 11px; color: var(--text-muted); font-weight: bold; display: block; margin-bottom: 5px; }
+        .w-item strong { font-size: 16px; color: var(--brand-navy); display: block; }
+
+        .timeline { padding-left: 15px; border-left: 3px solid #e2e8f0; margin-left: 5px; margin-bottom: 25px; }
+        .trend-card { position: relative; background: var(--bg-light); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        .trend-card::before { content: ''; position: absolute; left: -24px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--brand-blue); border: 2px solid var(--white); }
+        .trend-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-right: 8px; }
+        .bg-becmg { background-color: var(--warning-orange); }
+        .bg-tempo { background-color: var(--brand-blue); }
+        .bg-fm { background-color: var(--safe-green); }
+        .bg-prob { background-color: var(--alert-red); }
+        
+        .ai-summary { background: #eaf2f8; border-left: 5px solid var(--brand-blue); padding: 15px; border-radius: 0 8px 8px 0; font-size: 14px; color: var(--brand-navy); }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        <div class="box-title-bar">
+            <div class="box-title">✈️ 香港機場 (VHHH) TAF 航空預報</div>
+            <div id="status-text" style="font-size: 12px; color: var(--text-muted);">正在連接真實氣象數據庫...</div>
+        </div>
+        
+        <div class="terminal-box" id="raw-taf">🔄 正在載入真實數據...</div>
+
+        <div class="section-title">📅 基準預報 (Base Forecast)</div>
+        <div class="weather-grid">
+            <div class="w-item"><span>⏳ 預測時段 (HKT)</span><strong id="val-valid">--</strong></div>
+            <div class="w-item"><span>💨 基準風力</span><strong id="val-wind">--</strong></div>
+            <div class="w-item"><span>👁️ 基準能見度</span><strong id="val-vis">--</strong></div>
+            <div class="w-item"><span>☁️ 基準雲層</span><strong id="val-clouds">--</strong></div>
+        </div>
+
+        <div class="section-title">⏱️ 天氣變化趨勢 (Trend Timeline)</div>
+        <div class="timeline" id="timeline-box">
+            <div style="color: var(--text-muted); font-size: 13px;">等待數據...</div>
+        </div>
+
+        <div class="ai-summary" id="summary-text">等待數據解析中...</div>
+    </div>
+
+    <script>
+        // ================= 1. 三重學術與底層連線 (Triple-Layer Fallback) =================
+        async function fetchSafeTAF() {
+            const timestamp = new Date().getTime();
+
+            // 策略 1: 美國 NOAA Aviation API (官方 JSON 直連)
+            try {
+                const res1 = await fetch(`https://aviationweather.gov/api/data/taf?ids=VHHH&format=json&t=${timestamp}`, { cache: 'no-store' });
+                if (res1.ok) {
+                    const data = await res1.json();
+                    if (data && data.length > 0 && data[0].rawTAF) return data[0].rawTAF;
+                }
+            } catch (e1) { console.warn("策略 1 失敗"); }
+
+            // 策略 2: IEM 學術氣象伺服器 (原生開放 CORS，極穩定純文字庫)
+            try {
+                const res2 = await fetch(`https://mesonet.agron.iastate.edu/cgi-bin/request/taf.py?station=VHHH&t=${timestamp}`, { cache: 'no-store' });
+                if (res2.ok) {
+                    const text = await res2.text();
+                    if (text && text.includes('VHHH')) return text;
+                }
+            } catch (e2) { console.warn("策略 2 失敗"); }
+
+            // 策略 3: AllOrigins RAW 模式 (完美複製你 fetchHKO 的成功經驗)
+            try {
+                const ftpUrl = 'https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/VHHH.TXT';
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(ftpUrl)}`;
+                const res3 = await fetch(proxyUrl, { cache: 'no-store' });
+                if (res3.ok) {
+                    const text = await res3.text();
+                    if (text && text.includes('VHHH')) return text;
+                }
+            } catch (e3) { console.warn("策略 3 失敗"); }
+
+            return null; // 全部失敗則回傳 null，觸發錯誤處理
+        }
+
+        // ================= 2. 解析及渲染介面 =================
+        async function fetchAndParseTAF() {
+            const rawTaf = await fetchSafeTAF();
+
+            // 防護檢查與錯誤反饋 (對齊你系統的標準)
+            if (!rawTaf) {
+                document.getElementById('raw-taf').innerHTML = `<span style="color: #e74c3c;">❌ 讀取失敗，請檢查數據來源或網絡連線。</span>`;
+                document.getElementById('status-text').innerHTML = `<span style="color: #e74c3c; font-weight: bold;">連線中斷</span>`;
+                return;
+            }
+
+            document.getElementById('status-text').innerHTML = `🟢 更新於 ${new Date().toLocaleTimeString('zh-HK')}`;
+            
+            // 清理可能出現的雜訊及 FTP 時間戳 (確保 TAF 電碼乾淨)
+            let text = rawTaf.replace(/^[0-9\/:\s-]+\n/, '').trim(); 
+            text = text.replace(/^TAF\s+(AMD\s+|COR\s+)?/, '').trim();
+            text = text.replace(/\s+/g, ' '); // 統一空格，避免 IEM/FTP 換行符號搞亂 Regex
+            document.getElementById('raw-taf').innerText = text;
+
+            // 根據關鍵字斬開趨勢變化
+            const parts = text.split(/(?=\b(?:FM\d{6}|BECMG|TEMPO|PROB30|PROB40)\b)/);
+            const baseTokens = parts[0].trim().split(/\s+/);
+            let baseData = { valid: baseTokens[2], wind: '', vis: '', clouds: [] };
+
+            for(let i=3; i<baseTokens.length; i++) {
+                let p = baseTokens[i];
+                if (p.endsWith('KT')) baseData.wind = p;
+                else if (p.match(/^\d{4}$/)) baseData.vis = p;
+                else if (p.match(/^(FEW|SCT|BKN|OVC|CB|TCU)/) || p === 'CAVOK') baseData.clouds.push(p);
+            }
+
+            // 渲染基準預報
+            document.getElementById('val-valid').innerText = formatHKTime(baseData.valid);
+            document.getElementById('val-wind').innerText = baseData.wind || 'VRB02KT';
+            document.getElementById('val-vis').innerText = baseData.vis === '9999' ? '> 10 公里' : `${parseInt(baseData.vis)} 米`;
+            document.getElementById('val-clouds').innerText = baseData.clouds.length > 0 ? baseData.clouds.join(', ') : '無顯著雲層';
+
+            // 處理未來天氣變化趨勢
+            let trends = [];
+            for(let i=1; i<parts.length; i++) {
+                let tokens = parts[i].trim().split(/\s+/);
+                let typeStr = tokens[0], timeToken = "", typeClass = "", typeName = "", details = [];
+
+                if (typeStr.startsWith('FM')) {
+                    timeToken = typeStr; typeClass = 'bg-fm'; typeName = 'FM (迅速)'; details = tokens.slice(1);
+                } else if (typeStr === 'BECMG' || typeStr === 'TEMPO') {
+                    timeToken = tokens[1]; typeClass = `bg-${typeStr.toLowerCase()}`; typeName = typeStr; details = tokens.slice(2);
+                } else if (typeStr.startsWith('PROB')) {
+                    typeClass = 'bg-prob';
+                    if (tokens[1] === 'TEMPO') { typeName = `${typeStr} TEMPO`; timeToken = tokens[2]; details = tokens.slice(3); } 
+                    else { typeName = typeStr; timeToken = tokens[1]; details = tokens.slice(2); }
+                }
+                if (timeToken) trends.push({ typeClass, typeName, time: formatHKTime(timeToken), details });
+            }
+
+            // 渲染時間軸
+            let html = '';
+            if (trends.length === 0) {
+                html = '<div class="trend-card" style="color: #666; font-weight: bold;">預報期內無顯著天氣變化。</div>';
+            } else {
+                trends.forEach(t => {
+                    let dHtml = t.details.map(d => `<span style="background:white; border:1px solid #ccc; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:4px;">${d}</span>`).join('');
+                    if(!dHtml) dHtml = '<span style="color:#888; font-size:12px;">維持原本狀態</span>';
+                    html += `<div class="trend-card">
+                        <div style="margin-bottom: 8px;">
+                            <span class="trend-badge ${t.typeClass}">${t.typeName}</span>
+                            <span style="font-size:13px; font-weight:bold; color:var(--brand-navy);">🕒 ${t.time}</span>
+                        </div>
+                        <div>${dHtml}</div>
+                    </div>`;
+                });
+            }
+            document.getElementById('timeline-box').innerHTML = html;
+            
+            document.getElementById('summary-text').innerHTML = `🤖 <b>自動解析：</b> 基準期內機場能見度${baseData.vis === '9999' ? '極佳' : '受限'}。` + (trends.length > 0 ? `預計有 ${trends.length} 個趨勢轉變，詳情見上方時間軸 (已轉換為香港時間 HKT)。` : `未來天氣穩定。`);
+        }
+
+        // ================= 3. 時間自動轉換 (HKT) =================
+        function formatHKTime(timeStr) {
+            try {
+                if (timeStr.startsWith('FM')) {
+                    let d = timeStr.substring(2, 4), h = timeStr.substring(4, 6), m = timeStr.substring(6, 8);
+                    let hkH = (parseInt(h) + 8) % 24;
+                    let nextDay = (parseInt(h) + 8) >= 24 ? " (翌日)" : "";
+                    return `${d}日 ${hkH.toString().padStart(2, '0')}:${m} HKT${nextDay} 起`;
+                } else if (timeStr.includes('/')) {
+                    let [start, end] = timeStr.split('/');
+                    let sd = start.substring(0, 2), sh = start.substring(2, 4);
+                    let ed = end.substring(0, 2), eh = end.substring(2, 4);
+                    let hksH = (parseInt(sh) + 8) % 24, hkeH = (parseInt(eh) + 8) % 24;
+                    let nextDayS = (parseInt(sh) + 8) >= 24 ? "+1" : "";
+                    let nextDayE = (parseInt(eh) + 8) >= 24 ? "+1" : "";
+                    return `${sd}日 ${hksH.toString().padStart(2, '0')}:00${nextDayS} 至 ${ed}日 ${hkeH.toString().padStart(2, '0')}:00${nextDayE}`;
+                }
+            } catch(e) {}
+            return timeStr;
+        }
+
+        fetchAndParseTAF();
+        setInterval(fetchAndParseTAF, 300000); 
+    </script>
+</body>
+</html>
