@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAF Widget - Met Office</title>
+    <title>TAF Widget</title>
     <style>
         :root {
             --brand-navy: #112a46;
@@ -19,92 +19,87 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-light); color: var(--text-main); padding: 25px; line-height: 1.6; }
+        
+        body { background-color: var(--bg-light); color: var(--text-main); padding: 15px; line-height: 1.6; }
 
-        .container { max-width: 1000px; margin: 0 auto; }
-
-        .info-box { background: var(--white); border-radius: 12px; padding: 25px 30px; box-shadow: var(--card-shadow); border-top: 4px solid var(--brand-navy); margin-bottom: 25px; }
+        .info-box { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); border-top: 4px solid var(--brand-navy); }
         .box-title-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 20px; }
         .box-title { font-size: 16px; color: var(--brand-navy); font-weight: bold; }
         .status-info { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
         .live-dot { height: 8px; width: 8px; background-color: var(--safe-green); border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
-        
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+        
+        .terminal-box { background: #1e1e1e; color: #f39c12; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; border-left: 5px solid var(--warning-orange); line-height: 1.6; transition: opacity 0.3s ease;}
 
-        .terminal-box { background: #1e1e1e; color: #f39c12; padding: 18px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 15px; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; border-left: 5px solid var(--warning-orange); line-height: 1.6; }
+        .section-title { font-size: 14px; font-weight: 700; color: var(--brand-navy); margin-bottom: 12px; }
+        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .w-item { background: var(--bg-light); padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .w-item span { font-size: 11px; color: var(--text-muted); font-weight: bold; display: block; margin-bottom: 5px; }
+        .w-item strong { font-size: 16px; color: var(--brand-navy); display: block; }
+        .w-desc { font-size: 11px; color: var(--brand-blue); font-weight: 600; margin-top: 4px; }
 
-        .section-title { font-size: 14px; font-weight: 700; color: var(--brand-navy); margin-bottom: 15px; }
-        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .w-item { background: var(--bg-light); padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; transition: transform 0.2s; }
-        .w-item:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-        .w-item span { font-size: 12px; color: var(--text-muted); font-weight: bold; display: block; margin-bottom: 5px; }
-        .w-item strong { font-size: 18px; color: var(--brand-navy); display: block; }
-        .w-desc { font-size: 12px; color: var(--brand-blue); font-weight: 600; margin-top: 4px; }
-
-        .timeline { padding-left: 20px; border-left: 3px solid #e2e8f0; margin-left: 10px; margin-bottom: 25px; }
-        .trend-card { position: relative; background: var(--bg-light); border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        .trend-card::before { content: ''; position: absolute; left: -29px; top: 15px; width: 14px; height: 14px; border-radius: 50%; background: var(--brand-blue); border: 3px solid var(--white); box-shadow: 0 0 0 2px var(--brand-blue); }
-        .trend-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-right: 8px; display: inline-block; }
+        .timeline { padding-left: 15px; border-left: 3px solid #e2e8f0; margin-left: 5px; margin-bottom: 25px; transition: opacity 0.3s ease;}
+        .trend-card { position: relative; background: var(--bg-light); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        .trend-card::before { content: ''; position: absolute; left: -24px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--brand-blue); border: 2px solid var(--white); box-shadow: 0 0 0 2px var(--brand-blue); }
+        .trend-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-right: 8px; }
         .bg-becmg { background-color: var(--warning-orange); }
         .bg-tempo { background-color: var(--brand-blue); }
         .bg-fm { background-color: var(--safe-green); }
         .bg-prob { background-color: var(--alert-red); }
         
-        .ai-summary { background: #eaf2f8; border-left: 5px solid var(--brand-blue); padding: 20px; border-radius: 0 8px 8px 0; font-size: 14px; color: var(--brand-navy); line-height: 1.8; }
+        .ai-summary { background: #eaf2f8; border-left: 5px solid var(--brand-blue); padding: 15px; border-radius: 0 8px 8px 0; font-size: 14px; color: var(--brand-navy); line-height: 1.6;}
         .wx-tag { background: white; border: 1px solid #ccc; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 5px; display: inline-block; color: var(--brand-navy); font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="info-box">
-            <div class="box-title-bar">
-                <div class="box-title" data-i18n="box_title">✈️ 香港機場 (VHHH) TAF 航空預報</div>
-                <div class="status-info">
-                    <span id="status-text" data-i18n="connecting">連接氣象數據庫中...</span>
-                    <span class="live-dot" id="live-indicator"></span>
-                </div>
+    <div class="info-box">
+        <div class="box-title-bar">
+            <div class="box-title" data-i18n="box_title">✈️ 香港機場 (VHHH) TAF 航空預報</div>
+            <div class="status-info">
+                <span id="status-text" data-i18n="connecting">讀取 GitHub 數據中...</span>
+                <span class="live-dot" id="live-indicator"></span>
             </div>
-            
-            <div class="terminal-box" id="raw-taf" data-i18n="fetching">🔄 正在載入真實數據...</div>
+        </div>
+        
+        <div class="terminal-box" id="raw-taf" data-i18n="fetching">🔄 正在載入數據...</div>
 
-            <div class="section-title" data-i18n="title_base">📅 基準預報 (Base Forecast)</div>
-            <div class="weather-grid">
-                <div class="w-item">
-                    <span data-i18n="lbl_period">⏳ 預測時段 (HKT)</span>
-                    <strong id="val-valid">--</strong>
-                    <div class="w-desc" id="desc-issue">--</div>
-                </div>
-                <div class="w-item">
-                    <span data-i18n="lbl_wind">💨 基準風力</span>
-                    <strong id="val-wind">--</strong>
-                    <div class="w-desc" id="desc-wind">--</div>
-                </div>
-                <div class="w-item">
-                    <span data-i18n="lbl_vis">👁️ 基準能見度</span>
-                    <strong id="val-vis">--</strong>
-                    <div class="w-desc" id="desc-vis">--</div>
-                </div>
-                <div class="w-item">
-                    <span data-i18n="lbl_clouds">☁️ 基準雲層</span>
-                    <strong id="val-clouds">--</strong>
-                    <div class="w-desc" id="desc-clouds">--</div>
-                </div>
+        <div class="section-title" data-i18n="title_base">📅 基準預報 (Base Forecast)</div>
+        <div class="weather-grid">
+            <div class="w-item">
+                <span data-i18n="lbl_period">⏳ 預測時段 (HKT)</span>
+                <strong id="val-valid">--</strong>
+                <div class="w-desc" id="desc-issue">--</div>
             </div>
+            <div class="w-item">
+                <span data-i18n="lbl_wind">💨 基準風力</span>
+                <strong id="val-wind">--</strong>
+                <div class="w-desc" id="desc-wind">--</div>
+            </div>
+            <div class="w-item">
+                <span data-i18n="lbl_vis">👁️ 基準能見度</span>
+                <strong id="val-vis">--</strong>
+                <div class="w-desc" id="desc-vis">--</div>
+            </div>
+            <div class="w-item">
+                <span data-i18n="lbl_clouds">☁️ 基準雲層</span>
+                <strong id="val-clouds">--</strong>
+                <div class="w-desc" id="desc-clouds">--</div>
+            </div>
+        </div>
 
-            <div class="section-title" data-i18n="title_trend">⏱️ 天氣變化趨勢 (Trend Timeline)</div>
-            <div class="timeline" id="timeline-box">
-                <div style="color: var(--text-muted); font-size: 13px;" data-i18n="waiting">等待數據...</div>
-            </div>
+        <div class="section-title" data-i18n="title_trend">⏱️ 天氣變化趨勢 (Trend Timeline)</div>
+        <div class="timeline" id="timeline-box">
+            <div style="color: var(--text-muted); font-size: 13px;" data-i18n="waiting">等待數據...</div>
+        </div>
 
-            <div class="ai-summary">
-                <h3 style="margin-bottom: 10px; font-size: 15px;" data-i18n="summary_title">🤖 自動解析報告</h3>
-                <div id="summary-text" data-i18n="summary_waiting">等待數據解析中...</div>
-            </div>
+        <div class="ai-summary">
+            <h3 style="margin-bottom: 10px; font-size: 14px;" data-i18n="summary_title">🤖 自動解析報告</h3>
+            <div id="summary-text" data-i18n="summary_waiting">等待數據解析中...</div>
         </div>
     </div>
 
     <script>
-        // ================= 1. 無按鈕隱藏式雙語系統 (?lang=en) =================
+        // ================= 1. 隱藏式雙語系統 =================
         const urlParams = new URLSearchParams(window.location.search);
         const currentLang = urlParams.get('lang') === 'en' ? 'en' : 'tc';
         document.documentElement.lang = currentLang === 'en' ? 'en-GB' : 'zh-HK';
@@ -112,8 +107,8 @@
         const i18n = {
             "tc": {
                 "box_title": "✈️ 香港機場 (VHHH) TAF 航空預報",
-                "connecting": "連接氣象數據庫中...",
-                "fetching": "🔄 正在載入官方數據...",
+                "connecting": "讀取 GitHub 數據中...",
+                "fetching": "🔄 正在載入真實數據...",
                 "title_base": "📅 基準預報 (Base Forecast)",
                 "lbl_period": "⏳ 預測時段 (HKT)",
                 "lbl_wind": "💨 基準風力",
@@ -123,7 +118,7 @@
                 "waiting": "等待數據...",
                 "summary_title": "🤖 自動解析報告",
                 "summary_waiting": "等待數據解析中...",
-                "err_conn": "❌ 讀取失敗，請檢查網絡連線。",
+                "err_conn": "❌ 讀取失敗，無法連接 GitHub 或檔案格式錯誤。",
                 "disconnected": "連線中斷",
                 "update_prefix": "更新於 ",
                 "issue_time": "發出時間 (UTC): ",
@@ -150,8 +145,8 @@
             },
             "en": {
                 "box_title": "✈️ HKIA (VHHH) TAF Forecast",
-                "connecting": "Connecting to weather database...",
-                "fetching": "🔄 Fetching official data...",
+                "connecting": "Fetching GitHub data...",
+                "fetching": "🔄 Fetching live data...",
                 "title_base": "📅 Base Forecast",
                 "lbl_period": "⏳ Valid Period (HKT)",
                 "lbl_wind": "💨 Base Wind",
@@ -161,7 +156,7 @@
                 "waiting": "Awaiting data...",
                 "summary_title": "🤖 AI Parsed Summary",
                 "summary_waiting": "Awaiting data parsing...",
-                "err_conn": "❌ Fetch failed. Please check network connection.",
+                "err_conn": "❌ Fetch failed. Invalid file format or connection issue.",
                 "disconnected": "Disconnected",
                 "update_prefix": "Updated at ",
                 "issue_time": "Issued (UTC): ",
@@ -197,57 +192,73 @@
         }
         applyLanguageUI();
 
-        // ================= 2. 官方原生 API 直接獲取機制 =================
-        async function fetchOfficialTAF() {
-            // 你搵到嘅官方 JSON API (大道至簡，不加任何多餘 Header 或時間戳，避免被封鎖)
-            const targetUrl = 'https://aviationweather.gov/api/data/taf?ids=VHHH&format=json';
+        // 用來記錄上一次讀取的 TAF 內容，防止無謂閃爍
+        let lastRawTaf = "";
 
+        // ================= 2. 智能提取器 (專治 JSON 污染 CSV) =================
+        async function fetchGitHubTAF() {
+            const targetUrl = `https://dannytcchan00.github.io/0Data/data/TAF_VHHH.csv?t=${new Date().getTime()}`;
             try {
-                // 第一層：原生直取
-                const res = await fetch(targetUrl);
-                const data = await res.json();
-                if (data && data.length > 0 && data[0].rawTAF) {
-                    return data[0].rawTAF;
-                }
-            } catch (e) {
-                console.warn("直接讀取受阻，轉用備用通道...");
-            }
+                const res = await fetch(targetUrl, { cache: 'no-store' });
+                if (!res.ok) throw new Error("Fetch failed");
+                let text = await res.text();
+                
+                // 拆彈程序 1：嘗試當成 JSON 解析
+                try {
+                    let cleanJsonStr = text.trim();
+                    if (cleanJsonStr.startsWith('"') && cleanJsonStr.endsWith('"')) {
+                        cleanJsonStr = cleanJsonStr.slice(1, -1).replace(/""/g, '"');
+                    }
+                    const jsonData = JSON.parse(cleanJsonStr);
+                    
+                    if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].rawTAF) {
+                        return jsonData[0].rawTAF;
+                    } else if (jsonData.rawTAF) {
+                        return jsonData.rawTAF;
+                    }
+                } catch (e) {}
 
-            // 第二層：公用 CorsProxy 代理 (確保 100% 繞過本地 file:/// 的限制)
-            try {
-                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-                const res = await fetch(proxyUrl);
-                const data = await res.json();
-                if (data && data.length > 0 && data[0].rawTAF) {
-                    return data[0].rawTAF;
+                // 拆彈程序 2：暴力提取 (過濾走所有標點符號與無關數據)
+                const match = text.match(/TAF\s+(?:AMD\s+|COR\s+)?VHHH[^"'{}\[\]\n\r=]+/i);
+                if (match) {
+                    return match[0].replace(/\s+/g, ' ').trim();
                 }
+                return null;
             } catch (e) {
-                console.error("備用通道亦受阻", e);
+                return null;
             }
-
-            return null;
         }
 
-        // ================= 3. 解碼引擎與渲染 =================
-        async function fetchAndParseTAF() {
-            const rawTaf = await fetchOfficialTAF();
+        // ================= 3. 無縫解析與渲染 (不閃爍) =================
+        async function fetchAndParseTAF(isBackgroundUpdate = false) {
+            const rawTaf = await fetchGitHubTAF();
             const liveInd = document.getElementById('live-indicator');
+            const statusText = document.getElementById('status-text');
 
             if (!rawTaf) {
-                document.getElementById('raw-taf').innerHTML = `<span style="color: var(--alert-red);">${t.err_conn}</span>`;
-                document.getElementById('status-text').innerHTML = `<span style="color: var(--alert-red); font-weight: bold;">${t.disconnected}</span>`;
+                if (!isBackgroundUpdate) {
+                    document.getElementById('raw-taf').innerHTML = `<span style="color: var(--alert-red);">${t.err_conn}</span>`;
+                }
+                statusText.innerHTML = `<span style="color: var(--alert-red); font-weight: bold;">${t.disconnected}</span>`;
                 liveInd.style.backgroundColor = 'var(--alert-red)';
                 return;
             }
 
+            // 更新燈號及時間
             liveInd.style.backgroundColor = 'var(--safe-green)';
-            document.getElementById('status-text').innerHTML = `${t.update_prefix}${new Date().toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'zh-HK')}`;
+            statusText.innerHTML = `${t.update_prefix}${new Date().toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'zh-HK')}`;
             
-            // 清理原始字串並顯示
+            // 🛡️ 智能比對鎖 (Data Diff Lock)：如果電碼無改變，直接中止函數，絕對唔會重新繪製畫面 (防閃爍)
+            if (rawTaf === lastRawTaf) {
+                return; 
+            }
+            lastRawTaf = rawTaf; // 更新記憶
+
+            // 清洗電碼
             let text = rawTaf.trim().replace(/^TAF\s+(AMD\s+|COR\s+)?/, '').trim();
             document.getElementById('raw-taf').innerText = text;
 
-            // 切割出趨勢部分
+            // 切割趨勢
             const parts = text.split(/(?=\b(?:FM\d{6}|BECMG|TEMPO|PROB30|PROB40)\b)/);
             const baseTokens = parts[0].trim().split(/\s+/);
             let baseData = { issue: '', valid: '', wind: '', vis: '', clouds: [] };
@@ -261,7 +272,6 @@
                 else if (p.match(/^(FEW|SCT|BKN|OVC|CB|TCU)/)) baseData.clouds.push(p);
             }
 
-            // 渲染基準預報
             document.getElementById('val-valid').innerText = formatHKTime(baseData.valid);
             document.getElementById('desc-issue').innerText = baseData.issue ? `${t.issue_time}${baseData.issue}` : '';
             
@@ -286,7 +296,7 @@
                 document.getElementById('desc-clouds').innerText = t.cloud_clear;
             }
 
-            // 處理變化趨勢
+            // 處理未來天氣趨勢
             let trends = [];
             for(let i=1; i<parts.length; i++) {
                 let tokens = parts[i].trim().split(/\s+/);
@@ -304,6 +314,7 @@
                 if (timeToken) trends.push({ typeClass, typeName, time: formatHKTime(timeToken), details });
             }
 
+            // 渲染時間軸
             let html = '';
             if (trends.length === 0) {
                 html = `<div class="trend-card" style="color: #666; font-weight: bold;">${t.trend_none}</div>`;
@@ -314,7 +325,7 @@
                     html += `<div class="trend-card">
                         <div style="margin-bottom: 8px; display:flex; align-items:center;">
                             <span class="trend-badge ${tr.typeClass}">${tr.typeName}</span>
-                            <span style="font-size:14px; font-weight:bold; color:var(--brand-navy);">🕒 ${tr.time}</span>
+                            <span style="font-size:13px; font-weight:bold; color:var(--brand-navy);">🕒 ${tr.time}</span>
                         </div>
                         <div>${dHtml}</div>
                     </div>`;
@@ -322,6 +333,7 @@
             }
             document.getElementById('timeline-box').innerHTML = html;
             
+            // 智能總結
             let summary = `${t.ai_start} <b>${isVisGood ? t.ai_excellent : t.ai_limited}</b>`;
             if (trends.length > 0) summary += `${t.ai_mid}<b>${trends.length}</b>${t.ai_end}`;
             else summary += t.ai_stable;
@@ -329,7 +341,7 @@
             document.getElementById('summary-text').innerHTML = summary;
         }
 
-        // ================= 4. 自動 HKT 轉換及雙語支援 =================
+        // ================= 4. 自動 HKT 轉換與雙語 =================
         function formatHKTime(timeStr) {
             if (!timeStr) return '--';
             try {
@@ -358,9 +370,10 @@
             return timeStr;
         }
 
-        fetchAndParseTAF();
-        // 降低自動刷新頻率至 10 分鐘，進一步保護 API
-        setInterval(fetchAndParseTAF, 600000); 
+        // 首次手動執行 (顯示載入中)
+        fetchAndParseTAF(false);
+        // 背景自動更新：每 10 分鐘 (600000 毫秒) 執行一次 (不顯示載入中，防閃爍)
+        setInterval(() => fetchAndParseTAF(true), 600000); 
     </script>
 </body>
 </html>
