@@ -26,7 +26,7 @@
         .box-title-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 20px; }
         .box-title { font-size: 16px; color: var(--brand-navy); font-weight: bold; }
         
-        .terminal-box { background: #1e1e1e; color: #f39c12; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; border-left: 5px solid var(--warning-orange); }
+        .terminal-box { background: #1e1e1e; color: #f39c12; padding: 15px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; margin-bottom: 25px; word-wrap: break-word; border-left: 5px solid var(--warning-orange); line-height: 1.5; }
 
         .section-title { font-size: 14px; font-weight: 700; color: var(--brand-navy); margin-bottom: 12px; }
         .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 25px; }
@@ -72,82 +72,96 @@
     </div>
 
     <script>
-        // ================= 1. 三重學術與底層連線 (Triple-Layer Fallback) =================
-        async function fetchSafeTAF() {
-            const timestamp = new Date().getTime();
-
-            // 策略 1: 美國 NOAA Aviation API (官方 JSON 直連)
+        // ================= 1. 完美繼承你系統的 fetchHKO 代理邏輯 =================
+        async function fetchHKOTAF(apiUrl) {
             try {
-                const res1 = await fetch(`https://aviationweather.gov/api/data/taf?ids=VHHH&format=json&t=${timestamp}`, { cache: 'no-store' });
-                if (res1.ok) {
-                    const data = await res1.json();
-                    if (data && data.length > 0 && data[0].rawTAF) return data[0].rawTAF;
+                // 嘗試直接讀取 (加入 cache-busting)
+                const separator = apiUrl.includes('?') ? '&' : '?';
+                const res = await fetch(apiUrl + separator + `t=${new Date().getTime()}`, { cache: 'no-store' });
+                if (!res.ok) throw new Error('Direct fetch failed');
+                const text = await res.text();
+                if (text.includes('VHHH')) return text;
+                throw new Error('No VHHH data');
+            } catch (error) {
+                console.warn("直接連線受阻，正轉用 Proxy...", error);
+                // 完美複製你系統成功過嘅 AllOrigins RAW 模式
+                try {
+                    const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl);
+                    const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
+                    const proxyText = await proxyRes.text();
+                    if (proxyText.includes('VHHH')) return proxyText;
+                } catch (e) {
+                    return null;
                 }
-            } catch (e1) { console.warn("策略 1 失敗"); }
-
-            // 策略 2: IEM 學術氣象伺服器 (原生開放 CORS，極穩定純文字庫)
-            try {
-                const res2 = await fetch(`https://mesonet.agron.iastate.edu/cgi-bin/request/taf.py?station=VHHH&t=${timestamp}`, { cache: 'no-store' });
-                if (res2.ok) {
-                    const text = await res2.text();
-                    if (text && text.includes('VHHH')) return text;
-                }
-            } catch (e2) { console.warn("策略 2 失敗"); }
-
-            // 策略 3: AllOrigins RAW 模式 (完美複製你 fetchHKO 的成功經驗)
-            try {
-                const ftpUrl = 'https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/VHHH.TXT';
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(ftpUrl)}`;
-                const res3 = await fetch(proxyUrl, { cache: 'no-store' });
-                if (res3.ok) {
-                    const text = await res3.text();
-                    if (text && text.includes('VHHH')) return text;
-                }
-            } catch (e3) { console.warn("策略 3 失敗"); }
-
-            return null; // 全部失敗則回傳 null，觸發錯誤處理
+            }
+            return null;
         }
 
-        // ================= 2. 解析及渲染介面 =================
-        async function fetchAndParseTAF() {
-            const rawTaf = await fetchSafeTAF();
+        async function getRobustTAF() {
+            // 策略 1: IEM 學術庫 (極度穩定，無 CORS 封鎖)
+            let data = await fetchHKOTAF('https://mesonet.agron.iastate.edu/cgi-bin/request/taf.py?station=VHHH');
+            if (data) return data;
 
-            // 防護檢查與錯誤反饋 (對齊你系統的標準)
+            // 策略 2: NOAA 官方 API (作為最後防線)
+            data = await fetchHKOTAF('https://aviationweather.gov/api/data/taf?ids=VHHH&format=raw');
+            if (data) return data;
+
+            return null;
+        }
+
+        // ================= 2. 核心解析及渲染介面 =================
+        async function fetchAndParseTAF() {
+            const rawTaf = await getRobustTAF();
+
             if (!rawTaf) {
-                document.getElementById('raw-taf').innerHTML = `<span style="color: #e74c3c;">❌ 讀取失敗，請檢查數據來源或網絡連線。</span>`;
+                document.getElementById('raw-taf').innerHTML = `<span style="color: #e74c3c;">❌ 讀取失敗，請檢查網絡連線。</span>`;
                 document.getElementById('status-text').innerHTML = `<span style="color: #e74c3c; font-weight: bold;">連線中斷</span>`;
                 return;
             }
 
             document.getElementById('status-text').innerHTML = `🟢 更新於 ${new Date().toLocaleTimeString('zh-HK')}`;
             
-            // 清理可能出現的雜訊及 FTP 時間戳 (確保 TAF 電碼乾淨)
-            let text = rawTaf.replace(/^[0-9\/:\s-]+\n/, '').trim(); 
-            text = text.replace(/^TAF\s+(AMD\s+|COR\s+)?/, '').trim();
-            text = text.replace(/\s+/g, ' '); // 統一空格，避免 IEM/FTP 換行符號搞亂 Regex
+            // 智能定位 VHHH，切除 IEM/FTP 伺服器自帶的無用頂部時間戳
+            let cleanRawTaf = rawTaf;
+            let startIndex = cleanRawTaf.indexOf('VHHH');
+            if (startIndex !== -1) {
+                let tafIndex = cleanRawTaf.lastIndexOf('TAF', startIndex);
+                if (tafIndex !== -1 && (startIndex - tafIndex) < 15) {
+                    cleanRawTaf = cleanRawTaf.substring(tafIndex);
+                } else {
+                    cleanRawTaf = cleanRawTaf.substring(startIndex);
+                }
+            }
+            
+            // 清理開頭字眼並將所有換行/多餘空格壓平為單一空格
+            let text = cleanRawTaf.replace(/^TAF\s+(AMD\s+|COR\s+)?/, '').trim();
+            text = text.replace(/\s+/g, ' '); 
             document.getElementById('raw-taf').innerText = text;
 
             // 根據關鍵字斬開趨勢變化
             const parts = text.split(/(?=\b(?:FM\d{6}|BECMG|TEMPO|PROB30|PROB40)\b)/);
             const baseTokens = parts[0].trim().split(/\s+/);
-            let baseData = { valid: baseTokens[2], wind: '', vis: '', clouds: [] };
-
-            for(let i=3; i<baseTokens.length; i++) {
+            
+            let baseData = { valid: '', wind: '', vis: '', clouds: [] };
+            
+            // 靈活提取基準資料 (防範某些 API 漏派發出時間)
+            for(let i = 1; i < baseTokens.length; i++) {
                 let p = baseTokens[i];
-                if (p.endsWith('KT')) baseData.wind = p;
-                else if (p.match(/^\d{4}$/)) baseData.vis = p;
-                else if (p.match(/^(FEW|SCT|BKN|OVC|CB|TCU)/) || p === 'CAVOK') baseData.clouds.push(p);
+                if (p.includes('/')) baseData.valid = p;
+                else if (p.endsWith('KT') || p.endsWith('MPS')) baseData.wind = p;
+                else if (p.match(/^\d{4}$/) || p === 'CAVOK') baseData.vis = p;
+                else if (p.match(/^(FEW|SCT|BKN|OVC|CB|TCU)/)) baseData.clouds.push(p);
             }
 
             // 渲染基準預報
             document.getElementById('val-valid').innerText = formatHKTime(baseData.valid);
             document.getElementById('val-wind').innerText = baseData.wind || 'VRB02KT';
-            document.getElementById('val-vis').innerText = baseData.vis === '9999' ? '> 10 公里' : `${parseInt(baseData.vis)} 米`;
+            document.getElementById('val-vis').innerText = baseData.vis === '9999' || baseData.vis === 'CAVOK' ? '> 10 公里' : `${parseInt(baseData.vis)} 米`;
             document.getElementById('val-clouds').innerText = baseData.clouds.length > 0 ? baseData.clouds.join(', ') : '無顯著雲層';
 
             // 處理未來天氣變化趨勢
             let trends = [];
-            for(let i=1; i<parts.length; i++) {
+            for(let i = 1; i < parts.length; i++) {
                 let tokens = parts[i].trim().split(/\s+/);
                 let typeStr = tokens[0], timeToken = "", typeClass = "", typeName = "", details = [];
 
@@ -182,11 +196,12 @@
             }
             document.getElementById('timeline-box').innerHTML = html;
             
-            document.getElementById('summary-text').innerHTML = `🤖 <b>自動解析：</b> 基準期內機場能見度${baseData.vis === '9999' ? '極佳' : '受限'}。` + (trends.length > 0 ? `預計有 ${trends.length} 個趨勢轉變，詳情見上方時間軸 (已轉換為香港時間 HKT)。` : `未來天氣穩定。`);
+            document.getElementById('summary-text').innerHTML = `🤖 <b>自動解析：</b> 基準期內機場能見度${baseData.vis === '9999' || baseData.vis === 'CAVOK' ? '極佳' : '受限'}。` + (trends.length > 0 ? `預計有 ${trends.length} 個趨勢轉變，詳情見上方時間軸 (已轉換為香港時間 HKT)。` : `未來天氣穩定。`);
         }
 
         // ================= 3. 時間自動轉換 (HKT) =================
         function formatHKTime(timeStr) {
+            if (!timeStr) return '--';
             try {
                 if (timeStr.startsWith('FM')) {
                     let d = timeStr.substring(2, 4), h = timeStr.substring(4, 6), m = timeStr.substring(6, 8);
@@ -195,12 +210,14 @@
                     return `${d}日 ${hkH.toString().padStart(2, '0')}:${m} HKT${nextDay} 起`;
                 } else if (timeStr.includes('/')) {
                     let [start, end] = timeStr.split('/');
-                    let sd = start.substring(0, 2), sh = start.substring(2, 4);
-                    let ed = end.substring(0, 2), eh = end.substring(2, 4);
-                    let hksH = (parseInt(sh) + 8) % 24, hkeH = (parseInt(eh) + 8) % 24;
-                    let nextDayS = (parseInt(sh) + 8) >= 24 ? "+1" : "";
-                    let nextDayE = (parseInt(eh) + 8) >= 24 ? "+1" : "";
-                    return `${sd}日 ${hksH.toString().padStart(2, '0')}:00${nextDayS} 至 ${ed}日 ${hkeH.toString().padStart(2, '0')}:00${nextDayE}`;
+                    if (start.length >= 4 && end.length >= 4) {
+                        let sd = start.substring(0, 2), sh = start.substring(2, 4);
+                        let ed = end.substring(0, 2), eh = end.substring(2, 4);
+                        let hksH = (parseInt(sh) + 8) % 24, hkeH = (parseInt(eh) + 8) % 24;
+                        let nextDayS = (parseInt(sh) + 8) >= 24 ? " (翌日)" : "";
+                        let nextDayE = (parseInt(eh) + 8) >= 24 ? " (翌日)" : "";
+                        return `${sd}日 ${hksH.toString().padStart(2, '0')}:00${nextDayS} 至 ${ed}日 ${hkeH.toString().padStart(2, '0')}:00${nextDayE}`;
+                    }
                 }
             } catch(e) {}
             return timeStr;
