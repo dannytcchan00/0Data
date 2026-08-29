@@ -63,8 +63,9 @@
             <div style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                 <div id="radar-timestamp" style="margin-bottom: 15px; color: var(--brand-navy); font-weight: 600; font-size: 15px;" data-i18n="radar_loading">Loading Radar Data...</div>
                 
-                <div style="position: relative; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); background: #f8fafc;">
-                    <img id="radar-image" src="" alt="Radar Loop" style="width: 100%; aspect-ratio: 1/1; object-fit: contain; display: block;">
+                <!-- 修改咗呢度：取消強制 1:1，等框框自動貼實圖片 -->
+                <div style="position: relative; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); background: #f8fafc; font-size: 0; line-height: 0;">
+                    <img id="radar-image" src="" alt="Radar Loop" style="width: 100%; height: auto; display: block;">
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 20px; justify-content: center; align-items: center; width: 100%; max-width: 600px;">
@@ -100,10 +101,8 @@
         };
 
         function applyLanguageUI() {
-            // 更新網頁語言標籤
-            document.documentElement.lang = currentLang === 'tc' ? 'zh-HK' : 'en';
+            document.documentElement.lang = currentLang === 'tc' ? 'zh-HK' : 'en-GB';
 
-            // 更新靜態文字
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18nDict[currentLang] && i18nDict[currentLang][key]) { 
@@ -111,7 +110,6 @@
                 }
             });
             
-            // 更新播放/暫停按鈕狀態
             const playBtn = document.getElementById('play-btn');
             if (playing) {
                 playBtn.innerHTML = i18nDict[currentLang]["radar_pause"];
@@ -130,7 +128,6 @@
             const times = [];
             const now = new Date();
             const min = now.getMinutes();
-            // 計算最接近嘅 6 分鐘倍數，並往後推一格(減6分鐘)確保天文台已經出圖
             now.setMinutes(min - (min % 6) - 6); 
             
             for (let i = 0; i < 20; i++) {
@@ -158,13 +155,12 @@
                 };
             });
             
-            // 預載圖片
             radarFrames.forEach(frame => {
                 const img = new Image();
                 img.src = frame.url;
             });
 
-            currentFrameIndex = radarFrames.length - 1; // 從最新一張開始
+            currentFrameIndex = radarFrames.length - 1; 
             updateRadarDisplay();
             
             if (!playing) togglePlay(); 
@@ -198,7 +194,7 @@
         }
 
         document.getElementById('frame-slider').addEventListener('input', function(e) {
-            if (playing) togglePlay(); // 拖拉時間軸時自動暫停
+            if (playing) togglePlay(); 
             currentFrameIndex = parseInt(e.target.value);
             updateRadarDisplay();
         });
@@ -206,8 +202,8 @@
         // ================= 初始化 =================
         window.addEventListener('DOMContentLoaded', () => {
             applyLanguageUI();
-            loadRadarImages('064'); // 初始載入 64 公里雷達圖
-            playInterval = setInterval(nextFrame, 400); // 400 毫秒切換一張圖
+            loadRadarImages('064'); 
+            playInterval = setInterval(nextFrame, 400); 
         });
         
     </script>
