@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港標準時間 - 網上時鐘</title>
+    <title>世界時間儀表板 - Met Office</title>
     <style>
         /* ================= 沿用 Met Office 品牌顏色 ================= */
         :root {
@@ -13,6 +13,7 @@
             --text-main: #333333;
             --text-muted: #666666;
             --alert-red: #e74c3c;
+            --card-shadow: 0 8px 25px rgba(17, 42, 70, 0.08);
         }
 
         * {
@@ -23,68 +24,125 @@
         }
 
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             background-color: var(--bg-light);
+            padding: 40px 20px;
+            min-height: 100vh;
         }
 
-        /* 主容器卡片 */
+        /* 頁面大標題 */
+        .dashboard-title {
+            text-align: center;
+            color: var(--brand-navy);
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* 簡化版分隔線 (無文字) */
+        .section-divider {
+            margin: 40px auto 35px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80%;
+            max-width: 1000px;
+        }
+        .section-divider::before {
+            content: "";
+            height: 1px;
+            width: 100%;
+            background-color: #d1d8e0;
+        }
+
+        /* ================= 排版網格 ================= */
+        .main-clocks-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .sub-clocks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ================= 時鐘卡片共用設計 ================= */
         .clock-card {
             background-color: var(--white);
-            padding: 50px 60px;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(17, 42, 70, 0.1);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
             text-align: center;
-            border-top: 6px solid var(--brand-navy);
+            border-top: 5px solid var(--brand-navy);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        /* ================= 指針時鐘設計 ================= */
+        .clock-card.large { padding: 35px 40px; }
+        .clock-card.small { padding: 25px 20px; }
+
+        .city-name {
+            color: var(--brand-navy);
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .large .city-name { font-size: 22px; }
+        .small .city-name { font-size: 16px; margin-bottom: 15px; }
+
+        /* ================= 比例化指針時鐘 ================= */
         .analog-clock {
-            width: 350px; 
-            height: 350px;
             background-color: var(--white);
-            border: 14px solid var(--brand-navy);
+            border: solid var(--brand-navy);
             border-radius: 50%;
-            margin: 0 auto 35px auto;
             position: relative;
-            box-shadow: inset 0 0 25px rgba(0,0,0,0.05), 0 8px 20px rgba(0,0,0,0.1);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.1);
         }
+        
+        .large .analog-clock { width: 280px; height: 280px; border-width: 12px; margin-bottom: 25px; }
+        .small .analog-clock { width: 160px; height: 160px; border-width: 8px; margin-bottom: 20px; }
 
-        /* 鐘面刻度數字 */
+        /* 數字自動定位 */
         .number {
             position: absolute;
             width: 100%;
             height: 100%;
             text-align: center;
             transform: rotate(calc(var(--rot) * 30deg));
-            padding-top: 12px;
         }
+        .large .number { padding-top: 10px; }
+        .small .number { padding-top: 5px; }
 
         .number span {
             display: inline-block;
             transform: rotate(calc(var(--rot) * -30deg));
-            font-size: 28px;
             font-weight: 700;
             color: var(--brand-navy);
         }
+        .large .number span { font-size: 24px; }
+        .small .number span { font-size: 14px; }
 
-        /* 鐘面中心點 */
+        /* 中心點 */
         .clock-center {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 18px;
-            height: 18px;
             background-color: var(--alert-red);
             border-radius: 50%;
             transform: translate(-50%, -50%);
             z-index: 100;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
         }
+        .large .clock-center { width: 16px; height: 16px; }
+        .small .clock-center { width: 10px; height: 10px; }
 
-        /* 指針共用設定 */
+        /* 百分比彈性指針 */
         .hand {
             position: absolute;
             bottom: 50%;
@@ -94,175 +152,172 @@
             z-index: 10;
             transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
         }
-
-        .hour-hand {
-            width: 8px;
-            height: 95px;
-            background-color: var(--brand-navy);
-            margin-left: -4px; 
-        }
-
-        .minute-hand {
-            width: 6px;
-            height: 130px;
-            background-color: var(--text-main);
-            margin-left: -3px; 
-        }
-
-        .second-hand {
-            width: 4px;
-            height: 145px;
-            background-color: var(--alert-red);
-            margin-left: -2px; 
-            z-index: 20;
-        }
+        .large .hour-hand { width: 8px; margin-left: -4px; height: 26%; background: var(--brand-navy); }
+        .large .minute-hand { width: 6px; margin-left: -3px; height: 38%; background: var(--text-main); }
+        .large .second-hand { width: 3px; margin-left: -1.5px; height: 44%; background: var(--alert-red); z-index: 20; }
+        
+        .small .hour-hand { width: 5px; margin-left: -2.5px; height: 26%; background: var(--brand-navy); }
+        .small .minute-hand { width: 3px; margin-left: -1.5px; height: 38%; background: var(--text-main); }
+        .small .second-hand { width: 2px; margin-left: -1px; height: 44%; background: var(--alert-red); z-index: 20; }
 
         /* ================= 日期顯示區 ================= */
-        .date-info {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        .city-date { color: var(--text-main); font-weight: 600; }
+        .large .city-date { font-size: 18px; }
+        .small .city-date { font-size: 13px; }
 
-        .hk-title {
-            font-size: 16px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 600;
-            margin-bottom: 25px;
-        }
-
-        .hk-date {
-            font-size: 26px;
-            font-weight: bold;
-            color: var(--brand-navy);
-        }
-
+        /* 專屬農曆牌 */
         .hk-lunar {
-            font-size: 18px;
+            font-size: 15px;
             color: var(--text-main);
-            background-color: #e8ebf0; 
-            padding: 10px 24px;
-            border-radius: 20px;
+            background-color: #e8ebf0;
+            padding: 8px 18px;
+            border-radius: 15px;
             display: inline-block;
-            margin: 0 auto;
+            margin-top: 12px;
             font-weight: 500;
         }
+
     </style>
 </head>
 <body>
 
-    <div class="clock-card">
-        <!-- 加入了 id="hk-title" 方便 JS 動態翻譯 -->
-        <div class="hk-title" id="hk-title">Hong Kong Standard Time</div>
-        
-        <div class="analog-clock">
-            <div class="number" style="--rot: 1;"><span>1</span></div>
-            <div class="number" style="--rot: 2;"><span>2</span></div>
-            <div class="number" style="--rot: 3;"><span>3</span></div>
-            <div class="number" style="--rot: 4;"><span>4</span></div>
-            <div class="number" style="--rot: 5;"><span>5</span></div>
-            <div class="number" style="--rot: 6;"><span>6</span></div>
-            <div class="number" style="--rot: 7;"><span>7</span></div>
-            <div class="number" style="--rot: 8;"><span>8</span></div>
-            <div class="number" style="--rot: 9;"><span>9</span></div>
-            <div class="number" style="--rot: 10;"><span>10</span></div>
-            <div class="number" style="--rot: 11;"><span>11</span></div>
-            <div class="number" style="--rot: 12;"><span>12</span></div>
+    <h1 class="dashboard-title" id="page-title">世界標準時間</h1>
 
-            <div class="hand hour-hand" id="hour-hand"></div>
-            <div class="hand minute-hand" id="minute-hand"></div>
-            <div class="hand second-hand" id="second-hand"></div>
-            <div class="clock-center"></div>
-        </div>
+    <!-- 1. 核心時鐘 (香港 & 英國) -->
+    <div class="main-clocks-container" id="main-clocks">
+        <!-- JS 自動生成 -->
+    </div>
 
-        <div class="date-info">
-            <div class="hk-date" id="gregorian-date">Loading...</div>
-            <div class="hk-lunar" id="lunar-date">Loading...</div>
-        </div>
+    <!-- 2. 簡化版分隔線 (無文字) -->
+    <div class="section-divider"></div>
+
+    <!-- 3. 其他各洲首都 -->
+    <div class="sub-clocks-container" id="sub-clocks">
+        <!-- JS 自動生成 -->
     </div>
 
     <script>
         // ================= 1. 隱藏式語言偵測 =================
-        // 從網址讀取 lang 參數 (例如：?lang=en)，如果無，預設為 tc (繁體中文)
         const urlParams = new URLSearchParams(window.location.search);
         const currentLang = urlParams.get('lang') || 'tc';
 
-        // 翻譯字典
         const i18n = {
             tc: {
-                title: "香港標準時間",
+                pageTitle: "🌍 世界標準時間",
                 lunarPrefix: "農曆 "
             },
             en: {
-                title: "Hong Kong Standard Time",
+                pageTitle: "🌍 World Standard Time",
                 lunarPrefix: "Lunar: "
             }
         };
 
-        // 即時設定頁面標題
-        document.getElementById('hk-title').innerText = i18n[currentLang].title;
-        document.title = currentLang === 'en' ? "Hong Kong Standard Time" : "香港標準時間";
+        document.getElementById('page-title').innerText = i18n[currentLang].pageTitle;
+        document.title = currentLang === 'en' ? "World Clocks" : "世界標準時間";
 
-        // 根據語言設定 DateFormatter 的地區代碼 (Locale)
-        // 英文用 en-GB (日-月-年 格式)，中文用 zh-HK
         const localeGregorian = currentLang === 'en' ? 'en-GB' : 'zh-HK';
-        // 農曆引擎設定：英文用 en-US 搭配 chinese calendar，中文用 zh-HK 搭配 chinese calendar
         const localeLunar = currentLang === 'en' ? 'en-US-u-ca-chinese' : 'zh-HK-u-ca-chinese';
 
-        // ================= 2. 時鐘與日期運作邏輯 =================
-        function updateClock() {
-            const now = new Date();
-
-            // 強制設定為香港時區計算指針
-            const timeFormatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Hong_Kong',
-                hour: 'numeric',
-                minute: 'numeric',
-                second: 'numeric',
-                hour12: false 
-            });
-
-            const timeParts = timeFormatter.formatToParts(now);
-            const hours = parseInt(timeParts.find(p => p.type === 'hour').value);
-            const minutes = parseInt(timeParts.find(p => p.type === 'minute').value);
-            const seconds = parseInt(timeParts.find(p => p.type === 'second').value);
-
-            // 計算指針旋轉角度
-            const hourDeg = (hours % 12) * 30 + (minutes * 0.5); 
-            const minuteDeg = minutes * 6 + (seconds * 0.1);    
-            const secondDeg = seconds * 6;                      
-
-            // 應用 CSS 旋轉
-            document.getElementById('hour-hand').style.transform = `rotate(${hourDeg}deg)`;
-            document.getElementById('minute-hand').style.transform = `rotate(${minuteDeg}deg)`;
-            document.getElementById('second-hand').style.transform = `rotate(${secondDeg}deg)`;
-
-            // 更新今日西曆日子 (會自動跟隨 currentLang 變換語言)
-            const gregorianFormatter = new Intl.DateTimeFormat(localeGregorian, {
-                timeZone: 'Asia/Hong_Kong',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-            });
-            document.getElementById('gregorian-date').innerText = gregorianFormatter.format(now);
-
-            // 更新農曆日子 (會自動跟隨 currentLang 將天干地支及月份轉做英文拼音/格式)
-            const lunarFormatter = new Intl.DateTimeFormat(localeLunar, {
-                timeZone: 'Asia/Hong_Kong',
-                year: 'numeric', 
-                month: 'long',
-                day: 'numeric'
-            });
+        // ================= 2. 城市數據庫與排序 =================
+        // 已經為你排好次序：主鐘 (香港 & 英國) -> 副鐘 (嚴格按距離倫敦由近至遠排列)
+        const clockData = [
+            // 主時鐘 (大)
+            { id: 'hk', tz: 'Asia/Hong_Kong', nameTc: '香港', nameEn: 'Hong Kong', size: 'large', hasLunar: true },
+            { id: 'uk', tz: 'Europe/London', nameTc: '倫敦 (英國)', nameEn: 'London (UK)', size: 'large', hasLunar: false },
             
-            document.getElementById('lunar-date').innerText = `${i18n[currentLang].lunarPrefix}${lunarFormatter.format(now)}`;
+            // 副時鐘 (小) - 已精準依照與倫敦之地理距離排序，並涵蓋各大洲
+            { id: 'fr', tz: 'Europe/Paris', nameTc: '巴黎 (法國)', nameEn: 'Paris (France)', size: 'small', hasLunar: false }, // 歐洲 (~340km)
+            { id: 'de', tz: 'Europe/Berlin', nameTc: '柏林 (德國)', nameEn: 'Berlin (Germany)', size: 'small', hasLunar: false }, // 歐洲 (~930km)
+            { id: 'it', tz: 'Europe/Rome', nameTc: '羅馬 (意大利)', nameEn: 'Rome (Italy)', size: 'small', hasLunar: false }, // 歐洲 (~1,430km)
+            { id: 'ca', tz: 'America/Toronto', nameTc: '渥太華 (加拿大)', nameEn: 'Ottawa (Canada)', size: 'small', hasLunar: false }, // 北美洲 (~5,340km)
+            { id: 'us', tz: 'America/New_York', nameTc: '華盛頓 (美國)', nameEn: 'Washington D.C. (USA)', size: 'small', hasLunar: false }, // 北美洲 (~5,900km)
+            { id: 'in', tz: 'Asia/Kolkata', nameTc: '新德里 (印度)', nameEn: 'New Delhi (India)', size: 'small', hasLunar: false }, // 印度/南亞 (~6,700km)
+            { id: 'br', tz: 'America/Sao_Paulo', nameTc: '巴西利亞 (巴西)', nameEn: 'Brasilia (Brazil)', size: 'small', hasLunar: false }, // 南美洲 (~8,700km)
+            { id: 'kr', tz: 'Asia/Seoul', nameTc: '首爾 (韓國)', nameEn: 'Seoul (South Korea)', size: 'small', hasLunar: false }, // 亞洲 (~8,850km)
+            { id: 'jp', tz: 'Asia/Tokyo', nameTc: '東京 (日本)', nameEn: 'Tokyo (Japan)', size: 'small', hasLunar: false }, // 亞洲 (~9,560km)
+            { id: 'ar', tz: 'America/Argentina/Buenos_Aires', nameTc: '布宜諾斯艾利斯 (阿根廷)', nameEn: 'Buenos Aires (Argentina)', size: 'small', hasLunar: false }, // 南美洲 (~11,100km)
+            { id: 'au', tz: 'Australia/Sydney', nameTc: '坎培拉 (澳洲)', nameEn: 'Canberra (Australia)', size: 'small', hasLunar: false } // 澳洲 (~17,000km)
+        ];
+
+        // ================= 3. 動態生成 HTML =================
+        function generateClocks() {
+            const mainContainer = document.getElementById('main-clocks');
+            const subContainer = document.getElementById('sub-clocks');
+
+            let numbersHTML = '';
+            for(let i = 1; i <= 12; i++) {
+                numbersHTML += `<div class="number" style="--rot: ${i};"><span>${i}</span></div>`;
+            }
+
+            clockData.forEach(city => {
+                const cityName = currentLang === 'en' ? city.nameEn : city.nameTc;
+                const lunarDiv = city.hasLunar ? `<div class="hk-lunar" id="lunar-${city.id}">載入中...</div>` : '';
+                
+                const cardHTML = `
+                    <div class="clock-card ${city.size}">
+                        <div class="city-name">${cityName}</div>
+                        <div class="analog-clock">
+                            ${numbersHTML}
+                            <div class="hand hour-hand" id="hour-${city.id}"></div>
+                            <div class="hand minute-hand" id="minute-${city.id}"></div>
+                            <div class="hand second-hand" id="second-${city.id}"></div>
+                            <div class="clock-center"></div>
+                        </div>
+                        <div class="city-date" id="date-${city.id}">載入中...</div>
+                        ${lunarDiv}
+                    </div>
+                `;
+
+                if (city.size === 'large') {
+                    mainContainer.innerHTML += cardHTML;
+                } else {
+                    subContainer.innerHTML += cardHTML;
+                }
+            });
         }
 
-        // 初始化並每秒更新一次
-        updateClock();
-        setInterval(updateClock, 1000);
+        // ================= 4. 時鐘與日期運作邏輯 =================
+        function updateClocks() {
+            const now = new Date();
+
+            clockData.forEach(city => {
+                const timeFormatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: city.tz,
+                    hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false 
+                });
+                const timeParts = timeFormatter.formatToParts(now);
+                const hours = parseInt(timeParts.find(p => p.type === 'hour').value);
+                const minutes = parseInt(timeParts.find(p => p.type === 'minute').value);
+                const seconds = parseInt(timeParts.find(p => p.type === 'second').value);
+
+                const hourDeg = (hours % 12) * 30 + (minutes * 0.5); 
+                const minuteDeg = minutes * 6 + (seconds * 0.1);    
+                const secondDeg = seconds * 6;                      
+
+                document.getElementById(`hour-${city.id}`).style.transform = `rotate(${hourDeg}deg)`;
+                document.getElementById(`minute-${city.id}`).style.transform = `rotate(${minuteDeg}deg)`;
+                document.getElementById(`second-${city.id}`).style.transform = `rotate(${secondDeg}deg)`;
+
+                const gregorianFormatter = new Intl.DateTimeFormat(localeGregorian, {
+                    timeZone: city.tz,
+                    month: 'short', day: 'numeric', weekday: 'short'
+                });
+                document.getElementById(`date-${city.id}`).innerText = gregorianFormatter.format(now);
+
+                if (city.hasLunar) {
+                    const lunarFormatter = new Intl.DateTimeFormat(localeLunar, {
+                        timeZone: city.tz,
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                    document.getElementById(`lunar-${city.id}`).innerText = `${i18n[currentLang].lunarPrefix}${lunarFormatter.format(now)}`;
+                }
+            });
+        }
+
+        // 啟動程序
+        generateClocks();
+        updateClocks();
+        setInterval(updateClocks, 1000);
     </script>
 
 </body>
