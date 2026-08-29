@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">香港潮汐與海洋氣象資訊 - Met Office</title>
+    
+    <!-- 引入 Chart.js 繪圖庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* 沿用 Met Office 系統嘅品牌顏色 */
+        :root {
+            --brand-navy: #112a46;
+            --brand-blue: #0984e3;
+            --brand-teal: #00cec9;
+            --bg-light: #f0f2f5;
+            --white: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --border-color: #e2e8f0;
+            --alert-red: #e74c3c;
+            --card-shadow: 0 4px 12px rgba(17, 42, 70, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* 移除 Header 後針對 iframe 內嵌優化 */
+        body { background-color: var(--bg-light); color: var(--text-main); line-height: 1.6; padding: 25px 20px; }
+
+        .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .page-header h2 { color: var(--brand-navy); font-size: 22px; display: flex; align-items: center; gap: 10px; }
+        .update-time { font-size: 13px; color: var(--text-muted); font-weight: bold; }
+
+        /* 核心海洋指標 (KPI) */
+        .marine-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .kpi-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border-top: 4px solid var(--brand-teal);
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+        .kpi-card.blue { border-top-color: var(--brand-blue); }
+        .kpi-card.navy { border-top-color: var(--brand-navy); }
+        .kpi-header { font-size: 14px; color: var(--text-muted); font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .kpi-value { font-size: 36px; font-weight: 700; color: var(--brand-navy); margin-bottom: 5px; line-height: 1; }
+        .kpi-sub { font-size: 13px; color: var(--text-muted); }
+
+        /* 兩欄式佈局：圖表與表格 */
+        .content-grid { display: grid; grid-template-columns: 1fr 380px; gap: 25px; align-items: start; }
+        
+        @media (max-width: 1024px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        .section-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        .section-title { font-size: 18px; font-weight: 700; color: var(--brand-navy); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--bg-light); padding-bottom: 10px;}
+
+        /* 潮汐圖表容器 */
+        .chart-container { width: 100%; height: 350px; position: relative; }
+
+        /* 海洋數據表格 */
+        .table-wrapper { overflow-x: auto; max-height: 500px; border: 1px solid var(--border-color); border-radius: 8px;}
+        .table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 15px; }
+        thead th {
+            background: #f8fafc; color: var(--brand-navy);
+            padding: 15px; font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky; top: 0; z-index: 10;
+        }
+        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;}
+        
+        /* 表格互動列設計 */
+        tbody tr { cursor: pointer; transition: all 0.2s ease; border-left: 4px solid transparent; }
+        tbody tr:hover { background-color: #e2e8f0; border-left-color: var(--brand-blue); transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+        tbody tr.active-row { background-color: #e0f2fe; border-left-color: var(--brand-blue); font-weight: bold; }
+        
+        .station-name { font-weight: 600; color: var(--brand-navy); }
+        
+        /* 數值標籤 */
+        .badge { padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .b-tide { background: #e0f2fe; color: #0284c7; }
+
+        /* 月相與天文資訊 */
+        .astro-box { display: flex; flex-direction: column; gap: 12px; }
+        .astro-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--bg-light); border-radius: 8px; border-left: 4px solid var(--brand-blue);}
+        .astro-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .astro-val { font-size: 15px; font-weight: 700; color: var(--brand-navy); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- 頂部標題與時間 -->
+        <div class="page-header">
+            <h2 data-i18n="page_header_title">🌊 潮汐及海洋氣象實時觀測站</h2>
+            <div class="update-time" id="last-update">--</div>
+        </div>
+        
+        <!-- 核心 KPI 看板 (全真實數據) -->
+        <div class="marine-kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-header"><span data-i18n="kpi_avg">全港平均潮汐水位</span> <span>🌊</span></div>
+                <div class="kpi-value" id="kpi-avg-tide">-- <span style="font-size: 18px;">m</span></div>
+                <div class="kpi-sub" data-i18n="kpi_sub_cd">相對於海圖基準面 (C.D.)</div>
+            </div>
+
+            <div class="kpi-card navy">
+                <div class="kpi-header"><span data-i18n="kpi_max">全港最高水位測站</span> <span>📈</span></div>
+                <div class="kpi-value" id="kpi-max-tide">-- <span style="font-size: 18px;">m</span></div>
+                <div class="kpi-sub" id="kpi-max-station">--</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header"><span data-i18n="kpi_min">全港最低水位測站</span> <span>📉</span></div>
+                <div class="kpi-value" id="kpi-min-tide">-- <span style="font-size: 18px;">m</span></div>
+                <div class="kpi-sub" id="kpi-min-station">--</div>
+            </div>
+
+            <div class="kpi-card blue">
+                <div class="kpi-header"><span data-i18n="kpi_count">活躍驗潮站數量</span> <span>📡</span></div>
+                <div class="kpi-value" id="kpi-station-count">--</div>
+                <div class="kpi-sub" data-i18n="kpi_sub_active">實時提供數據之測站</div>
+            </div>
+        </div>
+
+        <!-- 主要佈局 -->
+        <div class="content-grid">
+            
+            <!-- 左側：圖表與表格 -->
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                
+                <!-- 各區海洋測站數據表 -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <span data-i18n="tbl_title">📍 各區驗潮站即時水位</span>
+                        <small style="font-size: 12px; color: var(--text-muted); font-weight: normal; margin-left: auto;" data-i18n="tbl_click">(點擊行數切換下方預測圖表)</small>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;" data-i18n="tbl_th_station">驗潮站位置</th>
+                                    <th style="width: 50%;" data-i18n="tbl_th_tide">即時水位 (m)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tide-table-body">
+                                <tr><td colspan="2" style="text-align: center; padding: 20px;" id="loading-txt">🔄 正在從 CSV 同步實時潮汐數據...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 24小時潮汐曲線圖 -->
+                <div class="section-card">
+                    <div class="section-title" id="chart-section-title">📈 24 小時潮汐預測曲線 (載入中...)</div>
+                    <div class="chart-container">
+                        <canvas id="tideChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：天文與引力資訊 -->
+            <div class="section-card">
+                <div class="section-title" data-i18n="astro_title">🌕 月相與潮汐引力影響</div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6;" data-i18n="astro_desc">
+                    潮汐主要受月球及太陽的引力影響。滿月（望）及新月（朔）期間會出現「大潮」，水位變化最為顯著；而上弦及下弦月則會出現「小潮」。
+                </p>
+                
+                <div class="astro-box">
+                    <div class="astro-item" style="background: var(--brand-navy); border-left: none;">
+                        <div class="astro-label" style="color: #cbd5e1;" data-i18n="astro_moon_phase">今日月相 (Moon Phase)</div>
+                        <div class="astro-val" style="color: white; font-size: 18px;" id="moon-phase-ui">--</div>
+                    </div>
+                    <div class="astro-item">
+                        <div class="astro-label" data-i18n="astro_gravity">引力系數 (潮差強度)</div>
+                        <div class="astro-val" id="tidal-range-ui">--</div>
+                    </div>
+                    <div class="astro-item" id="spring-tide-warning">
+                        <div class="astro-label" data-i18n="astro_warning">大潮 / 風暴潮預警</div>
+                        <div class="astro-val" style="color: #10b981;" data-i18n="astro_safe">✅ 現時並非大潮</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ================= 1. 隱藏式語言偵測與設定 =================
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = urlParams.get('lang') === 'en' ? 'en' : 'tc';
+        document.documentElement.lang = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+
+        const i18nDict = {
+            "tc": {
+                "page_title": "香港潮汐與海洋氣象資訊 - Met Office",
+                "page_header_title": "🌊 潮汐及海洋氣象實時觀測站",
+                "kpi_avg": "全港平均潮汐水位",
+                "kpi_max": "全港最高水位測站",
+                "kpi_min": "全港最低水位測站",
+                "kpi_count": "活躍驗潮站數量",
+                "kpi_sub_cd": "相對於海圖基準面 (C.D.)",
+                "kpi_sub_station": "測站：",
+                "kpi_sub_active": "實時提供數據之測站",
+                "tbl_title": "📍 各區驗潮站即時水位",
+                "tbl_click": "(點擊行數切換下方預測圖表)",
+                "tbl_th_station": "驗潮站位置",
+                "tbl_th_tide": "即時水位 (m)",
+                "syncing": "🔄 正在從 CSV 同步實時潮汐數據...",
+                "chart_title": "24 小時潮汐預測曲線",
+                "astro_title": "🌕 月相與潮汐引力影響",
+                "astro_desc": "潮汐主要受月球及太陽的引力影響。滿月（望）及新月（朔）期間會出現「大潮」，水位變化最為顯著；而上弦及下弦月則會出現「小潮」。",
+                "astro_moon_phase": "今日月相 (Moon Phase)",
+                "astro_gravity": "引力系數 (潮差強度)",
+                "astro_warning": "大潮 / 風暴潮預警",
+                "astro_safe": "✅ 現時並非大潮",
+                "astro_danger_title": "大潮 / 風暴潮預警",
+                "astro_danger_val": "⚠️ 現正值天文大潮，低窪地區易水浸",
+                "err_load": "❌ 無法載入潮汐數據，請檢查 API 連線。",
+                "err_csv": "未能在 CSV 中找到有效的水位數據。",
+                "last_update": "最後更新：",
+                "chart_y": "水位 (m)",
+                "chart_pred": "預測水位 (m)",
+                "chart_now": " (現在真實數據)",
+                "chart_history": " (歷史推算)",
+                "chart_future": " (未來預測)"
+            },
+            "en": {
+                "page_title": "Marine & Tide Info - Met Office",
+                "page_header_title": "🌊 Real-time Marine & Tide Observatory",
+                "kpi_avg": "Avg Tide Level",
+                "kpi_max": "Max Tide Station",
+                "kpi_min": "Min Tide Station",
+                "kpi_count": "Active Tide Stations",
+                "kpi_sub_cd": "Relative to Chart Datum (C.D.)",
+                "kpi_sub_station": "Station: ",
+                "kpi_sub_active": "Stations providing real-time data",
+                "tbl_title": "📍 Real-time Tide by Station",
+                "tbl_click": "(Click row to switch chart below)",
+                "tbl_th_station": "Station Location",
+                "tbl_th_tide": "Current Tide (m)",
+                "syncing": "🔄 Syncing tide data from CSV...",
+                "chart_title": "24-Hour Tide Forecast Curve",
+                "astro_title": "🌕 Moon Phase & Tidal Force",
+                "astro_desc": "Tides are primarily affected by the gravitational pull of the moon and sun. Spring tides occur during full and new moons, causing the greatest variation in water levels.",
+                "astro_moon_phase": "Today's Moon Phase",
+                "astro_gravity": "Tidal Coefficient",
+                "astro_warning": "Spring Tide Warning",
+                "astro_safe": "✅ Not a Spring Tide",
+                "astro_danger_title": "Spring/Storm Tide Warning",
+                "astro_danger_val": "⚠️ Spring tide in effect. Low-lying areas prone to flooding.",
+                "err_load": "❌ Failed to load tide data. Please check connection.",
+                "err_csv": "No valid tide data found in CSV.",
+                "last_update": "Last Updated: ",
+                "chart_y": "Tide Level (m)",
+                "chart_pred": "Forecast Tide (m)",
+                "chart_now": " (Current Real Data)",
+                "chart_history": " (Historical Est.)",
+                "chart_future": " (Future Forecast)"
+            }
+        };
+
+        const t = i18nDict[currentLang];
+
+        // 各區測站中英翻譯對照
+        const stationEN = {
+            "鰂魚涌": "Quarry Bay", "大埔滘": "Tai Po Kau", "尖鼻咀": "Tsim Bei Tsui", "石壁": "Shek Pik", 
+            "橫瀾島": "Waglan Island", "大廟灣": "Tai Miu Wan", "長洲": "Cheung Chau", "馬灣": "Ma Wan",
+            "香港天文台": "HK Observatory", "高流灣": "Ko Lau Wan", "葵涌": "Kwai Chung", "大澳": "Tai O",
+            "赤鱲角": "Chek Lap Kok", "坪洲": "Peng Chau", "大埔": "Tai Po"
+        };
+        
+        function getStationName(tcName) {
+            return (currentLang === 'en' && stationEN[tcName]) ? stationEN[tcName] : tcName;
+        }
+
+        // 月相專屬字典
+        const moonDict = {
+            'tc': {
+                full: "🌕 滿月 (望)", new: "🌑 新月 (朔)", w_gibbous: "🌖 虧凸月", l_quarter: "🌗 下弦月", w_crescent: "🌘 殘月", wax_crescent: "🌒 娥眉月", f_quarter: "🌓 上弦月", wax_gibbous: "🌔 盈凸月",
+                spring: "極高 (大潮 / Spring Tide)", med_high: "中等偏高", neap: "較低 (小潮 / Neap Tide)", med_low: "中等偏低"
+            },
+            'en': {
+                full: "🌕 Full Moon", new: "🌑 New Moon", w_gibbous: "🌖 Waning Gibbous", l_quarter: "🌗 Last Quarter", w_crescent: "🌘 Waning Crescent", wax_crescent: "🌒 Waxing Crescent", f_quarter: "🌓 First Quarter", wax_gibbous: "🌔 Waxing Gibbous",
+                spring: "Very High (Spring Tide)", med_high: "Medium-High", neap: "Low (Neap Tide)", med_low: "Medium-Low"
+            }
+        };
+        const mT = moonDict[currentLang];
+
+        // 靜態 UI 翻譯
+        function applyLanguageUI() {
+            document.title = t.page_title;
+            document.getElementById('loading-txt').innerText = t.syncing;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.innerHTML = t[key];
+            });
+        }
+        applyLanguageUI();
+
+        // ================= 2. 數據獲取與處理 =================
+        let currentChartInstance = null; 
+
+        async function fetchCSV(url) {
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error("Direct fetch failed");
+                return await res.text();
+            } catch (err) {
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                    const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
+                    const proxyJson = await proxyRes.json();
+                    return proxyJson.contents;
+                } catch (e) {
+                    return null;
+                }
+            }
+        }
+
+        async function loadMarineData() {
+            const csvText = await fetchCSV('https://dannytcchan00.github.io/0Data/data/tide_data.csv');
+            
+            if (csvText) {
+                processCSV(csvText);
+            } else {
+                document.getElementById('tide-table-body').innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--alert-red); font-weight: bold;">${t.err_load}</td></tr>`;
+            }
+            
+            const timeLocale = currentLang === 'en' ? 'en-GB' : 'zh-HK';
+            document.getElementById('last-update').innerText = `${t.last_update}${new Date().toLocaleTimeString(timeLocale)}`;
+        }
+
+        function processCSV(csvText) {
+            const rows = csvText.split(/\r?\n/).map(r => r.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''))).filter(r => r.length >= 2 && r[0] !== "");
+            const tbody = document.getElementById('tide-table-body');
+            tbody.innerHTML = '';
+            
+            let totalTide = 0; let tideCount = 0;
+            let firstStation = null; let firstTideVal = null;
+            let maxTide = -999; let minTide = 999;
+            let maxStation = "--"; let minStation = "--";
+
+            const ignoreWords = ["地區", "Station", "水位", "Tide", "日期時間", "自動氣象站", "Date/Time", "Automatic Weather Station"];
+
+            rows.forEach((r) => {
+                let cleanedRow = r.filter(x => !ignoreWords.includes(x));
+                let tideValStr = cleanedRow.find(x => !isNaN(parseFloat(x)) && parseFloat(x) >= -5 && parseFloat(x) <= 15);
+                let tideVal = tideValStr !== undefined ? parseFloat(tideValStr) : null;
+                let station = cleanedRow.find(x => isNaN(parseFloat(x)) && x !== "" && !x.includes("-"));
+                
+                if (station && !station.includes("日期") && !station.includes("氣象站") && tideVal !== null) {
+                    
+                    if (tideCount === 0) { firstStation = station; firstTideVal = tideVal; }
+
+                    totalTide += tideVal; tideCount++;
+                    
+                    if (tideVal > maxTide) { maxTide = tideVal; maxStation = station; }
+                    if (tideVal < minTide) { minTide = tideVal; minStation = station; }
+
+                    const tr = document.createElement('tr');
+                    tr.id = `row-${station}`;
+                    tr.onclick = () => updateTideChart(getStationName(station), tideVal, tr); // 點擊時傳入翻譯後的名字
+                    
+                    tr.innerHTML = `
+                        <td class="station-name">${getStationName(station)}</td>
+                        <td><span class="badge b-tide">${tideVal.toFixed(2)} m</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            if (tideCount > 0) {
+                const avg = (totalTide / tideCount).toFixed(2);
+                document.getElementById('kpi-avg-tide').innerHTML = `${avg} <span style="font-size: 18px;">m</span>`;
+                document.getElementById('kpi-station-count').innerText = tideCount;
+                
+                document.getElementById('kpi-max-tide').innerHTML = `${maxTide.toFixed(2)} <span style="font-size: 18px;">m</span>`;
+                document.getElementById('kpi-max-station').innerText = `${t.kpi_sub_station}${getStationName(maxStation)}`;
+                
+                document.getElementById('kpi-min-tide').innerHTML = `${minTide.toFixed(2)} <span style="font-size: 18px;">m</span>`;
+                document.getElementById('kpi-min-station').innerText = `${t.kpi_sub_station}${getStationName(minStation)}`;
+                
+                if (!currentChartInstance && firstStation) {
+                    const firstRow = document.getElementById(`row-${firstStation}`);
+                    updateTideChart(getStationName(firstStation), firstTideVal, firstRow);
+                }
+            } else {
+                tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--alert-red);">${t.err_csv}</td></tr>`;
+            }
+        }
+
+        // ================= 3. 動態渲染圖表與月相 =================
+        function updateTideChart(stationName, currentTide, rowElement) {
+            document.querySelectorAll('#tide-table-body tr').forEach(row => row.classList.remove('active-row'));
+            if (rowElement) rowElement.classList.add('active-row');
+
+            document.getElementById('chart-section-title').innerHTML = `📈 ${t.chart_title} <span style="color: var(--brand-blue);">(${stationName})</span>`;
+
+            const ctx = document.getElementById('tideChart').getContext('2d');
+            if (currentChartInstance) currentChartInstance.destroy();
+            
+            const labels = []; const tideData = [];
+            const now = new Date(); const currentHour = now.getHours();
+            
+            for (let i = 0; i <= 24; i++) {
+                let time = new Date(now);
+                time.setHours(currentHour - 12 + i);
+                labels.push(`${time.getHours()}:00`);
+                
+                let simulatedTide = currentTide + Math.sin((i - 12) / 6.2 * Math.PI) * 1.1;
+                if (simulatedTide < 0.1) simulatedTide = 0.1;
+                tideData.push(simulatedTide.toFixed(2));
+            }
+
+            currentChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${stationName} ${t.chart_pred}`,
+                        data: tideData,
+                        borderColor: '#0984e3',
+                        backgroundColor: 'rgba(9, 132, 227, 0.15)',
+                        borderWidth: 3,
+                        pointBackgroundColor: (ctx) => ctx.dataIndex === 12 ? '#e74c3c' : '#ffffff',
+                        pointBorderColor: (ctx) => ctx.dataIndex === 12 ? '#e74c3c' : '#0984e3',
+                        pointRadius: (ctx) => ctx.dataIndex === 12 ? 6 : 0, 
+                        pointHoverRadius: 7, tension: 0.4, fill: true
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { 
+                            mode: 'index', intersect: false,
+                            callbacks: {
+                                title: function(context) {
+                                    if (context[0].dataIndex === 12) return context[0].label + t.chart_now;
+                                    return context[0].label + (context[0].dataIndex < 12 ? t.chart_history : t.chart_future);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 0, suggestedMax: 3.5, grid: { borderDash: [4, 4], color: '#e2e8f0' }, title: { display: true, text: t.chart_y } },
+                        x: { grid: { display: false } }
+                    },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                }
+            });
+        }
+
+        function calculateMoonPhase() {
+            const today = new Date();
+            const fullMoonDate = new Date('2026-08-28');
+            const diffDays = Math.round((today - fullMoonDate) / (1000 * 60 * 60 * 24));
+            
+            let phaseStr = ""; let tidalRange = ""; let isSpringTide = false;
+            const cycleDay = ((15 + diffDays) % 30 + 30) % 30; // 確保正數
+            
+            if (cycleDay === 15 || cycleDay === 16 || cycleDay === 0 || cycleDay === 1) {
+                phaseStr = cycleDay >= 15 ? mT.full : mT.new;
+                tidalRange = mT.spring; isSpringTide = true;
+            } else if (cycleDay > 15 && cycleDay < 22) {
+                phaseStr = mT.w_gibbous; tidalRange = mT.med_high;
+            } else if (cycleDay === 22 || cycleDay === 23) {
+                phaseStr = mT.l_quarter; tidalRange = mT.neap;
+            } else if (cycleDay > 23) {
+                phaseStr = mT.w_crescent; tidalRange = mT.med_low;
+            } else if (cycleDay > 1 && cycleDay < 7) {
+                phaseStr = mT.wax_crescent; tidalRange = mT.med_low;
+            } else if (cycleDay === 7 || cycleDay === 8) {
+                phaseStr = mT.f_quarter; tidalRange = mT.neap;
+            } else {
+                phaseStr = mT.wax_gibbous; tidalRange = mT.med_high;
+            }
+
+            document.getElementById('moon-phase-ui').innerText = phaseStr;
+            document.getElementById('tidal-range-ui').innerText = tidalRange;
+            
+            if (isSpringTide) {
+                document.getElementById('spring-tide-warning').innerHTML = `
+                    <div class="astro-label" style="color: var(--alert-red);">${t.astro_danger_title}</div>
+                    <div class="astro-val" style="color: var(--alert-red);">${t.astro_danger_val}</div>
+                `;
+            } else {
+                document.getElementById('spring-tide-warning').innerHTML = `
+                    <div class="astro-label">${t.astro_warning}</div>
+                    <div class="astro-val" style="color: #10b981;">${t.astro_safe}</div>
+                `;
+            }
+        }
+
+        // 初始化執行
+        loadMarineData();
+        calculateMoonPhase();
+        setInterval(loadMarineData, 180000);
+
+    </script>
+</body>
+</html>
