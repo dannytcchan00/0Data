@@ -79,7 +79,7 @@
         .typhoon-status { flex: 1; padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 12px; border-left: 3px solid var(--brand-blue); line-height: 1.5; }
         
         .timing-box { margin-top: 10px; padding: 8px 12px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; font-size: 12.5px; color: #b78103; display: flex; align-items: center; gap: 6px; }
-        .timing-box strong { color: #d35400; font-size: 13px; }
+        .timing-box strong { color: #d35400; font-size: 13px; line-height: 1.4; }
         
         .pred-reason { 
             font-size: 12.5px; color: var(--text-muted); text-align: left; 
@@ -218,7 +218,8 @@
                 "title_hko": "🇭🇰 香港天文台預測路徑與影響範圍", "title_ncdr": "🌐 各國機構颱風預測路徑",
                 "click_details": "(點擊查看24小時圖表)",
                 "loading_data": "🔄 正在讀取數據...", "loading_wind": "🔄 正在載入風力數據...", "loading_rain": "🔄 正在載入雨量數據...",
-                "no_wind": "暫無風速數據", "no_rain": "暫無降雨數據", "no_typhoon": "現時西北太平洋並無活躍熱帶氣旋",
+                "no_wind": "暫無風速數據", "no_rain": "暫無降雨數據",
+                "no_typhoon_1200": "現時本港 1200 公里內並無活躍熱帶氣旋",
                 "system_name": "系統：", "centre_pos": "中心：", "lat": "北緯", "lon": "東經",
                 "distance": "距港：", "approx": "約", "km": "公里",
                 "latest_pos": "最新預測起點", "forecast_track": "預測路徑",
@@ -240,7 +241,8 @@
                 "title_hko": "🇭🇰 HKO Forecast Track", "title_ncdr": "🌐 International Forecasts",
                 "click_details": "(Click for 24h Chart)",
                 "loading_data": "🔄 Loading...", "loading_wind": "🔄 Loading wind...", "loading_rain": "🔄 Loading rain...",
-                "no_wind": "No wind data.", "no_rain": "No rainfall data.", "no_typhoon": "No active tropical cyclones.",
+                "no_wind": "No wind data.", "no_rain": "No rainfall data.",
+                "no_typhoon_1200": "No active tropical cyclones within 1200 km of HK.",
                 "system_name": "System: ", "centre_pos": "Pos: ", "lat": "N", "lon": "E",
                 "distance": "Dist: ", "approx": "Approx. ", "km": "km",
                 "latest_pos": "Latest Position", "forecast_track": "Forecast Track",
@@ -363,10 +365,8 @@
             return lang === 'en' ? arrEN[(val % 16)] : arrTC[(val % 16)];
         }
 
-        // ================= 💡 破壞快取機制 (Cache-Busting Fetch) =================
         async function fetchResource(url) {
             try {
-                // 每次請求加上隨機時間戳，防止被 proxy 嚴重快取
                 const tsUrl = url + (url.includes('?') ? '&' : '?') + '_=' + new Date().getTime();
                 const res = await fetch(tsUrl, { cache: 'no-store' });
                 if (!res.ok) throw new Error("Fetch failed");
@@ -379,7 +379,6 @@
             }
         }
 
-        // ================= 地圖及資料函數 =================
         const HK_LAT = 22.3027; const HK_LON = 114.1772;
         let hkoMap, ncdrMap, chartInstance = null;
         let hkoTyphoonLayer = null, ncdrTyphoonLayer = null;
@@ -426,10 +425,35 @@
             ncdrTyphoonLayer = L.layerGroup().addTo(ncdrMap);
         }
 
-        // ================= 解析 HKO XML (加入 7 大進階氣象因素 + 強制防快取) =================
+        // ================= 解析 HKO XML =================
         async function loadHKOTyphoonTrack() {
             const langRef = i18nDict[currentLang];
             const multiContainer = document.getElementById('multi-typhoon-container');
+
+            // 💡 1. 抓取官方文字警告，精簡輸出 (只取結論)
+            let officialOutlookText = "";
+            try {
+                const warnTextRaw = await fetchResource('https://dannytcchan00.github.io/0Data/data/weather_warning.xml');
+                let cleanText = warnTextRaw.replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1').replace(/<[^>]+>/g, ' ');
+                let sentences = cleanText.split(/。|！|？|\.\s/);
+                let validSentences = [];
+                for (let s of sentences) {
+                    let trimmed = s.trim();
+                    if (!trimmed) continue;
+                    let isTcRelated = /風球|信號|熱帶氣旋|signal|tropical cyclone/i.test(trimmed);
+                    let isTimingRelated = /維持|改發|考慮|機會|將於|取代|remain|issue|consider|chance|replace/i.test(trimmed);
+                    if (isTcRelated && isTimingRelated) {
+                        validSentences.push(trimmed + (/[a-zA-Z]$/.test(trimmed) ? '.' : '。'));
+                    }
+                }
+                if (validSentences.length > 0) {
+                    // 只抽取最後一句最關鍵嘅結論，保持簡潔
+                    let finalSentence = validSentences[validSentences.length - 1];
+                    // 移除開頭可能多餘嘅字眼，直接出重點
+                    finalSentence = finalSentence.replace(/^(天文台會|天文台預料|預料|天文台表示|預計|我們預料)/, '');
+                    officialOutlookText = finalSentence.charAt(0).toUpperCase() + finalSentence.slice(1);
+                }
+            } catch(e) { console.warn("Failed to fetch official warning text", e); }
 
             let qual41Count = 0; let qual63Count = 0;
             try {
@@ -444,11 +468,11 @@
                     let nums = r.filter(x => !isNaN(parseFloat(x)));
                     if (textItems.length > 0 && nums.length > 0) {
                         let station = textItems[0];
-                        let speed = parseFloat(nums[0]);
+                        let sustainedSpeed = parseFloat(nums[0]);
                         if (refStations.has(station) && !stMap.has(station)) {
                             stMap.add(station);
-                            if (speed >= 41) qual41Count++;
-                            if (speed >= 63) qual63Count++;
+                            if (sustainedSpeed >= 41) qual41Count++;
+                            if (sustainedSpeed >= 63) qual63Count++;
                         }
                     }
                 });
@@ -457,7 +481,6 @@
             try {
                 let activeTCSignal = 0;
                 try {
-                    // 💡 確保讀取到絕對最新嘅天文台警告 (使用 code 精準配對)
                     const warnRes = await fetchResource(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc`);
                     let warnData;
                     try { warnData = typeof warnRes === 'string' ? JSON.parse(warnRes) : warnRes; } catch(err) { warnData = warnRes; }
@@ -480,7 +503,7 @@
                             }
                         }
                     }
-                } catch (e) { console.warn("Warning Fetch Failed, bypassing:", e); }
+                } catch (e) { console.warn("Warning Fetch Failed, continuing:", e); }
 
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/current_typhoon.xml');
                 const xml = new DOMParser().parseFromString(text, "text/xml");
@@ -489,7 +512,7 @@
                 if (typhoonCarouselInterval) clearInterval(typhoonCarouselInterval);
 
                 if (tracks.length === 0) {
-                    multiContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px; width: 100%;">${langRef.no_typhoon}</div>`;
+                    multiContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px; width: 100%;">${langRef.no_typhoon_1200}</div>`;
                     return;
                 }
 
@@ -499,6 +522,7 @@
 
                 const tcColors = ['#e74c3c', '#9b59b6', '#0984e3', '#e67e22', '#1abc9c'];
                 let allHkoBounds = [[HK_LAT, HK_LON]];
+                let renderedCardsCount = 0;
 
                 tracks.forEach((trackNode, index) => {
                     const report = trackNode.querySelector('WeatherReport');
@@ -562,6 +586,16 @@
                         });
                     }
 
+                    const typhoonIcon = L.divIcon({ className: 'custom-icon', html: `<div class='typhoon-emoji' style="color:${tcColor}; text-shadow:0 0 5px rgba(255,255,255,0.8);">🌀</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+                    L.marker([curLat, curLon], { icon: typhoonIcon }).addTo(hkoTyphoonLayer).bindPopup(`<b>${tcName}</b><br>${curIntensity}`);
+                    L.polyline(forecastTrack, { color: tcColor, weight: 3, dashArray: '5,5' }).addTo(hkoTyphoonLayer);
+
+                    if (distance > 1200 && closestDist > 1200) {
+                        return;
+                    }
+
+                    renderedCardsCount++;
+
                     let intensityMultiplier = 1.0;
                     if (windNum < 41) intensityMultiplier = 0.1;       
                     else if (windNum <= 62) intensityMultiplier = 0.5; 
@@ -595,7 +629,6 @@
                     p1 = Math.max(0, Math.min(99, p1)); p3 = Math.max(0, Math.min(99, p3));
                     p8 = Math.max(0, Math.min(99, p8)); p9 = Math.max(0, Math.min(99, p9)); p10 = Math.max(0, Math.min(99, p10));
 
-                    // 💡 動態雙向升降級演算法
                     let targetSig = 1; let targetProb = 0; let isDowngrade = false;
                     
                     if (activeTCSignal === 0) { 
@@ -621,7 +654,7 @@
                         else { targetSig = 10; targetProb = 100; } 
                     }
 
-                    targetProb = Math.max(0, Math.min(100, targetProb)); // 安全鎖
+                    targetProb = Math.max(0, Math.min(100, targetProb));
 
                     let currentSigText = activeTCSignal > 0 ? `T${activeTCSignal}` : langRef.none;
                     let targetSigText = targetSig > 0 ? `T${targetSig}` : langRef.none;
@@ -641,33 +674,40 @@
 
                     let thresholdDistance = 800;
                     if (targetSig === 3) thresholdDistance = 450; else if (targetSig === 8) thresholdDistance = 280; else if (targetSig >= 9) thresholdDistance = 120;
+                    
+                    // 💡 標籤永遠保持為「預估信號更改時段」
+                    let timingLabel = langRef.est_timing_lbl;
                     let estimatedTimeText = "";
 
-                    // 💡 修復時間推算邏輯 (涵蓋降級)
-                    if (targetSig === activeTCSignal && activeTCSignal !== 0) { 
-                        estimatedTimeText = langRef.already_in_force; 
-                    } else if (isDowngrade) {
-                        let downThresh = 400;
-                        if (activeTCSignal === 3) downThresh = 450;
-                        else if (activeTCSignal === 8) downThresh = 280;
-                        else if (activeTCSignal >= 9) downThresh = 120;
-
-                        let exitPt = forecastPts.find(p => p.dist > downThresh && p.time > baseDate);
-                        if (exitPt && targetProb >= 30) {
-                            estimatedTimeText = formatForecastTiming(exitPt.time);
-                        } else {
-                            estimatedTimeText = langRef.imminent;
-                        }
-                    } else if (targetProb >= 85 && distance <= thresholdDistance) { 
-                        estimatedTimeText = langRef.imminent; 
+                    // 若抓取到官方文本，直接採用
+                    if (officialOutlookText !== "") {
+                        estimatedTimeText = officialOutlookText;
                     } else {
-                        let triggerPt = forecastPts.find(p => p.dist <= thresholdDistance && p.time > baseDate);
-                        if (triggerPt && targetProb >= 25) { 
-                            estimatedTimeText = formatForecastTiming(triggerPt.time); 
-                        } else if (targetProb >= 40) {
-                            let closestPt = forecastPts.reduce((min, p) => p.dist < min.dist ? p : min, forecastPts[0] || { dist: 9999, time: baseDate });
-                            if (closestPt) estimatedTimeText = formatForecastTiming(closestPt.time); else estimatedTimeText = langRef.unlikely;
-                        } else { estimatedTimeText = langRef.unlikely; }
+                        if (targetSig === activeTCSignal && activeTCSignal !== 0) { 
+                            estimatedTimeText = langRef.already_in_force; 
+                        } else if (isDowngrade) {
+                            let downThresh = 400;
+                            if (activeTCSignal === 3) downThresh = 450;
+                            else if (activeTCSignal === 8) downThresh = 280;
+                            else if (activeTCSignal >= 9) downThresh = 120;
+
+                            let exitPt = forecastPts.find(p => p.dist > downThresh && p.time > baseDate);
+                            if (exitPt && targetProb >= 30) {
+                                estimatedTimeText = formatForecastTiming(exitPt.time);
+                            } else {
+                                estimatedTimeText = langRef.imminent;
+                            }
+                        } else if (targetProb >= 85 && distance <= thresholdDistance) { 
+                            estimatedTimeText = langRef.imminent; 
+                        } else {
+                            let triggerPt = forecastPts.find(p => p.dist <= thresholdDistance && p.time > baseDate);
+                            if (triggerPt && targetProb >= 25) { 
+                                estimatedTimeText = formatForecastTiming(triggerPt.time); 
+                            } else if (targetProb >= 40) {
+                                let closestPt = forecastPts.reduce((min, p) => p.dist < min.dist ? p : min, forecastPts[0] || { dist: 9999, time: baseDate });
+                                if (closestPt) estimatedTimeText = formatForecastTiming(closestPt.time); else estimatedTimeText = langRef.unlikely;
+                            } else { estimatedTimeText = langRef.unlikely; }
+                        }
                     }
 
                     let distStr = Math.round(distance);
@@ -676,49 +716,49 @@
                     let reasonHTML = "";
                     if (currentLang === 'tc') {
                         if (isDowngrade) {
-                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>氣旋正逐漸遠離或減弱，本港風力威脅減退，預料<b>${targetSig===0?"取消所有信號":`降級至 T${targetSig}`}</b>的機率為 ${lvl.text}。`;
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>氣旋正逐漸減弱或移離本港，持續風力威脅減退，預料<b>${targetSig===0?"取消所有信號":`降級至 T${targetSig}`}</b>的機率為 ${lvl.text}。`;
                         } else if (activeTCSignal === 10 && targetSig === 10) { 
-                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>氣旋中心風力達 ${curWind}。`; 
+                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>氣旋中心持續風力達 ${curWind}。`; 
                         } else if (targetProb >= 99) { 
                             reasonHTML = `<strong>${langRef.rationale_met}</strong><br>氣旋極為接近，預料即將改發 T${targetSig} 信號。`; 
                         } else { 
                             let analysisPts = [];
-                            if (isWestLandfall) analysisPts.push("預測於香港以西掠過 (危險半圓)，轉吹東南風後風力將顯著急升");
-                            else analysisPts.push("預測於以東登陸，受內陸地形屏蔽，風力影響相對較細");
+                            if (isWestLandfall) analysisPts.push("預測於本港以西登陸 (危險半圓)，轉吹偏南風後持續風力將顯著急升");
+                            else analysisPts.push("預測於本港以東登陸，受內陸地形屏蔽，持續風力影響相對較小");
                             
-                            if (isAutumn && distance > 300) analysisPts.push("結合東北季候風效應，氣壓梯度大增");
-                            if (windNum <= 62) analysisPts.push("中心風力偏弱，環流較細小");
+                            if (isAutumn && distance > 300) analysisPts.push("結合東北季候風共同效應，氣壓梯度顯著增大");
+                            if (windNum <= 62) analysisPts.push("中心持續風力偏弱，環流較細小");
                             
                             if ((targetSig === 3 || targetSig === 8) && qual41Count >= 4) {
-                                analysisPts.push(`本港8個參考測風站已有 ${qual41Count} 個錄得強風，達標指標已啟動`);
+                                analysisPts.push(`本港8個參考測風站已有 ${qual41Count} 個錄得持續強風，已達指標`);
                             } else if (targetSig >= 9 && closestDist > 80) {
-                                analysisPts.push("預料核心颶風圈將不會直接掃過本港");
+                                analysisPts.push("預料核心颶風眼壁將不會直接橫過本港");
                             }
 
-                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>中心最高持續風速為 ${curWind}。${analysisPts.join('；')}。系統綜合評估後，預測升級至 <b>T${targetSig}</b> 的機率為 ${lvl.text}。`; 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>中心最高持續風速為 ${curWind}。${analysisPts.join('；')}。系統綜合評估持續風力指標後，預測升級至 <b>T${targetSig}</b> 的機率為 ${lvl.text}。`; 
                         }
                     } else {
                         if (isDowngrade) {
-                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>System is weakening/moving away. Prob of <b>${targetSig===0?"cancelling all signals":`downgrading to T${targetSig}`}</b> is ${lvl.text}.`;
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>System is moving away/weakening. Sustained winds easing. Prob of <b>${targetSig===0?"cancelling all signals":`downgrading to T${targetSig}`}</b> is ${lvl.text}.`;
                         } else if (activeTCSignal === 10 && targetSig === 10) { 
-                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>Center wind is ${curWind}.`; 
+                            reasonHTML = `<strong>${langRef.rationale_t10}</strong><br>Maximum sustained wind is ${curWind}.`; 
                         } else if (targetProb >= 99) { 
                             reasonHTML = `<strong>${langRef.rationale_met}</strong><br>Cyclone is very close. Issuance of T${targetSig} is imminent.`; 
                         } else { 
                             let analysisPts = [];
-                            if (isWestLandfall) analysisPts.push("West landfall expected (dangerous semi-circle) with surging SE winds");
+                            if (isWestLandfall) analysisPts.push("West landfall expected (dangerous semi-circle) with surging sustained winds");
                             else analysisPts.push("East landfall expected with terrain shielding");
                             
-                            if (isAutumn && distance > 300) analysisPts.push("monsoon interaction amplifies wind");
-                            if (windNum <= 62) analysisPts.push("weak intensity and small circulation");
+                            if (isAutumn && distance > 300) analysisPts.push("monsoon interaction amplifies pressure gradient");
+                            if (windNum <= 62) analysisPts.push("weak sustained intensity and compact circulation");
 
                             if ((targetSig === 3 || targetSig === 8) && qual41Count >= 4) {
-                                analysisPts.push(`threshold triggered (${qual41Count}/8 reference stations hit)`);
+                                analysisPts.push(`sustained wind criteria met (${qual41Count}/8 reference stations hit)`);
                             } else if (targetSig >= 9 && closestDist > 80) {
-                                analysisPts.push("core hurricane zone will likely miss HK");
+                                analysisPts.push("core hurricane eyewall will likely miss HK");
                             }
 
-                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Wind speed is ${curWind}. ${analysisPts.join('; ')}. Prob of upgrading to <b>T${targetSig}</b> is ${lvl.text}.`; 
+                            reasonHTML = `<strong>${langRef.rationale_title}</strong><br>Maximum sustained wind is ${curWind}. ${analysisPts.join('; ')}. Evaluated on 10-min sustained wind criteria, prob of upgrading to <b>T${targetSig}</b> is ${lvl.text}.`; 
                         }
                     }
 
@@ -727,11 +767,7 @@
                             <div class="tc-card-header" style="color: ${tcColor};">🌀 ${tcName} <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-left:auto;">(${curIntensity})</span></div>
                             <div class="tc-card-body">
                                 <div class="pred-signal-container">
-                                    <div class="signal-transition">
-                                        ${currentIconHtml}
-                                        <div class="transition-arrow">➔</div>
-                                        ${targetIconHtml}
-                                    </div>
+                                    <div class="signal-transition">${currentIconHtml}<div class="transition-arrow">➔</div>${targetIconHtml}</div>
                                     <div class="prob-bar-wrapper">
                                         ${textLevelHtml}
                                         <div class="prob-segments">${segmentsHtml}</div>
@@ -743,24 +779,24 @@
                                     ${activeWarnHtmlText}
                                 </div>
                             </div>
-                            <div class="timing-box"><span>${langRef.est_timing_lbl}</span><strong>${estimatedTimeText}</strong></div>
+                            <div class="timing-box"><span>${timingLabel}</span><strong>${estimatedTimeText}</strong></div>
                             <div class="pred-reason">${reasonHTML}</div>
                         </div>
                     `;
                     multiContainer.innerHTML += cardHtml;
-
-                    const typhoonIcon = L.divIcon({ className: 'custom-icon', html: `<div class='typhoon-emoji' style="color:${tcColor}; text-shadow:0 0 5px rgba(255,255,255,0.8);">🌀</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
-                    L.marker([curLat, curLon], { icon: typhoonIcon }).addTo(hkoTyphoonLayer).bindPopup(`<b>${tcName}</b><br>${curIntensity}`);
-                    L.polyline(forecastTrack, { color: tcColor, weight: 3, dashArray: '5,5' }).addTo(hkoTyphoonLayer);
                 });
+
+                if (renderedCardsCount === 0) {
+                    multiContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px; width: 100%;">${langRef.no_typhoon_1200}</div>`;
+                }
 
                 if (allHkoBounds.length > 1) { hkoMap.fitBounds(allHkoBounds, { padding: [40, 40] }); }
 
-                if (tracks.length > 1) {
+                if (renderedCardsCount > 1) {
                     let currentCardIndex = 0; let slideDir = 1; 
                     typhoonCarouselInterval = setInterval(() => {
                         currentCardIndex += slideDir;
-                        if (currentCardIndex >= tracks.length - 1) { currentCardIndex = tracks.length - 1; slideDir = -1; } 
+                        if (currentCardIndex >= renderedCardsCount - 1) { currentCardIndex = renderedCardsCount - 1; slideDir = -1; } 
                         else if (currentCardIndex <= 0) { currentCardIndex = 0; slideDir = 1; }
                         const cardWidth = multiContainer.clientWidth;
                         multiContainer.scrollTo({ left: currentCardIndex * cardWidth, behavior: 'smooth' });
@@ -773,6 +809,7 @@
             }
         }
 
+        // ================= 讀取實時風速風向 =================
         async function fetchWindData() {
             try {
                 const text = await fetchResource('https://dannytcchan00.github.io/0Data/data/wind_data.csv');
