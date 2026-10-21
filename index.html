@@ -401,9 +401,64 @@
         .bus-dir-btn.kmb { border-left: 4px solid var(--kmb-accent); }
         .bus-dir-btn.ctb { border-left: 4px solid var(--ctb-accent); }
         
-        .bus-stop-list { max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--panel-border); }
-        .bus-stop-item { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; font-weight: 500; display:flex; align-items:center; gap:12px; margin:0; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-main); }
+        .bus-stop-list { max-height: 44vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--panel-border); }
+        .stop-item-group { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .stop-item-group:last-child { border-bottom: none; }
+        .bus-stop-item { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; font-weight: 500; display:flex; align-items:center; gap:12px; margin:0; color: var(--text-main); }
         .bus-stop-item input[type="checkbox"] { transform: scale(1.2); cursor: pointer; accent-color: var(--accent-green); }
+
+        /* ✨ 揀選巴士站時即時彈出嘅同站其他路線選單 */
+        @keyframes slideDownDrawer {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .same-stop-drawer {
+            margin: 0 12px 12px 36px;
+            padding: 10px 12px;
+            background: var(--subtle-bg);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-left: 3px solid var(--accent-green);
+            border-radius: var(--radius-sm);
+            animation: slideDownDrawer 0.2s ease-out;
+        }
+        .same-stop-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .same-stop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+            gap: 6px;
+        }
+        .same-stop-route-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 9px;
+            background: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+        .same-stop-route-card:hover {
+            background: #303034;
+            border-color: rgba(255,255,255,0.18);
+        }
+        .same-stop-route-card input[type="checkbox"] {
+            transform: scale(1.15);
+            cursor: pointer;
+            accent-color: var(--accent-green);
+            flex-shrink: 0;
+        }
         
         .multi-add-bar { position: sticky; bottom: -15px; background: var(--card-bg); padding: 12px 15px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-top: 1px solid var(--panel-border); border-radius: var(--radius-md); }
 
@@ -667,12 +722,12 @@
         </div>
     </div>
 
-    <!-- Bus Manager Modal -->
+    <!-- Bus Manager Modal (上限已提升至 110 條) -->
     <div id="bus-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="t-sel-bus">設定巴士追蹤</h3>
-                <div class="modal-count"><span id="bus-select-count">0</span> / 60</div>
+                <div class="modal-count"><span id="bus-select-count">0</span> / 110</div>
             </div>
             <div class="modal-body">
                 <!-- 搜尋介面 -->
@@ -1744,27 +1799,230 @@
             let resDiv = document.getElementById('bus-search-results'); resDiv.innerHTML = `<div class="anim-pulse" style="text-align:center; color:var(--text-muted); font-weight:600; padding: 20px;"><span class="icon-spin">⏳</span> ${currentLang==='en'?'Loading Stops...':'讀取緊沿途車站...'}</div>`;
             try {
                 let rName = currentLang === 'en' ? destNameEn : destNameTc;
-                let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border); padding-bottom:10px; margin-bottom:12px;"><span style="color:var(--text-main); font-size:1rem; font-weight:700;">${i18n[currentLang]['txt-to']}${rName} <br><span style="color:var(--text-muted); font-size:0.8rem;">(${currentLang==='en'?'Multi-select':'可打剔多選'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
+                let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border); padding-bottom:10px; margin-bottom:12px;"><span style="color:var(--text-main); font-size:1rem; font-weight:700;">${i18n[currentLang]['txt-to']}${rName} <br><span style="color:var(--text-muted); font-size:0.8rem;">(${currentLang==='en'?'Check a stop to see other routes at the same stop':'打剔車站會即時彈出同站其他路線俾你一併加入'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
                 if (co === 'kmb') {
                     let d = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${service_type}`).then(r=>r.json());
+                    let kmbStops = await fetchKmbStopsCache();
                     for (let s of d.data) {
-                        let st = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
+                        let cachedSt = kmbStops ? kmbStops.find(x => x.stop === s.stop) : null;
+                        let st = cachedSt ? { data: cachedSt } : await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         let nameTc = st?.data?.name_tc || `車站 ${s.stop}`; let nameEn = st?.data?.name_en || `Stop ${s.stop}`;
-                        let val = encodeURIComponent(JSON.stringify({ co, route, stop: s.stop, name_tc: nameTc, name_en: nameEn, dest_tc: destNameTc, dest_en: destNameEn, service_type: service_type }));
-                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><span>🚏 ${currentLang==='en'?nameEn:nameTc}</span></label>`;
+                        let val = encodeURIComponent(JSON.stringify({ co, route, stop: s.stop, name: nameTc, name_tc: nameTc, name_en: nameEn, dest: destNameTc, dest_tc: destNameTc, dest_en: destNameEn, service_type: service_type }));
+                        html += `
+                            <div class="stop-item-group">
+                                <label class="bus-stop-item">
+                                    <input type="checkbox" class="stop-cb" value="${val}" onchange="handleStopCheck(this)">
+                                    <span>🚏 ${currentLang==='en'?nameEn:nameTc}</span>
+                                </label>
+                                <div class="same-stop-drawer" style="display:none;"></div>
+                            </div>`;
                     }
                 } else {
                     let d = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`).then(r=>r.json());
                     for (let s of d.data) {
                         let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
                         let nameTc = st?.data?.name_tc || `車站 ${s.stop}`; let nameEn = st?.data?.name_en || `Stop ${s.stop}`;
-                        let val = encodeURIComponent(JSON.stringify({ co, route, stop: s.stop, name_tc: nameTc, name_en: nameEn, dest_tc: destNameTc, dest_en: destNameEn }));
-                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><span>🚏 ${currentLang==='en'?nameEn:nameTc}</span></label>`;
+                        let val = encodeURIComponent(JSON.stringify({ co, route, stop: s.stop, name: nameTc, name_tc: nameTc, name_en: nameEn, dest: destNameTc, dest_tc: destNameTc, dest_en: destNameEn, service_type: '1' }));
+                        html += `
+                            <div class="stop-item-group">
+                                <label class="bus-stop-item">
+                                    <input type="checkbox" class="stop-cb" value="${val}" onchange="handleStopCheck(this)">
+                                    <span>🚏 ${currentLang==='en'?nameEn:nameTc}</span>
+                                </label>
+                                <div class="same-stop-drawer" style="display:none;"></div>
+                            </div>`;
                     }
                 }
                 html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:700; color:var(--text-main);">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`; resDiv.innerHTML = html;
             } catch(e) { resDiv.innerHTML = `<div style="color:var(--warning-red); text-align:center; font-weight:600;">Failed to load</div><button class="btn-back" onclick="resetBusSearchUI()">Back</button>`; }
         }
+
+        // ==========================================
+        // ✨ 當揀選某個巴士站時，即時彈出同站嘅其他路線供一併加入
+        // ==========================================
+        window.handleStopCheck = async function(cb) {
+            updateSelectedCount();
+            const group = cb.closest('.stop-item-group');
+            if (!group) return;
+            const drawer = group.querySelector('.same-stop-drawer');
+            if (!drawer) return;
+
+            if (!cb.checked) {
+                // 如果取消勾選主車站，且同站彈出清單入面冇勾選其他路線，就收起彈出框
+                const anyInnerChecked = drawer.querySelectorAll('.stop-cb:checked').length > 0;
+                if (!anyInnerChecked) {
+                    drawer.style.display = 'none';
+                }
+                return;
+            }
+
+            drawer.style.display = 'block';
+            if (drawer.dataset.loaded === 'true') return;
+
+            drawer.innerHTML = `<div class="anim-pulse" style="font-size:0.8rem; color:var(--text-muted); padding:4px 0;"><span class="icon-spin">🔄</span> ${currentLang==='en'?'Finding other routes at this stop...':'正在搜尋同站其他路線...'}</div>`;
+
+            try {
+                const target = JSON.parse(decodeURIComponent(cb.value));
+                const targetCleanTc = cleanStopName(target.name_tc || target.name || '');
+                const targetCleanEn = cleanStopName(target.name_en || '');
+                const foundMap = new Map();
+
+                // 1. 搜尋本地 busDict 數據庫入面同站號或同名嘅所有九巴/城巴路線
+                if (isBusDataReady && busDict) {
+                    let allItems = [];
+                    if (Array.isArray(busDict)) {
+                        allItems = busDict;
+                    } else {
+                        for (let key in busDict) {
+                            let val = busDict[key];
+                            if (Array.isArray(val)) allItems.push(...val);
+                            else if (typeof val === 'object' && val !== null) allItems.push(val);
+                        }
+                    }
+
+                    allItems.forEach(item => {
+                        if (!item || typeof item !== 'object') return;
+                        let sId = String(item.stop || item.stopId || '').trim();
+                        if (!sId) return;
+
+                        let nTc = item.name_tc || item.name || '';
+                        let nEn = item.name_en || '';
+                        let cTc = cleanStopName(nTc);
+                        let cEn = cleanStopName(nEn);
+
+                        let isSameStop = (sId === target.stop) ||
+                            (targetCleanTc && cTc && cTc === targetCleanTc) ||
+                            (targetCleanEn && cEn && cEn.toLowerCase() === targetCleanEn.toLowerCase());
+
+                        if (isSameStop) {
+                            let rawCo = String(item.co || item.company || '').toLowerCase();
+                            let safeCo = (rawCo.includes('kmb') || sId.length > 10) ? 'kmb' : 'ctb';
+                            let rRoute = String(item.route || '').trim().toUpperCase();
+                            if (!rRoute) return;
+
+                            // 排除當前已經揀緊嗰條路線
+                            if (safeCo === target.co && rRoute === String(target.route).toUpperCase()) return;
+
+                            let dTc = item.dest_tc || item.dest || '';
+                            let dEn = item.dest_en || '';
+                            let uniqueKey = `${safeCo}_${rRoute}_${dTc}`;
+
+                            if (!foundMap.has(uniqueKey)) {
+                                foundMap.set(uniqueKey, {
+                                    co: safeCo,
+                                    route: rRoute,
+                                    stop: sId,
+                                    name: nTc || target.name_tc,
+                                    name_tc: nTc || target.name_tc,
+                                    name_en: nEn || target.name_en,
+                                    dest: dTc,
+                                    dest_tc: dTc,
+                                    dest_en: dEn,
+                                    service_type: item.service_type || '1'
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // 2. 實時查詢九巴官方 stop-eta API (包含同站號及同名月台)
+                try {
+                    let kmbStopIdsToQuery = new Set();
+                    if (target.co === 'kmb' && target.stop) {
+                        kmbStopIdsToQuery.add(target.stop);
+                    }
+                    let kmbStops = await fetchKmbStopsCache();
+                    if (kmbStops && kmbStops.length > 0 && targetCleanTc) {
+                        kmbStops.forEach(s => {
+                            if (cleanStopName(s.name_tc) === targetCleanTc) {
+                                kmbStopIdsToQuery.add(s.stop);
+                            }
+                        });
+                    }
+
+                    let stopIdsArr = Array.from(kmbStopIdsToQuery).slice(0, 4);
+                    await Promise.allSettled(stopIdsArr.map(async (sId) => {
+                        let stopObj = (kmbStops && kmbStops.find(x => x.stop === sId)) || { stop: sId, name_tc: target.name_tc, name_en: target.name_en };
+                        let etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${sId}`).then(r => r.json());
+                        if (etaRes && etaRes.data) {
+                            etaRes.data.forEach(d => {
+                                if (!d.route) return;
+                                let rRoute = String(d.route).trim().toUpperCase();
+                                if (target.co === 'kmb' && rRoute === String(target.route).toUpperCase()) return;
+
+                                let dTc = d.dest_tc || '';
+                                let dEn = d.dest_en || '';
+                                let uniqueKey = `kmb_${rRoute}_${dTc}`;
+
+                                if (!foundMap.has(uniqueKey)) {
+                                    foundMap.set(uniqueKey, {
+                                        co: 'kmb',
+                                        route: rRoute,
+                                        stop: sId,
+                                        name: stopObj.name_tc || target.name_tc,
+                                        name_tc: stopObj.name_tc || target.name_tc,
+                                        name_en: stopObj.name_en || target.name_en,
+                                        dest: dTc,
+                                        dest_tc: dTc,
+                                        dest_en: dEn,
+                                        service_type: d.service_type || '1'
+                                    });
+                                }
+                            });
+                        }
+                    }));
+                } catch (e) {}
+
+                const sameStopRoutes = Array.from(foundMap.values());
+                drawer.dataset.loaded = 'true';
+
+                if (sameStopRoutes.length === 0) {
+                    drawer.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted);">${currentLang==='en'?'No other routes found at this stop.':'此站暫無其他同站路線資料'}</div>`;
+                    return;
+                }
+
+                let drawerHtml = `
+                    <div class="same-stop-title">
+                        <span>✨ ${currentLang==='en'?'Other routes at this stop (check to add together):':'同站其他路線 (打剔可一併加入)：'}</span>
+                        <span style="color:var(--text-muted); font-weight:600;">${sameStopRoutes.length} ${currentLang==='en'?'routes':'條路線'}</span>
+                    </div>
+                    <div class="same-stop-grid">
+                `;
+
+                sameStopRoutes.forEach(r => {
+                    let isAlreadySaved = myBuses.some(x => x.co === r.co && String(x.route).toUpperCase() === r.route && x.stop === r.stop);
+                    let coColor = r.co === 'kmb' ? 'var(--kmb-accent)' : 'var(--ctb-accent)';
+                    let coName = r.co === 'kmb' ? (currentLang==='en'?'KMB':'九巴') : (currentLang==='en'?'CTB':'城巴');
+                    let dispDest = currentLang === 'en' ? (r.dest_en || r.dest_tc) : (r.dest_tc || r.dest_en);
+                    let val = encodeURIComponent(JSON.stringify(r));
+
+                    if (isAlreadySaved) {
+                        drawerHtml += `
+                            <label class="same-stop-route-card" style="opacity:0.55; cursor:default;">
+                                <input type="checkbox" disabled checked>
+                                <div style="min-width:0; flex:1;">
+                                    <div style="font-weight:800; color:${coColor};">${coName} ${r.route} <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">(${currentLang==='en'?'Added':'已加入'})</span></div>
+                                    <div style="font-size:0.74rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${i18n[currentLang]['txt-to']}${dispDest}</div>
+                                </div>
+                            </label>`;
+                    } else {
+                        drawerHtml += `
+                            <label class="same-stop-route-card">
+                                <input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()">
+                                <div style="min-width:0; flex:1;">
+                                    <div style="font-weight:800; color:${coColor};">${coName} ${r.route}</div>
+                                    <div style="font-size:0.74rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${i18n[currentLang]['txt-to']}${dispDest}</div>
+                                </div>
+                            </label>`;
+                    }
+                });
+
+                drawerHtml += `</div>`;
+                drawer.innerHTML = drawerHtml;
+            } catch (err) {
+                drawer.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted);">${currentLang==='en'?'Unable to load other routes.':'暫時無法載入同站路線'}</div>`;
+            }
+        };
 
         async function searchStop() {
             let keyword = document.getElementById('stop-name-input').value.trim().toLowerCase(); 
@@ -1822,7 +2080,17 @@
                             dest: dTc, dest_tc: dTc, dest_en: dEn, service_type: item.service_type || '1' 
                         }));
 
-                        html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:700;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${rRoute})</span></span><span style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+                        html += `
+                            <div class="stop-item-group">
+                                <label class="bus-stop-item">
+                                    <input type="checkbox" class="stop-cb" value="${val}" onchange="handleStopCheck(this)">
+                                    <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                        <span style="font-weight:700;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${rRoute})</span></span>
+                                        <span style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${i18n[currentLang]['txt-to']}${displayDest}</span>
+                                    </div>
+                                </label>
+                                <div class="same-stop-drawer" style="display:none;"></div>
+                            </div>`; 
                         found++;
                     }
                 });
@@ -1863,7 +2131,17 @@
                                         dest: d.dest_tc, dest_tc: d.dest_tc, dest_en: d.dest_en, service_type: d.service_type || '1' 
                                     }));
 
-                                    html += `<label class="bus-stop-item"><input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()"><div style="display:flex; flex-direction:column; align-items:flex-start;"><span style="font-weight:700;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${d.route})</span></span><span style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${i18n[currentLang]['txt-to']}${displayDest}</span></div></label>`; 
+                                    html += `
+                                        <div class="stop-item-group">
+                                            <label class="bus-stop-item">
+                                                <input type="checkbox" class="stop-cb" value="${val}" onchange="handleStopCheck(this)">
+                                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                                    <span style="font-weight:700;">🚏 ${displayStop} <span style="color:${color}; font-size:0.8rem;">(${coName} ${d.route})</span></span>
+                                                    <span style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${i18n[currentLang]['txt-to']}${displayDest}</span>
+                                                </div>
+                                            </label>
+                                            <div class="same-stop-drawer" style="display:none;"></div>
+                                        </div>`; 
                                     found++;
                                 });
                             }
@@ -1880,7 +2158,7 @@
 
         function addSelectedItems() {
             let checked = document.querySelectorAll('.stop-cb:checked'); if(checked.length === 0) return;
-            if(myBuses.length + checked.length > 60) { alert(`Max 60 trackings allowed!`); return; }
+            if(myBuses.length + checked.length > 110) { alert(`Max 110 trackings allowed!`); return; }
             checked.forEach(cb => {
                 let item = JSON.parse(decodeURIComponent(cb.value));
                 if(!myBuses.some(x => x.co === item.co && x.route === item.route && x.stop === item.stop)) {
@@ -2483,7 +2761,7 @@
                                 <div style="font-size: 3.2rem; margin-bottom:10px;">💡</div>
                                 <div class="detail-route-title" style="font-size:1.5rem; color:var(--text-main);">${mainTitle}</div>
                             </div>
-                            <h4 style="margin: 16px 0 10px 0; color: var(--text-main); font-size: 0.95rem; font-weight: 700; padding: 0 4px;">${tipContentHead}</h4>
+                            <h4 style="margin: 16px 0 10px 0; color: var(--text-main); font-size: 0.95rem; font-weight: 700; padding: 0 4px;">${detailTitle}</h4>
                             <div class="detail-stops-container" style="padding:2px; border:none; background:transparent; box-shadow:none;">
                                 ${swtHtml}
                             </div>
