@@ -771,7 +771,7 @@
                     <button id="btn-dev-desktop" class="lang-btn" onclick="setDeviceMode('desktop')">🖥️ 桌面寬屏</button>
                 </div>
 
-                <h4 style="margin: 12px 0 10px 0; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px;" id="t-voice-set">🔊 港鐵延誤語音提示 Voice Alert</h4>
+                <h4 style="margin: 12px 0 10px 0; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px;" id="t-voice-set">🔊 語音提示 (港鐵延誤 / 天氣警告) Voice Alert</h4>
                 <div class="lang-btn-group">
                     <button id="btn-voice-on" class="lang-btn" onclick="setVoiceAlertSetting(true)">🔊 開啟 ON</button>
                     <button id="btn-voice-off" class="lang-btn active" onclick="setVoiceAlertSetting(false)">🔇 關閉 OFF</button>
@@ -931,10 +931,13 @@
         };
 
         // ==========================================
-        // 🔊 港鐵延誤語音提示邏輯 (廣東話 zh-HK / 英式英文 en-GB)
+        // 🔊 港鐵延誤及天氣警告語音提示邏輯
+        // 中文模式：依次序以「廣東話 (zh-HK)」、「台語 (閩南語發音合成)」及「客家話 (客語發音合成)」讀出
+        // 英文模式：以「英式英文 (en-GB)」讀出
         // ==========================================
         let announcedMtrIssues = new Set();
         let announcedMtrLines = new Set();
+        let announcedWarnings = new Set();
 
         let isVoiceAlertEnabled = false;
         try {
@@ -957,31 +960,318 @@
             btnOff.classList.toggle('active', !isVoiceAlertEnabled);
         }
 
+        // 將中文訊息轉換為地道台語（閩南語）發音字詞
+        function convertToTaigiPhonetic(text) {
+            if (!text) return '';
+            let s = String(text);
+
+            const rules = [
+                // 完整測試語句台語發音轉換
+                ['語音提示已經開啟。當港鐵路線出現延誤，或者天文台發出天氣警告時，系統會分別以廣東話、台語及客家話通知你。',
+                 '宜音提系，以經虧通。當港踢露算，出獻鹽誤，呀系天門台，發出聽去景告欸席陣，系桶欸昏別用，廣東威、台宜、嘎哈嘎威，通知李。'],
+
+                // 21 種香港天文台天氣警告台語發音
+                ['八號東北烈風或暴風信號', '杯厚當巴列轟呀報轟信厚'],
+                ['八號西北烈風或暴風信號', '杯厚篩巴列轟呀報轟信厚'],
+                ['八號東南烈風或暴風信號', '杯厚當藍列轟呀報轟信厚'],
+                ['八號西南烈風或暴風信號', '杯厚篩藍列轟呀報轟信厚'],
+                ['九號烈風或暴風風力增強信號', '狗厚列轟呀報轟轟力增強信厚'],
+                ['新界北部水浸特別報告', '新蓋巴部淹水敵別報告'],
+                ['黃色火災危險警告', '恩色灰災威險景告'],
+                ['紅色火災危險警告', '昂色灰災威險景告'],
+                ['黃色暴雨警告信號', '恩色報厚景告信厚'],
+                ['紅色暴雨警告信號', '昂色報厚景告信厚'],
+                ['黑色暴雨警告信號', '歐色報厚景告信厚'],
+                ['強烈季候風信號', '強列貴後轟信厚'],
+                ['一號戒備信號', '一厚蓋備信厚'],
+                ['三號強風信號', '三厚強轟信厚'],
+                ['十號颶風信號', '雜厚具轟信厚'],
+                ['寒冷天氣警告', '寒領聽去景告'],
+                ['酷熱天氣警告', '酷熱聽去景告'],
+                ['山泥傾瀉警告', '酸塗崩落景告'],
+                ['雷暴警告', '雷報景告'],
+                ['霜凍警告', '酸棟景告'],
+                ['海嘯警告', '海笑景告'],
+
+                // 港鐵全線名稱台語發音
+                ['將軍澳綫', '將軍奧算'],
+                ['將軍澳線', '將軍奧算'],
+                ['迪士尼綫', '敵士尼算'],
+                ['迪士尼線', '敵士尼算'],
+                ['南港島綫', '藍港抖算'],
+                ['南港島線', '藍港抖算'],
+                ['機場快綫', '機常快算'],
+                ['機場快線', '機常快算'],
+                ['港島綫', '港抖算'],
+                ['港島線', '港抖算'],
+                ['荃灣綫', '全彎算'],
+                ['荃灣線', '全彎算'],
+                ['觀塘綫', '官堂算'],
+                ['觀塘線', '官堂算'],
+                ['屯馬綫', '團馬算'],
+                ['屯馬線', '團馬算'],
+                ['東鐵綫', '當踢算'],
+                ['東鐵線', '當踢算'],
+                ['東涌綫', '當聰算'],
+                ['東涌線', '當聰算'],
+
+                // 常用廣播詞彙與句型台語發音
+                ['有班次延誤或信號故障', '有班次鹽誤，呀系信厚故障'],
+                ['香港天文台發出', '香講天門台發出'],
+                ['天文台發出', '天門台發出'],
+                ['現正生效', '現在以經星效'],
+                ['請注意', '搶祝意'],
+                ['列車服務', '列掐虎務'],
+                ['信號故障', '信厚故障'],
+                ['訊號故障', '信厚故障'],
+                ['候車時間', '後掐席間'],
+                ['班次延誤', '班次鹽誤'],
+                ['已經開啟', '以經虧通'],
+                ['語音提示', '宜音提系'],
+                ['天氣警告', '聽去景告'],
+                ['客家話', '哈嘎威'],
+                ['廣東話', '廣東威'],
+                ['天文台', '天門台'],
+                ['以及', '嘎'],
+                ['或者', '呀系'],
+                ['港鐵', '港踢'],
+                ['路線', '露算'],
+                ['路綫', '露算'],
+                ['出現', '出獻'],
+                ['延誤', '鹽誤'],
+                ['故障', '故障'],
+                ['信號', '信厚'],
+                ['訊號', '信厚'],
+                ['列車', '列掐'],
+                ['服務', '虎務'],
+                ['車站', '掐站'],
+                ['時間', '席間'],
+                ['正常', '正祥'],
+                ['恢復', '灰復'],
+                ['乘客', '層客'],
+                ['系統', '系桶'],
+                ['分別', '昏別'],
+                ['台語', '台宜'],
+                ['通知', '通知'],
+                ['注意', '祝意'],
+                ['香港', '香講'],
+                ['警告', '景告'],
+                ['生效', '星效'],
+                ['你', '李'],
+                ['及', '嘎']
+            ];
+
+            for (const [k, v] of rules) {
+                s = s.split(k).join(v);
+            }
+            return s;
+        }
+
+        // 將中文訊息轉換為地道客家話（Hakka）發音字詞
+        function convertToHakkaPhonetic(text) {
+            if (!text) return '';
+            let s = String(text);
+
+            const rules = [
+                // 完整測試語句客家話發音轉換 (Ngî-yîm thit-sṳ yî-kîn khôi-thûng...)
+                ['語音提示已經開啟。當港鐵路線出現延誤，或者天文台發出天氣警告時，系統會分別以廣東話、台語及客家話通知你。',
+                 '擬音提系，以經開通。當講貼路羨，出獻言誤，佛者添文抬，法出添戲講告時，係統妹分撇以，講東發、抬擬、及哈家發，通知你。'],
+
+                // 21 種香港天文台天氣警告客家話發音 (HKO Warnings in Hakka)
+                ['八號東北烈風或暴風信號', '八浩東背列蜂，佛抱蜂信浩'],
+                ['八號西北烈風或暴風信號', '八浩西背列蜂，佛抱蜂信浩'],
+                ['八號東南烈風或暴風信號', '八浩東藍列蜂，佛抱蜂信浩'],
+                ['八號西南烈風或暴風信號', '八浩西藍列蜂，佛抱蜂信浩'],
+                ['九號烈風或暴風風力增強信號', '九浩列蜂，佛抱蜂蜂力曾強信浩'],
+                ['新界北部水浸特別報告', '新介背部水浸特撇抱告'],
+                ['黃色火災危險警告', '房色佛災危顯講告'],
+                ['紅色火災危險警告', '馮色佛災危顯講告'],
+                ['黃色暴雨警告信號', '房色抱語講告信浩'],
+                ['紅色暴雨警告信號', '馮色抱語講告信浩'],
+                ['黑色暴雨警告信號', '嘿色抱語講告信浩'],
+                ['強烈季候風信號', '強列貴後蜂信浩'],
+                ['一號戒備信號', '一浩介備信浩'],
+                ['三號強風信號', '三浩強蜂信浩'],
+                ['十號颶風信號', '十浩具蜂信浩'],
+                ['寒冷天氣警告', '韓冷添戲講告'],
+                ['酷熱天氣警告', '酷熱添戲講告'],
+                ['山泥傾瀉警告', '山泥傾瀉講告'],
+                ['雷暴警告', '雷抱講告'],
+                ['霜凍警告', '雙凍講告'],
+                ['海嘯警告', '海笑講告'],
+
+                // 港鐵全線名稱客家話發音 (MTR Lines in Hakka)
+                ['將軍澳綫', '將軍奧羨'],
+                ['將軍澳線', '將軍奧羨'],
+                ['迪士尼綫', '敵士尼羨'],
+                ['迪士尼線', '敵士尼羨'],
+                ['南港島綫', '藍講島羨'],
+                ['南港島線', '藍講島羨'],
+                ['機場快綫', '機常快羨'],
+                ['機場快線', '機常快羨'],
+                ['港島綫', '講島羨'],
+                ['港島線', '講島羨'],
+                ['荃灣綫', '全彎羨'],
+                ['荃灣線', '全彎羨'],
+                ['觀塘綫', '官堂羨'],
+                ['觀塘線', '官堂羨'],
+                ['屯馬綫', '團馬羨'],
+                ['屯馬線', '團馬羨'],
+                ['東鐵綫', '東貼羨'],
+                ['東鐵線', '東貼羨'],
+                ['東涌綫', '東充羨'],
+                ['東涌線', '東充羨'],
+
+                // 常用廣播詞彙與句型客家話發音
+                ['有班次延誤或信號故障', '有班次言誤，佛者信浩固障'],
+                ['香港天文台發出', '香講添文抬法出'],
+                ['天文台發出', '添文抬法出'],
+                ['現正生效', '獻正生校'],
+                ['請注意', '搶注義'],
+                ['列車服務', '列叉服霧'],
+                ['信號故障', '信浩固障'],
+                ['訊號故障', '信浩固障'],
+                ['候車時間', '後叉時艱'],
+                ['班次延誤', '班次言誤'],
+                ['已經開啟', '以經開通'],
+                ['語音提示', '擬音提系'],
+                ['天氣警告', '添戲講告'],
+                ['客家話', '哈家發'],
+                ['廣東話', '講東發'],
+                ['天文台', '添文抬'],
+                ['以及', '同埋'],
+                ['或者', '佛者'],
+                ['港鐵', '講貼'],
+                ['路線', '路羨'],
+                ['路綫', '路羨'],
+                ['出現', '出獻'],
+                ['延誤', '言誤'],
+                ['故障', '固障'],
+                ['信號', '信浩'],
+                ['訊號', '信浩'],
+                ['列車', '列叉'],
+                ['服務', '服霧'],
+                ['車站', '叉站'],
+                ['時間', '時艱'],
+                ['正常', '正祥'],
+                ['恢復', '回服'],
+                ['乘客', '繩客'],
+                ['系統', '係統'],
+                ['分別', '分撇'],
+                ['台語', '抬擬'],
+                ['通知', '通知'],
+                ['注意', '注義'],
+                ['香港', '香講'],
+                ['警告', '講告'],
+                ['生效', '生校'],
+                ['及', '同']
+            ];
+
+            for (const [k, v] of rules) {
+                s = s.split(k).join(v);
+            }
+            return s;
+        }
+
         function speakMtrAlert(textZh, textEn, force = false) {
             if (!isVoiceAlertEnabled && !force) return;
             if (!('speechSynthesis' in window)) return;
 
             try {
-                window.speechSynthesis.cancel();
-                const isEn = (currentLang === 'en');
-                const textToSpeak = isEn ? (textEn || textZh) : (textZh || textEn);
-                const utter = new SpeechSynthesisUtterance(textToSpeak);
-                const targetLang = isEn ? 'en-GB' : 'zh-HK';
-                utter.lang = targetLang;
-
-                const voices = window.speechSynthesis.getVoices();
-                if (voices && voices.length > 0) {
-                    let matchedVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase() === targetLang.toLowerCase())
-                        || voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.toLowerCase()))
-                        || (isEn 
-                            ? voices.find(v => v.lang.toLowerCase().includes('gb') || v.name.toLowerCase().includes('uk') || v.name.toLowerCase().includes('british') || v.name.toLowerCase().includes('daniel'))
-                            : voices.find(v => v.lang.toLowerCase().includes('hk') || v.lang.toLowerCase().includes('yue') || v.name.toLowerCase().includes('cantonese') || v.name.toLowerCase().includes('sin-ji')));
-                    if (matchedVoice) {
-                        utter.voice = matchedVoice;
-                    }
+                // 只有手動點擊測試時先清除舊語音，確保同時有天氣警告與港鐵延誤時會排隊順序播報
+                if (force) {
+                    window.speechSynthesis.cancel();
                 }
-                utter.rate = 0.95;
-                window.speechSynthesis.speak(utter);
+
+                const voices = window.speechSynthesis.getVoices() || [];
+
+                if (currentLang === 'en') {
+                    // 英文介面：使用英式英文 (en-GB)
+                    const textToSpeak = textEn || textZh;
+                    const utterEn = new SpeechSynthesisUtterance(textToSpeak);
+                    utterEn.lang = 'en-GB';
+                    if (voices.length > 0) {
+                        let matchedEn = voices.find(v => v.lang.replace('_', '-').toLowerCase() === 'en-gb')
+                            || voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith('en-gb'))
+                            || voices.find(v => v.lang.toLowerCase().includes('gb') || v.name.toLowerCase().includes('uk') || v.name.toLowerCase().includes('british') || v.name.toLowerCase().includes('daniel'));
+                        if (matchedEn) utterEn.voice = matchedEn;
+                    }
+                    utterEn.rate = 0.95;
+                    window.speechSynthesis.speak(utterEn);
+                } else {
+                    // 中文介面：依次序用「廣東話」、「台語」及「客家話」讀出訊息
+                    const msgText = textZh || textEn;
+
+                    // 1. 廣東話 (Cantonese - zh-HK)
+                    const utterCantonese = new SpeechSynthesisUtterance(msgText);
+                    utterCantonese.lang = 'zh-HK';
+                    if (voices.length > 0) {
+                        let matchedHk = voices.find(v => v.lang.replace('_', '-').toLowerCase() === 'zh-hk')
+                            || voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith('zh-hk') || v.lang.toLowerCase().startsWith('yue'))
+                            || voices.find(v => v.lang.toLowerCase().includes('hk') || v.name.toLowerCase().includes('cantonese') || v.name.toLowerCase().includes('sin-ji'));
+                        if (matchedHk) utterCantonese.voice = matchedHk;
+                    }
+                    utterCantonese.rate = 0.95;
+
+                    // 2. 台語 (Taiwanese Hokkien)
+                    let nativeTaigiVoice = null;
+                    if (voices.length > 0) {
+                        nativeTaigiVoice = voices.find(v => {
+                            let l = v.lang.replace('_', '-').toLowerCase();
+                            let n = v.name.toLowerCase();
+                            return l.includes('nan') || l.includes('min-nan') || n.includes('taiwanese') || n.includes('hokkien') || n.includes('台語') || n.includes('閩南');
+                        });
+                    }
+
+                    const taigiSpeechText = nativeTaigiVoice ? msgText : convertToTaigiPhonetic(msgText);
+                    const utterTaiwanese = new SpeechSynthesisUtterance(taigiSpeechText);
+
+                    let twCarrierVoice = null;
+                    if (voices.length > 0) {
+                        twCarrierVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase() === 'zh-tw')
+                            || voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith('zh-tw'))
+                            || voices.find(v => v.lang.toLowerCase().includes('tw') || v.name.toLowerCase().includes('mei-jia'));
+                    }
+
+                    if (nativeTaigiVoice) {
+                        utterTaiwanese.voice = nativeTaigiVoice;
+                        utterTaiwanese.lang = nativeTaigiVoice.lang || 'nan-TW';
+                        utterTaiwanese.rate = 0.95;
+                    } else {
+                        if (twCarrierVoice) utterTaiwanese.voice = twCarrierVoice;
+                        utterTaiwanese.lang = 'zh-TW';
+                        utterTaiwanese.rate = 0.92;
+                        utterTaiwanese.pitch = 0.96;
+                    }
+
+                    // 3. 客家話 (Hakka)
+                    let nativeHakkaVoice = null;
+                    if (voices.length > 0) {
+                        nativeHakkaVoice = voices.find(v => {
+                            let l = v.lang.replace('_', '-').toLowerCase();
+                            let n = v.name.toLowerCase();
+                            return l.includes('hak') || n.includes('hakka') || n.includes('客家') || n.includes('客語');
+                        });
+                    }
+
+                    const hakkaSpeechText = nativeHakkaVoice ? msgText : convertToHakkaPhonetic(msgText);
+                    const utterHakka = new SpeechSynthesisUtterance(hakkaSpeechText);
+
+                    if (nativeHakkaVoice) {
+                        utterHakka.voice = nativeHakkaVoice;
+                        utterHakka.lang = nativeHakkaVoice.lang || 'hak-TW';
+                        utterHakka.rate = 0.95;
+                    } else {
+                        if (twCarrierVoice) utterHakka.voice = twCarrierVoice;
+                        utterHakka.lang = 'zh-TW';
+                        utterHakka.rate = 0.94;
+                        utterHakka.pitch = 1.05;
+                    }
+
+                    window.speechSynthesis.speak(utterCantonese);
+                    window.speechSynthesis.speak(utterTaiwanese);
+                    window.speechSynthesis.speak(utterHakka);
+                }
             } catch (e) {
                 console.warn("Voice alert error:", e);
             }
@@ -998,8 +1288,8 @@
 
             if (enable) {
                 speakMtrAlert(
-                    '港鐵延誤語音提示已經開啟。當港鐵路線出現延誤時，系統會以廣東話通知你。',
-                    'MTR delay voice alert enabled. You will be notified in British English if there are any train delays.',
+                    '語音提示已經開啟。當港鐵路線出現延誤，或者天文台發出天氣警告時，系統會分別以廣東話、台語及客家話通知你。',
+                    'Voice alert enabled. You will be notified in British English if there are any MTR train delays or weather warnings.',
                     true
                 );
             } else {
@@ -1051,7 +1341,7 @@
                 'donate-desc': '如果你覺得呢個 App 幫到你，可以考慮用 HSBC PayMe 請我飲杯咖啡，支持系統持續營運！',
                 'dev-set': '📱 裝置顯示模式 Device Layout',
                 'btn-dev-auto': '🔄 自動 Auto', 'btn-dev-ipad': '📱 iPad 橫向', 'btn-dev-iphone': '📲 iPhone 直向', 'btn-dev-desktop': '🖥️ 桌面寬屏',
-                'voice-set': '🔊 港鐵延誤語音提示 Voice Alert', 'btn-voice-on': '🔊 開啟 ON', 'btn-voice-off': '🔇 關閉 OFF',
+                'voice-set': '🔊 語音提示 (港鐵延誤 / 天氣警告) Voice Alert', 'btn-voice-on': '🔊 開啟 ON', 'btn-voice-off': '🔇 關閉 OFF',
                 'ts-set': '🛠️ 追蹤設定 Tracking Settings', 'btn-mtr-set': '🚇 設定地鐵站', 'btn-bus-set': '🚌 設定巴士線',
                 'txt-to': '往 ', 'txt-eta-arr': '即將到達', 'txt-eta-dep': '正在開出', 'txt-eta-end': '服務已終止', 'txt-min': ' 分鐘', 'txt-sec': '秒',
                 'txt-arrive-cd': '到達倒數: ', 'txt-departed': '已經開出', 'txt-loading': '<span class="icon-spin">🔄</span> 載入中...',
@@ -1073,7 +1363,7 @@
                 'donate-desc': 'If you find this App useful, consider buying me a coffee via HSBC PayMe to support the server!',
                 'dev-set': '📱 Device Layout Mode',
                 'btn-dev-auto': '🔄 Auto', 'btn-dev-ipad': '📱 iPad Landscape', 'btn-dev-iphone': '📲 iPhone Portrait', 'btn-dev-desktop': '🖥️ Desktop Wide',
-                'voice-set': '🔊 MTR Delay Voice Alert', 'btn-voice-on': '🔊 Enable ON', 'btn-voice-off': '🔇 Disable OFF',
+                'voice-set': '🔊 Voice Alert (MTR Delay / Weather Warning)', 'btn-voice-on': '🔊 Enable ON', 'btn-voice-off': '🔇 Disable OFF',
                 'ts-set': '🛠️ Tracking Settings', 'btn-mtr-set': '🚇 MTR Settings', 'btn-bus-set': '🚌 Bus Settings',
                 'txt-to': 'To ', 'txt-eta-arr': 'Arriving', 'txt-eta-dep': 'Departing', 'txt-eta-end': 'Service Ended', 'txt-min': ' min', 'txt-sec': 's',
                 'txt-arrive-cd': 'ETA: ', 'txt-departed': 'Departed', 'txt-loading': '<span class="icon-spin">🔄</span> Loading...',
@@ -2364,14 +2654,28 @@
                 if (hasActiveWarn) { warnInfoRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null); }
                 
                 const warningsContainer = document.getElementById('warnings-container'); activeWarningsData = {}; let warningHtml = '';
+                let currentWarnCodes = new Set();
+                let newWarnZh = [];
+                let newWarnEn = [];
                 
                 if (warnSumRes && hasActiveWarn) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
                         if (w.name && w.code && w.actionCode && w.actionCode !== "CANCEL") {
-                            let customCfg = CUSTOM_WARNING_CONFIG[w.code];
-                            let displayName = customCfg ? (currentLang === 'en' ? customCfg.name_en : customCfg.name_zh) : w.name;
+                            currentWarnCodes.add(w.code);
                             
+                            let customCfg = CUSTOM_WARNING_CONFIG[w.code];
+                            let nameZh = customCfg ? customCfg.name_zh : w.name;
+                            let nameEn = customCfg ? customCfg.name_en : w.name;
+                            let displayName = currentLang === 'en' ? nameEn : nameZh;
+                            
+                            // 檢查是否為新發出的天氣警告，加入語音播報清單
+                            if (!announcedWarnings.has(w.code)) {
+                                announcedWarnings.add(w.code);
+                                newWarnZh.push(nameZh);
+                                newWarnEn.push(nameEn);
+                            }
+
                             let iconImg = customCfg ? `<img src="https://www.hko.gov.hk/tc/textonly/img/warn/images/${customCfg.icon}" style="width: 24px; height: 24px; object-fit: contain; vertical-align: middle;">` : '⚠️';
                             let largeIconImg = customCfg ? `<img src="https://www.hko.gov.hk/tc/textonly/img/warn/images/${customCfg.icon}" style="width: 68px; height: 68px; object-fit: contain;">` : '<div style="font-size: 3.5rem;">⚠️</div>';
                             
@@ -2413,6 +2717,21 @@
                     }
                 }
                 
+                // 🔊 若有新發出的天氣警告，中文模式分別以廣東話、台語及客家話讀出，英文模式以英式英文讀出
+                if (newWarnZh.length > 0) {
+                    speakMtrAlert(
+                        `請注意，香港天文台發出${newWarnZh.join('，以及')}，現正生效。`,
+                        `Attention please. The Hong Kong Observatory has issued the ${newWarnEn.join(', and ')}, which is now in force.`
+                    );
+                }
+
+                // 清除已經取消的警告紀錄，以便下次該警告重發時可再次語音播報
+                for (let code of announcedWarnings) {
+                    if (!currentWarnCodes.has(code)) {
+                        announcedWarnings.delete(code);
+                    }
+                }
+
                 if (warningHtml !== '') {
                     warningsContainer.innerHTML = warningHtml;
                     warningsContainer.style.display = 'flex';
