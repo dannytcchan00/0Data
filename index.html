@@ -771,10 +771,10 @@
                     <button id="btn-dev-desktop" class="lang-btn" onclick="setDeviceMode('desktop')">🖥️ 桌面寬屏</button>
                 </div>
 
-                <h4 style="margin: 12px 0 10px 0; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px;" id="t-noti-set">🔔 系統通知 Notifications</h4>
+                <h4 style="margin: 12px 0 10px 0; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px;" id="t-voice-set">🔊 港鐵延誤語音提示 Voice Alert</h4>
                 <div class="lang-btn-group">
-                    <button id="btn-noti-on" class="lang-btn" onclick="setNotificationSetting(true)">開啟 ON</button>
-                    <button id="btn-noti-off" class="lang-btn" onclick="setNotificationSetting(false)">關閉 OFF</button>
+                    <button id="btn-voice-on" class="lang-btn" onclick="setVoiceAlertSetting(true)">🔊 開啟 ON</button>
+                    <button id="btn-voice-off" class="lang-btn active" onclick="setVoiceAlertSetting(false)">🔇 關閉 OFF</button>
                 </div>
                 
                 <h4 style="margin: 12px 0 10px 0; color: var(--text-main); font-weight: 700; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px;" id="t-ts-set">🛠️ 追蹤設定 Tracking Settings</h4>
@@ -841,7 +841,6 @@
             await Promise.allSettled(myBuses.map(async (b) => {
                 let hasValidEn = b.name_en && !/[\u4e00-\u9fa5]/.test(b.name_en);
                 if (!hasValidEn && b.stop) {
-                    // 先試下喺九巴快取入面搵
                     if (b.co === 'kmb' && kmbStopsCache) {
                         let cached = kmbStopsCache.find(s => s.stop === b.stop);
                         if (cached && cached.name_en) {
@@ -851,7 +850,6 @@
                             return;
                         }
                     }
-                    // 直接向官方 Stop API 查詢中英文站名
                     try {
                         let url = b.co === 'kmb' 
                             ? `https://data.etabus.gov.hk/v1/transport/kmb/stop/${b.stop}`
@@ -867,7 +865,6 @@
 
             if (updated) {
                 try { localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); } catch (e) {}
-                // 同步更新埋已讀取嘅實時班次入面嘅英文站名
                 transportTimestamps.bus.forEach(etaItem => {
                     let matchBus = myBuses.find(mb => mb.co === etaItem.co && mb.stop === etaItem.stop);
                     if (matchBus && matchBus.name_en) {
@@ -925,99 +922,104 @@
             toast.innerHTML = msg;
             toast.style.display = 'block';
             
-            toast.onclick = () => { toast.style.display = 'none'; }; // 點擊可手動關閉
+            toast.onclick = () => { toast.style.display = 'none'; };
             
             if (toastTimeout) clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => {
                 toast.style.display = 'none';
-            }, 120000); // 2分鐘後消失
+            }, 120000);
         };
 
         // ==========================================
-        // 🔔 Web Notification 系統推播完整邏輯 (含開關與特別提示)
+        // 🔊 港鐵延誤語音提示邏輯 (廣東話 zh-HK / 英式英文 en-GB)
         // ==========================================
-        let notifiedWarnings = new Set();
-        let notifiedMtrIssues = new Set();
-        let notifiedSwt = new Set();
+        let announcedMtrIssues = new Set();
+        let announcedMtrLines = new Set();
 
-        let isNotificationEnabled = false;
+        let isVoiceAlertEnabled = false;
         try {
-            isNotificationEnabled = localStorage.getItem('app_noti_enabled') === 'true';
+            isVoiceAlertEnabled = localStorage.getItem('app_voice_enabled') === 'true';
         } catch(e) {}
 
-        function updateNotiButtonUI() {
-            const btnOn = document.getElementById('btn-noti-on');
-            const btnOff = document.getElementById('btn-noti-off');
+        // 預先載入瀏覽器語音列表
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        function updateVoiceButtonUI() {
+            const btnOn = document.getElementById('btn-voice-on');
+            const btnOff = document.getElementById('btn-voice-off');
             if (!btnOn || !btnOff) return;
-            
-            if (isNotificationEnabled && "Notification" in window && Notification.permission === "granted") {
-                btnOn.classList.add('active');
-                btnOff.classList.remove('active');
-            } else {
-                btnOn.classList.remove('active');
-                btnOff.classList.add('active');
-            }
+            btnOn.classList.toggle('active', isVoiceAlertEnabled);
+            btnOff.classList.toggle('active', !isVoiceAlertEnabled);
         }
 
-        function setNotificationSetting(enable) {
-            if (!("Notification" in window)) {
-                alert(currentLang === 'en' ? 'Your browser does not support notifications.' : '你的瀏覽器不支援通知功能。');
-                return;
-            }
-
-            if (enable) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        isNotificationEnabled = true;
-                        try { localStorage.setItem('app_noti_enabled', 'true'); } catch(e){}
-                        updateNotiButtonUI();
-                        alert(currentLang === 'en' ? '✅ Notifications Enabled!' : '✅ 系統通知已成功開啟！');
-                        sendSystemNotification('HKG Dashboard', currentLang === 'en' ? 'Notification test successful.' : '通知測試成功，將在有天氣警告、特別提示或港鐵故障時提醒你。', true);
-                    } else {
-                        isNotificationEnabled = false;
-                        try { localStorage.setItem('app_noti_enabled', 'false'); } catch(e){}
-                        updateNotiButtonUI();
-                        alert(currentLang === 'en' ? '⚠️ Permission denied in browser settings.' : '⚠️ 瀏覽器通知權限被拒絕，請在瀏覽器或系統設定中允許通知。');
-                    }
-                });
-            } else {
-                isNotificationEnabled = false;
-                try { localStorage.setItem('app_noti_enabled', 'false'); } catch(e){}
-                updateNotiButtonUI();
-                alert(currentLang === 'en' ? '🔕 Notifications Disabled.' : '🔕 系統通知已關閉。');
-            }
-        }
-
-        function sendSystemNotification(title, body, force = false) {
-            if (!("Notification" in window)) return;
-            if (Notification.permission !== "granted") return;
-            if (!isNotificationEnabled && !force) return;
+        function speakMtrAlert(textZh, textEn, force = false) {
+            if (!isVoiceAlertEnabled && !force) return;
+            if (!('speechSynthesis' in window)) return;
 
             try {
-                new Notification(title, { 
-                    body: body, 
-                    icon: 'icon.png',
-                    badge: 'icon.png',
-                    vibrate: [200, 100, 200],
-                    tag: 'hk-dash-' + Date.now()
-                });
-            } catch(e) {
-                console.warn("Push error:", e);
+                window.speechSynthesis.cancel();
+                const isEn = (currentLang === 'en');
+                const textToSpeak = isEn ? (textEn || textZh) : (textZh || textEn);
+                const utter = new SpeechSynthesisUtterance(textToSpeak);
+                const targetLang = isEn ? 'en-GB' : 'zh-HK';
+                utter.lang = targetLang;
+
+                const voices = window.speechSynthesis.getVoices();
+                if (voices && voices.length > 0) {
+                    let matchedVoice = voices.find(v => v.lang.replace('_', '-').toLowerCase() === targetLang.toLowerCase())
+                        || voices.find(v => v.lang.replace('_', '-').toLowerCase().startsWith(targetLang.toLowerCase()))
+                        || (isEn 
+                            ? voices.find(v => v.lang.toLowerCase().includes('gb') || v.name.toLowerCase().includes('uk') || v.name.toLowerCase().includes('british') || v.name.toLowerCase().includes('daniel'))
+                            : voices.find(v => v.lang.toLowerCase().includes('hk') || v.lang.toLowerCase().includes('yue') || v.name.toLowerCase().includes('cantonese') || v.name.toLowerCase().includes('sin-ji')));
+                    if (matchedVoice) {
+                        utter.voice = matchedVoice;
+                    }
+                }
+                utter.rate = 0.95;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {
+                console.warn("Voice alert error:", e);
             }
         }
 
-        // 開放給 marquee.js 呼叫的 MTR 事故通知接口
+        function setVoiceAlertSetting(enable) {
+            if (!('speechSynthesis' in window)) {
+                alert(currentLang === 'en' ? 'Your browser does not support voice synthesis.' : '你的瀏覽器不支援語音提示功能。');
+                return;
+            }
+            isVoiceAlertEnabled = enable;
+            try { localStorage.setItem('app_voice_enabled', enable ? 'true' : 'false'); } catch(e) {}
+            updateVoiceButtonUI();
+
+            if (enable) {
+                speakMtrAlert(
+                    '港鐵延誤語音提示已經開啟。當港鐵路線出現延誤時，系統會以廣東話通知你。',
+                    'MTR delay voice alert enabled. You will be notified in British English if there are any train delays.',
+                    true
+                );
+            } else {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
+        }
+
+        // 開放給 marquee.js 呼叫的 MTR 事故接口 (改為語音提示及畫面提示)
         window.triggerMtrNotification = function(issueId, title, msg) {
-            if (!notifiedMtrIssues.has(issueId)) {
-                notifiedMtrIssues.add(issueId);
-                sendSystemNotification(title, msg);
+            if (!announcedMtrIssues.has(issueId)) {
+                announcedMtrIssues.add(issueId);
                 showGlobalToast(`⚠️ ${title}<br><span style="font-size:0.9rem;">${msg}</span>`);
+                let cleanMsg = String(msg || title || '').replace(/<[^>]*>?/gm, '');
+                speakMtrAlert(`請注意，${title}，${cleanMsg}`, `Attention please. ${title}. ${cleanMsg}`);
             }
         };
         
-        // 讓 marquee.js 在故障恢復時清除紀錄，以便下次故障可再次推播
+        // 讓 marquee.js 在故障恢復時清除紀錄，以便下次故障可再次播報
         window.clearMtrNotification = function(issueId) {
-            notifiedMtrIssues.delete(issueId);
+            announcedMtrIssues.delete(issueId);
         };
 
         // ==========================================
@@ -1049,10 +1051,10 @@
                 'donate-desc': '如果你覺得呢個 App 幫到你，可以考慮用 HSBC PayMe 請我飲杯咖啡，支持系統持續營運！',
                 'dev-set': '📱 裝置顯示模式 Device Layout',
                 'btn-dev-auto': '🔄 自動 Auto', 'btn-dev-ipad': '📱 iPad 橫向', 'btn-dev-iphone': '📲 iPhone 直向', 'btn-dev-desktop': '🖥️ 桌面寬屏',
-                'noti-set': '🔔 系統通知 Notifications', 'btn-noti-on': '🔔 開啟 ON', 'btn-noti-off': '🔕 關閉 OFF',
+                'voice-set': '🔊 港鐵延誤語音提示 Voice Alert', 'btn-voice-on': '🔊 開啟 ON', 'btn-voice-off': '🔇 關閉 OFF',
                 'ts-set': '🛠️ 追蹤設定 Tracking Settings', 'btn-mtr-set': '🚇 設定地鐵站', 'btn-bus-set': '🚌 設定巴士線',
                 'txt-to': '往 ', 'txt-eta-arr': '即將到達', 'txt-eta-dep': '正在開出', 'txt-eta-end': '服務已終止', 'txt-min': ' 分鐘', 'txt-sec': '秒',
-                'txt-arrive-cd': '到達倒數: ', 'txt-departed': '🚇 已經開出', 'txt-loading': '<span class="icon-spin">🔄</span> 載入中...',
+                'txt-arrive-cd': '到達倒數: ', 'txt-departed': '已經開出', 'txt-loading': '<span class="icon-spin">🔄</span> 載入中...',
                 'txt-st-op': '🟢 目前全線地鐵/火車皆正常營運 | 🤍 願我們都記住旺旺。記住她的名字，也記住每一個生命，都值得被溫柔以待。', 'txt-st-attn': '⚠️ 注意：', 'txt-st-norm': '其餘路線皆正常行駛',
                 'txt-st-fail': '無法連線', 'txt-st-delay': '班次延誤', 'txt-st-nodata': '信號故障', 'txt-st-end': '🌙 列車服務經已終止', 'txt-st-longwait': '(候車時間較長)',
                 'txt-st-first': '🌅 各綫首班車大約開出時間：港島綫 05:55｜荃灣綫 06:00｜觀塘綫 05:59｜將軍澳綫 06:00｜屯馬綫 05:40｜東鐵綫 05:30｜東涌綫 06:01｜機場快綫 05:50｜南港島綫 06:00｜迪士尼綫 06:15',
@@ -1071,10 +1073,10 @@
                 'donate-desc': 'If you find this App useful, consider buying me a coffee via HSBC PayMe to support the server!',
                 'dev-set': '📱 Device Layout Mode',
                 'btn-dev-auto': '🔄 Auto', 'btn-dev-ipad': '📱 iPad Landscape', 'btn-dev-iphone': '📲 iPhone Portrait', 'btn-dev-desktop': '🖥️ Desktop Wide',
-                'noti-set': '🔔 System Notifications', 'btn-noti-on': '🔔 Enable ON', 'btn-noti-off': '🔕 Disable OFF',
+                'voice-set': '🔊 MTR Delay Voice Alert', 'btn-voice-on': '🔊 Enable ON', 'btn-voice-off': '🔇 Disable OFF',
                 'ts-set': '🛠️ Tracking Settings', 'btn-mtr-set': '🚇 MTR Settings', 'btn-bus-set': '🚌 Bus Settings',
                 'txt-to': 'To ', 'txt-eta-arr': 'Arriving', 'txt-eta-dep': 'Departing', 'txt-eta-end': 'Service Ended', 'txt-min': ' min', 'txt-sec': 's',
-                'txt-arrive-cd': 'ETA: ', 'txt-departed': '🚇 Departed', 'txt-loading': '<span class="icon-spin">🔄</span> Loading...',
+                'txt-arrive-cd': 'ETA: ', 'txt-departed': 'Departed', 'txt-loading': '<span class="icon-spin">🔄</span> Loading...',
                 'txt-st-op': '🟢 All Rapid Transit System Operating Normally | 🤍 May we remember Wang Wang, May we remember her name, and remember that every life deserves to be cherished and treated with kindness.', 'txt-st-attn': '⚠️ Attention:', 'txt-st-norm': 'All other lines are operating on schedule',
                 'txt-st-fail': 'Connection Failed', 'txt-st-delay': 'Delayed', 'txt-st-nodata': 'Signal failure', 'txt-st-end': '🌙 Train services for today have ended', 'txt-st-longwait': '(Longer wait times)',
                 'txt-st-first': '🌅 First train departures: Island Line 05:55 | Tsuen Wan Line 06:00 | Kwun Tong Line 05:59 | Tseung Kwan O Line 06:00 | Tuen Ma Line 05:40 | East Rail Line 05:30 | Tung Chung Line 06:01 | Airport Express 05:50 | South Island Line 06:00 | Disneyland Resort Line 06:15',
@@ -1114,10 +1116,10 @@
                 document.getElementById('btn-dev-ipad').innerText = dict['btn-dev-ipad'];
                 document.getElementById('btn-dev-iphone').innerText = dict['btn-dev-iphone'];
                 document.getElementById('btn-dev-desktop').innerText = dict['btn-dev-desktop'];
-                document.getElementById('t-noti-set').innerText = dict['noti-set'];
-                document.getElementById('btn-noti-on').innerText = dict['btn-noti-on'];
-                document.getElementById('btn-noti-off').innerText = dict['btn-noti-off'];
-                updateNotiButtonUI();
+                document.getElementById('t-voice-set').innerText = dict['voice-set'];
+                document.getElementById('btn-voice-on').innerText = dict['btn-voice-on'];
+                document.getElementById('btn-voice-off').innerText = dict['btn-voice-off'];
+                updateVoiceButtonUI();
                 updateDeviceModeUI();
                 document.getElementById('t-ts-set').innerText = dict['ts-set'];
                 document.getElementById('t-btn-mtr-set').innerText = dict['btn-mtr-set'];
@@ -1150,7 +1152,7 @@
 
         function openSettingsModal() {
             lockBackgroundScroll();
-            updateNotiButtonUI();
+            updateVoiceButtonUI();
             updateDeviceModeUI();
             document.getElementById('bottom-menu').classList.remove('active');
             document.getElementById('settings-modal').classList.add('active');
@@ -1426,7 +1428,6 @@
                         });
                     } else {
                         let existing = stopGroupsMap.get(key);
-                        // 若原先儲存嘅英文名仲係中文字，而同一站另一條線有正統英文名，即刻自動更新
                         if (/[\u4e00-\u9fa5]/.test(existing.label_en) && !/[\u4e00-\u9fa5]/.test(cleanEn)) {
                             existing.label_en = cleanEn;
                         }
@@ -1616,7 +1617,48 @@
                 } catch(e) { suspended = true; }
                 return { line: s.line, sta: s.sta, data: trains, suspended: suspended };
             });
-            transportTimestamps.mtr = await Promise.all(promises); renderUI();
+            transportTimestamps.mtr = await Promise.all(promises);
+
+            // 檢查營運時間內是否有港鐵路綫出現延誤並進行語音播報
+            let isOpHours = checkIsOperatingHours();
+            let now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Hong_Kong'}));
+            let nowH = now.getHours(); let nowM = now.getMinutes();
+            let isLateNightEdge = (nowH === 23 && nowM >= 30) || (nowH >= 0 && nowH <= 5);
+
+            if (isOpHours && !isLateNightEdge) {
+                let currentDelayedLines = new Set();
+                let newDelayZh = [];
+                let newDelayEn = [];
+
+                transportTimestamps.mtr.forEach(s => {
+                    let lineInfo = MTR_NETWORK[s.line];
+                    if (!lineInfo) return;
+                    if (s.data.length === 0 || s.suspended) {
+                        currentDelayedLines.add(s.line);
+                        if (!announcedMtrLines.has(s.line)) {
+                            announcedMtrLines.add(s.line);
+                            newDelayZh.push(lineInfo.name_zh);
+                            newDelayEn.push(lineInfo.name_en);
+                        }
+                    }
+                });
+
+                if (newDelayZh.length > 0) {
+                    speakMtrAlert(
+                        `請注意，港鐵${newDelayZh.join('及')}有班次延誤或信號故障。`,
+                        `Attention please. There is a service delay on the MTR ${newDelayEn.join(' and ')}.`
+                    );
+                }
+
+                // 若路線恢復正常，從已播報集合移除以便日後再次發佈提示
+                for (let lineCode of announcedMtrLines) {
+                    if (!currentDelayedLines.has(lineCode)) {
+                        announcedMtrLines.delete(lineCode);
+                    }
+                }
+            }
+
+            renderUI();
         }
 
         async function initStaticDatabase() {
@@ -2180,7 +2222,7 @@
         function showWarningModalDetail(warnId) { if (activeWarningsData[warnId]) { openWarningDetailModal(activeWarningsData[warnId].title, activeWarningsData[warnId].html); } }
 
         // ==========================================
-        // 🚇 港鐵詳情視窗 (顯示路線色圓圈月台 + 分鐘)
+        // 🚇 港鐵詳情視窗 (顯示路線色圓圈月台 + 分鐘，已移除開出 Emoji)
         // ==========================================
         function openMtrDetail(lineCode, currentStaCode) {
             lockBackgroundScroll();
@@ -2322,28 +2364,16 @@
                 if (hasActiveWarn) { warnInfoRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null); }
                 
                 const warningsContainer = document.getElementById('warnings-container'); activeWarningsData = {}; let warningHtml = '';
-                let currentWarnCodes = new Set();
                 
                 if (warnSumRes && hasActiveWarn) {
                     for (const key in warnSumRes) {
                         const w = warnSumRes[key];
                         if (w.name && w.code && w.actionCode && w.actionCode !== "CANCEL") {
-                            currentWarnCodes.add(w.code);
-                            
                             let customCfg = CUSTOM_WARNING_CONFIG[w.code];
-                            let emoji = customCfg ? customCfg.emoji : '⚠️';
                             let displayName = customCfg ? (currentLang === 'en' ? customCfg.name_en : customCfg.name_zh) : w.name;
                             
                             let iconImg = customCfg ? `<img src="https://www.hko.gov.hk/tc/textonly/img/warn/images/${customCfg.icon}" style="width: 24px; height: 24px; object-fit: contain; vertical-align: middle;">` : '⚠️';
                             let largeIconImg = customCfg ? `<img src="https://www.hko.gov.hk/tc/textonly/img/warn/images/${customCfg.icon}" style="width: 68px; height: 68px; object-fit: contain;">` : '<div style="font-size: 3.5rem;">⚠️</div>';
-                            
-                            if (!notifiedWarnings.has(w.code)) {
-                                notifiedWarnings.add(w.code);
-                                let notiTitle = currentLang === 'en' ? 'HKO Weather Warning' : '天文台天氣警告';
-                                let notiBody = currentLang === 'en' ? `${emoji} ${displayName} is in force.` : `${emoji} ${displayName} 現正生效。`;
-                                
-                                sendSystemNotification(notiTitle, notiBody);
-                            }
                             
                             let introStr = currentLang === 'en' ? 'is in force. Please take precautions.' : '現正生效。請留意最新天氣情況及採取相應預防措施。';
                             let detailTextHtml = `<div style="padding: 14px; background: var(--card-bg); color: var(--text-main); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); margin-bottom:12px; font-weight:600; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 10px;">${iconImg} <span><b>${displayName}</b> ${introStr}</span></div>`;
@@ -2390,33 +2420,15 @@
                     warningsContainer.innerHTML = '';
                     warningsContainer.style.display = 'none';
                 }
-                
-                for (let code of notifiedWarnings) {
-                    if (!currentWarnCodes.has(code)) {
-                        notifiedWarnings.delete(code);
-                    }
-                }
 
                 let swtData = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=swt&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
                 const swtBox = document.getElementById('swt-box');
-                let currentSwtKeys = new Set();
 
                 if (swtData && swtData.swt && swtData.swt.length > 0) {
                     let swtHead = currentLang==='en' ? '💡 <b>Special Weather Tips:</b><br>' : '💡 <b>特別天氣提示：</b><br>';
                     
                     swtBox.innerHTML = swtHead + swtData.swt.map(tip => `• ${tip.desc}`).join('<br>');
                     swtBox.style.display = 'block'; swtBox.classList.add('swt-blink');
-
-                    swtData.swt.forEach(tip => {
-                        let tipKey = tip.updateTime ? `${tip.updateTime}_${tip.desc.substring(0, 15)}` : tip.desc;
-                        currentSwtKeys.add(tipKey);
-
-                        if (!notifiedSwt.has(tipKey)) {
-                            notifiedSwt.add(tipKey);
-                            let notiTitle = currentLang === 'en' ? '💡 HKO Special Weather Tip' : '💡 天文台特別天氣提示';
-                            sendSystemNotification(notiTitle, tip.desc);
-                        }
-                    });
                     
                     swtBox.onclick = function() {
                         let updateTxt = currentLang==='en' ? 'Updated:' : '更新時間：';
@@ -2446,12 +2458,6 @@
                         openWarningDetailModal('💡 ' + mainTitle, fullHtml);
                     };
                 } else { swtBox.style.display = 'none'; swtBox.classList.remove('swt-blink'); swtBox.onclick = null; }
-
-                for (let key of notifiedSwt) {
-                    if (!currentSwtKeys.has(key)) {
-                        notifiedSwt.delete(key);
-                    }
-                }
 
                 let fnd = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json());
                 if(fnd?.weatherForecast) {
