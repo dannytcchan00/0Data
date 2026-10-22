@@ -146,10 +146,13 @@
             align-items: center;
             padding: 10px 6px;
             gap: 10px;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
         .left-menu-rail a, .left-menu-rail button {
             width: 40px;
             height: 40px;
+            flex-shrink: 0;
             border-radius: 14px;
             display: flex;
             align-items: center;
@@ -243,7 +246,7 @@
         }
 
         /* 左側欄：時間與天氣 */
-        .left-col { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; }
+        .left-col { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; min-width: 0; }
         .left-col::-webkit-scrollbar { width: 4px; }
         .left-col::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.15); border-radius: 10px; }
         
@@ -346,10 +349,11 @@
             border: none; border-bottom: 1px solid var(--hairline-border); border-radius: 0; box-shadow: none; 
             font-weight: 700; margin: 0 0 10px 0; 
             display: flex; justify-content: space-between; align-items: center; font-size: 0.98rem;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.2px; gap: 8px; min-width: 0;
         }
-        .header-actions { display: flex; align-items: center; gap: 8px; }
-        .refresh-indicator { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; background: var(--card-bg); padding: 4px 10px; border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); border-radius: 50px; }
+        h2 > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .refresh-indicator { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; background: var(--card-bg); padding: 4px 10px; border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); border-radius: 50px; white-space: nowrap; flex-shrink: 0; }
 
         /* 跑馬燈套用 45 度微斜紋質感 */
         .marquee-container { 
@@ -666,56 +670,174 @@
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
         }
 
-        /* 3. iPhone / 手機直向單欄模式 (保留左側固定導航欄) */
+        /* 3. iPhone / 手機直向單欄模式 (導航欄改為網頁最頂打橫顯示) */
+        html:has(body[data-device-mode="iphone"]) {
+            height: auto !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
         body[data-device-mode="iphone"] {
-            height: auto !important; min-height: 100dvh !important; overflow-y: auto !important; display: block !important; overflow-x: hidden !important;
+            height: auto !important;
+            min-height: 100dvh !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+            display: block !important;
+        }
+        body[data-device-mode="iphone"] #app-iframe {
+            top: calc(max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 58px) !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100% - (max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 58px)) !important;
         }
         body[data-device-mode="iphone"] .left-menu-rail {
-            left: 10px !important;
-            top: 12px !important;
-            bottom: 12px !important;
-            width: 48px !important;
-            padding: 8px 4px !important;
+            top: max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) !important;
+            bottom: auto !important;
+            left: 12px !important;
+            right: 12px !important;
+            width: auto !important;
+            max-width: 516px !important;
+            height: 50px !important;
+            margin: 0 auto !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 6px 10px !important;
+            border-radius: 18px !important;
+        }
+        body[data-device-mode="iphone"] .left-menu-rail .rail-btn-primary {
+            margin-bottom: 0 !important;
         }
         body[data-device-mode="iphone"] .left-menu-rail a,
         body[data-device-mode="iphone"] .left-menu-rail button {
-            width: 36px !important;
-            height: 36px !important;
-            font-size: 1.1rem !important;
+            width: 38px !important;
+            height: 38px !important;
+            font-size: 1.15rem !important;
+            border-radius: 12px !important;
         }
         body[data-device-mode="iphone"] .main-content {
-            display: flex !important; flex-direction: column !important; overflow: visible !important; height: auto !important; max-width: 540px !important; margin: 0 auto !important; padding: 12px 12px 24px 68px !important; gap: 12px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: visible !important;
+            height: auto !important;
+            width: 100% !important;
+            max-width: 540px !important;
+            margin: 0 auto !important;
+            padding: calc(max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 60px) 12px max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px)) 12px !important;
+            gap: 12px !important;
         }
         body[data-device-mode="iphone"] .left-col, 
-        body[data-device-mode="iphone"] .right-col { height: auto !important; overflow: visible !important; gap: 12px !important; }
-        body[data-device-mode="iphone"] .panel { flex: none !important; height: auto !important; }
-        body[data-device-mode="iphone"] .bus-section { min-height: 420px !important; flex: none !important; }
-        body[data-device-mode="iphone"] .mtr-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        body[data-device-mode="iphone"] .bus-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        body[data-device-mode="iphone"] .right-col {
+            height: auto !important;
+            overflow: visible !important;
+            gap: 12px !important;
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+        body[data-device-mode="iphone"] .panel {
+            flex: none !important;
+            height: auto !important;
+            padding: 15px !important;
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+        body[data-device-mode="iphone"] .bus-section {
+            min-height: 420px !important;
+            flex: none !important;
+        }
+        body[data-device-mode="iphone"] .mtr-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+        }
+        body[data-device-mode="iphone"] .bus-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+        }
 
-        /* 4. 自動偵測模式 (Auto) 下嘅手機螢幕支援 */
+        /* 4. 自動偵測模式 (Auto) 下嘅手機螢幕支援 (導航欄置頂打橫) */
         @media screen and (max-width: 767px) {
-            body[data-device-mode="auto"], html:has(body[data-device-mode="auto"]) {
-                height: auto; min-height: 100dvh; overflow-y: auto; display: block; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+            html:has(body[data-device-mode="auto"]) {
+                height: auto;
+                overflow-x: hidden;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            body[data-device-mode="auto"] {
+                height: auto;
+                min-height: 100dvh;
+                overflow-x: hidden;
+                overflow-y: visible;
+                display: block;
+            }
+            body[data-device-mode="auto"] #app-iframe {
+                top: calc(max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 58px);
+                left: 0;
+                width: 100%;
+                height: calc(100% - (max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 58px));
             }
             body[data-device-mode="auto"] .left-menu-rail {
-                left: 10px;
-                top: 12px;
-                bottom: 12px;
-                width: 48px;
-                padding: 8px 4px;
+                top: max(10px, calc(env(safe-area-inset-top, 0px) + 6px));
+                bottom: auto;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                height: 50px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 6px 10px;
+                border-radius: 18px;
+            }
+            body[data-device-mode="auto"] .left-menu-rail .rail-btn-primary {
+                margin-bottom: 0;
             }
             body[data-device-mode="auto"] .left-menu-rail a,
             body[data-device-mode="auto"] .left-menu-rail button {
-                width: 36px;
-                height: 36px;
-                font-size: 1.1rem;
+                width: 38px;
+                height: 38px;
+                font-size: 1.15rem;
+                border-radius: 12px;
             }
-            body[data-device-mode="auto"] .main-content { display: flex; flex-direction: column; overflow: visible; height: auto; padding: 12px 12px 24px 68px; gap: 12px; }
-            body[data-device-mode="auto"] .left-col, body[data-device-mode="auto"] .right-col { height: auto; overflow: visible; gap: 12px; }
-            body[data-device-mode="auto"] .panel { margin-bottom: 0; flex: none; height: auto; }
-            body[data-device-mode="auto"] .mtr-section { flex: none; }
-            body[data-device-mode="auto"] .bus-section { min-height: 400px; flex: none; }
+            body[data-device-mode="auto"] .main-content {
+                display: flex;
+                flex-direction: column;
+                overflow: visible;
+                height: auto;
+                width: 100%;
+                padding: calc(max(10px, calc(env(safe-area-inset-top, 0px) + 6px)) + 60px) 12px max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px)) 12px;
+                gap: 12px;
+            }
+            body[data-device-mode="auto"] .left-col,
+            body[data-device-mode="auto"] .right-col {
+                height: auto;
+                overflow: visible;
+                gap: 12px;
+                min-width: 0;
+                width: 100%;
+            }
+            body[data-device-mode="auto"] .panel {
+                margin-bottom: 0;
+                flex: none;
+                height: auto;
+                padding: 15px;
+                min-width: 0;
+                width: 100%;
+            }
+            body[data-device-mode="auto"] .mtr-section {
+                flex: none;
+            }
+            body[data-device-mode="auto"] .bus-section {
+                min-height: 400px;
+                flex: none;
+            }
+            body[data-device-mode="auto"] .mtr-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            body[data-device-mode="auto"] .bus-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px;
+            }
             
             #bus-detail-flex-container { flex-direction: column; }
             #detail-right-panel { 
