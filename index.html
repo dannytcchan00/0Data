@@ -224,11 +224,17 @@
             transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease, background-color 0.18s ease;
         }
 
-        .modal-content { border-radius: 26px; overflow: hidden; width: 92%; max-width: 680px; max-height: 86vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.9); } 
-        .station-pill { border-radius: 50px; padding: 6px 14px; font-weight: 600; background-color: var(--subtle-bg); background-image: var(--hatch-pattern); border: 1px solid var(--hairline-border); }
+        .modal-content { border-radius: 26px; overflow: hidden; width: 92%; max-width: 680px; max-height: 86vh; max-height: 88dvh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.9); transform: translateZ(0); -webkit-transform: translateZ(0); } 
+        .station-pill { border-radius: 50px; padding: 7px 14px; font-weight: 600; background-color: var(--subtle-bg); background-image: none; border: 1px solid var(--hairline-border); box-shadow: none; touch-action: manipulation; }
         .stop-num { border-radius: 50%; width: 26px; height: 26px; background: var(--subtle-bg); font-weight: 700; color: var(--text-muted); border: 1px solid var(--hairline-border); box-shadow: none; } 
-        .btn-back, .bm-delete, .modal-btn, .lang-btn { border-radius: var(--radius-sm); }
+        .btn-back, .bm-delete, .modal-btn, .lang-btn { border-radius: var(--radius-sm); touch-action: manipulation; }
         
+        /* 背景鎖定狀態 (避免 iOS position:fixed 破壞彈窗內滾動順暢度) */
+        html.modal-open, body.modal-open {
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+        }
+
         /* 輕量化觸感按壓回饋 */
         .station-card:active, .bus-card-wrapper:active, .lang-btn:active, .modal-btn:active, .bus-dir-btn:active, .alert-box:active, .station-pill:active, .btn-back:active, .bm-delete:active, .bus-stop-tab:active {
             transform: scale(0.975);
@@ -488,11 +494,12 @@
         .modal-header button { flex-shrink: 0; color: var(--text-muted) !important; font-size: 1.3rem !important; }
         .modal-count { font-size: 0.8rem; color: var(--text-main); background: var(--subtle-bg); padding: 4px 10px; border: 1px solid var(--hairline-border); border-radius: 50px; font-weight: 700; }
         
-        .modal-body { padding: 16px; flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--bg-color); }
+        .modal-body { padding: 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y; background: var(--bg-color); }
         .modal-body::-webkit-scrollbar { width: 5px; }
         .modal-body::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.18); border-radius: 10px; }
 
-        #bus-detail-body { padding: 15px 15px 0 15px; overflow: hidden !important; display: flex; flex-direction: column; }
+        #bus-detail-body { padding: 15px 15px 0 15px; overflow: hidden !important; display: flex; flex-direction: column; min-height: 0; }
+        #scrollable-stops-list { overscroll-behavior-y: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
         #scrollable-stops-list::-webkit-scrollbar { width: 5px; }
         #scrollable-stops-list::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.18); border-radius: 10px; }
 
@@ -510,7 +517,7 @@
         .meta-badge { background: var(--subtle-bg); color: var(--text-main); padding: 3px 10px; font-size: 0.75rem; border-radius: 50px; font-weight: 600; border: 1px solid var(--hairline-border); }
         
         /* 🚌 可點擊車站清單 */
-        .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid var(--hairline-border); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 10px; line-height: 1.3; transition: all 0.15s; color: var(--text-main); }
+        .detail-stop-item { padding: 10px 12px; border-bottom: 1px solid var(--hairline-border); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 10px; line-height: 1.3; transition: background-color 0.15s; color: var(--text-main); touch-action: manipulation; user-select: none; }
         .detail-stop-item:last-child { border-bottom: none; }
         .clickable-stop { cursor: pointer; border-radius: 10px; }
         .clickable-stop:hover:not(.current-stop-highlight) { background: var(--subtle-bg); }
@@ -568,7 +575,7 @@
         .bus-dir-btn.kmb { border-left: 4px solid var(--kmb-accent); }
         .bus-dir-btn.ctb { border-left: 4px solid var(--ctb-accent); }
         
-        .bus-stop-list { max-height: 44vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); }
+        .bus-stop-list { max-height: 44vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y; padding: 0; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); }
         .stop-item-group { border-bottom: 1px solid var(--hairline-border); }
         .stop-item-group:last-child { border-bottom: none; }
         .bus-stop-item { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; font-weight: 500; display:flex; align-items:center; gap:12px; margin:0; color: var(--text-main); }
@@ -753,6 +760,79 @@
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             gap: 10px !important;
         }
+        /* iPhone 模式下嘅巴士路線詳情與停靠站切換優化 */
+        body[data-device-mode="iphone"] #bus-detail-modal .modal-content {
+            width: 95% !important;
+            max-height: 90dvh !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-body {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            touch-action: pan-y !important;
+            padding: 12px 14px 18px 14px !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-body .detail-header-card {
+            padding: 9px 12px !important;
+            margin-bottom: 8px !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-body .detail-route-title {
+            font-size: 1.3rem !important;
+            margin-bottom: 2px !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-body .detail-route-desc {
+            font-size: 0.85rem !important;
+            margin-bottom: 4px !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-flex-container {
+            flex-direction: column !important;
+            flex: none !important;
+            gap: 10px !important;
+        }
+        body[data-device-mode="iphone"] #detail-right-panel {
+            display: contents !important;
+        }
+        body[data-device-mode="iphone"] #detail-right-panel .countdown-box {
+            order: 1 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+        body[data-device-mode="iphone"] #detail-right-panel .countdown-box-header {
+            padding: 7px 10px !important;
+        }
+        body[data-device-mode="iphone"] #detail-right-panel .countdown-box-body {
+            padding: 8px 10px !important;
+            min-height: 64px !important;
+        }
+        body[data-device-mode="iphone"] #bus-detail-stops-col {
+            order: 2 !important;
+            width: 100% !important;
+            flex: none !important;
+            margin-bottom: 0 !important;
+        }
+        body[data-device-mode="iphone"] #scrollable-stops-list {
+            height: 38dvh !important;
+            min-height: 230px !important;
+            max-height: 320px !important;
+            flex: none !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            touch-action: pan-y !important;
+        }
+        body[data-device-mode="iphone"] .detail-stop-item {
+            padding: 12px 12px !important;
+            font-size: 0.93rem !important;
+            min-height: 44px !important;
+        }
+        body[data-device-mode="iphone"] #detail-map-box {
+            order: 3 !important;
+            width: 100% !important;
+            height: 165px !important;
+            min-height: 165px !important;
+            flex: none !important;
+            margin-bottom: 4px !important;
+        }
 
         /* 4. 自動偵測模式 (Auto) 下嘅手機螢幕支援 (導航欄置頂打橫) */
         @media screen and (max-width: 767px) {
@@ -839,17 +919,77 @@
                 gap: 10px;
             }
             
-            #bus-detail-flex-container { flex-direction: column; }
+            #bus-detail-modal .modal-content {
+                width: 95% !important;
+                max-height: 90dvh !important;
+            }
+            #bus-detail-body {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-y: contain !important;
+                touch-action: pan-y !important;
+                padding: 12px 14px 18px 14px !important;
+            }
+            #bus-detail-body .detail-header-card {
+                padding: 9px 12px !important;
+                margin-bottom: 8px !important;
+            }
+            #bus-detail-body .detail-route-title {
+                font-size: 1.3rem !important;
+                margin-bottom: 2px !important;
+            }
+            #bus-detail-body .detail-route-desc {
+                font-size: 0.85rem !important;
+                margin-bottom: 4px !important;
+            }
+            #bus-detail-flex-container {
+                flex-direction: column !important;
+                flex: none !important;
+                gap: 10px !important;
+            }
             #detail-right-panel { 
-                width: 100% !important; 
-                max-width: none !important; 
-                margin-bottom: 10px !important; 
-                flex: 0 0 auto !important;
-                order: -1; 
+                display: contents !important;
+            }
+            #detail-right-panel .countdown-box {
+                order: 1 !important;
+                width: 100% !important;
+                margin-bottom: 0 !important;
+            }
+            #detail-right-panel .countdown-box-header {
+                padding: 7px 10px !important;
+            }
+            #detail-right-panel .countdown-box-body {
+                padding: 8px 10px !important;
+                min-height: 64px !important;
+            }
+            #bus-detail-stops-col {
+                order: 2 !important;
+                width: 100% !important;
+                flex: none !important;
+                margin-bottom: 0 !important;
+            }
+            #scrollable-stops-list {
+                height: 38dvh !important;
+                min-height: 230px !important;
+                max-height: 320px !important;
+                flex: none !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-y: contain !important;
+                touch-action: pan-y !important;
+            }
+            .detail-stop-item {
+                padding: 12px 12px !important;
+                font-size: 0.93rem !important;
+                min-height: 44px !important;
             }
             #detail-map-box {
-                height: 150px !important;
-                min-height: 150px !important;
+                order: 3 !important;
+                width: 100% !important;
+                height: 165px !important;
+                min-height: 165px !important;
+                flex: none !important;
+                margin-bottom: 4px !important;
             }
         }
 
@@ -1466,14 +1606,24 @@
         function showHome() { const iframe = document.getElementById('app-iframe'); iframe.src = ''; iframe.style.display = 'none'; }
 
         let iosScrollPosition = 0;
-        function lockBackgroundScroll() { iosScrollPosition = window.scrollY || window.pageYOffset; document.body.style.position = 'fixed'; document.body.style.top = `-${iosScrollPosition}px`; document.body.style.width = '100%'; }
-        function unlockBackgroundScroll() { document.body.style.position = ''; document.body.style.top = ''; document.body.style.width = ''; window.scrollTo(0, iosScrollPosition); }
+        function lockBackgroundScroll() {
+            document.documentElement.classList.add('modal-open');
+            document.body.classList.add('modal-open');
+        }
+        function unlockBackgroundScroll() {
+            setTimeout(() => {
+                if (!document.querySelector('.modal-overlay.active')) {
+                    document.documentElement.classList.remove('modal-open');
+                    document.body.classList.remove('modal-open');
+                }
+            }, 10);
+        }
 
         let ptrStartY = 0, ptrCurrentY = 0, isPulling = false;
         const ptrIndicator = document.getElementById('ptr-indicator'), ptrMainContent = document.querySelector('.main-content');
 
         document.addEventListener('touchstart', (e) => {
-            if (e.target.closest('.modal-overlay.active') || e.target.closest('.left-menu-rail')) return;
+            if (e.target.closest('.modal-overlay.active') || e.target.closest('.left-menu-rail')) { isPulling = false; return; }
             if (document.getElementById('app-iframe').style.display === 'block') return;
             let el = e.target; let canScrollUp = false;
             
@@ -1916,11 +2066,27 @@
         function toggleMtrStation(lineCode, staCode) {
             const index = tempMtrSelections.findIndex(s => s.line === lineCode && s.sta === staCode);
             if (index > -1) tempMtrSelections.splice(index, 1); else { if (tempMtrSelections.length >= 6) return; tempMtrSelections.push({ line: lineCode, sta: staCode }); }
-            renderMtrModalBody();
+            const body = document.getElementById('mtr-modal-body');
+            const pills = body ? body.querySelectorAll('.station-pill[data-line]') : [];
+            if (pills.length > 0) {
+                pills.forEach(pill => {
+                    const l = pill.getAttribute('data-line');
+                    const s = pill.getAttribute('data-sta');
+                    const isSel = tempMtrSelections.some(x => x.line === l && x.sta === s);
+                    const isDis = (!isSel && tempMtrSelections.length >= 6);
+                    pill.classList.toggle('selected', isSel);
+                    pill.classList.toggle('disabled', isDis);
+                });
+                document.getElementById('mtr-select-count').innerText = tempMtrSelections.length;
+            } else {
+                renderMtrModalBody();
+            }
         }
         
         function renderMtrModalBody() {
-            const body = document.getElementById('mtr-modal-body'); let html = '';
+            const body = document.getElementById('mtr-modal-body');
+            const prevScroll = body ? body.scrollTop : 0;
+            let html = '';
             for (let lineCode in MTR_NETWORK) {
                 const line = MTR_NETWORK[lineCode];
                 let lName = currentLang === 'en' ? line.name_en : line.name_zh;
@@ -1935,7 +2101,7 @@
                             let sName = currentLang === 'en' ? line.stations[staCode].en : line.stations[staCode].zh;
                             const isSel = tempMtrSelections.some(s => s.line === lineCode && s.sta === staCode);
                             const isDis = (!isSel && tempMtrSelections.length >= 6);
-                            html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
+                            html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" data-line="${lineCode}" data-sta="${staCode}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
                         });
                         html += `</div></div>`;
                     });
@@ -1946,12 +2112,14 @@
                         let sName = currentLang === 'en' ? line.stations[staCode].en : line.stations[staCode].zh;
                         const isSel = tempMtrSelections.some(s => s.line === lineCode && s.sta === staCode);
                         const isDis = (!isSel && tempMtrSelections.length >= 6);
-                        html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
+                        html += `<div class="station-pill ${isSel ? 'selected' : ''} ${isDis ? 'disabled' : ''}" data-line="${lineCode}" data-sta="${staCode}" onclick="toggleMtrStation('${lineCode}', '${staCode}')">${sName}</div>`;
                     }
                     html += `</div></div>`;
                 }
             }
-            body.innerHTML = html; document.getElementById('mtr-select-count').innerText = tempMtrSelections.length;
+            body.innerHTML = html;
+            if (prevScroll > 0) body.scrollTop = prevScroll;
+            document.getElementById('mtr-select-count').innerText = tempMtrSelections.length;
         }
 
         async function fetchMTR() {
@@ -2712,11 +2880,11 @@
                 <div id="detail-right-panel" style="flex: 0 0 46%; max-width: 280px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; min-height: 0;">
                     <!-- 上格：實時倒數 -->
                     <div class="countdown-box" style="background: var(--card-bg); border: 1px solid var(--panel-border); border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; flex: 0 0 auto;">
-                        <div style="background: ${themeColor}; color: #fff; padding: 10px 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <div class="countdown-box-header" style="background: ${themeColor}; color: #fff; padding: 10px 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 6px;">
                             <span style="font-size: 1.2rem;">🚏</span>
                             <div id="detail-right-stop-name" style="font-size: 0.95rem; font-weight: 700; line-height: 1.25; word-break: break-word;">${currentStopName}</div>
                         </div>
-                        <div style="padding: 12px 10px; background-color: var(--subtle-bg); background-image: var(--hatch-pattern); display: flex; flex-direction: column; justify-content: center; min-height: 95px;">
+                        <div class="countdown-box-body" style="padding: 12px 10px; background-color: var(--subtle-bg); background-image: var(--hatch-pattern); display: flex; flex-direction: column; justify-content: center; min-height: 95px;">
                             <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">⏱️ ${iconText}</div>
                             <div id="detail-eta-countdown" class="anim-pulse" style="font-weight: 800; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;"><span class="icon-spin" style="font-size: 1.8rem; color: var(--text-muted);">🔄</span></div>
                         </div>
@@ -2739,7 +2907,7 @@
                     <div class="detail-route-meta"><span class="meta-badge">${coName}</span></div>
                 </div>
                 <div id="bus-detail-flex-container" style="display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0;">
-                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; margin-bottom: 15px;">
+                    <div id="bus-detail-stops-col" style="flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; margin-bottom: 15px;">
                         <h4 style="margin:0 0 8px 0; color:var(--text-main); font-size:0.9rem; font-weight:700; padding-bottom: 6px; flex-shrink: 0;">${currentLang==='en'?'Route Stops (Click to select):':'沿途停靠車站 (點擊切換)：'}</h4>
                         <div id="scrollable-stops-list" class="detail-stops-container" style="background:var(--card-bg); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); border-radius: var(--radius-md); padding: 8px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; margin-bottom: 0; position: relative;">
                             ${stopsHtml}
