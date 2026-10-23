@@ -1305,6 +1305,54 @@
             min-width: 0;
         }
 
+        /* 📅 跨日分界線橫幅 (兩日交界醒目提示列) */
+        .flight-date-divider-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            margin: 6px 0 2px 0;
+            padding: 9px 14px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-left: 4px solid #f59e0b;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #ffffff;
+            box-shadow: var(--shadow-md);
+            flex-shrink: 0;
+            min-width: 0;
+            letter-spacing: 0.2px;
+        }
+        .fl-date-div-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+        .fl-date-div-tag {
+            font-size: 0.66rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 50px;
+            background: rgba(245, 158, 11, 0.22);
+            color: #fde68a;
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            white-space: nowrap;
+        }
+        .fl-date-div-right {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 9px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
         .flight-row-card {
             display: grid;
             grid-template-columns: 76px minmax(0, 1.25fr) minmax(0, 1.35fr) 92px 64px 106px 32px;
@@ -1946,12 +1994,13 @@
         body[data-device-mode="iphone"] .flight-filter-row1 .flight-search-input {
             grid-column: 1 / -1 !important;
         }
-        body[data-device-mode="iphone"] .flight-hour-anchor-banner {
+        body[data-device-mode="iphone"] .flight-hour-anchor-banner,
+        body[data-device-mode="iphone"] .flight-date-divider-banner {
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 3px !important;
-            padding: 7px 11px !important;
-            font-size: 0.72rem !important;
+            gap: 4px !important;
+            padding: 8px 12px !important;
+            font-size: 0.74rem !important;
         }
         body[data-device-mode="iphone"] .flight-list-container {
             height: 64dvh !important;
@@ -2305,12 +2354,13 @@
             body[data-device-mode="auto"] .fl-kpi-val {
                 font-size: 1.12rem;
             }
-            body[data-device-mode="auto"] .flight-hour-anchor-banner {
+            body[data-device-mode="auto"] .flight-hour-anchor-banner,
+            body[data-device-mode="auto"] .flight-date-divider-banner {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 3px;
-                padding: 7px 11px;
-                font-size: 0.72rem;
+                gap: 4px;
+                padding: 8px 12px;
+                font-size: 0.74rem;
             }
             body[data-device-mode="auto"] .flight-list-container {
                 height: 64dvh;
@@ -5366,6 +5416,22 @@
                 ? earlierOrDeparted.length
                 : Math.max(0, displaySlice.length - 1);
 
+            // 統計每個日期嘅航班數量，用於兩日交界分隔列顯示
+            const dateCountsMap = {};
+            displaySlice.forEach(f => {
+                dateCountsMap[f.date] = (dateCountsMap[f.date] || 0) + 1;
+            });
+
+            const formatDateWithWeekday = (dStr) => {
+                const parts = String(dStr || '').split('-').map(Number);
+                if (parts.length !== 3) return dStr;
+                const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+                const daysZh = ['日', '一', '二', '三', '四', '五', '六'];
+                const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const w = dt.getDay();
+                return isEn ? `${dStr} (${daysEn[w]})` : `${dStr} (禮拜${daysZh[w]})`;
+            };
+
             const htmlRows = displaySlice.map((item, idx) => {
                 const isTom = item.date === tomorrowStr;
                 const dateBadgeTxt = isTom
@@ -5426,6 +5492,19 @@
                     ? `<span class="fl-gate-num">${gateVal}</span>`
                     : `<span class="fl-gate-empty">--</span>`;
 
+                const isDateBoundary = (idx > 0 && displaySlice[idx - 1].date !== item.date);
+                const nextDayCount = dateCountsMap[item.date] || 0;
+                const formattedBoundaryDate = formatDateWithWeekday(item.date);
+                const dateDividerHtml = isDateBoundary
+                    ? `<div class="flight-date-divider-banner">
+                        <div class="fl-date-div-left">
+                            <span class="fl-date-div-tag">🌙 ➔ 🌅 ${isEn ? 'Day Change' : '兩日交界'}</span>
+                            <span>📅 ${isTom ? (isEn ? `Tomorrow's Flights · ${formattedBoundaryDate}` : `明日航班・${formattedBoundaryDate}`) : formattedBoundaryDate}</span>
+                        </div>
+                        <span class="fl-date-div-right">${isEn ? `From 00:00 · ${nextDayCount} Flights` : `00:00 起・共 ${nextDayCount} 班航班`}</span>
+                       </div>`
+                    : '';
+
                 const anchorBannerHtml = (isCurrentHourAnchor && flightDateFilter !== 'tomorrow')
                     ? `<div class="flight-hour-anchor-banner" data-current-hour-anchor="true">
                         <span>🕒 ${isEn ? `Live Active Flights (${hkFloor.hourStr}+)` : `即時待發 / 抵港航班 (${hkFloor.hourStr} 時段起)`}</span>
@@ -5438,7 +5517,7 @@
                     ? (isEn ? `Via / Multi: ${item.placeCodes}` : `經停航點：${item.placeCodes}`)
                     : (isEn ? `Airport Code: ${item.primaryIata}` : `機場代碼：${item.primaryIata}`);
 
-                return `${anchorBannerHtml}<div class="flight-row-card ${stInfo.rowClass}" ${isCurrentHourAnchor && flightDateFilter === 'tomorrow' ? 'data-current-hour-anchor="true"' : ''} onclick="openFlightDetailModal(${idx})">
+                return `${anchorBannerHtml}${dateDividerHtml}<div class="flight-row-card ${stInfo.rowClass}" ${isCurrentHourAnchor && flightDateFilter === 'tomorrow' ? 'data-current-hour-anchor="true"' : ''} onclick="openFlightDetailModal(${idx})">
                     <div class="fl-time-col">
                         ${timeHtml}
                     </div>
