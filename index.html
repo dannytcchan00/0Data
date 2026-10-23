@@ -1312,8 +1312,8 @@
         }
         .flight-row-card.status-ok { border-left-color: var(--status-green); }
         .flight-row-card.status-warn { border-left-color: #d97706; }
-        .flight-row-card.status-cancel { border-left-color: var(--warning-red); opacity: 0.8; }
-        .flight-row-card.status-done { border-left-color: #94a3b8; }
+        .flight-row-card.status-cancel { border-left-color: var(--warning-red); }
+        .flight-row-card.status-done { border-left-color: #94a3b8; opacity: 0.82; }
 
         /* 1. 時間欄 (原定 / 預計) */
         .fl-time-col {
@@ -1560,6 +1560,206 @@
             border-color: rgba(100, 116, 139, 0.2);
         }
 
+        /* ✨ 航班狀態醒目閃爍效果 (現正登機 / 最後召集 / 取消 / 延誤) */
+        @keyframes flBlinkBoarding {
+            0%, 100% {
+                background: #059669;
+                color: #ffffff;
+                border-color: #047857;
+                box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.55);
+                transform: scale(1);
+            }
+            50% {
+                background: rgba(5, 150, 105, 0.14);
+                color: #047857;
+                border-color: rgba(5, 150, 105, 0.45);
+                box-shadow: 0 0 12px 2px rgba(5, 150, 105, 0.3);
+                transform: scale(1.03);
+            }
+        }
+        @keyframes flBlinkFinalCall {
+            0%, 100% {
+                background: #d97706;
+                color: #ffffff;
+                border-color: #b45309;
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.65);
+                transform: scale(1.03);
+            }
+            50% {
+                background: rgba(245, 158, 11, 0.16);
+                color: #b45309;
+                border-color: #d97706;
+                box-shadow: 0 0 14px 3px rgba(217, 119, 6, 0.38);
+                transform: scale(0.98);
+            }
+        }
+        @keyframes flBlinkCancel {
+            0%, 100% {
+                background: #e11d48;
+                color: #ffffff;
+                border-color: #be123c;
+                box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6);
+                transform: scale(1.02);
+            }
+            50% {
+                background: rgba(225, 29, 72, 0.14);
+                color: #be123c;
+                border-color: #e11d48;
+                box-shadow: 0 0 12px 3px rgba(225, 29, 72, 0.32);
+                transform: scale(0.98);
+            }
+        }
+        @keyframes flBlinkDelay {
+            0%, 100% {
+                background: rgba(245, 158, 11, 0.28);
+                color: #92400e;
+                border-color: rgba(217, 119, 6, 0.55);
+            }
+            50% {
+                background: rgba(245, 158, 11, 0.08);
+                color: #b45309;
+                border-color: rgba(217, 119, 6, 0.22);
+            }
+        }
+        .fl-status-badge.st-blink-boarding {
+            animation: flBlinkBoarding 1.3s infinite ease-in-out;
+            font-weight: 800;
+        }
+        .fl-status-badge.st-blink-finalcall {
+            animation: flBlinkFinalCall 0.9s infinite ease-in-out;
+            font-weight: 800;
+        }
+        .fl-status-badge.st-blink-cancel {
+            animation: flBlinkCancel 1.15s infinite ease-in-out;
+            font-weight: 800;
+        }
+        .fl-status-badge.st-blink-delay {
+            animation: flBlinkDelay 1.6s infinite ease-in-out;
+            font-weight: 800;
+        }
+
+        /* ✈️ 航班詳情彈窗：直線航程進度與飛機動態位置組件 */
+        .fl-progress-card {
+            background-color: var(--card-bg);
+            background-image: var(--hatch-pattern);
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--shadow-sm);
+            border-radius: var(--radius-md);
+            padding: 16px 18px;
+            margin-bottom: 12px;
+        }
+        .fl-progress-endpoints {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .fl-ep-box {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+        .fl-ep-box.right {
+            align-items: flex-end;
+            text-align: right;
+        }
+        .fl-ep-role {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .fl-ep-city {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+        .fl-ep-time {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+        .fl-ep-time strong {
+            color: var(--text-main);
+            font-size: 0.88rem;
+        }
+        .fl-line-track-wrap {
+            position: relative;
+            margin: 24px 14px 20px 14px;
+            height: 6px;
+            background: rgba(15, 23, 42, 0.1);
+            border-radius: 999px;
+            box-shadow: var(--shadow-inset);
+        }
+        .fl-line-track-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            border-radius: 999px;
+            background: var(--accent-dark);
+            transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .fl-line-dot {
+            position: absolute;
+            top: 50%;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 3px solid var(--accent-dark);
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+        .fl-line-dot.start { left: 0%; }
+        .fl-line-dot.end { left: 100%; }
+        .fl-line-plane {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--accent-dark);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            z-index: 3;
+            transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            user-select: none;
+        }
+        .fl-progress-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid var(--hairline-border);
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .fl-eta-pill {
+            background: var(--subtle-bg);
+            border: 1px solid var(--hairline-border);
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: var(--text-main);
+            font-variant-numeric: tabular-nums;
+        }
+
         /* 7. 追蹤星號按鈕 */
         .fl-star-btn {
             background: transparent;
@@ -1582,13 +1782,24 @@
             color: #f59e0b;
         }
 
-        /* iPhone 及窄屏幕自適應排版 */
+        /* iPhone 及窄屏幕自適應排版 (三層清晰卡片結構，徹底防止文字與標籤重疊) */
         body[data-device-mode="iphone"] .flight-section {
-            min-height: 540px !important;
+            min-height: 560px !important;
             flex: none !important;
         }
+        body[data-device-mode="iphone"] .flight-section h2 {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+        }
         body[data-device-mode="iphone"] .flight-kpi-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+        }
+        body[data-device-mode="iphone"] .flight-kpi-card {
+            padding: 8px 10px !important;
+        }
+        body[data-device-mode="iphone"] .fl-kpi-val {
+            font-size: 1.12rem !important;
         }
         body[data-device-mode="iphone"] .flight-filter-row1 {
             grid-template-columns: 1fr 1fr !important;
@@ -1596,31 +1807,90 @@
         body[data-device-mode="iphone"] .flight-filter-row1 .flight-search-input {
             grid-column: 1 / -1 !important;
         }
+        body[data-device-mode="iphone"] .flight-hour-anchor-banner {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 3px !important;
+            padding: 7px 11px !important;
+            font-size: 0.72rem !important;
+        }
         body[data-device-mode="iphone"] .flight-list-container {
-            max-height: 65dvh !important;
+            height: 64dvh !important;
+            max-height: 64dvh !important;
         }
         body[data-device-mode="iphone"] .flight-table-header {
             display: none !important;
         }
         body[data-device-mode="iphone"] .flight-row-card {
-            grid-template-columns: 64px 1fr auto 32px !important;
+            grid-template-columns: auto auto 1fr auto !important;
             grid-template-areas:
-                "time airline status star"
-                "place place term gate" !important;
+                "time airline airline star"
+                "place place place place"
+                "term gate status status" !important;
             gap: 8px 8px !important;
-            padding: 10px 12px !important;
+            padding: 12px 12px !important;
+            align-items: center !important;
         }
-        body[data-device-mode="iphone"] .fl-time-col { grid-area: time; }
-        body[data-device-mode="iphone"] .fl-airline-group { grid-area: airline; }
-        body[data-device-mode="iphone"] .fl-status-col { grid-area: status; }
-        body[data-device-mode="iphone"] .fl-star-btn { grid-area: star; }
-        body[data-device-mode="iphone"] .fl-place-group { grid-area: place; }
-        body[data-device-mode="iphone"] .fl-term-col { grid-area: term; justify-content: flex-end; }
-        body[data-device-mode="iphone"] .fl-gate-col { grid-area: gate; justify-content: flex-end; }
+        body[data-device-mode="iphone"] .fl-time-col {
+            grid-area: time !important;
+            min-width: 68px !important;
+            padding-right: 6px !important;
+            border-right: 1px solid var(--hairline-border) !important;
+        }
+        body[data-device-mode="iphone"] .fl-airline-group {
+            grid-area: airline !important;
+            min-width: 0 !important;
+        }
+        body[data-device-mode="iphone"] .fl-star-btn {
+            grid-area: star !important;
+            align-self: flex-start !important;
+        }
+        body[data-device-mode="iphone"] .fl-place-group {
+            grid-area: place !important;
+            padding: 7px 0 6px 0 !important;
+            border-top: 1px solid var(--hairline-border) !important;
+            border-bottom: 1px dashed var(--hairline-border) !important;
+            width: 100% !important;
+        }
+        body[data-device-mode="iphone"] .fl-place-zh,
+        body[data-device-mode="iphone"] .fl-place-en {
+            white-space: normal !important;
+            line-height: 1.25 !important;
+        }
+        body[data-device-mode="iphone"] .fl-term-col {
+            grid-area: term !important;
+            justify-content: flex-start !important;
+        }
+        body[data-device-mode="iphone"] .fl-gate-col {
+            grid-area: gate !important;
+            justify-content: flex-start !important;
+        }
+        body[data-device-mode="iphone"] .fl-gate-num::before {
+            content: "🚪 ";
+            font-size: 0.72rem;
+        }
+        body[data-device-mode="iphone"] .fl-status-col {
+            grid-area: status !important;
+            justify-content: flex-end !important;
+            min-width: 0 !important;
+        }
+        body[data-device-mode="iphone"] .fl-status-badge {
+            font-size: 0.7rem !important;
+            padding: 4px 9px !important;
+            max-width: 100% !important;
+        }
+        body[data-device-mode="iphone"] .fl-progress-endpoints {
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+        body[data-device-mode="iphone"] .fl-ep-box.right {
+            align-items: flex-start !important;
+            text-align: left !important;
+        }
 
         @media screen and (max-width: 900px) {
             body[data-device-mode="auto"] .flight-kpi-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             body[data-device-mode="auto"] .flight-filter-row1 {
                 grid-template-columns: 1fr 1fr;
@@ -1631,30 +1901,99 @@
         }
         @media screen and (max-width: 767px) {
             body[data-device-mode="auto"] .flight-section {
-                min-height: 520px;
+                min-height: 540px;
                 flex: none;
             }
+            body[data-device-mode="auto"] .flight-section h2 {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            body[data-device-mode="auto"] .flight-kpi-card {
+                padding: 8px 10px;
+            }
+            body[data-device-mode="auto"] .fl-kpi-val {
+                font-size: 1.12rem;
+            }
+            body[data-device-mode="auto"] .flight-hour-anchor-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 3px;
+                padding: 7px 11px;
+                font-size: 0.72rem;
+            }
             body[data-device-mode="auto"] .flight-list-container {
-                max-height: 65dvh;
+                height: 64dvh;
+                max-height: 64dvh;
             }
             body[data-device-mode="auto"] .flight-table-header {
                 display: none;
             }
             body[data-device-mode="auto"] .flight-row-card {
-                grid-template-columns: 64px 1fr auto 32px;
+                grid-template-columns: auto auto 1fr auto;
                 grid-template-areas:
-                    "time airline status star"
-                    "place place term gate";
+                    "time airline airline star"
+                    "place place place place"
+                    "term gate status status";
                 gap: 8px 8px;
-                padding: 10px 12px;
+                padding: 12px 12px;
+                align-items: center;
             }
-            body[data-device-mode="auto"] .fl-time-col { grid-area: time; }
-            body[data-device-mode="auto"] .fl-airline-group { grid-area: airline; }
-            body[data-device-mode="auto"] .fl-status-col { grid-area: status; }
-            body[data-device-mode="auto"] .fl-star-btn { grid-area: star; }
-            body[data-device-mode="auto"] .fl-place-group { grid-area: place; }
-            body[data-device-mode="auto"] .fl-term-col { grid-area: term; justify-content: flex-end; }
-            body[data-device-mode="auto"] .fl-gate-col { grid-area: gate; justify-content: flex-end; }
+            body[data-device-mode="auto"] .fl-time-col {
+                grid-area: time;
+                min-width: 68px;
+                padding-right: 6px;
+                border-right: 1px solid var(--hairline-border);
+            }
+            body[data-device-mode="auto"] .fl-airline-group {
+                grid-area: airline;
+                min-width: 0;
+            }
+            body[data-device-mode="auto"] .fl-star-btn {
+                grid-area: star;
+                align-self: flex-start;
+            }
+            body[data-device-mode="auto"] .fl-place-group {
+                grid-area: place;
+                padding: 7px 0 6px 0;
+                border-top: 1px solid var(--hairline-border);
+                border-bottom: 1px dashed var(--hairline-border);
+                width: 100%;
+            }
+            body[data-device-mode="auto"] .fl-place-zh,
+            body[data-device-mode="auto"] .fl-place-en {
+                white-space: normal;
+                line-height: 1.25;
+            }
+            body[data-device-mode="auto"] .fl-term-col {
+                grid-area: term;
+                justify-content: flex-start;
+            }
+            body[data-device-mode="auto"] .fl-gate-col {
+                grid-area: gate;
+                justify-content: flex-start;
+            }
+            body[data-device-mode="auto"] .fl-gate-num::before {
+                content: "🚪 ";
+                font-size: 0.72rem;
+            }
+            body[data-device-mode="auto"] .fl-status-col {
+                grid-area: status;
+                justify-content: flex-end;
+                min-width: 0;
+            }
+            body[data-device-mode="auto"] .fl-status-badge {
+                font-size: 0.7rem;
+                padding: 4px 9px;
+                max-width: 100%;
+            }
+            body[data-device-mode="auto"] .fl-progress-endpoints {
+                flex-direction: column;
+                gap: 8px;
+            }
+            body[data-device-mode="auto"] .fl-ep-box.right {
+                align-items: flex-start;
+                text-align: left;
+            }
         }
 
         /* 全域 Toast Soft UI 樣式 */
@@ -2131,6 +2470,7 @@
 
         window.selectBusStopTag = function(tagKey) {
             window.selectedBusStopTag = tagKey;
+            try { localStorage.setItem('app_selected_bus_stop_tag', tagKey || ''); } catch (e) {}
             renderUI();
         };
 
@@ -2482,11 +2822,29 @@
         }
 
         let currentActivePage = 'home';
+        try {
+            const savedPage = localStorage.getItem('app_active_page');
+            if (savedPage === 'flight' || savedPage === 'home' || savedPage === 'iframe') {
+                currentActivePage = savedPage;
+            }
+            const savedBusTag = localStorage.getItem('app_selected_bus_stop_tag');
+            if (savedBusTag) window.selectedBusStopTag = savedBusTag;
+        } catch (e) {}
 
         function toggleBottomMenu() {}
-        function showIframe(url) { const iframe = document.getElementById('app-iframe'); iframe.src = url; iframe.style.display = 'block'; }
+        function showIframe(url) {
+            currentActivePage = 'iframe';
+            try {
+                localStorage.setItem('app_active_page', 'iframe');
+                localStorage.setItem('app_iframe_url', url || '');
+            } catch (e) {}
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = url;
+            iframe.style.display = 'block';
+        }
         function showHome() {
             currentActivePage = 'home';
+            try { localStorage.setItem('app_active_page', 'home'); } catch (e) {}
             const iframe = document.getElementById('app-iframe');
             iframe.src = '';
             iframe.style.display = 'none';
@@ -2506,6 +2864,7 @@
 
         function showFlightPage() {
             currentActivePage = 'flight';
+            try { localStorage.setItem('app_active_page', 'flight'); } catch (e) {}
             const iframe = document.getElementById('app-iframe');
             iframe.src = '';
             iframe.style.display = 'none';
@@ -2536,6 +2895,20 @@
         let flightCategory = 'dep_pax'; // 'dep_pax', 'arr_pax', 'dep_cargo', 'arr_cargo', 'starred'
         let flightDateFilter = 'upcoming'; // 'upcoming', 'today', 'tomorrow'
         let selectedHotCity = 'ALL';
+        try {
+            const savedCat = localStorage.getItem('app_flight_category');
+            if (['dep_pax', 'arr_pax', 'dep_cargo', 'arr_cargo', 'starred'].includes(savedCat)) {
+                flightCategory = savedCat;
+            }
+            const savedDateF = localStorage.getItem('app_flight_date_filter');
+            if (['upcoming', 'today', 'tomorrow'].includes(savedDateF)) {
+                flightDateFilter = savedDateF;
+            }
+            const savedHot = localStorage.getItem('app_flight_hot_city');
+            if (savedHot) {
+                selectedHotCity = savedHot;
+            }
+        } catch (e) {}
 
         let starredFlights = [];
         try {
@@ -2554,155 +2927,778 @@
         };
         let currentRenderedFlights = [];
 
-        // 常見機場 IATA 代碼中英對照表
+        // 全球機場 IATA 代碼中英對照表 (涵蓋香港國際機場所有客運、貨運、包機及轉機航點)
         const IATA_CITY_MAP = {
+            // 港澳台 (HK, Macau, Taiwan)
+            'HKG': { zh: '香港', en: 'Hong Kong' },
+            'MFM': { zh: '澳門', en: 'Macau' },
             'TPE': { zh: '台北 (桃園)', en: 'Taipei (Taoyuan)' },
-            'KHH': { zh: '高雄', en: 'Kaohsiung' },
-            'RMQ': { zh: '台中', en: 'Taichung' },
             'TSA': { zh: '台北 (松山)', en: 'Taipei (Songshan)' },
+            'KHH': { zh: '高雄', en: 'Kaohsiung' },
+            'RMQ': { zh: '台中 (清泉崗)', en: 'Taichung' },
+            'TNN': { zh: '台南', en: 'Tainan' },
+            'HUN': { zh: '花蓮', en: 'Hualien' },
+            'TTT': { zh: '台東', en: 'Taitung' },
+            'CYI': { zh: '嘉義', en: 'Chiayi' },
+            'MZG': { zh: '澎湖 (馬公)', en: 'Penghu (Magong)' },
+            'KNH': { zh: '金門', en: 'Kinmen' },
+            'LZN': { zh: '馬祖 (南竿)', en: 'Matsu (Nangan)' },
+
+            // 日本 (Japan)
             'NRT': { zh: '東京 (成田)', en: 'Tokyo (Narita)' },
             'HND': { zh: '東京 (羽田)', en: 'Tokyo (Haneda)' },
             'KIX': { zh: '大阪 (關西)', en: 'Osaka (Kansai)' },
-            'CTS': { zh: '札幌 (新千歲)', en: 'Sapporo (New Chitose)' },
-            'FUK': { zh: '福岡', en: 'Fukuoka' },
+            'ITM': { zh: '大阪 (伊丹)', en: 'Osaka (Itami)' },
+            'UKB': { zh: '神戶', en: 'Kobe' },
             'NGO': { zh: '名古屋 (中部)', en: 'Nagoya (Chubu)' },
+            'NKM': { zh: '名古屋 (小牧)', en: 'Nagoya (Komaki)' },
+            'CTS': { zh: '札幌 (新千歲)', en: 'Sapporo (New Chitose)' },
+            'OKD': { zh: '札幌 (丘珠)', en: 'Sapporo (Okadama)' },
+            'FUK': { zh: '福岡', en: 'Fukuoka' },
             'OKA': { zh: '沖繩 (那霸)', en: 'Okinawa (Naha)' },
+            'ISG': { zh: '石垣島', en: 'Ishigaki' },
+            'MMY': { zh: '宮古島', en: 'Miyako' },
+            'SHI': { zh: '下地島 (宮古)', en: 'Shimojishima' },
+            'UEO': { zh: '久米島', en: 'Kumejima' },
             'SDJ': { zh: '仙台', en: 'Sendai' },
             'HIJ': { zh: '廣島', en: 'Hiroshima' },
-            'TAK': { zh: '高松', en: 'Takamatsu' },
+            'OKJ': { zh: '岡山', en: 'Okayama' },
+            'TAK': { zh: '高松 (香川)', en: 'Takamatsu' },
+            'MYJ': { zh: '松山 (愛媛)', en: 'Matsuyama' },
+            'KCZ': { zh: '高知', en: 'Kochi' },
+            'TKS': { zh: '德島', en: 'Tokushima' },
             'KMJ': { zh: '熊本', en: 'Kumamoto' },
             'KOJ': { zh: '鹿兒島', en: 'Kagoshima' },
-            'YON': { zh: '米子', en: 'Yonago' },
+            'KMI': { zh: '宮崎', en: 'Miyazaki' },
+            'OIT': { zh: '大分', en: 'Oita' },
+            'NGS': { zh: '長崎', en: 'Nagasaki' },
+            'HSG': { zh: '佐賀', en: 'Saga' },
+            'KKJ': { zh: '北九州', en: 'Kitakyushu' },
+            'ASJ': { zh: '奄美大島', en: 'Amami Oshima' },
+            'YON': { zh: '米子 (鳥取)', en: 'Yonago' },
+            'TTJ': { zh: '鳥取', en: 'Tottori' },
+            'IZO': { zh: '出雲 (島根)', en: 'Izumo' },
+            'UBJ': { zh: '山口宇部', en: 'Yamaguchi Ube' },
+            'IWK': { zh: '岩國', en: 'Iwakuni' },
+            'KMQ': { zh: '小松 (金澤)', en: 'Komatsu (Kanazawa)' },
+            'TOY': { zh: '富山', en: 'Toyama' },
+            'NTQ': { zh: '能登', en: 'Noto' },
+            'FSZ': { zh: '靜岡 (富士山)', en: 'Shizuoka' },
+            'MMJ': { zh: '松本 (信州)', en: 'Matsumoto' },
+            'KIJ': { zh: '新潟', en: 'Niigata' },
+            'IBR': { zh: '茨城', en: 'Ibaraki' },
+            'AOJ': { zh: '青森', en: 'Aomori' },
+            'MSJ': { zh: '三澤 (青森)', en: 'Misawa' },
+            'AXT': { zh: '秋田', en: 'Akita' },
+            'ONJ': { zh: '大館能代', en: 'Odate-Noshiro' },
+            'HNA': { zh: '花卷 (岩手)', en: 'Hanamaki (Iwate)' },
+            'GAJ': { zh: '山形', en: 'Yamagata' },
+            'SYO': { zh: '庄內 (山形)', en: 'Shonai' },
+            'FKS': { zh: '福島', en: 'Fukushima' },
+            'HKD': { zh: '函館', en: 'Hakodate' },
+            'AKJ': { zh: '旭川', en: 'Asahikawa' },
+            'OBO': { zh: '帶廣 (十勝)', en: 'Obihiro' },
+            'KUH': { zh: '釧路', en: 'Kushiro' },
+            'MMB': { zh: '女滿別 (網走)', en: 'Memanbetsu' },
+            'SHB': { zh: '中標津', en: 'Nakashibetsu' },
+            'WKJ': { zh: '稚內', en: 'Wakkanai' },
+
+            // 韓國 (South Korea)
             'ICN': { zh: '首爾 (仁川)', en: 'Seoul (Incheon)' },
             'GMP': { zh: '首爾 (金浦)', en: 'Seoul (Gimpo)' },
-            'PUS': { zh: '釜山', en: 'Busan' },
+            'PUS': { zh: '釜山 (金海)', en: 'Busan (Gimhae)' },
             'CJU': { zh: '濟州', en: 'Jeju' },
-            'BKK': { zh: '曼谷 (蘇凡納布)', en: 'Bangkok (Suvarnabhumi)' },
-            'DMK': { zh: '曼谷 (廊曼)', en: 'Bangkok (Don Mueang)' },
-            'HKT': { zh: '布吉', en: 'Phuket' },
-            'CNX': { zh: '清邁', en: 'Chiang Mai' },
-            'UTP': { zh: '芭堤雅 (烏塔保)', en: 'Pattaya (U-Tapao)' },
-            'SIN': { zh: '新加坡', en: 'Singapore' },
-            'KUL': { zh: '吉隆坡', en: 'Kuala Lumpur' },
-            'PEN': { zh: '檳城', en: 'Penang' },
-            'BKI': { zh: '沙巴 (亞庇)', en: 'Kota Kinabalu' },
-            'KCH': { zh: '古晉', en: 'Kuching' },
-            'MNL': { zh: '馬尼拉', en: 'Manila' },
-            'CEB': { zh: '宿霧', en: 'Cebu' },
-            'CRK': { zh: '克拉克', en: 'Clark' },
-            'ILO': { zh: '伊洛伊洛', en: 'Iloilo' },
-            'DVO': { zh: '達沃', en: 'Davao' },
-            'SGN': { zh: '胡志明市', en: 'Ho Chi Minh City' },
-            'HAN': { zh: '河內', en: 'Hanoi' },
-            'DAD': { zh: '峴港', en: 'Da Nang' },
-            'PQC': { zh: '富國島', en: 'Phu Quoc' },
-            'CXR': { zh: '芽莊', en: 'Nha Trang' },
-            'CGK': { zh: '雅加達', en: 'Jakarta' },
-            'DPS': { zh: '峇里島 (登巴薩)', en: 'Bali (Denpasar)' },
-            'SUB': { zh: '泗水', en: 'Surabaya' },
-            'PNH': { zh: '金邊', en: 'Phnom Penh' },
-            'SAI': { zh: '暹粒', en: 'Siem Reap' },
-            'VTE': { zh: '永珍', en: 'Vientiane' },
-            'RGN': { zh: '仰光', en: 'Yangon' },
-            'BWN': { zh: '斯里巴加灣市 (汶萊)', en: 'Bandar Seri Begawan' },
+            'TAE': { zh: '大邱', en: 'Daegu' },
+            'CJJ': { zh: '清州', en: 'Cheongju' },
+            'MWX': { zh: '務安 (光州)', en: 'Muan' },
+            'KWJ': { zh: '光州', en: 'Gwangju' },
+            'YNY': { zh: '襄陽 (江原道)', en: 'Yangyang' },
+            'RSU': { zh: '麗水', en: 'Yeosu' },
+            'USN': { zh: '蔚山', en: 'Ulsan' },
+            'KPO': { zh: '浦項 (慶州)', en: 'Pohang' },
+            'HIN': { zh: '泗川 (晉州)', en: 'Sacheon' },
+            'WJU': { zh: '原州', en: 'Wonju' },
+            'KUV': { zh: '群山', en: 'Gunsan' },
+
+            // 中國内地 (Mainland China - 涵蓋所有客貨運樞紐及二三線航點)
             'PVG': { zh: '上海 (浦東)', en: 'Shanghai (Pudong)' },
             'SHA': { zh: '上海 (虹橋)', en: 'Shanghai (Hongqiao)' },
             'PEK': { zh: '北京 (首都)', en: 'Beijing (Capital)' },
             'PKX': { zh: '北京 (大興)', en: 'Beijing (Daxing)' },
+            'CAN': { zh: '廣州 (白雲)', en: 'Guangzhou (Baiyun)' },
+            'SZX': { zh: '深圳 (寶安)', en: "Shenzhen (Bao'an)" },
+            'ZUH': { zh: '珠海 (金灣)', en: 'Zhuhai' },
+            'SWA': { zh: '揭陽 (潮汕)', en: 'Jieyang (Chaoshan)' },
+            'MXZ': { zh: '梅州 (梅縣)', en: 'Meizhou' },
+            'ZHA': { zh: '湛江 (吳川)', en: 'Zhanjiang' },
+            'HUZ': { zh: '惠州 (平潭)', en: 'Huizhou' },
+            'FUO': { zh: '佛山 (沙堤)', en: 'Foshan' },
+            'HSC': { zh: '韶關 (丹霞)', en: 'Shaoguan' },
             'TFU': { zh: '成都 (天府)', en: 'Chengdu (Tianfu)' },
             'CTU': { zh: '成都 (雙流)', en: 'Chengdu (Shuangliu)' },
-            'CKG': { zh: '重慶', en: 'Chongqing' },
-            'HGH': { zh: '杭州', en: 'Hangzhou' },
-            'NKG': { zh: '南京', en: 'Nanjing' },
-            'XMN': { zh: '廈門', en: 'Xiamen' },
-            'FOC': { zh: '福州', en: 'Fuzhou' },
-            'JJN': { zh: '泉州 (晉江)', en: 'Quanzhou' },
-            'WUH': { zh: '武漢', en: 'Wuhan' },
-            'XIY': { zh: '西安', en: 'Xi\'an' },
-            'CSX': { zh: '長沙', en: 'Changsha' },
-            'TAO': { zh: '青島', en: 'Qingdao' },
-            'TSN': { zh: '天津', en: 'Tianjin' },
-            'DLC': { zh: '大連', en: 'Dalian' },
-            'SHE': { zh: '瀋陽', en: 'Shenyang' },
-            'HRB': { zh: '哈爾濱', en: 'Harbin' },
-            'KMG': { zh: '昆明', en: 'Kunming' },
-            'HAK': { zh: '海口', en: 'Haikou' },
-            'SYX': { zh: '三亞', en: 'Sanya' },
-            'NGB': { zh: '寧波', en: 'Ningbo' },
-            'WNZ': { zh: '溫州', en: 'Wenzhou' },
-            'CGO': { zh: '鄭州', en: 'Zhengzhou' },
-            'TNA': { zh: '濟南', en: 'Jinan' },
-            'NNG': { zh: '南寧', en: 'Nanning' },
-            'KWL': { zh: '桂林', en: 'Guilin' },
-            'LJG': { zh: '麗江', en: 'Lijiang' },
-            'URC': { zh: '烏魯木齊', en: 'Urumqi' },
-            'LHR': { zh: '倫敦 (希斯路)', en: 'London (Heathrow)' },
-            'LGW': { zh: '倫敦 (蓋特威克)', en: 'London (Gatwick)' },
-            'STN': { zh: '倫敦 (史坦斯特)', en: 'London (Stansted)' },
-            'MAN': { zh: '曼徹斯特', en: 'Manchester' },
-            'CDG': { zh: '巴黎 (戴高樂)', en: 'Paris (CDG)' },
-            'FRA': { zh: '法蘭克福', en: 'Frankfurt' },
-            'MUC': { zh: '慕尼黑', en: 'Munich' },
-            'LEJ': { zh: '萊比錫', en: 'Leipzig' },
-            'AMS': { zh: '阿姆斯特丹', en: 'Amsterdam' },
-            'LUX': { zh: '盧森堡', en: 'Luxembourg' },
-            'LGG': { zh: '列日', en: 'Liege' },
-            'ZRH': { zh: '蘇黎世', en: 'Zurich' },
-            'MXP': { zh: '米蘭 (馬爾彭薩)', en: 'Milan (Malpensa)' },
-            'FCO': { zh: '羅馬 (菲烏米奇諾)', en: 'Rome (Fiumicino)' },
-            'MAD': { zh: '馬德里', en: 'Madrid' },
-            'BCN': { zh: '巴塞隆拿', en: 'Barcelona' },
-            'HEL': { zh: '赫爾辛基', en: 'Helsinki' },
-            'IST': { zh: '伊斯坦堡', en: 'Istanbul' },
-            'SVO': { zh: '莫斯科 (謝列梅捷沃)', en: 'Moscow (SVO)' },
-            'DXB': { zh: '杜拜', en: 'Dubai' },
-            'DWC': { zh: '杜拜 (阿勒馬克圖姆)', en: 'Dubai (World Central)' },
-            'DOH': { zh: '多哈', en: 'Doha' },
-            'AUH': { zh: '阿布扎比', en: 'Abu Dhabi' },
-            'RUH': { zh: '利雅得', en: 'Riyadh' },
-            'JED': { zh: '吉達', en: 'Jeddah' },
-            'BAH': { zh: '巴林', en: 'Bahrain' },
-            'MCT': { zh: '馬斯喀特', en: 'Muscat' },
-            'TLV': { zh: '特拉維夫', en: 'Tel Aviv' },
+            'CKG': { zh: '重慶 (江北)', en: 'Chongqing (Jiangbei)' },
+            'HGH': { zh: '杭州 (蕭山)', en: 'Hangzhou (Xiaoshan)' },
+            'NGB': { zh: '寧波 (櫟社)', en: 'Ningbo' },
+            'WNZ': { zh: '溫州 (龍灣)', en: 'Wenzhou' },
+            'YIW': { zh: '義烏', en: 'Yiwu' },
+            'HSN': { zh: '舟山 (普陀山)', en: 'Zhoushan' },
+            'HYN': { zh: '台州 (路橋)', en: 'Taizhou' },
+            'JUZ': { zh: '衢州', en: 'Quzhou' },
+            'NKG': { zh: '南京 (祿口)', en: 'Nanjing (Lukou)' },
+            'WUX': { zh: '無錫 (蘇南碩放)', en: 'Wuxi' },
+            'CZX': { zh: '常州 (奔牛)', en: 'Changzhou' },
+            'NTG': { zh: '南通 (興東)', en: 'Nantong' },
+            'YTY': { zh: '揚州 (泰州)', en: 'Yangzhou (Taizhou)' },
+            'YNZ': { zh: '鹽城 (南洋)', en: 'Yancheng' },
+            'LYG': { zh: '連雲港 (花果山)', en: 'Lianyungang' },
+            'XUZ': { zh: '徐州 (觀音)', en: 'Xuzhou' },
+            'HUA': { zh: '淮安 (漣水)', en: "Huai'an" },
+            'HIA': { zh: '淮安 (漣水)', en: "Huai'an" },
+            'XMN': { zh: '廈門 (高崎)', en: 'Xiamen' },
+            'FOC': { zh: '福州 (長樂)', en: 'Fuzhou' },
+            'JJN': { zh: '泉州 (晉江)', en: 'Quanzhou (Jinjiang)' },
+            'WUS': { zh: '武夷山', en: 'Wuyishan' },
+            'SMJ': { zh: '三明 (沙縣)', en: 'Sanming' },
+            'LCX': { zh: '龍岩 (冠豸山)', en: 'Longyan' },
+            'WUH': { zh: '武漢 (天河)', en: 'Wuhan' },
+            'EHU': { zh: '鄂州 (花湖)', en: 'Ezhou (Huahu)' },
+            'YIH': { zh: '宜昌 (三峽)', en: 'Yichang' },
+            'ENH': { zh: '恩施 (許家坪)', en: 'Enshi' },
+            'XFN': { zh: '襄陽 (劉集)', en: 'Xiangyang' },
+            'HPG': { zh: '神農架', en: 'Shennongjia' },
+            'CSX': { zh: '長沙 (黃花)', en: 'Changsha' },
+            'DYG': { zh: '張家界 (荷花)', en: 'Zhangjiajie' },
+            'CGD': { zh: '常德 (桃花源)', en: 'Changde' },
+            'HNY': { zh: '衡陽 (南嶽)', en: 'Hengyang' },
+            'HJJ': { zh: '懷化 (芷江)', en: 'Huaihua' },
+            'CGO': { zh: '鄭州 (新鄭)', en: 'Zhengzhou' },
+            'LYA': { zh: '洛陽 (北郊)', en: 'Luoyang' },
+            'NNY': { zh: '南陽 (姜營)', en: 'Nanyang' },
+            'HFE': { zh: '合肥 (新橋)', en: 'Hefei' },
+            'TXN': { zh: '黃山 (屯溪)', en: 'Huangshan' },
+            'AQG': { zh: '安慶', en: 'Anqing' },
+            'FUG': { zh: '阜陽', en: 'Fuyang' },
+            'JUH': { zh: '池州 (九華山)', en: 'Chizhou (Jiuhuashan)' },
+            'KHN': { zh: '南昌 (昌北)', en: 'Nanchang' },
+            'KOW': { zh: '贛州 (黃金)', en: 'Ganzhou' },
+            'JIU': { zh: '九江 (廬山)', en: 'Jiujiang' },
+            'JDZ': { zh: '景德鎮', en: 'Jingdezhen' },
+            'JGS': { zh: '井岡山', en: 'Jinggangshan' },
+            'SQD': { zh: '上饒 (三清山)', en: 'Shangrao' },
+            'YIC': { zh: '宜春 (明月山)', en: 'Yichun' },
+            'TAO': { zh: '青島 (膠東)', en: 'Qingdao' },
+            'TNA': { zh: '濟南 (遙牆)', en: 'Jinan' },
+            'YNT': { zh: '煙台 (蓬萊)', en: 'Yantai' },
+            'WEH': { zh: '威海 (大水泊)', en: 'Weihai' },
+            'LYI': { zh: '臨沂 (啟陽)', en: 'Linyi' },
+            'JNG': { zh: '濟寧', en: 'Jining' },
+            'WEF': { zh: '濰坊', en: 'Weifang' },
+            'DOY': { zh: '東營', en: 'Dongying' },
+            'RIZ': { zh: '日照', en: 'Rizhao' },
+            'TSN': { zh: '天津 (濱海)', en: 'Tianjin' },
+            'SJW': { zh: '石家莊 (正定)', en: 'Shijiazhuang' },
+            'SHP': { zh: '秦皇島 (北戴河)', en: 'Qinhuangdao' },
+            'TVS': { zh: '唐山 (三女河)', en: 'Tangshan' },
+            'HDG': { zh: '邯鄲', en: 'Handan' },
+            'TYN': { zh: '太原 (武宿)', en: 'Taiyuan' },
+            'DAT': { zh: '大同 (雲岡)', en: 'Datong' },
+            'YCU': { zh: '運城 (張孝)', en: 'Yuncheng' },
+            'CIH': { zh: '長治 (王村)', en: 'Changzhi' },
+            'WUT': { zh: '五台山 (忻州)', en: 'Wutaishan' },
+            'HET': { zh: '呼和浩特 (白塔)', en: 'Hohhot' },
+            'BAV': { zh: '包頭 (東河)', en: 'Baotou' },
+            'DSN': { zh: '鄂爾多斯', en: 'Ordos' },
+            'HLD': { zh: '海拉爾 (呼倫貝爾)', en: 'Hailar (Hulunbuir)' },
+            'CIF': { zh: '赤峰 (玉龍)', en: 'Chifeng' },
+            'TGO': { zh: '通遼', en: 'Tongliao' },
+            'NZH': { zh: '滿洲里', en: 'Manzhouli' },
+            'SHE': { zh: '瀋陽 (桃仙)', en: 'Shenyang' },
+            'DLC': { zh: '大連 (周水子)', en: 'Dalian' },
+            'DDG': { zh: '丹東 (浪頭)', en: 'Dandong' },
+            'JNZ': { zh: '錦州', en: 'Jinzhou' },
+            'YKH': { zh: '營口 (蘭旗)', en: 'Yingkou' },
+            'CGQ': { zh: '長春 (龍嘉)', en: 'Changchun' },
+            'YNJ': { zh: '延吉 (朝陽川)', en: 'Yanji' },
+            'NBS': { zh: '長白山', en: 'Changbaishan' },
+            'HRB': { zh: '哈爾濱 (太平)', en: 'Harbin' },
+            'MDG': { zh: '牡丹江 (海浪)', en: 'Mudanjiang' },
+            'NDG': { zh: '齊齊哈爾', en: 'Qiqihar' },
+            'JMU': { zh: '佳木斯', en: 'Jiamusi' },
+            'OHE': { zh: '漠河', en: 'Mohe' },
+            'XIY': { zh: '西安 (咸陽)', en: "Xi'an" },
+            'UYN': { zh: '榆林 (榆陽)', en: 'Yulin' },
+            'ENY': { zh: '延安 (南泥灣)', en: "Yan'an" },
+            'HZG': { zh: '漢中 (城固)', en: 'Hanzhong' },
+            'LHW': { zh: '蘭州 (中川)', en: 'Lanzhou' },
+            'DNH': { zh: '敦煌 (莫高)', en: 'Dunhuang' },
+            'JGN': { zh: '嘉峪關 (酒泉)', en: 'Jiayuguan' },
+            'YZY': { zh: '張掖', en: 'Zhangye' },
+            'XNN': { zh: '西寧 (曹家堡)', en: 'Xining' },
+            'GOQ': { zh: '格爾木', en: 'Golmud' },
+            'INC': { zh: '銀川 (河東)', en: 'Yinchuan' },
+            'ZHY': { zh: '中衛 (沙坡頭)', en: 'Zhongwei' },
+            'URC': { zh: '烏魯木齊 (地窩堡)', en: 'Urumqi' },
+            'KHG': { zh: '喀什 (徠寧)', en: 'Kashgar' },
+            'YIN': { zh: '伊寧', en: 'Yining' },
+            'KRL': { zh: '庫爾勒', en: 'Korla' },
+            'AKU': { zh: '阿克蘇', en: 'Aksu' },
+            'HTN': { zh: '和田', en: 'Hotan' },
+            'AAT': { zh: '阿勒泰', en: 'Altay' },
+            'KRY': { zh: '克拉瑪依', en: 'Karamay' },
+            'HMI': { zh: '哈密', en: 'Hami' },
+            'TLQ': { zh: '吐魯番', en: 'Turpan' },
+            'KMG': { zh: '昆明 (長水)', en: 'Kunming' },
+            'LJG': { zh: '麗江 (三義)', en: 'Lijiang' },
+            'JHG': { zh: '西雙版納 (嘎灑)', en: 'Xishuangbanna' },
+            'DLU': { zh: '大理 (鳳儀)', en: 'Dali' },
+            'DIG': { zh: '香格里拉 (迪慶)', en: 'Shangri-La (Diqing)' },
+            'TCZ': { zh: '騰衝 (駝峰)', en: 'Tengchong' },
+            'LUM': { zh: '德宏 (芒市)', en: 'Dehong (Mangshi)' },
+            'KWE': { zh: '貴陽 (龍洞堡)', en: 'Guiyang' },
+            'ZYI': { zh: '遵義 (新舟)', en: 'Zunyi (Xinzhou)' },
+            'WMT': { zh: '遵義 (茅台)', en: 'Zunyi (Maotai)' },
+            'TEN': { zh: '銅仁 (鳳凰)', en: 'Tongren' },
+            'ACX': { zh: '興義 (萬峰林)', en: 'Xingyi' },
+            'MIG': { zh: '綿陽 (南郊)', en: 'Mianyang' },
+            'YBP': { zh: '宜賓 (五糧液)', en: 'Yibin' },
+            'LZO': { zh: '瀘州 (雲龍)', en: 'Luzhou' },
+            'NAO': { zh: '南充 (高坪)', en: 'Nanchong' },
+            'DAX': { zh: '達州 (金埡)', en: 'Dazhou' },
+            'JZH': { zh: '九寨溝 (黃龍)', en: 'Jiuzhaigou' },
+            'XIC': { zh: '西昌 (青山)', en: 'Xichang' },
+            'DCY': { zh: '稻城 (亞丁)', en: 'Daocheng Yading' },
+            'LXA': { zh: '拉薩 (貢嘎)', en: 'Lhasa' },
+            'LZY': { zh: '林芝 (米林)', en: 'Nyingchi' },
+            'NNG': { zh: '南寧 (吳圩)', en: 'Nanning' },
+            'KWL': { zh: '桂林 (兩江)', en: 'Guilin' },
+            'BHY': { zh: '北海 (福成)', en: 'Beihai' },
+            'LZH': { zh: '柳州 (白蓮)', en: 'Liuzhou' },
+            'HAK': { zh: '海口 (美蘭)', en: 'Haikou' },
+            'SYX': { zh: '三亞 (鳳凰)', en: 'Sanya' },
+            'BAR': { zh: '瓊海 (博鰲)', en: "Qionghai (Bo'ao)" },
+
+            // 東南亞 (Southeast Asia)
+            'BKK': { zh: '曼谷 (蘇凡納布)', en: 'Bangkok (Suvarnabhumi)' },
+            'DMK': { zh: '曼谷 (廊曼)', en: 'Bangkok (Don Mueang)' },
+            'HKT': { zh: '布吉', en: 'Phuket' },
+            'CNX': { zh: '清邁', en: 'Chiang Mai' },
+            'CEI': { zh: '清萊', en: 'Chiang Rai' },
+            'UTP': { zh: '芭堤雅 (烏塔保)', en: 'Pattaya (U-Tapao)' },
+            'USM': { zh: '蘇梅島', en: 'Koh Samui' },
+            'KBV': { zh: '甲米 (喀比)', en: 'Krabi' },
+            'HDY': { zh: '合艾', en: 'Hat Yai' },
+            'URT': { zh: '素叻他尼', en: 'Surat Thani' },
+            'UTH': { zh: '烏隆他尼', en: 'Udon Thani' },
+            'KKC': { zh: '孔敬', en: 'Khon Kaen' },
+            'SIN': { zh: '新加坡 (樟宜)', en: 'Singapore (Changi)' },
+            'XSP': { zh: '新加坡 (實里達)', en: 'Singapore (Seletar)' },
+            'KUL': { zh: '吉隆坡', en: 'Kuala Lumpur' },
+            'SZB': { zh: '吉隆坡 (梳邦)', en: 'Kuala Lumpur (Subang)' },
+            'PEN': { zh: '檳城', en: 'Penang' },
+            'BKI': { zh: '沙巴 (亞庇)', en: 'Kota Kinabalu' },
+            'KCH': { zh: '古晉 (砂拉越)', en: 'Kuching' },
+            'LGK': { zh: '浮羅交怡 (蘭卡威)', en: 'Langkawi' },
+            'JHB': { zh: '新山 (柔佛)', en: 'Johor Bahru' },
+            'IPH': { zh: '怡保', en: 'Ipoh' },
+            'MYY': { zh: '美里', en: 'Miri' },
+            'SBW': { zh: '詩巫', en: 'Sibu' },
+            'TWU': { zh: '斗湖 (仙本那)', en: 'Tawau' },
+            'SDK': { zh: '山打根', en: 'Sandakan' },
+            'BTU': { zh: '民都魯', en: 'Bintulu' },
+            'LBU': { zh: '納閩', en: 'Labuan' },
+            'KBR': { zh: '哥打巴魯', en: 'Kota Bharu' },
+            'TGG': { zh: '登嘉樓', en: 'Kuala Terengganu' },
+            'KUA': { zh: '關丹', en: 'Kuantan' },
+            'MNL': { zh: '馬尼拉', en: 'Manila' },
+            'CRK': { zh: '克拉克', en: 'Clark' },
+            'CEB': { zh: '宿霧', en: 'Cebu' },
+            'ILO': { zh: '伊洛伊洛 (怡朗)', en: 'Iloilo' },
+            'DVO': { zh: '達沃', en: 'Davao' },
+            'KLO': { zh: '卡利博 (長灘島)', en: 'Kalibo (Boracay)' },
+            'MPH': { zh: '長灘島 (卡迪克蘭)', en: 'Caticlan (Boracay)' },
+            'PPS': { zh: '公主港 (巴拉望)', en: 'Puerto Princesa' },
+            'TAG': { zh: '薄荷島 (邦勞)', en: 'Bohol (Panglao)' },
+            'BCD': { zh: '巴科洛德', en: 'Bacolod' },
+            'CGY': { zh: '卡加延德奧羅', en: 'Cagayan de Oro' },
+            'GES': { zh: '將軍城', en: 'General Santos' },
+            'ZAM': { zh: '三寶顏', en: 'Zamboanga' },
+            'LAO': { zh: '佬沃', en: 'Laoag' },
+            'TAC': { zh: '獨魯萬', en: 'Tacloban' },
+            'LGP': { zh: '黎牙實比', en: 'Legazpi' },
+            'SFS': { zh: '蘇比克灣', en: 'Subic Bay' },
+            'SGN': { zh: '胡志明市', en: 'Ho Chi Minh City' },
+            'HAN': { zh: '河內', en: 'Hanoi' },
+            'DAD': { zh: '峴港', en: 'Da Nang' },
+            'PQC': { zh: '富國島', en: 'Phu Quoc' },
+            'CXR': { zh: '芽莊 (金蘭)', en: 'Nha Trang (Cam Ranh)' },
+            'HPH': { zh: '海防', en: 'Hai Phong' },
+            'VDO': { zh: '雲屯 (下龍灣)', en: 'Van Don' },
+            'HUI': { zh: '順化', en: 'Hue' },
+            'DLI': { zh: '大叻', en: 'Da Lat' },
+            'VCA': { zh: '芹苴', en: 'Can Tho' },
+            'UIH': { zh: '歸仁', en: 'Quy Nhon' },
+            'VII': { zh: '榮市', en: 'Vinh' },
+            'CGK': { zh: '雅加達', en: 'Jakarta' },
+            'HLP': { zh: '雅加達 (哈利姆)', en: 'Jakarta (Halim)' },
+            'DPS': { zh: '峇里島 (登巴薩)', en: 'Bali (Denpasar)' },
+            'SUB': { zh: '泗水', en: 'Surabaya' },
+            'KNO': { zh: '棉蘭 (瓜拉納穆)', en: 'Medan (Kualanamu)' },
+            'UPG': { zh: '望加錫', en: 'Makassar' },
+            'YIA': { zh: '日惹', en: 'Yogyakarta' },
+            'JOG': { zh: '日惹 (阿迪蘇吉普托)', en: 'Yogyakarta (JOG)' },
+            'SRG': { zh: '三寶壟', en: 'Semarang' },
+            'BDO': { zh: '萬隆', en: 'Bandung' },
+            'BPN': { zh: '巴厘巴板', en: 'Balikpapan' },
+            'MDC': { zh: '萬鴉老 (美娜多)', en: 'Manado' },
+            'BTH': { zh: '巴淡島', en: 'Batam' },
+            'LOP': { zh: '龍目島', en: 'Lombok' },
+            'LBJ': { zh: '科莫多 (納閩巴霍)', en: 'Labuan Bajo' },
+            'PLM': { zh: '巨港', en: 'Palembang' },
+            'PNK': { zh: '坤甸', en: 'Pontianak' },
+            'PKU': { zh: '北乾巴魯', en: 'Pekanbaru' },
+            'SOC': { zh: '梭羅', en: 'Solo (Surakarta)' },
+            'PNH': { zh: '金邊', en: 'Phnom Penh' },
+            'KTI': { zh: '金邊 (德崇)', en: 'Phnom Penh (Techo)' },
+            'SAI': { zh: '暹粒 (吳哥)', en: 'Siem Reap (Angkor)' },
+            'REP': { zh: '暹粒', en: 'Siem Reap' },
+            'KOS': { zh: '西哈努克 (西港)', en: 'Sihanoukville' },
+            'VTE': { zh: '永珍 (萬象)', en: 'Vientiane' },
+            'LPQ': { zh: '龍坡邦 (琅勃拉邦)', en: 'Luang Prabang' },
+            'PKZ': { zh: '巴色 (老撾)', en: 'Pakse' },
+            'RGN': { zh: '仰光', en: 'Yangon' },
+            'MDL': { zh: '曼德勒', en: 'Mandalay' },
+            'NYT': { zh: '奈比都 (內比都)', en: 'Naypyidaw' },
+            'BWN': { zh: '斯里巴加灣市 (汶萊)', en: 'Bandar Seri Begawan (Brunei)' },
+            'DIL': { zh: '帝力 (東帝汶)', en: 'Dili (Timor-Leste)' },
+
+            // 南亞、中亞及蒙古 (South Asia, Central Asia & Mongolia)
             'DEL': { zh: '德里', en: 'Delhi' },
             'BOM': { zh: '孟買', en: 'Mumbai' },
             'BLR': { zh: '班加羅爾', en: 'Bengaluru' },
             'MAA': { zh: '欽奈', en: 'Chennai' },
             'HYD': { zh: '海得拉巴', en: 'Hyderabad' },
             'CCU': { zh: '加爾各答', en: 'Kolkata' },
-            'DAC': { zh: '達卡', en: 'Dhaka' },
+            'AMD': { zh: '艾哈邁達巴德', en: 'Ahmedabad' },
+            'COK': { zh: '科欽', en: 'Kochi (Cochin)' },
+            'TRV': { zh: '特里凡得琅', en: 'Thiruvananthapuram' },
+            'PNQ': { zh: '浦那', en: 'Pune' },
+            'GOI': { zh: '果阿 (達波林)', en: 'Goa (Dabolim)' },
+            'GOX': { zh: '果阿 (莫帕)', en: 'Goa (Mopa)' },
+            'ATQ': { zh: '阿姆利則', en: 'Amritsar' },
+            'JAI': { zh: '齋浦爾', en: 'Jaipur' },
+            'LKO': { zh: '勒克瑙', en: 'Lucknow' },
+            'GAU': { zh: '古瓦哈提', en: 'Guwahati' },
+            'NAG': { zh: '那格浦爾', en: 'Nagpur' },
+            'CJB': { zh: '哥印拜陀', en: 'Coimbatore' },
+            'TRZ': { zh: '蒂魯吉拉帕利', en: 'Tiruchirappalli' },
+            'DAC': { zh: '達卡 (孟加拉)', en: 'Dhaka' },
+            'CGP': { zh: '吉大港', en: 'Chattogram' },
+            'ZYL': { zh: '錫爾赫特', en: 'Sylhet' },
             'KTM': { zh: '加德滿都', en: 'Kathmandu' },
-            'CMB': { zh: '科倫坡', en: 'Colombo' },
+            'PKR': { zh: '博卡拉', en: 'Pokhara' },
+            'BWA': { zh: '藍毗尼 (佛祖)', en: 'Bhairahawa' },
+            'CMB': { zh: '科倫坡 (斯里蘭卡)', en: 'Colombo' },
+            'HRI': { zh: '漢班托塔', en: 'Hambantota' },
             'MLE': { zh: '馬累 (馬爾代夫)', en: 'Male (Maldives)' },
+            'GAN': { zh: '甘島 (馬爾代夫)', en: 'Gan Island' },
+            'KHI': { zh: '卡拉奇', en: 'Karachi' },
+            'LHE': { zh: '拉合爾', en: 'Lahore' },
+            'ISB': { zh: '伊斯蘭堡', en: 'Islamabad' },
+            'PEW': { zh: '白沙瓦', en: 'Peshawar' },
+            'MUX': { zh: '木爾坦', en: 'Multan' },
+            'SKT': { zh: '錫亞爾科特', en: 'Sialkot' },
+            'PBH': { zh: '帕羅 (不丹)', en: 'Paro (Bhutan)' },
+            'KBL': { zh: '喀布爾', en: 'Kabul' },
+            'UBN': { zh: '烏蘭巴托 (成吉思汗)', en: 'Ulaanbaatar' },
+            'ULN': { zh: '烏蘭巴托', en: 'Ulaanbaatar (Buyant-Ukhaa)' },
+            'ALA': { zh: '阿拉木圖', en: 'Almaty' },
+            'NQZ': { zh: '阿斯塔納 (哈薩克)', en: 'Astana' },
+            'TSE': { zh: '阿斯塔納', en: 'Astana' },
+            'KGF': { zh: '卡拉干達 (哈薩克)', en: 'Karaganda' },
+            'SCO': { zh: '阿克套', en: 'Aktau' },
+            'CIT': { zh: '奇姆肯特', en: 'Shymkent' },
+            'AKX': { zh: '阿克托別', en: 'Aktobe' },
+            'GUW': { zh: '阿特勞', en: 'Atyrau' },
+            'TAS': { zh: '塔什干 (烏茲別克)', en: 'Tashkent' },
+            'SKD': { zh: '撒馬爾罕', en: 'Samarkand' },
+            'BHK': { zh: '布哈拉', en: 'Bukhara' },
+            'NMA': { zh: '納曼干', en: 'Namangan' },
+            'NVI': { zh: '納沃伊', en: 'Navoiy' },
+            'FEG': { zh: '費爾干納', en: 'Fergana' },
+            'FRU': { zh: '比什凱克 (吉爾吉斯)', en: 'Bishkek' },
+            'OSS': { zh: '奧什', en: 'Osh' },
+            'ASB': { zh: '阿什哈巴德 (土庫曼)', en: 'Ashgabat' },
+            'KRW': { zh: '土庫曼巴希', en: 'Turkmenbashi' },
+            'DYU': { zh: '杜尚別 (塔吉克)', en: 'Dushanbe' },
+            'GYD': { zh: '巴庫 (阿塞拜疆)', en: 'Baku' },
+            'TBS': { zh: '第比利斯 (格魯吉亞)', en: 'Tbilisi' },
+            'BUS': { zh: '巴統', en: 'Batumi' },
+            'KUT': { zh: '庫塔伊西', en: 'Kutaisi' },
+            'EVN': { zh: '埃里溫 (亞美尼亞)', en: 'Yerevan' },
+
+            // 中東 (Middle East)
+            'DXB': { zh: '杜拜 (國際)', en: 'Dubai (DXB)' },
+            'DWC': { zh: '杜拜 (世界中心)', en: 'Dubai (World Central)' },
+            'AUH': { zh: '阿布扎比', en: 'Abu Dhabi' },
+            'SHJ': { zh: '沙迦', en: 'Sharjah' },
+            'RKT': { zh: '拉斯海瑪', en: 'Ras Al Khaimah' },
+            'FJR': { zh: '富查伊拉', en: 'Fujairah' },
+            'DOH': { zh: '多哈 (卡塔爾)', en: 'Doha' },
+            'RUH': { zh: '利雅得 (沙特)', en: 'Riyadh' },
+            'JED': { zh: '吉達', en: 'Jeddah' },
+            'DMM': { zh: '達曼', en: 'Dammam' },
+            'MED': { zh: '麥地那', en: 'Medina' },
+            'AHB': { zh: '阿卜哈', en: 'Abha' },
+            'TIF': { zh: '塔伊夫', en: 'Taif' },
+            'ULH': { zh: '埃爾奧拉', en: 'AlUla' },
+            'NUM': { zh: '新未來城 (NEOM)', en: 'NEOM Bay' },
+            'BAH': { zh: '巴林', en: 'Bahrain' },
+            'MCT': { zh: '馬斯喀特 (阿曼)', en: 'Muscat' },
+            'SLL': { zh: '塞拉萊', en: 'Salalah' },
+            'KWI': { zh: '科威特', en: 'Kuwait City' },
+            'AMM': { zh: '安曼 (約旦)', en: 'Amman' },
+            'AQJ': { zh: '亞喀巴', en: 'Aqaba' },
+            'TLV': { zh: '特拉維夫', en: 'Tel Aviv' },
+            'BEY': { zh: '貝魯特', en: 'Beirut' },
+            'BGW': { zh: '巴格達', en: 'Baghdad' },
+            'EBL': { zh: '埃爾比勒', en: 'Erbil' },
+            'BSR': { zh: '巴士拉', en: 'Basra' },
+            'IKA': { zh: '德黑蘭 (伊瑪目)', en: 'Tehran (IKA)' },
+            'THR': { zh: '德黑蘭 (梅赫拉巴德)', en: 'Tehran (THR)' },
+            'MHD': { zh: '馬什哈德', en: 'Mashhad' },
+            'SYZ': { zh: '設拉子', en: 'Shiraz' },
+            'IFN': { zh: '伊斯法罕', en: 'Isfahan' },
+
+            // 歐洲及俄羅斯 (Europe & Russia)
+            'LHR': { zh: '倫敦 (希斯路)', en: 'London (Heathrow)' },
+            'LGW': { zh: '倫敦 (蓋特威克)', en: 'London (Gatwick)' },
+            'STN': { zh: '倫敦 (史坦斯特)', en: 'London (Stansted)' },
+            'LTN': { zh: '倫敦 (盧頓)', en: 'London (Luton)' },
+            'LCY': { zh: '倫敦 (城市)', en: 'London (City)' },
+            'SEN': { zh: '倫敦 (紹森德)', en: 'London (Southend)' },
+            'MAN': { zh: '曼徹斯特', en: 'Manchester' },
+            'BHX': { zh: '伯明翰', en: 'Birmingham' },
+            'EDI': { zh: '愛丁堡', en: 'Edinburgh' },
+            'GLA': { zh: '格拉斯哥', en: 'Glasgow' },
+            'PIK': { zh: '普雷斯蒂克 (格拉斯哥)', en: 'Glasgow (Prestwick)' },
+            'EMA': { zh: '東米德蘭茲 (英國)', en: 'East Midlands' },
+            'BRS': { zh: '布里斯托', en: 'Bristol' },
+            'NCL': { zh: '紐卡素', en: 'Newcastle' },
+            'LPL': { zh: '利物浦', en: 'Liverpool' },
+            'BFS': { zh: '貝爾法斯特', en: 'Belfast' },
+            'CWL': { zh: '卡迪夫', en: 'Cardiff' },
+            'DSA': { zh: '唐卡斯特', en: 'Doncaster Sheffield' },
+            'BOH': { zh: '伯恩茅斯', en: 'Bournemouth' },
+            'CDG': { zh: '巴黎 (戴高樂)', en: 'Paris (CDG)' },
+            'ORY': { zh: '巴黎 (奧利)', en: 'Paris (Orly)' },
+            'BVA': { zh: '巴黎 (博韋)', en: 'Paris (Beauvais)' },
+            'XCR': { zh: '巴黎 (瓦特里)', en: 'Paris (Vatry)' },
+            'NCE': { zh: '尼斯', en: 'Nice' },
+            'LYS': { zh: '里昂', en: 'Lyon' },
+            'MRS': { zh: '馬賽', en: 'Marseille' },
+            'TLS': { zh: '圖盧茲', en: 'Toulouse' },
+            'BOD': { zh: '波爾多', en: 'Bordeaux' },
+            'NTE': { zh: '南特', en: 'Nantes' },
+            'SXB': { zh: '斯特拉斯堡', en: 'Strasbourg' },
+            'LIL': { zh: '里爾', en: 'Lille' },
+            'FRA': { zh: '法蘭克福', en: 'Frankfurt' },
+            'HHN': { zh: '法蘭克福 (哈恩)', en: 'Frankfurt (Hahn)' },
+            'MUC': { zh: '慕尼黑', en: 'Munich' },
+            'LEJ': { zh: '萊比錫 (德國)', en: 'Leipzig (Halle)' },
+            'CGN': { zh: '科隆 / 波恩', en: 'Cologne / Bonn' },
+            'DUS': { zh: '杜塞爾多夫', en: 'Dusseldorf' },
+            'BER': { zh: '柏林 (勃蘭登堡)', en: 'Berlin' },
+            'HAM': { zh: '漢堡', en: 'Hamburg' },
+            'STR': { zh: '斯圖加特', en: 'Stuttgart' },
+            'HAJ': { zh: '漢諾威', en: 'Hanover' },
+            'NUE': { zh: '紐倫堡', en: 'Nuremberg' },
+            'DTM': { zh: '多特蒙德', en: 'Dortmund' },
+            'FMO': { zh: '明斯特', en: 'Munster Osnabruck' },
+            'PAD': { zh: '帕德博恩', en: 'Paderborn' },
+            'AMS': { zh: '阿姆斯特丹', en: 'Amsterdam (Schiphol)' },
+            'MST': { zh: '馬斯特里赫特 (荷蘭)', en: 'Maastricht' },
+            'EIN': { zh: '埃因霍溫', en: 'Eindhoven' },
+            'RTM': { zh: '鹿特丹', en: 'Rotterdam' },
+            'LUX': { zh: '盧森堡', en: 'Luxembourg' },
+            'BRU': { zh: '布魯塞爾', en: 'Brussels' },
+            'LGG': { zh: '列日 (比利時)', en: 'Liege' },
+            'OST': { zh: '奧斯坦德 (布魯日)', en: 'Ostend-Bruges' },
+            'CRL': { zh: '沙勒羅瓦 (布魯塞爾)', en: 'Brussels (Charleroi)' },
+            'ANR': { zh: '安特衛普', en: 'Antwerp' },
+            'ZRH': { zh: '蘇黎世', en: 'Zurich' },
+            'GVA': { zh: '日內瓦', en: 'Geneva' },
+            'BSL': { zh: '巴塞爾 / 米盧斯', en: 'Basel / Mulhouse' },
+            'BRN': { zh: '伯爾尼', en: 'Bern' },
+            'MXP': { zh: '米蘭 (馬爾彭薩)', en: 'Milan (Malpensa)' },
+            'LIN': { zh: '米蘭 (利納特)', en: 'Milan (Linate)' },
+            'BGY': { zh: '米蘭 (貝加莫)', en: 'Milan (Bergamo)' },
+            'FCO': { zh: '羅馬 (菲烏米奇諾)', en: 'Rome (Fiumicino)' },
+            'CIA': { zh: '羅馬 (錢皮諾)', en: 'Rome (Ciampino)' },
+            'VCE': { zh: '威尼斯', en: 'Venice' },
+            'BLQ': { zh: '博洛尼亞', en: 'Bologna' },
+            'NAP': { zh: '那不勒斯', en: 'Naples' },
+            'FLR': { zh: '佛羅倫斯', en: 'Florence' },
+            'PSA': { zh: '比薩', en: 'Pisa' },
+            'TRN': { zh: '都靈', en: 'Turin' },
+            'VRN': { zh: '維羅納', en: 'Verona' },
+            'CTA': { zh: '卡塔尼亞', en: 'Catania' },
+            'PMO': { zh: '巴勒莫', en: 'Palermo' },
+            'BRI': { zh: '巴里', en: 'Bari' },
+            'GOA': { zh: '熱那亞', en: 'Genoa' },
+            'MAD': { zh: '馬德里', en: 'Madrid' },
+            'BCN': { zh: '巴塞隆拿', en: 'Barcelona' },
+            'ZAZ': { zh: '薩拉戈薩 (西班牙)', en: 'Zaragoza' },
+            'VLC': { zh: '華倫西亞', en: 'Valencia' },
+            'AGP': { zh: '馬拉加', en: 'Malaga' },
+            'SVQ': { zh: '塞維利亞', en: 'Seville' },
+            'PMI': { zh: '馬略卡島', en: 'Palma de Mallorca' },
+            'BIO': { zh: '畢爾包', en: 'Bilbao' },
+            'ALC': { zh: '阿利坎特', en: 'Alicante' },
+            'VIT': { zh: '維多利亞 (西班牙)', en: 'Vitoria' },
+            'TFS': { zh: '特內里費', en: 'Tenerife' },
+            'LPA': { zh: '大加那利島', en: 'Gran Canaria' },
+            'LIS': { zh: '里斯本', en: 'Lisbon' },
+            'OPO': { zh: '波圖 (葡萄牙)', en: 'Porto' },
+            'FAO': { zh: '法魯', en: 'Faro' },
+            'FNC': { zh: '馬德拉', en: 'Madeira' },
+            'VIE': { zh: '維也納', en: 'Vienna' },
+            'LNZ': { zh: '林茨 (奧地利)', en: 'Linz' },
+            'SZG': { zh: '薩爾茨堡', en: 'Salzburg' },
+            'INN': { zh: '因斯布魯克', en: 'Innsbruck' },
+            'GRZ': { zh: '格拉茨', en: 'Graz' },
+            'PRG': { zh: '布拉格', en: 'Prague' },
+            'OSR': { zh: '俄斯特拉發 (捷克)', en: 'Ostrava' },
+            'BRQ': { zh: '布爾諾', en: 'Brno' },
+            'WAW': { zh: '華沙', en: 'Warsaw' },
+            'KTW': { zh: '卡托維治 (波蘭)', en: 'Katowice' },
+            'GDN': { zh: '格但斯克', en: 'Gdansk' },
+            'KRK': { zh: '克拉科夫', en: 'Krakow' },
+            'WRO': { zh: '弗羅茨瓦夫', en: 'Wroclaw' },
+            'POZ': { zh: '波茲南', en: 'Poznan' },
+            'RZE': { zh: '熱舒夫', en: 'Rzeszow' },
+            'BUD': { zh: '布達佩斯', en: 'Budapest' },
+            'DEB': { zh: '德布勒森', en: 'Debrecen' },
+            'BTS': { zh: '布拉迪斯拉發 (斯洛伐克)', en: 'Bratislava' },
+            'LJU': { zh: '盧布爾雅那 (斯洛文尼亞)', en: 'Ljubljana' },
+            'ZAG': { zh: '薩格勒布 (克羅地亞)', en: 'Zagreb' },
+            'DBV': { zh: '杜布羅夫尼克', en: 'Dubrovnik' },
+            'SPU': { zh: '斯普利特', en: 'Split' },
+            'BEG': { zh: '貝爾格萊德 (塞爾維亞)', en: 'Belgrade' },
+            'OTP': { zh: '布加勒斯特 (羅馬尼亞)', en: 'Bucharest' },
+            'CLJ': { zh: '克盧日', en: 'Cluj-Napoca' },
+            'SOF': { zh: '索菲亞 (保加利亞)', en: 'Sofia' },
+            'BOJ': { zh: '布爾加斯', en: 'Burgas' },
+            'VAR': { zh: '瓦爾納', en: 'Varna' },
+            'ATH': { zh: '雅典', en: 'Athens' },
+            'SKG': { zh: '塞薩洛尼基', en: 'Thessaloniki' },
+            'HER': { zh: '伊拉克利翁 (克里特)', en: 'Heraklion' },
+            'LCA': { zh: '拉納卡 (塞浦路斯)', en: 'Larnaca' },
+            'PFO': { zh: '帕福斯', en: 'Paphos' },
+            'MLA': { zh: '馬耳他', en: 'Malta' },
+            'TIA': { zh: '地拉那 (阿爾巴尼亞)', en: 'Tirana' },
+            'SKP': { zh: '斯科普里', en: 'Skopje' },
+            'SJJ': { zh: '薩拉熱窩', en: 'Sarajevo' },
+            'TGD': { zh: '波德戈里察', en: 'Podgorica' },
+            'PRN': { zh: '普里什蒂納', en: 'Pristina' },
+            'DUB': { zh: '都柏林', en: 'Dublin' },
+            'SNN': { zh: '香農 (愛爾蘭)', en: 'Shannon' },
+            'ORK': { zh: '科克', en: 'Cork' },
+            'HEL': { zh: '赫爾辛基', en: 'Helsinki' },
+            'RVN': { zh: '羅瓦涅米 (芬蘭)', en: 'Rovaniemi' },
+            'ARN': { zh: '斯德哥爾摩', en: 'Stockholm (Arlanda)' },
+            'GOT': { zh: '哥德堡', en: 'Gothenburg' },
+            'MMX': { zh: '馬爾默', en: 'Malmo' },
+            'OSL': { zh: '奧斯陸', en: 'Oslo' },
+            'BGO': { zh: '卑爾根', en: 'Bergen' },
+            'TOS': { zh: '特羅姆瑟', en: 'Tromso' },
+            'SVG': { zh: '斯塔萬格', en: 'Stavanger' },
+            'CPH': { zh: '哥本哈根', en: 'Copenhagen' },
+            'BLL': { zh: '比隆 (丹麥)', en: 'Billund' },
+            'AAL': { zh: '奧爾堡', en: 'Aalborg' },
+            'KEF': { zh: '雷克雅未克 (冰島)', en: 'Reykjavik (Keflavik)' },
+            'TLL': { zh: '塔林 (愛沙尼亞)', en: 'Tallinn' },
+            'RIX': { zh: '里加 (拉脫維亞)', en: 'Riga' },
+            'VNO': { zh: '維爾紐斯 (立陶宛)', en: 'Vilnius' },
+            'KUN': { zh: '考納斯', en: 'Kaunas' },
+            'MSQ': { zh: '明斯克', en: 'Minsk' },
+            'IST': { zh: '伊斯坦堡', en: 'Istanbul' },
+            'ISL': { zh: '伊斯坦堡 (阿塔圖爾克)', en: 'Istanbul (Ataturk)' },
+            'SAW': { zh: '伊斯坦堡 (薩比哈)', en: 'Istanbul (Sabiha Gokcen)' },
+            'ESB': { zh: '安卡拉', en: 'Ankara' },
+            'AYT': { zh: '安塔利亞', en: 'Antalya' },
+            'ADB': { zh: '伊茲密爾', en: 'Izmir' },
+            'SVO': { zh: '莫斯科 (謝列梅捷沃)', en: 'Moscow (SVO)' },
+            'DME': { zh: '莫斯科 (多莫傑多沃)', en: 'Moscow (Domodedovo)' },
+            'VKO': { zh: '莫斯科 (伏努科沃)', en: 'Moscow (Vnukovo)' },
+            'ZIA': { zh: '莫斯科 (茹科夫斯基)', en: 'Moscow (Zhukovsky)' },
+            'LED': { zh: '聖彼得堡', en: 'St. Petersburg' },
+            'OVB': { zh: '新西伯利亞', en: 'Novosibirsk' },
+            'SVX': { zh: '葉卡捷琳堡', en: 'Yekaterinburg' },
+            'KZN': { zh: '喀山', en: 'Kazan' },
+            'KJA': { zh: '克拉斯諾亞爾斯克', en: 'Krasnoyarsk' },
+            'IKT': { zh: '伊爾庫茨克', en: 'Irkutsk' },
+            'UUD': { zh: '烏蘭烏德', en: 'Ulan-Ude' },
+            'KHV': { zh: '哈巴羅夫斯克 (伯力)', en: 'Khabarovsk' },
+            'VVO': { zh: '海參崴 (符拉迪沃斯托克)', en: 'Vladivostok' },
+            'YKS': { zh: '雅庫茨克', en: 'Yakutsk' },
+            'PKC': { zh: '堪察加', en: 'Petropavlovsk-Kamchatsky' },
+            'AER': { zh: '索契', en: 'Sochi' },
+
+            // 大洋洲及太平洋島嶼 (Oceania & Pacific)
             'SYD': { zh: '悉尼', en: 'Sydney' },
             'MEL': { zh: '墨爾本', en: 'Melbourne' },
+            'AVV': { zh: '墨爾本 (阿瓦隆)', en: 'Melbourne (Avalon)' },
             'BNE': { zh: '布里斯班', en: 'Brisbane' },
             'PER': { zh: '珀斯', en: 'Perth' },
             'ADL': { zh: '阿德萊德', en: 'Adelaide' },
             'CNS': { zh: '凱恩斯', en: 'Cairns' },
-            'AKL': { zh: '奧克蘭', en: 'Auckland' },
+            'OOL': { zh: '黃金海岸', en: 'Gold Coast' },
+            'DRW': { zh: '達爾文', en: 'Darwin' },
+            'CBR': { zh: '坎培拉', en: 'Canberra' },
+            'HBA': { zh: '荷伯特', en: 'Hobart' },
+            'TSV': { zh: '湯斯維爾', en: 'Townsville' },
+            'WTB': { zh: '圖翁巴 (威爾坎普)', en: 'Toowoomba (Wellcamp)' },
+            'AKL': { zh: '奧克蘭 (新西蘭)', en: 'Auckland' },
             'CHC': { zh: '基督城', en: 'Christchurch' },
+            'WLG': { zh: '威靈頓', en: 'Wellington' },
+            'ZQN': { zh: '皇后鎮', en: 'Queenstown' },
+            'DUD': { zh: '但尼丁', en: 'Dunedin' },
             'NAN': { zh: '楠迪 (斐濟)', en: 'Nadi (Fiji)' },
-            'POM': { zh: '莫爾茲比港', en: 'Port Moresby' },
+            'SUV': { zh: '蘇瓦 (斐濟)', en: 'Suva (Fiji)' },
+            'POM': { zh: '莫爾茲比港 (巴布亞新幾內亞)', en: 'Port Moresby' },
+            'GUM': { zh: '關島', en: 'Guam' },
+            'SPN': { zh: '塞班島', en: 'Saipan' },
+            'ROR': { zh: '帛琉 (科羅爾)', en: 'Palau (Koror)' },
+            'NOU': { zh: '努美阿 (新喀里多尼亞)', en: 'Noumea' },
+            'PPT': { zh: '大溪地', en: 'Tahiti (Papeete)' },
+            'APW': { zh: '阿皮亞 (薩摩亞)', en: 'Apia (Samoa)' },
+            'VLI': { zh: '維拉港 (瓦努阿圖)', en: 'Port Vila' },
+            'HIR': { zh: '霍尼亞拉 (所羅門群島)', en: 'Honiara' },
+
+            // 北美洲及中南美洲 (North & Latin America)
             'LAX': { zh: '洛杉磯', en: 'Los Angeles' },
+            'ONT': { zh: '安大略 (加州)', en: 'Ontario (CA)' },
+            'SBD': { zh: '聖貝納迪諾 (加州)', en: 'San Bernardino' },
             'SFO': { zh: '三藩市', en: 'San Francisco' },
-            'JFK': { zh: '紐約 (甘迺迪)', en: 'New York (JFK)' },
-            'EWR': { zh: '紐約 (紐瓦克)', en: 'Newark' },
-            'BOS': { zh: '波士頓', en: 'Boston' },
-            'ORD': { zh: '芝加哥 (奧黑爾)', en: 'Chicago (O\'Hare)' },
-            'DFW': { zh: '達拉斯', en: 'Dallas (DFW)' },
+            'OAK': { zh: '奧克蘭 (加州)', en: 'Oakland (CA)' },
+            'SJC': { zh: '聖荷西 (加州)', en: 'San Jose (CA)' },
             'SEA': { zh: '西雅圖', en: 'Seattle' },
-            'ANC': { zh: '安克拉治', en: 'Anchorage' },
+            'PAE': { zh: '西雅圖 (佩恩)', en: 'Seattle (Paine Field)' },
+            'PDX': { zh: '波特蘭', en: 'Portland' },
+            'SAN': { zh: '聖地牙哥 (加州)', en: 'San Diego' },
+            'LAS': { zh: '拉斯維加斯', en: 'Las Vegas' },
+            'PHX': { zh: '鳳凰城', en: 'Phoenix' },
+            'SLC': { zh: '鹽湖城', en: 'Salt Lake City' },
+            'DEN': { zh: '丹佛', en: 'Denver' },
+            'ANC': { zh: '安克拉治 (阿拉斯加)', en: 'Anchorage' },
+            'FAI': { zh: '費爾班克斯', en: 'Fairbanks' },
+            'HNL': { zh: '檀香山 (夏威夷)', en: 'Honolulu' },
+            'OGG': { zh: '茂宜島 (夏威夷)', en: 'Maui (Kahului)' },
+            'KOA': { zh: '科納 (夏威夷)', en: 'Kona' },
+            'ORD': { zh: '芝加哥 (奧黑爾)', en: "Chicago (O'Hare)" },
+            'RFD': { zh: '芝加哥 (羅克福德)', en: 'Chicago (Rockford)' },
+            'MDW': { zh: '芝加哥 (中途)', en: 'Chicago (Midway)' },
+            'DFW': { zh: '達拉斯 (沃斯堡)', en: 'Dallas (DFW)' },
+            'AFW': { zh: '達拉斯 (聯盟)', en: 'Dallas (Alliance)' },
+            'IAH': { zh: '休斯頓 (喬治布殊)', en: 'Houston (IAH)' },
+            'HOU': { zh: '休斯頓 (霍比)', en: 'Houston (Hobby)' },
+            'AUS': { zh: '奧斯汀', en: 'Austin' },
+            'SAT': { zh: '聖安東尼奧', en: 'San Antonio' },
+            'MSP': { zh: '明尼阿波利斯', en: 'Minneapolis' },
+            'DTW': { zh: '底特律', en: 'Detroit' },
             'CVG': { zh: '辛辛那提', en: 'Cincinnati' },
             'SDF': { zh: '路易維爾', en: 'Louisville' },
             'MEM': { zh: '孟菲斯', en: 'Memphis' },
-            'MIA': { zh: '邁阿密', en: 'Miami' },
+            'IND': { zh: '印第安納波利斯', en: 'Indianapolis' },
+            'CMH': { zh: '哥倫布 (俄亥俄)', en: 'Columbus (OH)' },
+            'LCK': { zh: '哥倫布 (里肯巴克)', en: 'Columbus (Rickenbacker)' },
+            'ILN': { zh: '威明頓 (俄亥俄)', en: 'Wilmington (OH)' },
+            'STL': { zh: '聖路易斯', en: 'St. Louis' },
+            'MCI': { zh: '堪薩斯城', en: 'Kansas City' },
+            'MKE': { zh: '密爾沃基', en: 'Milwaukee' },
+            'JFK': { zh: '紐約 (甘迺迪)', en: 'New York (JFK)' },
+            'EWR': { zh: '紐約 (紐瓦克)', en: 'Newark (EWR)' },
+            'LGA': { zh: '紐約 (拉瓜迪亞)', en: 'New York (LaGuardia)' },
+            'SWF': { zh: '紐約 (斯圖爾特)', en: 'New York (Stewart)' },
+            'BOS': { zh: '波士頓', en: 'Boston' },
+            'IAD': { zh: '華盛頓 (杜勒斯)', en: 'Washington (Dulles)' },
+            'DCA': { zh: '華盛頓 (列根)', en: 'Washington (Reagan)' },
+            'BWI': { zh: '巴爾的摩', en: 'Baltimore' },
+            'PHL': { zh: '費城', en: 'Philadelphia' },
+            'PIT': { zh: '匹茲堡', en: 'Pittsburgh' },
+            'DOV': { zh: '多佛 (特拉華)', en: 'Dover (DE)' },
+            'OSC': { zh: '奧斯科達 (密歇根)', en: 'Oscoda (MI)' },
             'ATL': { zh: '亞特蘭大', en: 'Atlanta' },
+            'CLT': { zh: '夏洛特', en: 'Charlotte' },
+            'RDU': { zh: '羅利 / 達拉姆', en: 'Raleigh-Durham' },
+            'BNA': { zh: '納什維爾', en: 'Nashville' },
+            'HSV': { zh: '亨茨維爾 (阿拉巴馬)', en: 'Huntsville (AL)' },
+            'GSP': { zh: '格林維爾', en: 'Greenville-Spartanburg' },
+            'MIA': { zh: '邁阿密', en: 'Miami' },
+            'FLL': { zh: '勞德代爾堡', en: 'Fort Lauderdale' },
+            'MCO': { zh: '奧蘭多', en: 'Orlando' },
+            'TPA': { zh: '坦帕', en: 'Tampa' },
+            'JAX': { zh: '傑克遜維爾', en: 'Jacksonville' },
+            'MSY': { zh: '新奧爾良', en: 'New Orleans' },
             'YVR': { zh: '溫哥華', en: 'Vancouver' },
             'YYZ': { zh: '多倫多', en: 'Toronto' },
+            'YHM': { zh: '哈密爾頓 (加拿大)', en: 'Hamilton (ON)' },
+            'YUL': { zh: '蒙特利爾', en: 'Montreal' },
+            'YMX': { zh: '蒙特利爾 (米拉貝爾)', en: 'Montreal (Mirabel)' },
+            'YYC': { zh: '卡加利', en: 'Calgary' },
+            'YEG': { zh: '愛民頓', en: 'Edmonton' },
+            'YWG': { zh: '溫尼伯', en: 'Winnipeg' },
+            'YOW': { zh: '渥太華', en: 'Ottawa' },
+            'YHZ': { zh: '哈利法克斯', en: 'Halifax' },
+            'MEX': { zh: '墨西哥城', en: 'Mexico City (AICM)' },
+            'NLU': { zh: '墨西哥城 (費利佩)', en: 'Mexico City (AIFA)' },
+            'GDL': { zh: '瓜達拉哈拉 (墨西哥)', en: 'Guadalajara' },
+            'MTY': { zh: '蒙特雷 (墨西哥)', en: 'Monterrey' },
+            'CUN': { zh: '坎昆', en: 'Cancun' },
+            'TIJ': { zh: '蒂華納', en: 'Tijuana' },
+            'PTY': { zh: '巴拿馬城', en: 'Panama City' },
+            'SJO': { zh: '聖荷西 (哥斯達黎加)', en: 'San Jose (Costa Rica)' },
+            'HAV': { zh: '哈瓦那', en: 'Havana' },
+            'SJU': { zh: '聖胡安 (波多黎各)', en: 'San Juan' },
+            'GRU': { zh: '聖保羅 (瓜魯柳斯)', en: 'Sao Paulo (Guarulhos)' },
+            'VCP': { zh: '聖保羅 (坎皮納斯)', en: 'Sao Paulo (Viracopos)' },
+            'GIG': { zh: '里約熱內盧', en: 'Rio de Janeiro' },
+            'EZE': { zh: '布宜諾斯艾利斯', en: 'Buenos Aires' },
+            'SCL': { zh: '聖地牙哥 (智利)', en: 'Santiago (Chile)' },
+            'BOG': { zh: '波哥大 (哥倫比亞)', en: 'Bogota' },
+            'MDE': { zh: '麥德林', en: 'Medellin' },
+            'LIM': { zh: '利馬 (秘魯)', en: 'Lima' },
+            'UIO': { zh: '基多 (厄瓜多爾)', en: 'Quito' },
+            'GYE': { zh: '瓜亞基爾', en: 'Guayaquil' },
+
+            // 非洲 (Africa)
             'JNB': { zh: '約翰內斯堡', en: 'Johannesburg' },
-            'ADD': { zh: '亞的斯亞貝巴', en: 'Addis Ababa' },
-            'MRU': { zh: '毛里求斯', en: 'Mauritius' }
+            'CPT': { zh: '開普敦', en: 'Cape Town' },
+            'DUR': { zh: '德班', en: 'Durban' },
+            'ADD': { zh: '亞的斯亞貝巴 (埃塞俄比亞)', en: 'Addis Ababa' },
+            'MRU': { zh: '毛里求斯', en: 'Mauritius' },
+            'SEZ': { zh: '塞舌爾', en: 'Seychelles' },
+            'TNR': { zh: '塔那那利佛 (馬達加斯加)', en: 'Antananarivo' },
+            'CAI': { zh: '開羅', en: 'Cairo' },
+            'HRG': { zh: '赫爾格達 (埃及)', en: 'Hurghada' },
+            'NBO': { zh: '奈洛比 (肯亞)', en: 'Nairobi' },
+            'MBA': { zh: '蒙巴薩', en: 'Mombasa' },
+            'DAR': { zh: '達累斯薩拉姆 (坦桑尼亞)', en: 'Dar es Salaam' },
+            'ZNZ': { zh: '桑給巴爾', en: 'Zanzibar' },
+            'EBB': { zh: '恩德培 (烏干達)', en: 'Entebbe' },
+            'KGL': { zh: '基加利 (盧旺達)', en: 'Kigali' },
+            'LOS': { zh: '拉各斯 (尼日利亞)', en: 'Lagos' },
+            'ABV': { zh: '阿布賈', en: 'Abuja' },
+            'ACC': { zh: '阿克拉 (加納)', en: 'Accra' },
+            'DSS': { zh: '達喀爾 (塞內加爾)', en: 'Dakar' },
+            'ABJ': { zh: '阿比讓', en: 'Abidjan' },
+            'CMN': { zh: '卡薩布蘭卡 (摩洛哥)', en: 'Casablanca' },
+            'RAK': { zh: '馬拉喀什', en: 'Marrakesh' },
+            'TUN': { zh: '突尼斯', en: 'Tunis' },
+            'ALG': { zh: '阿爾及爾', en: 'Algiers' },
+            'LAD': { zh: '羅安達 (安哥拉)', en: 'Luanda' },
+            'HRE': { zh: '哈拉雷 (津巴布韋)', en: 'Harare' },
+            'LUN': { zh: '盧薩卡 (贊比亞)', en: 'Lusaka' }
         };
 
         // 航空公司名稱及專屬品牌顏色對照表 (支援 2 碼 IATA 及 3 碼 ICAO)
@@ -3027,8 +4023,8 @@
             const primaryFlag = getAirportFlag(primaryCode);
             const allFlags = arr.map(c => getAirportFlag(c)).join(' ');
             const codes = arr.join(' / ');
-            const namesZh = arr.map(c => IATA_CITY_MAP[c] ? IATA_CITY_MAP[c].zh : c).join(' ➔ ');
-            const namesEn = arr.map(c => IATA_CITY_MAP[c] ? IATA_CITY_MAP[c].en : c).join(' ➔ ');
+            const namesZh = arr.map(c => IATA_CITY_MAP[c] ? IATA_CITY_MAP[c].zh : `國際機場 (${c})`).join(' ➔ ');
+            const namesEn = arr.map(c => IATA_CITY_MAP[c] ? IATA_CITY_MAP[c].en : `Airport (${c})`).join(' ➔ ');
             return { primaryCode, primaryFlag, allFlags, codes, namesZh, namesEn };
         }
 
@@ -3064,26 +4060,26 @@
 
             if (lower.includes('cancel')) {
                 textZh = '取消';
-                bilingualText = currentLang === 'en' ? 'Cancelled' : '取消 · Cancelled';
-                badgeClass = 'st-cancel';
+                bilingualText = currentLang === 'en' ? '🚨 Cancelled' : '🚨 取消 · Cancelled';
+                badgeClass = 'st-cancel st-blink-cancel';
                 rowClass = 'status-cancel';
                 category = 'DELAY';
             } else if (lower.includes('delay')) {
                 textZh = '延誤';
-                bilingualText = currentLang === 'en' ? 'Delayed' : '延誤 · Delayed';
-                badgeClass = 'st-warn';
+                bilingualText = currentLang === 'en' ? '⚠️ Delayed' : '⚠️ 延誤 · Delayed';
+                badgeClass = 'st-warn st-blink-delay';
                 rowClass = 'status-warn';
                 category = 'DELAY';
             } else if (lower.includes('final call')) {
                 textZh = '最後召集';
-                bilingualText = currentLang === 'en' ? 'Final Call' : '最後召集 · Final Call';
-                badgeClass = 'st-warn';
+                bilingualText = currentLang === 'en' ? '🔥 Final Call' : '🔥 最後召集 · Final Call';
+                badgeClass = 'st-warn st-blink-finalcall';
                 rowClass = 'status-warn';
                 category = 'ACTIVE';
             } else if (lower.includes('boarding')) {
                 textZh = lower.includes('soon') ? '即將登機' : '現正登機';
-                bilingualText = currentLang === 'en' ? st : `${textZh} · Boarding`;
-                badgeClass = 'st-ok';
+                bilingualText = currentLang === 'en' ? `🟢 ${st}` : `🟢 ${textZh} · Boarding`;
+                badgeClass = 'st-ok st-blink-boarding';
                 rowClass = 'status-ok';
                 category = 'ACTIVE';
             } else if (lower.includes('gate closed')) {
@@ -3531,8 +4527,7 @@
             renderFlightList();
         }
 
-        function setFlightCategory(cat) {
-            flightCategory = cat;
+        function syncFlightFilterButtonsUI() {
             const mapIds = {
                 'dep_pax': 'btn-fl-dep-pax',
                 'arr_pax': 'btn-fl-arr-pax',
@@ -3542,26 +4537,36 @@
             };
             for (const k in mapIds) {
                 const btn = document.getElementById(mapIds[k]);
-                if (btn) btn.classList.toggle('active', k === cat);
+                if (btn) btn.classList.toggle('active', k === flightCategory);
             }
+            ['upcoming', 'today', 'tomorrow'].forEach(k => {
+                const btn = document.getElementById(`btn-fl-date-${k}`);
+                if (btn) btn.classList.toggle('active', k === flightDateFilter);
+            });
+            document.querySelectorAll('#flight-hot-cities .fl-city-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-iata') === selectedHotCity);
+            });
+        }
+
+        function setFlightCategory(cat) {
+            flightCategory = cat;
+            try { localStorage.setItem('app_flight_category', cat); } catch (e) {}
+            syncFlightFilterButtonsUI();
             applyFlightLanguage();
             scrollToCurrentHourFlight(false);
         }
 
         function setFlightDateFilter(filterMode) {
             flightDateFilter = filterMode;
-            ['upcoming', 'today', 'tomorrow'].forEach(k => {
-                const btn = document.getElementById(`btn-fl-date-${k}`);
-                if (btn) btn.classList.toggle('active', k === filterMode);
-            });
+            try { localStorage.setItem('app_flight_date_filter', filterMode); } catch (e) {}
+            syncFlightFilterButtonsUI();
             renderFlightList(true);
         }
 
         function selectHotCity(iata) {
             selectedHotCity = iata;
-            document.querySelectorAll('#flight-hot-cities .fl-city-pill').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-iata') === iata);
-            });
+            try { localStorage.setItem('app_flight_hot_city', iata); } catch (e) {}
+            syncFlightFilterButtonsUI();
             renderFlightList(true);
         }
 
@@ -3728,9 +4733,31 @@
                 return;
             }
 
-            // 渲染完整航班列表 (保留今日 00:00 起所有先前航班，並自動捲動定位至當前整點時段如 09:00)
-            const displaySlice = filtered.slice(0, 2500);
-            let anchorAssigned = false;
+            // 將今日「當前整點之前」或「當前整點內但已經起飛 / 已完成 (DONE)」嘅航班歸入上方歷史區，
+            // 等即時時段錨點 (Anchor) 下方只顯示未起飛 / 登機中 / 即將起降嘅航班，同時向上碌即可睇返所有已起飛航班！
+            const earlierOrDeparted = [];
+            const liveAndUpcoming = [];
+
+            filtered.forEach(item => {
+                const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
+                if (flightDateFilter !== 'tomorrow' && item.date === todayStr) {
+                    if (item.timestampMs < upcomingCutoffMs || stInfo.category === 'DONE') {
+                        earlierOrDeparted.push(item);
+                    } else {
+                        liveAndUpcoming.push(item);
+                    }
+                } else {
+                    liveAndUpcoming.push(item);
+                }
+            });
+
+            const orderedList = [...earlierOrDeparted, ...liveAndUpcoming];
+            currentRenderedFlights = orderedList;
+
+            const displaySlice = orderedList.slice(0, 2500);
+            const anchorIndex = earlierOrDeparted.length < displaySlice.length
+                ? earlierOrDeparted.length
+                : Math.max(0, displaySlice.length - 1);
 
             const htmlRows = displaySlice.map((item, idx) => {
                 const isTom = item.date === tomorrowStr;
@@ -3740,12 +4767,7 @@
 
                 const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
                 const isStarred = starSet.has(item.uid);
-
-                let isCurrentHourAnchor = false;
-                if (!anchorAssigned && item.timestampMs >= upcomingCutoffMs) {
-                    anchorAssigned = true;
-                    isCurrentHourAnchor = true;
-                }
+                const isCurrentHourAnchor = (idx === anchorIndex);
 
                 // 時間顯示（如預計時間有變動，顯示刪除線原定時間 + 醒目預計時間）
                 let timeHtml = '';
@@ -3793,8 +4815,8 @@
 
                 const anchorBannerHtml = (isCurrentHourAnchor && flightDateFilter !== 'tomorrow')
                     ? `<div class="flight-hour-anchor-banner" data-current-hour-anchor="true">
-                        <span>🕒 ${currentLang === 'en' ? `Live Hour Slot (${hkFloor.hourStr} Onwards)` : `即時航班時段 (${hkFloor.hourStr} 起)`}</span>
-                        <span style="color:var(--text-muted); font-weight:700;">${todayStr}</span>
+                        <span>🕒 ${currentLang === 'en' ? `Live Active Flights (${hkFloor.hourStr}+)` : `即時待發 / 抵港航班 (${hkFloor.hourStr} 時段起)`}</span>
+                        <span style="color:var(--text-muted); font-weight:700;">${earlierOrDeparted.length > 0 ? (currentLang === 'en' ? `⬆️ Scroll up for ${earlierOrDeparted.length} departed/earlier flights` : `⬆️ 向上碌可查看 ${earlierOrDeparted.length} 班已起飛／較早航班`) : todayStr}</span>
                        </div>`
                     : '';
 
@@ -3841,18 +4863,506 @@
             }
         }
 
+        // 各航點標準飛行時間估算表 (單位：分鐘，用於計算預計到達時間及直線飛機移動進度)
+        const IATA_FLIGHT_DURATION_MINS = {
+            'MFM': 35, 'SZX': 45, 'ZUH': 50, 'CAN': 55, 'SWA': 65, 'MXZ': 70, 'ZHA': 75,
+            'KWL': 85, 'HAK': 85, 'XMN': 85, 'BHY': 90, 'NNG': 95, 'JJN': 95, 'KHH': 95, 'TNN': 95,
+            'RMQ': 100, 'FOC': 105, 'SYX': 105, 'CSX': 105, 'TPE': 110, 'TSA': 115, 'WNZ': 115, 'DAD': 115,
+            'HAN': 125, 'WUH': 125, 'CRK': 130, 'MNL': 135, 'CXR': 135, 'NGB': 135, 'HGH': 140,
+            'NKG': 150, 'KMG': 150, 'CKG': 150, 'OKA': 150, 'PVG': 155, 'SHA': 155, 'VTE': 155,
+            'SGN': 160, 'CGO': 160, 'SAI': 160, 'PNH': 165, 'ILO': 165, 'TFU': 165, 'CTU': 165,
+            'CEB': 170, 'PQC': 170, 'UTP': 170, 'BKK': 175, 'DMK': 175, 'XIY': 175,
+            'CNX': 185, 'BKI': 185, 'LJG': 185, 'TNA': 185, 'CJU': 190, 'RGN': 195, 'BWN': 195, 'TAO': 195, 'TSN': 195, 'KOJ': 195,
+            'DVO': 200, 'KMJ': 200, 'PKX': 200, 'PEK': 205, 'FUK': 205, 'PUS': 205, 'DLC': 210,
+            'HKT': 215, 'KCH': 215, 'HIJ': 215, 'ICN': 220, 'GMP': 220, 'TAK': 220,
+            'PEN': 230, 'SHE': 230, 'YON': 230, 'KIX': 230, 'SIN': 235, 'KUL': 240, 'NGO': 240, 'DAC': 240,
+            'HND': 255, 'CCU': 255, 'NRT': 260, 'HRB': 265, 'SDJ': 275, 'UBN': 275,
+            'SUB': 290, 'CGK': 295, 'KTM': 295, 'DPS': 300, 'CTS': 310,
+            'URC': 330, 'MAA': 330, 'BLR': 345, 'HYD': 345, 'CMB': 345, 'DEL': 355, 'BOM': 370, 'MLE': 380, 'ALA': 390,
+            'POM': 410, 'CNS': 435, 'MCT': 465, 'PER': 470, 'DXB': 475, 'DWC': 480, 'AUH': 485,
+            'DOH': 510, 'BAH': 515, 'BNE': 525, 'ADL': 540, 'SYD': 550, 'RUH': 550, 'MEL': 565, 'MRU': 585, 'ANC': 590,
+            'SVO': 600, 'JED': 610, 'NAN': 610, 'TLV': 630, 'ADD': 640, 'IST': 660, 'AKL': 660, 'CHC': 680, 'HEL': 690,
+            'YVR': 715, 'SEA': 735, 'LEJ': 750, 'MUC': 755, 'SFO': 755, 'FRA': 760, 'ZRH': 765, 'AMS': 765, 'LUX': 765, 'MXP': 765,
+            'LGG': 770, 'FCO': 775, 'CDG': 785, 'LAX': 785, 'JNB': 790, 'STN': 790, 'LHR': 795, 'LGW': 795, 'MAN': 795,
+            'BCN': 805, 'MAD': 830, 'ORD': 880, 'CVG': 890, 'DFW': 895, 'YYZ': 895, 'SDF': 895, 'MEM': 900, 'ATL': 930, 'BOS': 935, 'JFK': 950, 'EWR': 950, 'MIA': 980
+        };
+
+        function getEstimatedFlightDurationMins(iataCode) {
+            const c = String(iataCode || '').trim().toUpperCase();
+            return IATA_FLIGHT_DURATION_MINS[c] || 210;
+        }
+
+        function formatMinsZhEn(totalMins) {
+            const m = Math.max(0, Math.round(totalMins));
+            const hrs = Math.floor(m / 60);
+            const mins = m % 60;
+            if (currentLang === 'en') {
+                return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+            }
+            return hrs > 0 ? `${hrs}小時 ${mins}分` : `${mins}分鐘`;
+        }
+
+        // 全球機場時區對照表 (IANA TimeZone，自動支援夏令及冬令時間轉換)
+        const TIMEZONE_GROUPS = {
+            "Asia/Hong_Kong": ["HKG"],
+            "Asia/Macau": ["MFM"],
+            "Asia/Taipei": ["TPE","TSA","KHH","RMQ","TNN","HUN","TTT","CYI","MZG","KNH","LZN"],
+            "Asia/Tokyo": ['NRT', 'HND', 'KIX', 'ITM', 'UKB', 'NGO', 'NKM', 'CTS', 'OKD', 'FUK', 'OKA', 'ISG', 'MMY', 'SHI', 'UEO', 'SDJ', 'HIJ', 'OKJ', 'TAK', 'MYJ', 'KCZ', 'TKS', 'KMJ', 'KOJ', 'KMI', 'OIT', 'NGS', 'HSG', 'KKJ', 'ASJ', 'YON', 'TTJ', 'IZO', 'UBJ', 'IWK', 'KMQ', 'TOY', 'NTQ', 'FSZ', 'MMJ', 'KIJ', 'IBR', 'AOJ', 'MSJ', 'AXT', 'ONJ', 'HNA', 'GAJ', 'SYO', 'FKS', 'HKD', 'AKJ', 'OBO', 'KUH', 'MMB', 'SHB', 'WKJ'],
+            "Asia/Seoul": ['ICN', 'GMP', 'PUS', 'CJU', 'TAE', 'CJJ', 'MWX', 'KWJ', 'YNY', 'RSU', 'USN', 'KPO', 'HIN', 'WJU', 'KUV'],
+            "Asia/Shanghai": ['PVG', 'SHA', 'PEK', 'PKX', 'CAN', 'SZX', 'ZUH', 'SWA', 'MXZ', 'ZHA', 'HUZ', 'FUO', 'HSC', 'TFU', 'CTU', 'CKG', 'HGH', 'NGB', 'WNZ', 'YIW', 'HSN', 'HYN', 'JUZ', 'NKG', 'WUX', 'CZX', 'NTG', 'YTY', 'YNZ', 'LYG', 'XUZ', 'HUA', 'HIA', 'XMN', 'FOC', 'JJN', 'WUS', 'SMJ', 'LCX', 'WUH', 'EHU', 'YIH', 'ENH', 'XFN', 'HPG', 'CSX', 'DYG', 'CGD', 'HNY', 'HJJ', 'CGO', 'LYA', 'NNY', 'HFE', 'TXN', 'AQG', 'FUG', 'JUH', 'KHN', 'KOW', 'JIU', 'JDZ', 'JGS', 'SQD', 'YIC', 'TAO', 'TNA', 'YNT', 'WEH', 'LYI', 'JNG', 'WEF', 'DOY', 'RIZ', 'TSN', 'SJW', 'SHP', 'TVS', 'HDG', 'TYN', 'DAT', 'YCU', 'CIH', 'WUT', 'HET', 'BAV', 'DSN', 'HLD', 'CIF', 'TGO', 'NZH', 'SHE', 'DLC', 'DDG', 'JNZ', 'YKH', 'CGQ', 'YNJ', 'NBS', 'HRB', 'MDG', 'NDG', 'JMU', 'OHE', 'XIY', 'UYN', 'ENY', 'HZG', 'LHW', 'DNH', 'JGN', 'YZY', 'XNN', 'GOQ', 'INC', 'ZHY', 'URC', 'KHG', 'YIN', 'KRL', 'AKU', 'HTN', 'AAT', 'KRY', 'HMI', 'TLQ', 'KMG', 'LJG', 'JHG', 'DLU', 'DIG', 'TCZ', 'LUM', 'KWE', 'ZYI', 'WMT', 'TEN', 'ACX', 'MIG', 'YBP', 'LZO', 'NAO', 'DAX', 'JZH', 'XIC', 'DCY', 'LXA', 'LZY', 'NNG', 'KWL', 'BHY', 'LZH', 'HAK', 'SYX', 'BAR'],
+            "Asia/Bangkok": ["BKK","DMK","HKT","CNX","CEI","UTP","USM","KBV","HDY","URT","UTH","KKC"],
+            "Asia/Singapore": ["SIN","XSP"],
+            "Asia/Kuala_Lumpur": ["KUL","SZB","PEN","BKI","KCH","LGK","JHB","IPH","MYY","SBW","TWU","SDK","BTU","LBU","KBR","TGG","KUA"],
+            "Asia/Manila": ["MNL","CRK","CEB","ILO","DVO","KLO","MPH","PPS","TAG","BCD","CGY","GES","ZAM","LAO","TAC","LGP","SFS"],
+            "Asia/Ho_Chi_Minh": ["SGN","HAN","DAD","PQC","CXR","HPH","VDO","HUI","DLI","VCA","UIH","VII"],
+            "Asia/Jakarta": ["CGK","HLP","SUB","KNO","YIA","JOG","SRG","BDO","BTH","PLM","PNK","PKU","SOC"],
+            "Asia/Makassar": ["DPS","UPG","BPN","MDC","LOP","LBJ"],
+            "Asia/Phnom_Penh": ["PNH","KTI","SAI","REP","KOS"],
+            "Asia/Vientiane": ["VTE","LPQ","PKZ"],
+            "Asia/Yangon": ["RGN","MDL","NYT"],
+            "Asia/Brunei": ["BWN"],
+            "Asia/Dili": ["DIL"],
+            "Asia/Kolkata": ["DEL","BOM","BLR","MAA","HYD","CCU","AMD","COK","TRV","PNQ","GOI","GOX","ATQ","JAI","LKO","GAU","NAG","CJB","TRZ"],
+            "Asia/Dhaka": ["DAC","CGP","ZYL"],
+            "Asia/Kathmandu": ["KTM","PKR","BWA"],
+            "Asia/Colombo": ["CMB","HRI"],
+            "Indian/Maldives": ["MLE","GAN"],
+            "Asia/Karachi": ["KHI","LHE","ISB","PEW","MUX","SKT"],
+            "Asia/Thimphu": ["PBH"],
+            "Asia/Kabul": ["KBL"],
+            "Asia/Ulaanbaatar": ["UBN","ULN"],
+            "Asia/Almaty": ["ALA","NQZ","TSE","KGF","CIT"],
+            "Asia/Aqtau": ["SCO","AKX","GUW"],
+            "Asia/Tashkent": ["TAS","SKD","BHK","NMA","NVI","FEG"],
+            "Asia/Bishkek": ["FRU","OSS"],
+            "Asia/Ashgabat": ["ASB","KRW"],
+            "Asia/Dushanbe": ["DYU"],
+            "Asia/Baku": ["GYD"],
+            "Asia/Tbilisi": ["TBS","BUS","KUT"],
+            "Asia/Yerevan": ["EVN"],
+            "Asia/Dubai": ["DXB","DWC","AUH","SHJ","RKT","FJR"],
+            "Asia/Qatar": ["DOH"],
+            "Asia/Riyadh": ["RUH","JED","DMM","MED","AHB","TIF","ULH","NUM"],
+            "Asia/Bahrain": ["BAH"],
+            "Asia/Muscat": ["MCT","SLL"],
+            "Asia/Kuwait": ["KWI"],
+            "Asia/Amman": ["AMM","AQJ"],
+            "Asia/Jerusalem": ["TLV"],
+            "Asia/Beirut": ["BEY"],
+            "Asia/Baghdad": ["BGW","EBL","BSR"],
+            "Asia/Tehran": ["IKA","THR","MHD","SYZ","IFN"],
+            "Europe/London": ["LHR","LGW","STN","LTN","LCY","SEN","MAN","BHX","EDI","GLA","PIK","EMA","BRS","NCL","LPL","BFS","CWL","DSA","BOH"],
+            "Europe/Dublin": ["DUB","SNN","ORK"],
+            "Europe/Lisbon": ["LIS","OPO","FAO"],
+            "Atlantic/Madeira": ["FNC"],
+            "Atlantic/Canary": ["TFS","LPA"],
+            "Atlantic/Reykjavik": ["KEF"],
+            "Europe/Paris": ["CDG","ORY","BVA","XCR","NCE","LYS","MRS","TLS","BOD","NTE","SXB","LIL"],
+            "Europe/Berlin": ["FRA","HHN","MUC","LEJ","CGN","DUS","BER","HAM","STR","HAJ","NUE","DTM","FMO","PAD"],
+            "Europe/Amsterdam": ["AMS","MST","EIN","RTM"],
+            "Europe/Luxembourg": ["LUX"],
+            "Europe/Brussels": ["BRU","LGG","OST","CRL","ANR"],
+            "Europe/Zurich": ["ZRH","GVA","BSL","BRN"],
+            "Europe/Rome": ["MXP","LIN","BGY","FCO","CIA","VCE","BLQ","NAP","FLR","PSA","TRN","VRN","CTA","PMO","BRI","GOA"],
+            "Europe/Madrid": ["MAD","BCN","ZAZ","VLC","AGP","SVQ","PMI","BIO","ALC","VIT"],
+            "Europe/Vienna": ["VIE","LNZ","SZG","INN","GRZ"],
+            "Europe/Prague": ["PRG","OSR","BRQ"],
+            "Europe/Warsaw": ["WAW","KTW","GDN","KRK","WRO","POZ","RZE"],
+            "Europe/Budapest": ["BUD","DEB"],
+            "Europe/Bratislava": ["BTS"],
+            "Europe/Ljubljana": ["LJU"],
+            "Europe/Zagreb": ["ZAG","DBV","SPU"],
+            "Europe/Belgrade": ["BEG","PRN"],
+            "Europe/Tirane": ["TIA"],
+            "Europe/Skopje": ["SKP"],
+            "Europe/Sarajevo": ["SJJ"],
+            "Europe/Podgorica": ["TGD"],
+            "Europe/Malta": ["MLA"],
+            "Europe/Stockholm": ["ARN","GOT","MMX"],
+            "Europe/Oslo": ["OSL","BGO","TOS","SVG"],
+            "Europe/Copenhagen": ["CPH","BLL","AAL"],
+            "Europe/Helsinki": ["HEL","RVN"],
+            "Europe/Tallinn": ["TLL"],
+            "Europe/Riga": ["RIX"],
+            "Europe/Vilnius": ["VNO","KUN"],
+            "Europe/Bucharest": ["OTP","CLJ"],
+            "Europe/Sofia": ["SOF","BOJ","VAR"],
+            "Europe/Athens": ["ATH","SKG","HER"],
+            "Asia/Nicosia": ["LCA","PFO"],
+            "Europe/Minsk": ["MSQ"],
+            "Europe/Istanbul": ["IST","ISL","SAW","ESB","AYT","ADB"],
+            "Europe/Moscow": ["SVO","DME","VKO","ZIA","LED","KZN","AER"],
+            "Asia/Yekaterinburg": ["SVX"],
+            "Asia/Novosibirsk": ["OVB"],
+            "Asia/Krasnoyarsk": ["KJA"],
+            "Asia/Irkutsk": ["IKT","UUD"],
+            "Asia/Yakutsk": ["YKS"],
+            "Asia/Vladivostok": ["VVO","KHV"],
+            "Asia/Kamchatka": ["PKC"],
+            "Australia/Sydney": ["SYD","CBR"],
+            "Australia/Melbourne": ["MEL","AVV"],
+            "Australia/Hobart": ["HBA"],
+            "Australia/Brisbane": ["BNE","CNS","OOL","TSV","WTB"],
+            "Australia/Adelaide": ["ADL"],
+            "Australia/Darwin": ["DRW"],
+            "Australia/Perth": ["PER"],
+            "Pacific/Auckland": ["AKL","CHC","WLG","ZQN","DUD"],
+            "Pacific/Fiji": ["NAN","SUV"],
+            "Pacific/Port_Moresby": ["POM"],
+            "Pacific/Guam": ["GUM"],
+            "Pacific/Saipan": ["SPN"],
+            "Pacific/Palau": ["ROR"],
+            "Pacific/Noumea": ["NOU"],
+            "Pacific/Tahiti": ["PPT"],
+            "Pacific/Apia": ["APW"],
+            "Pacific/Efate": ["VLI"],
+            "Pacific/Guadalcanal": ["HIR"],
+            "America/Los_Angeles": ["LAX","ONT","SBD","SFO","OAK","SJC","SEA","PAE","PDX","SAN","LAS"],
+            "America/Vancouver": ["YVR"],
+            "America/Tijuana": ["TIJ"],
+            "America/Phoenix": ["PHX"],
+            "America/Denver": ["SLC","DEN"],
+            "America/Edmonton": ["YYC","YEG"],
+            "America/Anchorage": ["ANC","FAI"],
+            "Pacific/Honolulu": ["HNL","OGG","KOA"],
+            "America/Chicago": ["ORD","RFD","MDW","DFW","AFW","IAH","HOU","AUS","SAT","MSP","MEM","STL","MCI","MKE","BNA","HSV","MSY"],
+            "America/Winnipeg": ["YWG"],
+            "America/New_York": ["DTW","CVG","SDF","IND","CMH","LCK","ILN","JFK","EWR","LGA","SWF","BOS","IAD","DCA","BWI","PHL","PIT","DOV","OSC","ATL","CLT","RDU","GSP","MIA","FLL","MCO","TPA","JAX"],
+            "America/Toronto": ["YYZ","YHM","YUL","YMX","YOW"],
+            "America/Halifax": ["YHZ"],
+            "America/Mexico_City": ["MEX","NLU","GDL","MTY"],
+            "America/Cancun": ["CUN"],
+            "America/Panama": ["PTY"],
+            "America/Costa_Rica": ["SJO"],
+            "America/Havana": ["HAV"],
+            "America/Puerto_Rico": ["SJU"],
+            "America/Sao_Paulo": ["GRU","VCP","GIG"],
+            "America/Argentina/Buenos_Aires": ["EZE"],
+            "America/Santiago": ["SCL"],
+            "America/Bogota": ["BOG","MDE"],
+            "America/Lima": ["LIM"],
+            "America/Guayaquil": ["UIO","GYE"],
+            "Africa/Johannesburg": ["JNB","CPT","DUR"],
+            "Africa/Addis_Ababa": ["ADD"],
+            "Indian/Mauritius": ["MRU"],
+            "Indian/Mahe": ["SEZ"],
+            "Indian/Antananarivo": ["TNR"],
+            "Africa/Cairo": ["CAI","HRG"],
+            "Africa/Nairobi": ["NBO","MBA"],
+            "Africa/Dar_es_Salaam": ["DAR","ZNZ"],
+            "Africa/Kampala": ["EBB"],
+            "Africa/Kigali": ["KGL"],
+            "Africa/Lagos": ["LOS","ABV"],
+            "Africa/Accra": ["ACC"],
+            "Africa/Dakar": ["DSS"],
+            "Africa/Abidjan": ["ABJ"],
+            "Africa/Casablanca": ["CMN","RAK"],
+            "Africa/Tunis": ["TUN"],
+            "Africa/Algiers": ["ALG"],
+            "Africa/Luanda": ["LAD"],
+            "Africa/Harare": ["HRE"],
+            "Africa/Lusaka": ["LUN"]
+        };
+        const IATA_TIMEZONE_MAP = {};
+        for (const [tzName, codesList] of Object.entries(TIMEZONE_GROUPS)) {
+            codesList.forEach(c => { IATA_TIMEZONE_MAP[c] = tzName; });
+        }
+
+        function getAirportTimeZone(iataCode) {
+            const c = String(iataCode || "").trim().toUpperCase();
+            return IATA_TIMEZONE_MAP[c] || "Asia/Hong_Kong";
+        }
+
+        function formatTimeWithLocalZone(ms, iataCode, baseDateStr) {
+            if (!ms || isNaN(ms)) {
+                return {
+                    hkTimeStr: "--:--",
+                    localTimeStr: "--:--",
+                    utcOffsetStr: "UTC+8",
+                    diffFromHkMins: 0,
+                    diffLabelZh: "與香港無時差",
+                    diffLabelEn: "Same as HKT",
+                    hkDayTagZh: "",
+                    hkDayTagEn: "",
+                    localDayTagZh: "",
+                    localDayTagEn: ""
+                };
+            }
+            const tz = getAirportTimeZone(iataCode);
+            const hkTimeStr = new Date(ms).toLocaleTimeString("en-GB", {
+                timeZone: "Asia/Hong_Kong",
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+            const localTimeStr = new Date(ms).toLocaleTimeString("en-GB", {
+                timeZone: tz,
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+            // 計算該時區在該時間點的準確 UTC 偏移量 (自動處理夏令/冬令時間)
+            const tzDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: tz }));
+            const utcDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "UTC" }));
+            const hkDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" }));
+            const offsetMins = Math.round((tzDate.getTime() - utcDate.getTime()) / 60000);
+            const diffFromHkMins = offsetMins - 480;
+
+            const sign = offsetMins >= 0 ? "+" : "-";
+            const absOff = Math.abs(offsetMins);
+            const offH = Math.floor(absOff / 60);
+            const offM = absOff % 60;
+            const utcOffsetStr = offM > 0 ? `UTC${sign}${offH}:${String(offM).padStart(2, "0")}` : `UTC${sign}${offH}`;
+
+            let diffLabelZh = "與香港無時差";
+            let diffLabelEn = "Same as HKT";
+            if (diffFromHkMins !== 0) {
+                const absDiff = Math.abs(diffFromHkMins);
+                const dH = Math.floor(absDiff / 60);
+                const dM = absDiff % 60;
+                const dStrZh = dM > 0 ? `${dH}小時${dM}分` : `${dH}小時`;
+                const dStrEn = dM > 0 ? `${dH}h ${dM}m` : `${dH}h`;
+                if (diffFromHkMins > 0) {
+                    diffLabelZh = `快香港 ${dStrZh}`;
+                    diffLabelEn = `${dStrEn} ahead of HK`;
+                } else {
+                    diffLabelZh = `慢香港 ${dStrZh}`;
+                    diffLabelEn = `${dStrEn} behind HK`;
+                }
+            }
+
+            // 檢查與航班表定日期是否有跨日 (+1日 / -1日)
+            let hkDayTagZh = "", hkDayTagEn = "", localDayTagZh = "", localDayTagEn = "";
+            if (baseDateStr) {
+                const [by, bm, bd] = baseDateStr.split("-").map(Number);
+                const baseMid = Date.UTC(by, bm - 1, bd);
+                const hkMid = Date.UTC(hkDate.getFullYear(), hkDate.getMonth(), hkDate.getDate());
+                const locMid = Date.UTC(tzDate.getFullYear(), tzDate.getMonth(), tzDate.getDate());
+                const hkDayDiff = Math.round((hkMid - baseMid) / 86400000);
+                const locDayDiff = Math.round((locMid - baseMid) / 86400000);
+                if (hkDayDiff > 0) { hkDayTagZh = ` (+${hkDayDiff}日)`; hkDayTagEn = ` (+${hkDayDiff}d)`; }
+                else if (hkDayDiff < 0) { hkDayTagZh = ` (${hkDayDiff}日)`; hkDayTagEn = ` (${hkDayDiff}d)`; }
+                if (locDayDiff > 0) { localDayTagZh = ` (+${locDayDiff}日)`; localDayTagEn = ` (+${locDayDiff}d)`; }
+                else if (locDayDiff < 0) { localDayTagZh = ` (${locDayDiff}日)`; localDayTagEn = ` (${locDayDiff}d)`; }
+            }
+
+            return {
+                hkTimeStr,
+                localTimeStr,
+                utcOffsetStr,
+                diffFromHkMins,
+                diffLabelZh,
+                diffLabelEn,
+                hkDayTagZh,
+                hkDayTagEn,
+                localDayTagZh,
+                localDayTagEn
+            };
+        }
+
+        function formatHkTimeHM(ms) {
+            if (!ms || isNaN(ms)) return '--:--';
+            return new Date(ms).toLocaleTimeString('en-GB', {
+                timeZone: 'Asia/Hong_Kong',
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function resolveStatusTimestampMs(baseDateStr, schedTimeStr, extractedTimeStr) {
+            if (!extractedTimeStr) return 0;
+            let ms = new Date(`${baseDateStr}T${extractedTimeStr}:00+08:00`).getTime();
+            if (isNaN(ms)) return 0;
+            const schedH = parseInt(String(schedTimeStr || '00:00').slice(0, 2), 10);
+            const extH = parseInt(String(extractedTimeStr).slice(0, 2), 10);
+            if (schedH >= 20 && extH <= 5) {
+                ms += 24 * 60 * 60 * 1000;
+            } else if (schedH <= 4 && extH >= 20) {
+                ms -= 24 * 60 * 60 * 1000;
+            }
+            return ms;
+        }
+
+        function computeFlightProgressInfo(item) {
+            const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
+            const lower = String(item.rawStatus || '').toLowerCase();
+            const durationMins = getEstimatedFlightDurationMins(item.primaryIata);
+            const durationMs = durationMins * 60 * 1000;
+            const statusMs = resolveStatusTimestampMs(item.date, item.time, stInfo.extractedTime);
+            const nowMs = Date.now();
+
+            let depTimeMs = 0;
+            let arrTimeMs = 0;
+
+            if (item.isArrival) {
+                // 抵港航班：香港為目的地，status 時間或表定時間為預計到達香港時間
+                arrTimeMs = statusMs || item.timestampMs;
+                depTimeMs = arrTimeMs - durationMs;
+            } else {
+                // 離港航班：香港為起飛地，status 時間或表定時間為香港起飛時間
+                depTimeMs = statusMs || item.timestampMs;
+                arrTimeMs = depTimeMs + durationMs;
+            }
+
+            const origIata = item.isArrival ? item.primaryIata : 'HKG';
+            const destIata = item.isArrival ? 'HKG' : item.primaryIata;
+
+            const depZoneInfo = formatTimeWithLocalZone(depTimeMs, origIata, item.date);
+            const arrZoneInfo = formatTimeWithLocalZone(arrTimeMs, destIata, item.date);
+            const arrInForeignZoneInfo = formatTimeWithLocalZone(arrTimeMs, item.primaryIata, item.date);
+
+            const depTimeStr = depZoneInfo.hkTimeStr;
+            const arrTimeStr = arrZoneInfo.hkTimeStr;
+
+            let progressPct = 0;
+            let remainingLabel = '';
+
+            if (lower.includes('cancel')) {
+                progressPct = 0;
+                remainingLabel = currentLang === 'en' ? '🚨 Flight Cancelled' : '🚨 此航班已取消';
+            } else if (lower.startsWith('at gate') || lower.startsWith('landed')) {
+                progressPct = 100;
+                remainingLabel = currentLang === 'en'
+                    ? `🛬 Arrived at Destination (${stInfo.extractedTime || arrTimeStr} HKT / ${arrZoneInfo.localTimeStr} Local)`
+                    : `🛬 已平安抵達目的地 (香港 ${stInfo.extractedTime || arrTimeStr} / 當地 ${arrZoneInfo.localTimeStr})`;
+            } else if (!item.isArrival && (lower.startsWith('dep') || lower.includes('gate closed'))) {
+                if (nowMs >= arrTimeMs) {
+                    progressPct = 100;
+                    remainingLabel = currentLang === 'en'
+                        ? '🛬 Estimated Arrived at Destination'
+                        : '🛬 預計已抵達目的地';
+                } else {
+                    const elapsed = Math.max(0, nowMs - depTimeMs);
+                    progressPct = Math.min(97, Math.max(6, Math.round((elapsed / durationMs) * 100)));
+                    const remMins = Math.max(1, Math.ceil((arrTimeMs - nowMs) / 60000));
+                    remainingLabel = currentLang === 'en'
+                        ? `✈️ In Flight (${progressPct}%) · Approx. ${formatMinsZhEn(remMins)} to destination`
+                        : `✈️ 空中飛行中 (${progressPct}%)・仲有約 ${formatMinsZhEn(remMins)} 到達目的地`;
+                }
+            } else if (item.isArrival && nowMs >= depTimeMs) {
+                if (nowMs >= arrTimeMs) {
+                    progressPct = 98;
+                    remainingLabel = currentLang === 'en'
+                        ? '🛬 Approaching Hong Kong / Landing Soon'
+                        : '🛬 即將降落香港國際機場';
+                } else {
+                    const elapsed = Math.max(0, nowMs - depTimeMs);
+                    progressPct = Math.min(96, Math.max(5, Math.round((elapsed / durationMs) * 100)));
+                    const remMins = Math.max(1, Math.ceil((arrTimeMs - nowMs) / 60000));
+                    remainingLabel = currentLang === 'en'
+                        ? `✈️ En Route to HK (${progressPct}%) · Approx. ${formatMinsZhEn(remMins)} remaining`
+                        : `✈️ 飛往香港途中 (${progressPct}%)・仲有約 ${formatMinsZhEn(remMins)} 到達目的地`;
+                }
+            } else {
+                if (lower.includes('final call')) {
+                    progressPct = 5;
+                } else if (lower.includes('boarding')) {
+                    progressPct = 3;
+                } else {
+                    progressPct = 0;
+                }
+                const waitMins = Math.max(0, Math.ceil((depTimeMs - nowMs) / 60000));
+                if (waitMins > 0) {
+                    remainingLabel = currentLang === 'en'
+                        ? `⏳ Departs in ${formatMinsZhEn(waitMins)} (Est. flight time ${formatMinsZhEn(durationMins)})`
+                        : `⏳ 距離起飛尚餘 ${formatMinsZhEn(waitMins)}（起飛後約 ${formatMinsZhEn(durationMins)} 到達目的地）`;
+                } else {
+                    remainingLabel = currentLang === 'en'
+                        ? `🛫 Preparing for Takeoff (Est. flight time ${formatMinsZhEn(durationMins)})`
+                        : `🛫 準備起飛（預計航程約 ${formatMinsZhEn(durationMins)} 到達目的地）`;
+                }
+            }
+
+            return {
+                depTimeStr,
+                arrTimeStr,
+                depZoneInfo,
+                arrZoneInfo,
+                arrInForeignZoneInfo,
+                durationMins,
+                progressPct,
+                remainingLabel
+            };
+        }
+
+        window.flightDetailTicker = null;
+        window.currentDetailFlightItem = null;
+
+        function buildFlightEtaStrings(item, prog) {
+            const isEn = (currentLang === 'en');
+            const depZ = prog.depZoneInfo;
+            const arrZ = prog.arrZoneInfo;
+
+            const depHkDay = isEn ? depZ.hkDayTagEn : depZ.hkDayTagZh;
+            const depLocDay = isEn ? depZ.localDayTagEn : depZ.localDayTagZh;
+            const depDiffTxt = isEn ? depZ.diffLabelEn : depZ.diffLabelZh;
+
+            const arrHkDay = isEn ? arrZ.hkDayTagEn : arrZ.hkDayTagZh;
+            const arrLocDay = isEn ? arrZ.localDayTagEn : arrZ.localDayTagZh;
+            const arrDiffTxt = isEn ? arrZ.diffLabelEn : arrZ.diffLabelZh;
+
+            const depHkFull = `${depZ.hkTimeStr}${depHkDay} HKT (UTC+8)`;
+            const depLocalFull = `${depZ.localTimeStr}${depLocDay} (${depZ.utcOffsetStr} · ${depDiffTxt})`;
+
+            const arrHkFull = `${arrZ.hkTimeStr}${arrHkDay} HKT (UTC+8)`;
+            const arrLocalFull = `${arrZ.localTimeStr}${arrLocDay} (${arrZ.utcOffsetStr} · ${arrDiffTxt})`;
+
+            return {
+                depHkFull,
+                depLocalFull,
+                arrHkFull,
+                arrLocalFull
+            };
+        }
+
+        function updateFlightDetailProgressDOM() {
+            const item = window.currentDetailFlightItem;
+            if (!item) return;
+            const prog = computeFlightProgressInfo(item);
+            const tStrs = buildFlightEtaStrings(item, prog);
+            const fillEl = document.getElementById('fl-det-line-fill');
+            const planeEl = document.getElementById('fl-det-line-plane');
+            const remEl = document.getElementById('fl-det-rem-label');
+            const etaEl = document.getElementById('fl-det-eta-val');
+            const etaLocEl = document.getElementById('fl-det-eta-local-val');
+            const depEl = document.getElementById('fl-det-dep-val');
+            const depLocEl = document.getElementById('fl-det-dep-local-val');
+            const etaSummaryHkEl = document.getElementById('fl-det-summary-eta-hk');
+            const etaSummaryLocEl = document.getElementById('fl-det-summary-eta-local');
+
+            if (fillEl) fillEl.style.width = `${prog.progressPct}%`;
+            if (planeEl) planeEl.style.left = `${prog.progressPct}%`;
+            if (remEl) remEl.innerText = prog.remainingLabel;
+            if (etaEl) etaEl.innerText = tStrs.arrHkFull;
+            if (etaLocEl) etaLocEl.innerText = tStrs.arrLocalFull;
+            if (depEl) depEl.innerText = tStrs.depHkFull;
+            if (depLocEl) depLocEl.innerText = tStrs.depLocalFull;
+            if (etaSummaryHkEl) etaSummaryHkEl.innerText = tStrs.arrHkFull;
+            if (etaSummaryLocEl) etaSummaryLocEl.innerText = tStrs.arrLocalFull;
+        }
+
         function openFlightDetailModal(index) {
             const item = currentRenderedFlights[index];
             if (!item) return;
+            window.currentDetailFlightItem = item;
             lockBackgroundScroll();
 
             const modal = document.getElementById('flight-detail-modal');
             const body = document.getElementById('flight-detail-body');
             const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
+            const prog = computeFlightProgressInfo(item);
+            const tStrs = buildFlightEtaStrings(item, prog);
 
-            const routeDesc = item.isArrival
-                ? `${item.placeZh} (${item.placeCodes}) ➔ ${currentLang === 'en' ? 'Hong Kong (HKG)' : '香港 (HKG)'}`
-                : `${currentLang === 'en' ? 'Hong Kong (HKG)' : '香港 (HKG)'} ➔ ${item.placeZh} (${item.placeCodes})`;
+            const origIata = item.isArrival ? item.primaryIata : 'HKG';
+            const origCity = item.isArrival
+                ? (currentLang === 'en' ? item.placeEn : item.placeZh)
+                : (currentLang === 'en' ? 'Hong Kong' : '香港');
+            const destIata = item.isArrival ? 'HKG' : item.primaryIata;
+            const destCity = item.isArrival
+                ? (currentLang === 'en' ? 'Hong Kong' : '香港')
+                : (currentLang === 'en' ? item.placeEn : item.placeZh);
 
             const codeshareFull = item.codeshares.length > 0
                 ? item.codeshares.join(', ')
@@ -3878,23 +5388,74 @@
                 <div class="detail-header-card" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
                     <div class="fl-airline-square" style="background:${item.airlineColor}; width:48px; height:48px; font-size:1.1rem; border-radius:14px;">${item.airlineBadge}</div>
                     <div class="detail-route-title" style="margin-bottom:0;">${item.primaryNo} ${item.isCargo ? '<span class="fl-cargo-tag" style="vertical-align:middle;">CARGO 貨機</span>' : ''}</div>
-                    <div class="detail-route-desc">${routeDesc}</div>
                     <div class="detail-route-meta">
                         <span class="meta-badge">${item.airlineZh} (${item.airlineEn})</span>
                         <span class="meta-badge">📅 ${item.date} ${item.time}</span>
                     </div>
                 </div>
+
+                <!-- ✈️ 直線航程進度及預計到達時間追蹤器 (同時顯示香港標準時間與當地時間) -->
+                <div class="fl-progress-card">
+                    <div class="fl-progress-endpoints">
+                        <div class="fl-ep-box">
+                            <span class="fl-ep-role">🛫 ${currentLang === 'en' ? 'ORIGIN (起飛地)' : '起飛地 ORIGIN'}</span>
+                            <div class="fl-ep-city">
+                                <span class="fl-iata-square" style="height:30px; min-width:38px; font-size:0.76rem; border-radius:8px;">${origIata}</span>
+                                <span>${origCity}</span>
+                            </div>
+                            <span class="fl-ep-time">🇭🇰 ${currentLang === 'en' ? 'HK Time:' : '香港標準時間：'}<strong id="fl-det-dep-val">${tStrs.depHkFull}</strong></span>
+                            <span class="fl-ep-time">🌍 ${currentLang === 'en' ? 'Local Time:' : '起飛地當地時間：'}<strong id="fl-det-dep-local-val" style="color:var(--text-main);">${tStrs.depLocalFull}</strong></span>
+                        </div>
+                        <div class="fl-ep-box right">
+                            <span class="fl-ep-role">🛬 ${currentLang === 'en' ? 'DESTINATION (目的地)' : '目的地 DESTINATION'}</span>
+                            <div class="fl-ep-city">
+                                <span>${destCity}</span>
+                                <span class="fl-iata-square" style="height:30px; min-width:38px; font-size:0.76rem; border-radius:8px;">${destIata}</span>
+                            </div>
+                            <span class="fl-ep-time">🇭🇰 ${currentLang === 'en' ? 'Est. Arr (HKT):' : '預計到達 (香港時間)：'}<strong id="fl-det-eta-val" style="color:var(--status-green);">${tStrs.arrHkFull}</strong></span>
+                            <span class="fl-ep-time">🌍 ${currentLang === 'en' ? 'Est. Arr (Local):' : '預計到達 (當地時間)：'}<strong id="fl-det-eta-local-val" style="color:#0284c7;">${tStrs.arrLocalFull}</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="fl-line-track-wrap">
+                        <div class="fl-line-dot start" style="border-color:${item.airlineColor};"></div>
+                        <div class="fl-line-track-fill" id="fl-det-line-fill" style="width:${prog.progressPct}%; background:${item.airlineColor};"></div>
+                        <div class="fl-line-plane" id="fl-det-line-plane" style="left:${prog.progressPct}%; border-color:${item.airlineColor};">✈️</div>
+                        <div class="fl-line-dot end" style="border-color:${item.airlineColor};"></div>
+                    </div>
+
+                    <div class="fl-progress-summary">
+                        <span id="fl-det-rem-label">${prog.remainingLabel}</span>
+                        <span class="fl-eta-pill">⏱️ ${currentLang === 'en' ? `Est. Duration: ${formatMinsZhEn(prog.durationMins)}` : `預計航程：約 ${formatMinsZhEn(prog.durationMins)}`}</span>
+                    </div>
+                </div>
+
                 <div class="detail-stops-container" style="padding: 18px; color: var(--text-main); font-size: 0.95rem; line-height: 1.7; background: var(--card-bg); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); border-radius: var(--radius-md);">
                     <p style="margin: 0 0 10px 0;">📡 <b>${currentLang === 'en' ? 'Latest Status:' : '最新航班狀態：'}</b> <span class="fl-status-badge ${stInfo.badgeClass}" style="display:inline-block; vertical-align:middle;">${stInfo.bilingualText}</span></p>
+                    <div style="margin: 0 0 12px 0; padding: 10px 12px; background: var(--subtle-bg); border: 1px solid var(--hairline-border); border-radius: 12px;">
+                        <div style="font-weight: 800; margin-bottom: 4px;">🛬 ${currentLang === 'en' ? 'Estimated Arrival Time (HKT & Local Time):' : '預計到達目的地時間（香港標準時間及當地時間）：'}</div>
+                        <div style="font-size: 0.88rem; display: flex; flex-direction: column; gap: 3px;">
+                            <div>🇭🇰 <b>${currentLang === 'en' ? 'Hong Kong Time (HKT):' : '香港標準時間：'}</b> <span id="fl-det-summary-eta-hk" style="font-weight:800; color:var(--status-green);">${tStrs.arrHkFull}</span></div>
+                            <div>🌍 <b>${currentLang === 'en' ? `Destination Local Time (${destCity}):` : `目的地當地時間 (${destCity})：`}</b> <span id="fl-det-summary-eta-local" style="font-weight:800; color:#0284c7;">${tStrs.arrLocalFull}</span></div>
+                        </div>
+                    </div>
                     ${specificRows}
                     <p style="margin: 0;">🤝 <b>${currentLang === 'en' ? 'Codeshare Flights:' : '聯營航班編號：'}</b> <span style="color:var(--text-muted);">${codeshareFull}</span></p>
                 </div>
             `;
             modal.classList.add('active');
+
+            if (window.flightDetailTicker) clearInterval(window.flightDetailTicker);
+            window.flightDetailTicker = setInterval(updateFlightDetailProgressDOM, 1000);
         }
 
         function closeFlightDetailModal() {
             unlockBackgroundScroll();
+            if (window.flightDetailTicker) {
+                clearInterval(window.flightDetailTicker);
+                window.flightDetailTicker = null;
+            }
+            window.currentDetailFlightItem = null;
             document.getElementById('flight-detail-modal').classList.remove('active');
         }
 
@@ -5672,7 +7233,19 @@
                 }
             }, 5000);
 
+            try { syncFlightFilterButtonsUI(); } catch(e){}
             try { applyLanguage(); } catch(e){}
+            try {
+                if (currentActivePage === 'flight') {
+                    showFlightPage();
+                } else if (currentActivePage === 'iframe') {
+                    const savedUrl = localStorage.getItem('app_iframe_url');
+                    if (savedUrl) showIframe(savedUrl);
+                    else showHome();
+                } else {
+                    showHome();
+                }
+            } catch(e){}
             try { updateTick(); setInterval(updateTick, 1000); } catch(e){}
             try { fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
             try { if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
@@ -5681,7 +7254,10 @@
             try { setInterval(() => { if (currentActivePage === 'flight') fetchFlightData(false); }, 60000); } catch(e){}
             
             initStaticDatabase();
-            setTimeout(() => { window.location.reload(true); }, 3600000);
+            setTimeout(() => {
+                try { localStorage.setItem('app_active_page', currentActivePage); } catch(e){}
+                window.location.reload(true);
+            }, 3600000);
         }
         
         boot();
