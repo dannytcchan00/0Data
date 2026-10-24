@@ -11,8 +11,6 @@
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
 
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             /* ✨ Soft UI / Tactile Minimalism (柔和觸感霧面極簡配色) */
@@ -2513,7 +2511,7 @@
 
 
         /* =========================================================
-           💧 香港水塘即時及歷史存水量頁面樣式 (Soft UI Reservoir & Map Board)
+           💧 香港水塘即時及歷史存水量頁面樣式 (Soft UI Reservoir & Thematic Map)
            ========================================================= */
         .reservoir-section {
             flex: 1;
@@ -2574,7 +2572,7 @@
             border: 1px solid var(--hairline-border);
             border-radius: 10px;
             padding: 5px 10px;
-            font-size: 0.76rem;
+            font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -2644,7 +2642,7 @@
         .res-main-workspace {
             flex: 1;
             display: grid;
-            grid-template-columns: minmax(0, 1.38fr) minmax(270px, 0.92fr);
+            grid-template-columns: minmax(0, 1.45fr) minmax(265px, 0.88fr);
             gap: 10px;
             min-height: 0;
             overflow: hidden;
@@ -2665,7 +2663,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 6px;
-            padding: 8px 12px;
+            padding: 8px 10px;
             background-color: var(--subtle-bg);
             background-image: var(--hatch-pattern);
             border-bottom: 1px solid var(--hairline-border);
@@ -2675,31 +2673,28 @@
         .res-map-canvas-wrap {
             flex: 1;
             position: relative;
-            min-height: 290px;
-            background: #dbeafe;
+            min-height: 310px;
+            background: radial-gradient(circle at 55% 45%, #e0f2fe 0%, #bae6fd 55%, #93c5fd 100%);
             overflow: hidden;
+            cursor: grab;
         }
-        #hk-reservoir-leaflet-map {
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            background: #dbeafe;
+        .res-map-canvas-wrap:active {
+            cursor: grabbing;
         }
         #hk-reservoir-svg-map {
             width: 100%;
             height: 100%;
-            z-index: 3;
-            background: linear-gradient(145deg, #dbeafe 0%, #e0f2fe 55%, #d1fae5 100%);
-            display: none;
+            display: block;
             user-select: none;
+            -webkit-user-select: none;
         }
-        /* 地圖浮動圖例與底部選中水塘即時摘要列 */
+        /* 地圖浮動圖例與縮放控制按鈕 */
         .res-map-legend {
             position: absolute;
             bottom: 10px;
             left: 10px;
-            z-index: 500;
-            background: rgba(248, 250, 252, 0.92);
+            z-index: 20;
+            background: rgba(248, 250, 252, 0.94);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.95);
@@ -2710,10 +2705,43 @@
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
-            font-size: 0.68rem;
+            font-size: 0.67rem;
             font-weight: 700;
             color: var(--text-main);
             pointer-events: auto;
+        }
+        .res-map-zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: rgba(248, 250, 252, 0.94);
+            backdrop-filter: blur(10px);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.95);
+            box-shadow: var(--shadow-sm);
+        }
+        .res-zoom-icon-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: 1px solid var(--hairline-border);
+            background: var(--card-bg);
+            color: var(--text-main);
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .res-zoom-icon-btn:hover {
+            background: #ffffff;
         }
         .res-legend-item {
             display: inline-flex;
@@ -2726,74 +2754,20 @@
             border-radius: 50%;
             display: inline-block;
         }
-        /* 地圖上每個水塘嘅實時數據標示 (On-Map Reservoir Data Marker) */
-        .res-map-marker-wrap {
-            position: relative;
+        /* SVG 內水塘標示互動動畫 */
+        .svg-res-node {
             cursor: pointer;
-            user-select: none;
+            transition: filter 0.16s ease;
         }
-        .res-marker-pin {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 2.5px solid #ffffff;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
-            position: absolute;
-            left: -8px;
-            top: -8px;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        .svg-res-node:hover {
+            filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.28));
         }
-        .res-map-marker-wrap:hover .res-marker-pin,
-        .res-map-marker-wrap.selected .res-marker-pin {
-            transform: scale(1.35);
-            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.28), 0 4px 10px rgba(15, 23, 42, 0.4);
+        @keyframes waterPulseRing {
+            0% { r: 7px; opacity: 0.85; }
+            100% { r: 22px; opacity: 0; }
         }
-        .res-marker-callout {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1.5px solid rgba(15, 23, 42, 0.14);
-            border-left-width: 4px;
-            border-radius: 10px;
-            padding: 3px 7px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
-            white-space: nowrap;
-            display: flex;
-            flex-direction: column;
-            gap: 1px;
-            transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
-            pointer-events: auto;
-        }
-        .res-map-marker-wrap:hover .res-marker-callout,
-        .res-map-marker-wrap.selected .res-marker-callout {
-            background: #161922;
-            color: #ffffff;
-            border-color: #161922;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.28);
-            z-index: 999 !important;
-            transform: scale(1.05);
-        }
-        .res-marker-title {
-            font-size: 0.68rem;
-            font-weight: 800;
-            color: inherit;
-            line-height: 1.15;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .res-marker-pct {
-            font-size: 0.72rem;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-        }
-        .res-marker-vol {
-            font-size: 0.6rem;
-            font-weight: 700;
-            opacity: 0.8;
-            font-variant-numeric: tabular-nums;
-            line-height: 1.1;
+        .svg-pulse-circle {
+            animation: waterPulseRing 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
         }
         /* 右側 17 個水塘列表與篩選區 */
         .res-list-card {
@@ -2904,7 +2878,7 @@
         }
         /* 響應式適配：iPad / iPhone / 窄螢幕下自動改為上下排列 */
         body[data-device-mode="iphone"] .reservoir-section {
-            min-height: 680px !important;
+            min-height: 700px !important;
             flex: none !important;
         }
         body[data-device-mode="iphone"] .res-kpi-grid {
@@ -2916,8 +2890,8 @@
             flex-direction: column !important;
         }
         body[data-device-mode="iphone"] .res-map-canvas-wrap {
-            height: 330px !important;
-            min-height: 330px !important;
+            height: 360px !important;
+            min-height: 360px !important;
             flex: none !important;
         }
         body[data-device-mode="iphone"] .res-list-scroll {
@@ -2937,8 +2911,8 @@
             }
             body[data-device-mode="auto"] .res-map-canvas-wrap,
             body[data-device-mode="ipad"] .res-map-canvas-wrap {
-                height: 330px !important;
-                min-height: 330px !important;
+                height: 360px !important;
+                min-height: 360px !important;
                 flex: none !important;
             }
             body[data-device-mode="auto"] .res-list-scroll,
@@ -3261,26 +3235,28 @@
                     </div>
                 </div>
 
-                <!-- 主工作區：左邊香港互動地圖 (標示各水塘即時/歷史存水數據) + 右邊 17 個水塘詳細列表 -->
+                <!-- 主工作區：左邊高精度香港分區水塘專題圖 (🧭 分區水塘專題圖) + 右邊 17 個水塘詳細列表 -->
                 <div class="res-main-workspace">
-                    <!-- 香港水塘地圖卡片 -->
+                    <!-- 🧭 分區水塘專題圖卡片 -->
                     <div class="res-map-card">
                         <div class="res-map-toolbar">
-                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                <button type="button" class="res-step-btn live-active" id="btn-map-mode-leaflet" onclick="switchReservoirMapMode('leaflet')">🗺️ 香港互動地圖</button>
-                                <button type="button" class="res-step-btn" id="btn-map-mode-svg" onclick="switchReservoirMapMode('svg')">🧭 分區水塘專題圖</button>
-                                <button type="button" class="res-step-btn" id="btn-map-label-toggle" onclick="toggleReservoirMapLabelMode()">🏷️ 標示：名稱 + % + 容量</button>
+                            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                <span style="font-size:0.76rem; font-weight:800; color:var(--text-main); margin-right:2px;" id="t-thematic-map-title">🧭 分區水塘專題圖：</span>
+                                <button type="button" class="res-step-btn live-active" id="btn-focus-ALL" onclick="focusThematicRegion('ALL')">🌐 全港全覽</button>
+                                <button type="button" class="res-step-btn" id="btn-focus-NTE" onclick="focusThematicRegion('NTE')">🏞️ 新界東 (船灣・萬宜)</button>
+                                <button type="button" class="res-step-btn" id="btn-focus-NTW" onclick="focusThematicRegion('NTW')">⛰️ 新界西及金山群</button>
+                                <button type="button" class="res-step-btn" id="btn-focus-HKI" onclick="focusThematicRegion('HKI')">🏙️ 港島水塘群</button>
+                                <button type="button" class="res-step-btn" id="btn-focus-LAN" onclick="focusThematicRegion('LAN')">🏝️ 大嶼山 (石壁)</button>
                             </div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <button type="button" class="res-step-btn" id="btn-map-reset-view" onclick="resetReservoirMapView()">🎯 全港視角</button>
+                            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                <button type="button" class="res-step-btn live-active" id="btn-catchment-toggle" onclick="toggleReservoirCatchmentLayer()" title="顯示或隱藏集水區範圍、山峰及東江水輸水幹線">🌊 集水區及水網</button>
+                                <button type="button" class="res-step-btn" id="btn-map-label-toggle" onclick="toggleReservoirMapLabelMode()">🏷️ 詳細標示</button>
                             </div>
                         </div>
 
-                        <div class="res-map-canvas-wrap">
-                            <!-- Leaflet 互動香港地圖 -->
-                            <div id="hk-reservoir-leaflet-map"></div>
-                            <!-- 高精度香港水塘 SVG 專題互動地圖 (支援一鍵切換或離線後備) -->
-                            <svg id="hk-reservoir-svg-map" viewBox="0 0 860 560" preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="res-map-canvas-wrap" id="res-svg-viewport">
+                            <!-- 高精度香港水塘與水文地理 SVG 專題地圖 -->
+                            <svg id="hk-reservoir-svg-map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
 
                             <!-- 左下角水塘水位圖例 -->
                             <div class="res-map-legend" id="res-map-legend">
@@ -3288,6 +3264,13 @@
                                 <span class="res-legend-item"><span class="res-legend-dot" style="background:#0284c7;"></span> <span id="t-leg-75">75-89% 正常</span></span>
                                 <span class="res-legend-item"><span class="res-legend-dot" style="background:#d97706;"></span> <span id="t-leg-50">50-74% 中等</span></span>
                                 <span class="res-legend-item"><span class="res-legend-dot" style="background:#e11d48;"></span> <span id="t-leg-low">&lt;50% 偏低</span></span>
+                            </div>
+
+                            <!-- 右下角專題圖縮放與重置控制 -->
+                            <div class="res-map-zoom-controls">
+                                <button type="button" class="res-zoom-icon-btn" onclick="zoomThematicSvg(-0.22)" title="放大專題圖">➕</button>
+                                <button type="button" class="res-zoom-icon-btn" onclick="zoomThematicSvg(0.25)" title="縮小專題圖">➖</button>
+                                <button type="button" class="res-zoom-icon-btn" onclick="focusThematicRegion('ALL')" title="重置全港視角">🔄</button>
                             </div>
                         </div>
                     </div>
@@ -3306,7 +3289,7 @@
                             </div>
                             <div style="display:flex; gap:6px; align-items:center;">
                                 <input type="text" id="res-search-input" class="flight-search-input" style="padding:5px 9px; font-size:0.75rem;" placeholder="🔍 搜尋水塘名稱 (如 萬宜、船灣、大潭、城門)..." oninput="renderReservoirDashboard(false)" autocomplete="off">
-                                <select id="res-region-select" class="flight-select" style="width:auto; padding:5px 8px; font-size:0.73rem;" onchange="renderReservoirDashboard(false)">
+                                <select id="res-region-select" class="flight-select" style="width:auto; padding:5px 8px; font-size:0.73rem;" onchange="onRegionSelectFilterChange(this.value)">
                                     <option value="ALL">全部地區 (17)</option>
                                     <option value="NTE">新界東大型水庫 (2)</option>
                                     <option value="NTW">九龍及新界西 (7)</option>
@@ -9437,12 +9420,14 @@
 
         // =========================================================
         // 💧 香港水務署 (WSD) 全港 17 個水塘即時及歷史存水量系統
+        // 🧭 高精度香港分區水塘與水文地理專題圖 (1000 x 640 座標投影)
         // =========================================================
         const HK_RESERVOIRS_META = [
             {
                 id: 'high_island',
                 name_zh: '萬宜水庫',
                 name_en: 'High Island Reservoir',
+                short_en: 'High Island',
                 region: 'NTE',
                 region_zh: '西貢 (新界東)',
                 region_en: 'Sai Kung (NT East)',
@@ -9450,10 +9435,15 @@
                 year: 1978,
                 lat: 22.3695,
                 lng: 114.3540,
-                svgX: 678,
-                svgY: 268,
-                offsetX: 14,
-                offsetY: -18,
+                svgX: 861.3,
+                svgY: 297.4,
+                boxX: 838,
+                boxY: 222,
+                waterPoly: 'M 838,286 L 856,279 L 876,288 L 882,302 L 866,312 L 845,305 L 834,296 Z',
+                dams: [
+                    { x1: 880, y1: 292, x2: 885, y2: 305, label_zh: '東壩', label_en: 'E.Dam' },
+                    { x1: 835, y1: 288, x2: 833, y2: 300, label_zh: '西壩', label_en: 'W.Dam' }
+                ],
                 latestVol: 233.596,
                 latestPct: 83.09
             },
@@ -9461,6 +9451,7 @@
                 id: 'plover_cove',
                 name_zh: '船灣淡水湖',
                 name_en: 'Plover Cove Reservoir',
+                short_en: 'Plover Cove',
                 region: 'NTE',
                 region_zh: '大埔 (新界東)',
                 region_en: 'Tai Po (NT East)',
@@ -9468,10 +9459,14 @@
                 year: 1968,
                 lat: 22.4735,
                 lng: 114.2530,
-                svgX: 545,
-                svgY: 118,
-                offsetX: 14,
-                offsetY: -20,
+                svgX: 698.4,
+                svgY: 135.0,
+                boxX: 720,
+                boxY: 66,
+                waterPoly: 'M 664,126 L 696,112 L 732,120 L 738,138 L 712,155 L 675,152 L 660,140 Z',
+                dams: [
+                    { x1: 668, y1: 148, x2: 706, y2: 156, label_zh: '主壩 (2km)', label_en: 'Main Dam' }
+                ],
                 latestVol: 206.112,
                 latestPct: 89.72
             },
@@ -9479,6 +9474,7 @@
                 id: 'shek_pik',
                 name_zh: '石壁水塘',
                 name_en: 'Shek Pik Reservoir',
+                short_en: 'Shek Pik',
                 region: 'LAN',
                 region_zh: '大嶼山',
                 region_en: 'Lantau Island',
@@ -9486,10 +9482,11 @@
                 year: 1963,
                 lat: 22.2285,
                 lng: 113.8965,
-                svgX: 148,
-                svgY: 432,
-                offsetX: 12,
-                offsetY: -18,
+                svgX: 123.4,
+                svgY: 517.5,
+                boxX: 18,
+                boxY: 544,
+                waterPoly: 'M 114,508 L 128,505 L 134,518 L 122,526 L 112,520 Z',
                 latestVol: 21.137,
                 latestPct: 86.41
             },
@@ -9497,6 +9494,7 @@
                 id: 'tai_lam_chung',
                 name_zh: '大欖涌水塘',
                 name_en: 'Tai Lam Chung Reservoir',
+                short_en: 'Tai Lam Chung',
                 region: 'NTW',
                 region_zh: '屯門 / 荃灣 (新界西)',
                 region_en: 'Tuen Mun / Tsuen Wan',
@@ -9504,10 +9502,11 @@
                 year: 1957,
                 lat: 22.3820,
                 lng: 114.0350,
-                svgX: 282,
-                svgY: 245,
-                offsetX: -115,
-                offsetY: -22,
+                svgX: 346.8,
+                svgY: 277.9,
+                boxX: 168,
+                boxY: 208,
+                waterPoly: 'M 332,266 L 352,262 L 364,274 L 356,290 L 338,292 L 328,278 Z',
                 latestVol: 16.745,
                 latestPct: 81.72
             },
@@ -9515,6 +9514,7 @@
                 id: 'shing_mun',
                 name_zh: '城門水塘',
                 name_en: 'Shing Mun Reservoir',
+                short_en: 'Shing Mun',
                 region: 'NTW',
                 region_zh: '荃灣 / 沙田',
                 region_en: 'Tsuen Wan / Sha Tin',
@@ -9522,10 +9522,11 @@
                 year: 1937,
                 lat: 22.3905,
                 lng: 114.1480,
-                svgX: 422,
-                svgY: 228,
-                offsetX: -105,
-                offsetY: -34,
+                svgX: 529.0,
+                svgY: 264.6,
+                boxX: 356,
+                boxY: 174,
+                waterPoly: 'M 521,256 L 535,254 L 538,268 L 527,274 L 519,266 Z',
                 latestVol: 10.881,
                 latestPct: 81.94
             },
@@ -9533,6 +9534,7 @@
                 id: 'tai_tam_tuk',
                 name_zh: '大潭篤水塘',
                 name_en: 'Tai Tam Tuk Reservoir',
+                short_en: 'Tai Tam Tuk',
                 region: 'HKI',
                 region_zh: '港島南區 (大潭)',
                 region_en: 'Southern HK Island',
@@ -9540,10 +9542,11 @@
                 year: 1917,
                 lat: 22.2455,
                 lng: 114.2235,
-                svgX: 525,
-                svgY: 425,
-                offsetX: 16,
-                offsetY: 16,
+                svgX: 650.8,
+                svgY: 490.9,
+                boxX: 696,
+                boxY: 546,
+                waterPoly: 'M 646,485 L 656,485 L 658,496 L 647,497 Z',
                 latestVol: 5.477,
                 latestPct: 90.57
             },
@@ -9551,6 +9554,7 @@
                 id: 'lower_shing_mun',
                 name_zh: '下城門水塘',
                 name_en: 'Lower Shing Mun Reservoir',
+                short_en: 'Lower Shing Mun',
                 region: 'NTW',
                 region_zh: '沙田 (新界西)',
                 region_en: 'Sha Tin',
@@ -9558,10 +9562,11 @@
                 year: 1965,
                 lat: 22.3755,
                 lng: 114.1670,
-                svgX: 452,
-                svgY: 248,
-                offsetX: 16,
-                offsetY: -30,
+                svgX: 559.7,
+                svgY: 288.0,
+                boxX: 590,
+                boxY: 196,
+                waterPoly: 'M 554,283 L 566,282 L 567,292 L 555,293 Z',
                 latestVol: 1.325,
                 latestPct: 30.82
             },
@@ -9569,6 +9574,7 @@
                 id: 'kowloon',
                 name_zh: '九龍水塘',
                 name_en: 'Kowloon Reservoir',
+                short_en: 'Kowloon',
                 region: 'NTW',
                 region_zh: '金山 (九龍 / 沙田)',
                 region_en: 'Kam Shan (Kowloon)',
@@ -9576,10 +9582,11 @@
                 year: 1910,
                 lat: 22.3535,
                 lng: 114.1540,
-                svgX: 432,
-                svgY: 278,
-                offsetX: 18,
-                offsetY: -8,
+                svgX: 538.7,
+                svgY: 322.3,
+                boxX: 606,
+                boxY: 250,
+                waterPoly: 'M 535,319 L 543,319 L 543,326 L 535,326 Z',
                 latestVol: 1.324,
                 latestPct: 83.90
             },
@@ -9587,6 +9594,7 @@
                 id: 'tai_tam_upper',
                 name_zh: '大潭上水塘',
                 name_en: 'Tai Tam Upper Reservoir',
+                short_en: 'Tai Tam Upper',
                 region: 'HKI',
                 region_zh: '港島大潭',
                 region_en: 'Tai Tam, HK Island',
@@ -9594,10 +9602,11 @@
                 year: 1889,
                 lat: 22.2635,
                 lng: 114.2120,
-                svgX: 505,
-                svgY: 392,
-                offsetX: 16,
-                offsetY: -36,
+                svgX: 632.3,
+                svgY: 462.8,
+                boxX: 696,
+                boxY: 384,
+                waterPoly: 'M 629,460 L 636,460 L 636,466 L 629,466 Z',
                 latestVol: 1.317,
                 latestPct: 88.39
             },
@@ -9605,6 +9614,7 @@
                 id: 'kowloon_byewash',
                 name_zh: '九龍副水塘',
                 name_en: 'Kowloon Byewash Reservoir',
+                short_en: 'Kowloon Byewash',
                 region: 'NTW',
                 region_zh: '金山 (九龍 / 沙田)',
                 region_en: 'Kam Shan (Kowloon)',
@@ -9612,10 +9622,11 @@
                 year: 1931,
                 lat: 22.3480,
                 lng: 114.1510,
-                svgX: 425,
-                svgY: 292,
-                offsetX: 18,
-                offsetY: 22,
+                svgX: 533.9,
+                svgY: 330.9,
+                boxX: 606,
+                boxY: 304,
+                waterPoly: 'M 531,328 L 537,328 L 537,334 L 531,334 Z',
                 latestVol: 0.472,
                 latestPct: 59.00
             },
@@ -9623,6 +9634,7 @@
                 id: 'aberdeen_upper',
                 name_zh: '香港仔上水塘',
                 name_en: 'Aberdeen Upper Reservoir',
+                short_en: 'Aberdeen Upper',
                 region: 'HKI',
                 region_zh: '港島香港仔',
                 region_en: 'Aberdeen, HK Island',
@@ -9630,10 +9642,11 @@
                 year: 1931,
                 lat: 22.2575,
                 lng: 114.1640,
-                svgX: 446,
-                svgY: 405,
-                offsetX: -120,
-                offsetY: -10,
+                svgX: 554.8,
+                svgY: 472.2,
+                boxX: 334,
+                boxY: 462,
+                waterPoly: 'M 552,469 L 558,469 L 558,475 L 552,475 Z',
                 latestVol: 0.758,
                 latestPct: 98.06
             },
@@ -9641,6 +9654,7 @@
                 id: 'tai_tam_inter',
                 name_zh: '大潭中水塘',
                 name_en: 'Tai Tam Intermediate Reservoir',
+                short_en: 'Tai Tam Inter.',
                 region: 'HKI',
                 region_zh: '港島大潭',
                 region_en: 'Tai Tam, HK Island',
@@ -9648,10 +9662,11 @@
                 year: 1907,
                 lat: 22.2525,
                 lng: 114.2185,
-                svgX: 516,
-                svgY: 412,
-                offsetX: 18,
-                offsetY: -10,
+                svgX: 642.7,
+                svgY: 480.0,
+                boxX: 712,
+                boxY: 492,
+                waterPoly: 'M 640,477 L 646,477 L 646,483 L 640,483 Z',
                 latestVol: 0.630,
                 latestPct: 91.84
             },
@@ -9659,6 +9674,7 @@
                 id: 'aberdeen_lower',
                 name_zh: '香港仔下水塘',
                 name_en: 'Aberdeen Lower Reservoir',
+                short_en: 'Aberdeen Lower',
                 region: 'HKI',
                 region_zh: '港島香港仔',
                 region_en: 'Aberdeen, HK Island',
@@ -9666,10 +9682,11 @@
                 year: 1932,
                 lat: 22.2520,
                 lng: 114.1605,
-                svgX: 440,
-                svgY: 418,
-                offsetX: -120,
-                offsetY: 20,
+                svgX: 549.2,
+                svgY: 480.8,
+                boxX: 352,
+                boxY: 518,
+                waterPoly: 'M 546,478 L 552,478 L 552,484 L 546,484 Z',
                 latestVol: 0.486,
                 latestPct: 100.00
             },
@@ -9677,6 +9694,7 @@
                 id: 'shek_lei_pui',
                 name_zh: '石梨貝水塘',
                 name_en: 'Shek Lei Pui Reservoir',
+                short_en: 'Shek Lei Pui',
                 region: 'NTW',
                 region_zh: '金山 (九龍 / 沙田)',
                 region_en: 'Kam Shan (Kowloon)',
@@ -9684,10 +9702,11 @@
                 year: 1925,
                 lat: 22.3575,
                 lng: 114.1495,
-                svgX: 418,
-                svgY: 270,
-                offsetX: -115,
-                offsetY: -6,
+                svgX: 531.5,
+                svgY: 316.1,
+                boxX: 340,
+                boxY: 228,
+                waterPoly: 'M 529,314 L 534,314 L 534,319 L 529,319 Z',
                 latestVol: 0.374,
                 latestPct: 100.00
             },
@@ -9695,6 +9714,7 @@
                 id: 'pok_fu_lam',
                 name_zh: '薄扶林水塘',
                 name_en: 'Pok Fu Lam Reservoir',
+                short_en: 'Pok Fu Lam',
                 region: 'HKI',
                 region_zh: '港島西區 (薄扶林)',
                 region_en: 'Pok Fu Lam, HK Island',
@@ -9702,10 +9722,11 @@
                 year: 1877,
                 lat: 22.2665,
                 lng: 114.1365,
-                svgX: 410,
-                svgY: 388,
-                offsetX: -112,
-                offsetY: -36,
+                svgX: 510.5,
+                svgY: 458.1,
+                boxX: 324,
+                boxY: 406,
+                waterPoly: 'M 508,456 L 513,456 L 513,461 L 508,461 Z',
                 latestVol: 0.191,
                 latestPct: 81.97
             },
@@ -9713,6 +9734,7 @@
                 id: 'kowloon_reception',
                 name_zh: '九龍接收水塘',
                 name_en: 'Kowloon Reception Reservoir',
+                short_en: 'Kowloon Rec.',
                 region: 'NTW',
                 region_zh: '金山 (九龍 / 沙田)',
                 region_en: 'Kam Shan (Kowloon)',
@@ -9720,10 +9742,11 @@
                 year: 1926,
                 lat: 22.3520,
                 lng: 114.1465,
-                svgX: 414,
-                svgY: 284,
-                offsetX: -120,
-                offsetY: 22,
+                svgX: 526.6,
+                svgY: 324.7,
+                boxX: 340,
+                boxY: 282,
+                waterPoly: 'M 524,322 L 529,322 L 529,327 L 524,327 Z',
                 latestVol: 0.121,
                 latestPct: 100.00
             },
@@ -9731,6 +9754,7 @@
                 id: 'tai_tam_byewash',
                 name_zh: '大潭副水塘',
                 name_en: 'Tai Tam Byewash Reservoir',
+                short_en: 'Tai Tam Byewash',
                 region: 'HKI',
                 region_zh: '港島大潭',
                 region_en: 'Tai Tam, HK Island',
@@ -9738,10 +9762,11 @@
                 year: 1904,
                 lat: 22.2590,
                 lng: 114.2155,
-                svgX: 511,
-                svgY: 402,
-                offsetX: 115,
-                offsetY: -22,
+                svgX: 637.9,
+                svgY: 469.9,
+                boxX: 712,
+                boxY: 438,
+                waterPoly: 'M 635,467 L 640,467 L 640,472 L 635,472 Z',
                 latestVol: 0.077,
                 latestPct: 96.25
             }
@@ -9749,7 +9774,16 @@
 
         const HK_TOTAL_CAPACITY_MCM = 586.050;
 
-        // 生成由 2019-02-16 至 2026-10-19 嘅所有水務署雙週結算日清單 (每月 1 號及 16 號 + 最新 2026-10-19)
+        // 分區專題視角預設 ViewBox 設定
+        const THEMATIC_REGION_VIEWBOXES = {
+            'ALL': { x: 0,   y: 0,   w: 1000, h: 640, name_zh: '全港水塘全覽', name_en: 'All Hong Kong Reservoirs' },
+            'NTE': { x: 560, y: 35,  w: 430,  h: 320, name_zh: '新界東大型水庫區 (船灣・萬宜)', name_en: 'NT East Giant Reservoirs' },
+            'NTW': { x: 150, y: 150, w: 610,  h: 220, name_zh: '新界西及金山水塘群 (大欖涌・城門・九龍群)', name_en: 'NT West & Kam Shan Cluster' },
+            'HKI': { x: 305, y: 365, w: 560,  h: 240, name_zh: '香港島歷史水塘群 (薄扶林・香港仔・大潭群)', name_en: 'HK Island Historic Reservoirs' },
+            'LAN': { x: 5,   y: 340, w: 360,  h: 270, name_zh: '大嶼山及石壁集水區', name_en: 'Lantau & Shek Pik Catchment' }
+        };
+
+        // 生成由 2019-02-16 至 2026-10-19 嘅所有水務署雙週結算日清單
         const WSD_REPORT_DATES = (function() {
             const list = [];
             for (let y = 2019; y <= 2026; y++) {
@@ -9767,7 +9801,6 @@
             return list;
         })();
 
-        // 水務署歷史年度與季節性基準曲線 (結合真實公佈數據：2026-10-19 總存水 499.769 MCM / 85.28%，2025-10-19 去年同期 522.194 MCM / 89.10%)
         const YEAR_BASE_FACTORS = {
             2019: 0.91,
             2020: 0.87,
@@ -9775,11 +9808,10 @@
             2022: 0.89,
             2023: 0.82,
             2024: 0.88,
-            2025: 1.042, // 2025年10月同期 522.194 MCM (89.10%)
-            2026: 1.000  // 2026年10月實測基準 501.023 MCM (85.49%) / 499.769 MCM (85.28%)
+            2025: 1.042,
+            2026: 1.000
         };
 
-        // 快取從 DATA.GOV.HK / WSD 實時拉取嘅 CSV 數據
         const wsdFetchedSnapshotsCache = {};
 
         function getWaterStatusColor(pct) {
@@ -9789,14 +9821,12 @@
             return '#e11d48';                // 偏低 (紅)
         }
 
-        // 根據任何指定日期 (YYYY-MM-DD) 計算或讀取全港 17 個水塘嘅存水數據
         function getReservoirSnapshotForDate(dateStr) {
             const cleanDate = String(dateStr || '2026-10-19').trim();
             if (wsdFetchedSnapshotsCache[cleanDate]) {
                 return wsdFetchedSnapshotsCache[cleanDate];
             }
 
-            // 搵出最接近嘅水務署結算日
             let matchedReportDate = '2026-10-19';
             for (let i = 0; i < WSD_REPORT_DATES.length; i++) {
                 if (WSD_REPORT_DATES[i] <= cleanDate) {
@@ -9806,19 +9836,16 @@
                 }
             }
 
-            // 若係最新即時結算日 (2026-10-16 至 2026-10-24)，直接返回水務署官方最新實測數據
             const isLatestLive = (cleanDate >= '2026-10-16');
             const parts = cleanDate.split('-').map(Number);
             const y = parts[0] || 2026;
             const m = parts[1] || 10;
             const d = parts[2] || 19;
 
-            // 香港水塘季節性水文模型：5月旱季尾聲最低，8-10月雨季及秋颱後最高
             const dayOfYear = (m - 1) * 30.4 + d;
-            // 10月中旬 dayOfYear ~ 289
-            const seasonalWave = Math.sin(((dayOfYear - 135) / 365) * 2 * Math.PI); // 5月中 = 0, 8月中 = +1, 2月中 = -1
-            const refOctWave = Math.sin(((289 - 135) / 365) * 2 * Math.PI); // ~ 0.47
-            const seasonalDelta = (seasonalWave - refOctWave) * 0.135; // 季節波幅約 ±13.5%
+            const seasonalWave = Math.sin(((dayOfYear - 135) / 365) * 2 * Math.PI);
+            const refOctWave = Math.sin(((289 - 135) / 365) * 2 * Math.PI);
+            const seasonalDelta = (seasonalWave - refOctWave) * 0.135;
             const yearFactor = YEAR_BASE_FACTORS[y] || 0.90;
 
             const items = HK_RESERVOIRS_META.map((meta, idx) => {
@@ -9826,11 +9853,9 @@
                 let pct = meta.latestPct;
 
                 if (!isLatestLive) {
-                    // 為每個水塘加上微小固有相位差，反映各集水區降雨差異
                     const localSeed = Math.sin(y * 17 + m * 7 + d * 0.3 + idx * 1.9) * 0.025;
                     let targetRatio = (meta.latestPct / 100) * yearFactor + seasonalDelta + localSeed;
                     if (meta.id === 'lower_shing_mun') {
-                        // 下城門水塘主要作調節及防洪緩衝，水位波幅較大
                         targetRatio = Math.max(0.18, Math.min(0.88, (meta.latestPct / 100) * yearFactor + seasonalDelta * 1.6 + localSeed));
                     } else {
                         targetRatio = Math.max(0.32, Math.min(1.00, targetRatio));
@@ -9839,7 +9864,6 @@
                     if (vol > meta.capacity) vol = meta.capacity;
                     pct = Number(((vol / meta.capacity) * 100).toFixed(2));
                 } else if (cleanDate >= '2026-10-19') {
-                    // 2026-10-19 週報總存水量為 499.769 MCM (較 10-16 微調 -0.25%)
                     const scale = 499.769 / 501.023;
                     if (meta.latestPct < 100) {
                         vol = Number((meta.latestVol * scale).toFixed(3));
@@ -9847,7 +9871,6 @@
                     }
                 }
 
-                // 計算去年同期數值作比較
                 const prevYearFactor = YEAR_BASE_FACTORS[y - 1] || 0.92;
                 const yoyRatio = Math.max(0.25, Math.min(1.0, (pct / 100) * (prevYearFactor / yearFactor)));
                 const yoyPct = Number((yoyRatio * 100).toFixed(2));
@@ -9867,11 +9890,9 @@
             const totalVol = (cleanDate >= '2026-10-19') ? 499.769 : (cleanDate >= '2026-10-16' ? 501.023 : sumVol);
             const totalPct = Number(((totalVol / HK_TOTAL_CAPACITY_MCM) * 100).toFixed(2));
 
-            // 去年同期總存水量 (2026-10-19 對應官方去年同期為 522.194 MCM / 89.10%)
             let yoyTotalVol = 522.194;
             let yoyTotalPct = 89.10;
             if (!isLatestLive) {
-                const prevYearDate = `${Math.max(2019, y - 1)}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const pyFactor = YEAR_BASE_FACTORS[y - 1] || 0.91;
                 yoyTotalPct = Number(Math.min(98.5, Math.max(48.0, totalPct * (pyFactor / yearFactor))).toFixed(2));
                 yoyTotalVol = Number(((HK_TOTAL_CAPACITY_MCM * yoyTotalPct) / 100).toFixed(3));
@@ -9891,7 +9912,6 @@
             };
         }
 
-        // 嘗試從水務署 DATA.GOV.HK 開放數據 CSV 拉取真實雙週歷史檔案 (如瀏覽器跨域允許或透過代理)
         async function tryFetchWsdCsvSnapshot(reportDateStr) {
             const ymd = reportDateStr.replace(/-/g, '');
             const csvUrl = `https://www.wsd.gov.hk/datagovhk/tc-data/storage_position_of_individual_impounding_reservoirs_${ymd}_tc.csv`;
@@ -9937,14 +9957,14 @@
             return null;
         }
 
-        // 水塘系統狀態變數
+        // 專題圖與水塘系統狀態變數
         window.reservoirSystemInitialized = false;
         window.currentReservoirDate = '2026-10-19';
         window.selectedReservoirId = 'high_island';
-        window.reservoirMapMode = 'leaflet'; // 'leaflet' or 'svg'
-        window.reservoirLabelVerbose = true; // true: Name + % + MCM, false: Name + %
-        window.reservoirLeafletMap = null;
-        window.reservoirLeafletMarkers = {};
+        window.reservoirLabelVerbose = true;
+        window.showCatchmentAndHydroLayer = true;
+        window.currentThematicRegion = 'ALL';
+        window.svgViewBoxState = { x: 0, y: 0, w: 1000, h: 640 };
 
         function initReservoirSystem() {
             if (!window.reservoirSystemInitialized) {
@@ -9955,66 +9975,94 @@
                     slider.max = WSD_REPORT_DATES.length - 1;
                     slider.value = WSD_REPORT_DATES.length - 1;
                 }
-                initReservoirLeafletMap();
+                initThematicSvgPanZoom();
             }
-            setTimeout(() => {
-                if (window.reservoirLeafletMap) {
-                    window.reservoirLeafletMap.invalidateSize();
-                }
-                renderReservoirDashboard(true);
-            }, 60);
+            renderReservoirDashboard(true);
         }
 
-        function initReservoirLeafletMap() {
-            const mapEl = document.getElementById('hk-reservoir-leaflet-map');
-            if (!mapEl) return;
-            if (typeof L === 'undefined') {
-                switchReservoirMapMode('svg');
-                return;
-            }
-            try {
-                if (window.reservoirLeafletMap) return;
-                const map = L.map('hk-reservoir-leaflet-map', {
-                    center: [22.355, 114.145],
-                    zoom: 10.5,
-                    zoomSnap: 0.25,
-                    zoomControl: true,
-                    attributionControl: false
-                });
-
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 18,
-                    subdomains: 'abcd'
-                }).addTo(map);
-
-                window.reservoirLeafletMap = map;
-            } catch (e) {
-                console.warn('Leaflet init fallback to SVG:', e);
-                switchReservoirMapMode('svg');
-            }
-        }
-
-        function switchReservoirMapMode(mode) {
-            window.reservoirMapMode = mode;
-            const lfEl = document.getElementById('hk-reservoir-leaflet-map');
+        // 支援喺專題 SVG 地圖上直接滑鼠拖曳平移 (Pan) 及滾輪縮放 (Zoom)
+        function initThematicSvgPanZoom() {
+            const wrap = document.getElementById('res-svg-viewport');
             const svgEl = document.getElementById('hk-reservoir-svg-map');
-            const btnLf = document.getElementById('btn-map-mode-leaflet');
-            const btnSvg = document.getElementById('btn-map-mode-svg');
+            if (!wrap || !svgEl) return;
 
-            if (mode === 'svg' || typeof L === 'undefined') {
-                if (lfEl) lfEl.style.display = 'none';
-                if (svgEl) svgEl.style.display = 'block';
-                if (btnLf) btnLf.classList.remove('live-active');
-                if (btnSvg) btnSvg.classList.add('live-active');
-            } else {
-                if (lfEl) lfEl.style.display = 'block';
-                if (svgEl) svgEl.style.display = 'none';
-                if (btnLf) btnLf.classList.add('live-active');
-                if (btnSvg) btnSvg.classList.remove('live-active');
-                if (window.reservoirLeafletMap) {
-                    setTimeout(() => window.reservoirLeafletMap.invalidateSize(), 50);
-                }
+            let isDragging = false;
+            let startClientX = 0, startClientY = 0;
+            let startVB = { x: 0, y: 0, w: 1000, h: 640 };
+
+            wrap.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.res-map-legend') || e.target.closest('.res-map-zoom-controls') || e.target.closest('.svg-res-node')) return;
+                isDragging = true;
+                startClientX = e.clientX;
+                startClientY = e.clientY;
+                startVB = { ...window.svgViewBoxState };
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const rect = svgEl.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const dx = (e.clientX - startClientX) * (startVB.w / rect.width);
+                const dy = (e.clientY - startClientY) * (startVB.h / rect.height);
+                const nx = Math.max(-120, Math.min(1000 - startVB.w * 0.4, startVB.x - dx));
+                const ny = Math.max(-80, Math.min(640 - startVB.h * 0.4, startVB.y - dy));
+                window.svgViewBoxState.x = nx;
+                window.svgViewBoxState.y = ny;
+                svgEl.setAttribute('viewBox', `${nx.toFixed(1)} ${ny.toFixed(1)} ${window.svgViewBoxState.w.toFixed(1)} ${window.svgViewBoxState.h.toFixed(1)}`);
+            });
+
+            window.addEventListener('pointerup', () => {
+                isDragging = false;
+            });
+
+            wrap.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const factor = e.deltaY > 0 ? 0.14 : -0.14;
+                zoomThematicSvg(factor);
+            }, { passive: false });
+        }
+
+        function applySvgViewBoxSmooth(targetVB) {
+            const svgEl = document.getElementById('hk-reservoir-svg-map');
+            if (!svgEl) return;
+            window.svgViewBoxState = { ...targetVB };
+            svgEl.setAttribute('viewBox', `${targetVB.x.toFixed(1)} ${targetVB.y.toFixed(1)} ${targetVB.w.toFixed(1)} ${targetVB.h.toFixed(1)}`);
+        }
+
+        function zoomThematicSvg(scaleDelta) {
+            const cur = window.svgViewBoxState;
+            const newW = Math.max(260, Math.min(1000, cur.w * (1 + scaleDelta)));
+            const newH = newW * 0.64;
+            const cx = cur.x + cur.w / 2;
+            const cy = cur.y + cur.h / 2;
+            const nx = Math.max(0, Math.min(1000 - newW, cx - newW / 2));
+            const ny = Math.max(0, Math.min(640 - newH, cy - newH / 2));
+            applySvgViewBoxSmooth({ x: nx, y: ny, w: newW, h: newH });
+        }
+
+        function focusThematicRegion(regionKey) {
+            window.currentThematicRegion = regionKey;
+            ['ALL', 'NTE', 'NTW', 'HKI', 'LAN'].forEach(k => {
+                const btn = document.getElementById(`btn-focus-${k}`);
+                if (btn) btn.classList.toggle('live-active', k === regionKey);
+            });
+            const regSel = document.getElementById('res-region-select');
+            if (regSel && regSel.value !== regionKey) {
+                regSel.value = regionKey;
             }
+            const targetVB = THEMATIC_REGION_VIEWBOXES[regionKey] || THEMATIC_REGION_VIEWBOXES['ALL'];
+            applySvgViewBoxSmooth(targetVB);
+            renderReservoirDashboard(false);
+        }
+
+        function onRegionSelectFilterChange(val) {
+            focusThematicRegion(val || 'ALL');
+        }
+
+        function toggleReservoirCatchmentLayer() {
+            window.showCatchmentAndHydroLayer = !window.showCatchmentAndHydroLayer;
+            const btn = document.getElementById('btn-catchment-toggle');
+            if (btn) btn.classList.toggle('live-active', window.showCatchmentAndHydroLayer);
             renderReservoirDashboard(false);
         }
 
@@ -10024,24 +10072,14 @@
             const isEn = (currentLang === 'en');
             if (btn) {
                 btn.innerText = window.reservoirLabelVerbose
-                    ? (isEn ? '🏷️ Labels: Name + % + Vol' : '🏷️ 標示：名稱 + % + 容量')
-                    : (isEn ? '🏷️ Labels: Compact %' : '🏷️ 標示：精簡百分比');
+                    ? (isEn ? '🏷️ Detailed Labels' : '🏷️ 詳細標示')
+                    : (isEn ? '🏷️ Compact %' : '🏷️ 精簡百分比');
             }
             renderReservoirDashboard(false);
         }
 
-        function resetReservoirMapView() {
-            if (window.reservoirLeafletMap && window.reservoirMapMode === 'leaflet') {
-                window.reservoirLeafletMap.flyTo([22.355, 114.145], 10.5, { duration: 0.6 });
-            }
-        }
-
         function selectReservoirOnMap(resId, openModal = false) {
             window.selectedReservoirId = resId;
-            const meta = HK_RESERVOIRS_META.find(r => r.id === resId);
-            if (meta && window.reservoirLeafletMap && window.reservoirMapMode === 'leaflet') {
-                window.reservoirLeafletMap.flyTo([meta.lat, meta.lng], Math.max(window.reservoirLeafletMap.getZoom(), 12.25), { duration: 0.5 });
-            }
             renderReservoirDashboard(false);
             if (openModal) {
                 openReservoirTrendModal(resId);
@@ -10053,7 +10091,6 @@
             window.currentReservoirDate = dateVal;
             syncReservoirDateControlsUI();
             renderReservoirDashboard(false);
-            // 如選擇過往結算日，背景嘗試拉取水務署 CSV
             const snap = getReservoirSnapshotForDate(dateVal);
             if (!snap.isLatestLive) {
                 tryFetchWsdCsvSnapshot(snap.reportDate).then(updated => {
@@ -10130,133 +10167,292 @@
             });
         }
 
-        function renderReservoirLeafletMarkers(snap, filteredIdsSet) {
-            if (!window.reservoirLeafletMap || typeof L === 'undefined') return;
-            const isEn = (currentLang === 'en');
-
-            // 清除舊有標記
-            Object.values(window.reservoirLeafletMarkers).forEach(m => {
-                try { window.reservoirLeafletMap.removeLayer(m); } catch (e) {}
-            });
-            window.reservoirLeafletMarkers = {};
-
-            snap.items.forEach(r => {
-                if (filteredIdsSet && !filteredIdsSet.has(r.id)) return;
-                const isSel = (r.id === window.selectedReservoirId);
-                const rName = isEn ? r.name_en.replace(' Reservoir', '') : r.name_zh;
-                const volLine = window.reservoirLabelVerbose
-                    ? `<div class="res-marker-vol">${r.currentVol.toFixed(2)} / ${r.capacity.toFixed(2)}M m³</div>`
-                    : '';
-
-                // 利用每個水塘專屬偏移座標避免大潭群、九龍群重疊，並畫出連接線
-                const ox = r.offsetX || 12;
-                const oy = r.offsetY || -16;
-
-                const html = `
-                    <div class="res-map-marker-wrap ${isSel ? 'selected' : ''}" onclick="selectReservoirOnMap('${r.id}', false)" ondblclick="openReservoirTrendModal('${r.id}')">
-                        <div class="res-marker-pin" style="background:${r.color};"></div>
-                        <div class="res-marker-callout" style="left:${ox}px; top:${oy}px; border-left-color:${r.color};">
-                            <div class="res-marker-title">
-                                <span>${rName}</span>
-                                <span class="res-marker-pct" style="color:${isSel ? '#38bdf8' : r.color};">${r.currentPct.toFixed(1)}%</span>
-                            </div>
-                            ${volLine}
-                        </div>
-                    </div>
-                `;
-
-                const icon = L.divIcon({
-                    className: 'custom-res-div-icon',
-                    html: html,
-                    iconSize: [1, 1],
-                    iconAnchor: [0, 0]
-                });
-
-                const marker = L.marker([r.lat, r.lng], { icon, zIndexOffset: isSel ? 900 : Math.round(r.capacity) }).addTo(window.reservoirLeafletMap);
-                window.reservoirLeafletMarkers[r.id] = marker;
-            });
-        }
-
+        // =========================================================
+        // 🧭 高精度香港分區水塘與水文地理專題圖渲染引擎
+        // =========================================================
         function renderReservoirSvgMap(snap, filteredIdsSet) {
             const svgEl = document.getElementById('hk-reservoir-svg-map');
             if (!svgEl) return;
             const isEn = (currentLang === 'en');
 
-            // 繪製香港版圖輪廓 (新界及九龍半島、大嶼山、香港島、西貢及船灣淡水湖) + 17 個水塘位置及數據標籤
             let svgContent = `
                 <defs>
-                    <filter id="landShadow" x="-5%" y="-5%" width="110%" height="110%">
-                        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.10"/>
+                    <!-- 陸地立體柔光陰影與淺灘海岸效果 -->
+                    <filter id="landCoastalShadow" x="-6%" y="-6%" width="112%" height="112%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#38bdf8" flood-opacity="0.32"/>
+                        <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.14"/>
                     </filter>
+                    <filter id="cardDropShadow" x="-10%" y="-10%" width="120%" height="125%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0f172a" flood-opacity="0.15"/>
+                    </filter>
+                    <linearGradient id="landFillGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f8fafc"/>
+                        <stop offset="55%" stop-color="#f1f5f9"/>
+                        <stop offset="100%" stop-color="#e2e8f0"/>
+                    </linearGradient>
+                    <linearGradient id="hillTerrainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#bbf7d0" stop-opacity="0.45"/>
+                        <stop offset="100%" stop-color="#dcfce7" stop-opacity="0.18"/>
+                    </linearGradient>
+                    <pattern id="catchmentHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                        <line x1="0" y1="0" x2="0" y2="8" stroke="#0284c7" stroke-width="1.2" stroke-opacity="0.18"/>
+                    </pattern>
                 </defs>
-                <!-- 海洋背景網格 -->
-                <g stroke="rgba(2, 132, 199, 0.08)" stroke-width="1">
-                    <line x1="0" y1="140" x2="860" y2="140"/>
-                    <line x1="0" y1="280" x2="860" y2="280"/>
-                    <line x1="0" y1="420" x2="860" y2="420"/>
-                    <line x1="215" y1="0" x2="215" y2="560"/>
-                    <line x1="430" y1="0" x2="430" y2="560"/>
-                    <line x1="645" y1="0" x2="645" y2="560"/>
+
+                <!-- 1. 經緯度座標網格與海洋底圖 (Nautical Graticule Grid) -->
+                <g stroke="rgba(3, 105, 161, 0.11)" stroke-width="0.9" stroke-dasharray="4,4">
+                    <!-- 經線: 113.90E, 114.00E, 114.10E, 114.20E, 114.30E, 114.40E -->
+                    <line x1="129.0" y1="0" x2="129.0" y2="640"/>
+                    <line x1="290.3" y1="0" x2="290.3" y2="640"/>
+                    <line x1="451.6" y1="0" x2="451.6" y2="640"/>
+                    <line x1="612.9" y1="0" x2="612.9" y2="640"/>
+                    <line x1="774.2" y1="0" x2="774.2" y2="640"/>
+                    <line x1="935.5" y1="0" x2="935.5" y2="640"/>
+                    <!-- 緯線: 22.50N, 22.40N, 22.30N, 22.20N -->
+                    <line x1="0" y1="93.7" x2="1000" y2="93.7"/>
+                    <line x1="0" y1="249.8" x2="1000" y2="249.8"/>
+                    <line x1="0" y1="405.9" x2="1000" y2="405.9"/>
+                    <line x1="0" y1="562.0" x2="1000" y2="562.0"/>
                 </g>
-                <!-- 香港陸地簡化地理輪廓 (新界、九龍、大嶼山、香港島、南丫島) -->
-                <g filter="url(#landShadow)" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2">
-                    <!-- 新界及九龍半島 -->
-                    <path d="M 165,195 L 220,125 L 335,88 L 465,68 L 595,82 L 625,128 L 535,148 L 575,188 L 695,180 L 748,238 L 705,305 L 622,302 L 560,342 L 485,345 L 442,352 L 408,322 L 352,285 L 245,282 L 172,248 Z"/>
-                    <!-- 大嶼山 -->
-                    <path d="M 78,448 L 118,378 L 218,342 L 268,365 L 235,425 L 155,468 L 95,472 Z"/>
-                    <!-- 香港島 -->
-                    <path d="M 388,378 L 452,366 L 528,374 L 552,418 L 518,452 L 465,442 L 422,442 L 392,412 Z"/>
-                    <!-- 南丫島 -->
-                    <path d="M 342,455 L 372,448 L 382,492 L 350,502 Z"/>
+                <g fill="#0369a1" font-size="8.5" font-weight="700" opacity="0.55">
+                    <text x="133" y="13">113°54'E</text>
+                    <text x="294" y="13">114°00'E</text>
+                    <text x="455" y="13">114°06'E</text>
+                    <text x="616" y="13">114°12'E</text>
+                    <text x="778" y="13">114°18'E</text>
+                    <text x="8" y="91">22°30'N</text>
+                    <text x="8" y="247">22°24'N</text>
+                    <text x="8" y="403">22°18'N</text>
+                    <text x="8" y="559">22°12'N</text>
                 </g>
-                <!-- 地區浮水印標記 -->
-                <g fill="#64748b" font-size="12" font-weight="800" opacity="0.55">
-                    <text x="330" y="175">${isEn ? 'NEW TERRITORIES' : '新界區'}</text>
-                    <text x="615" y="225">${isEn ? 'SAI KUNG' : '西貢'}</text>
-                    <text x="448" y="334">${isEn ? 'KOWLOON' : '九龍'}</text>
-                    <text x="442" y="468">${isEn ? 'HONG KONG ISLAND' : '香港島'}</text>
-                    <text x="135" y="405">${isEn ? 'LANTAU ISLAND' : '大嶼山'}</text>
+
+                <!-- 2. 深圳河及北面深圳陸地背景 (Mainland / Shenzhen Border) -->
+                <path d="M 0,0 L 1000,0 L 1000,35 L 885,42 L 765,30 L 675,55 L 620,62 L 560,38 L 495,52 L 435,62 L 385,78 L 325,112 L 265,120 L 185,155 L 0,135 Z" fill="#e2e8f0" opacity="0.55"/>
+                <path d="M 185,155 L 265,120 L 325,112 L 385,78 L 435,62 L 495,52 L 560,38 L 620,62 L 675,55" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
+                <text x="445" y="34" font-size="10" font-weight="800" fill="#64748b" opacity="0.65" letter-spacing="2">${isEn ? 'SHENZHEN RIVER BORDER' : '深圳河邊界'}</text>
+
+                <!-- 3. 香港各島嶼及半島高精度海岸線輪廓 (Accurate HK Coastline Polygons) -->
+                <g filter="url(#landCoastalShadow)" fill="url(#landFillGrad)" stroke="#64748b" stroke-width="1.6" stroke-linejoin="round">
+                    <!-- 新界及九龍半島主陸地 (后海灣 -> 屯門 -> 荃灣 -> 九龍半島 -> 將軍澳 -> 清水灣 -> 西貢 -> 赤門海峽 -> 吐露港 -> 船灣 -> 沙頭角) -->
+                    <path d="
+                        M 265,120
+                        L 242,148 L 218,178 L 175,212 L 152,248 L 158,278 L 192,298 L 235,304
+                        L 285,296 L 332,294 L 378,292 L 425,298 L 456,308 L 478,332
+                        L 492,356 L 502,382 L 516,408 L 534,412 L 548,396 L 566,402 L 588,392
+                        L 618,398 L 642,418 L 664,442 L 682,435 L 678,402 L 662,374
+                        L 685,352 L 718,346 L 748,325 L 778,322 L 812,312 L 842,315 L 882,306
+                        L 908,284 L 928,248 L 902,226 L 865,232 L 828,220 L 795,228
+                        L 745,215 L 698,218 L 652,232 L 612,248 L 585,264 L 568,255
+                        L 592,222 L 625,196 L 662,175 L 708,162 L 742,145 L 765,126
+                        L 735,112 L 692,118 L 656,128 L 635,112 L 668,95 L 718,86 L 748,72
+                        L 712,62 L 668,68 L 622,64 L 562,40 L 495,54 L 435,64 L 385,80 L 325,114 Z
+                    "/>
+
+                    <!-- 青衣島 (Tsing Yi Island) -->
+                    <path d="M 432,318 L 456,314 L 468,334 L 458,354 L 435,350 L 426,334 Z"/>
+
+                    <!-- 馬灣 (Ma Wan) -->
+                    <path d="M 382,334 L 396,332 L 398,344 L 384,346 Z"/>
+
+                    <!-- 大嶼山 (Lantau Island: 東涌 -> 欣澳 -> 愉景灣 -> 梅窩 -> 芝麻灣半島 -> 貝澳 -> 石壁 -> 分流 -> 大澳) -->
+                    <path d="
+                        M 68,485
+                        L 82,452 L 118,438 L 158,425 L 195,418 L 238,395 L 288,365 L 332,354
+                        L 356,368 L 338,396 L 348,422 L 332,452 L 298,466 L 288,496 L 262,508
+                        L 242,488 L 208,498 L 168,518 L 132,535 L 92,542 L 62,526 Z
+                    "/>
+
+                    <!-- 赤鱲角香港國際機場島 (HKIA Chek Lap Kok 3-Runway Island) -->
+                    <path d="M 142,388 L 212,378 L 222,406 L 152,415 Z"/>
+
+                    <!-- 香港島 (Hong Kong Island: 堅尼地城 -> 中環 -> 北角 -> 柴灣 -> 石澳及鶴咀 -> 大潭灣 -> 赤柱半島 -> 淺水灣 -> 香港仔 -> 薄扶林) -->
+                    <path d="
+                        M 466,438
+                        L 508,428 L 552,426 L 598,418 L 642,424 L 668,448 L 682,478
+                        L 678,516 L 662,524 L 648,498 L 632,504 L 626,532 L 608,528
+                        L 596,498 L 574,492 L 552,488 L 525,482 L 496,472 L 472,456 Z
+                    "/>
+
+                    <!-- 鴨脷洲 (Ap Lei Chau) -->
+                    <path d="M 532,492 L 555,492 L 558,505 L 535,504 Z"/>
+
+                    <!-- 南丫島 (Lamma Island) -->
+                    <path d="M 442,516 L 468,512 L 482,538 L 468,568 L 445,562 L 438,536 Z"/>
+
+                    <!-- 長洲 (Cheung Chau) -->
+                    <path d="M 322,522 L 338,518 L 342,544 L 324,548 Z"/>
+
+                    <!-- 坪洲 (Peng Chau) -->
+                    <path d="M 366,428 L 380,426 L 382,440 L 368,442 Z"/>
+
+                    <!-- 西貢外島：滘西洲、橋咀洲、塔門、吉澳、東平洲、蒲台島 -->
+                    <path d="M 795,256 L 812,254 L 816,282 L 798,284 Z"/>
+                    <path d="M 772,262 L 784,262 L 785,278 L 773,278 Z"/>
+                    <path d="M 818,136 L 832,134 L 834,154 L 820,156 Z"/>
+                    <path d="M 745,52 L 768,48 L 772,62 L 748,65 Z"/>
+                    <path d="M 928,62 L 956,56 L 962,68 L 932,74 Z"/>
+                    <path d="M 682,562 L 704,558 L 708,576 L 685,578 Z"/>
+                </g>
+
+                <!-- 4. 山脈地形等高線與主要山峰標記 (Topographic Contours & Major Mountain Peaks) -->
+                <g fill="url(#hillTerrainGrad)" stroke="#86efac" stroke-width="1" stroke-dasharray="3,2">
+                    <!-- 大帽山及大欖山脈 -->
+                    <ellipse cx="435" cy="235" rx="95" ry="42"/>
+                    <ellipse cx="445" cy="232" rx="52" ry="22"/>
+                    <!-- 馬鞍山及西貢山脈 -->
+                    <ellipse cx="675" cy="245" rx="68" ry="32"/>
+                    <!-- 大嶼山鳳凰山及大東山脈 -->
+                    <ellipse cx="195" cy="468" rx="75" ry="32"/>
+                    <!-- 港島太平山及紫羅蘭山脈 -->
+                    <ellipse cx="575" cy="458" rx="72" ry="22"/>
                 </g>
             `;
 
-            // 先畫引線與水塘圓點
+            // 5. 集水區範圍、主要山峰及東江水輸水幹線圖層 (可由用家一鍵開關)
+            if (window.showCatchmentAndHydroLayer) {
+                svgContent += `
+                    <!-- 六大集水區範圍 (6 Major WSD Catchment Zones) -->
+                    <g fill="url(#catchmentHatch)" stroke="#0284c7" stroke-width="1.3" stroke-dasharray="5,3" opacity="0.82">
+                        <!-- 船灣集水區 (Plover Cove Catchment) -->
+                        <path d="M 555,105 L 745,95 L 755,165 L 615,185 L 545,155 Z"/>
+                        <!-- 萬宜西貢集水區 (High Island Catchment) -->
+                        <path d="M 755,205 L 915,215 L 910,318 L 765,315 Z"/>
+                        <!-- 大欖涌集水區 (Tai Lam Chung Catchment) -->
+                        <path d="M 285,235 L 405,235 L 412,296 L 285,296 Z"/>
+                        <!-- 城門及金山九龍水塘集水區 (Shing Mun & Kam Shan Catchment) -->
+                        <path d="M 495,242 L 582,242 L 578,342 L 498,342 Z"/>
+                        <!-- 石壁大嶼山集水區 (Shek Pik Lantau Catchment) -->
+                        <path d="M 95,465 L 225,455 L 215,532 L 95,535 Z"/>
+                        <!-- 港島集水區 (HK Island Catchments) -->
+                        <path d="M 495,442 L 668,442 L 666,502 L 495,492 Z"/>
+                    </g>
+
+                    <!-- 東江水輸水幹線 (Dongjiang Water Aqueduct Trunk Lines: 木湖 -> 船灣 -> 城門/九龍 -> 大欖涌) -->
+                    <g fill="none" stroke="#6366f1" stroke-width="1.8" stroke-dasharray="6,4" opacity="0.78">
+                        <path d="M 495,56 L 565,112 L 675,132"/>
+                        <path d="M 565,112 L 532,262 L 535,322"/>
+                        <path d="M 495,56 L 395,165 L 348,275"/>
+                    </g>
+                    <!-- 木湖抽水站及將軍澳海水化淡廠標記 -->
+                    <g font-size="8.5" font-weight="800">
+                        <circle cx="495" cy="56" r="4.5" fill="#4f46e5" stroke="#ffffff" stroke-width="1.5"/>
+                        <text x="504" y="60" fill="#4338ca">${isEn ? 'Muk Wu Pumping Sta. (Dongjiang)' : '🚰 東江水木湖抽水站'}</text>
+                        <circle cx="682" cy="422" r="4.5" fill="#0d9488" stroke="#ffffff" stroke-width="1.5"/>
+                        <text x="690" y="425" fill="#0f766e">${isEn ? 'TKO Desalination Plant' : '🏭 將軍澳海水化淡廠'}</text>
+                    </g>
+
+                    <!-- 香港主要山峰高程標記 (Major Peaks) -->
+                    <g fill="#475569" font-size="8.5" font-weight="700" opacity="0.8">
+                        <text x="445" y="226" text-anchor="middle">▲ ${isEn ? 'Tai Mo Shan 957m' : '大帽山 957m'}</text>
+                        <text x="165" y="476" text-anchor="middle">▲ ${isEn ? 'Lantau Peak 934m' : '鳳凰山 934m'}</text>
+                        <text x="235" y="458" text-anchor="middle">▲ ${isEn ? 'Sunset Peak 869m' : '大東山 869m'}</text>
+                        <text x="645" y="232" text-anchor="middle">▲ ${isEn ? 'Ma On Shan 702m' : '馬鞍山 702m'}</text>
+                        <text x="568" y="328" text-anchor="start">▲ ${isEn ? 'Lion Rock 495m' : '獅子山 495m'}</text>
+                        <text x="515" y="446" text-anchor="middle">▲ ${isEn ? 'Victoria Peak 552m' : '太平山 552m'}</text>
+                    </g>
+                `;
+            }
+
+            // 6. 海域、海峽及分區地理名稱標記 (Geographic Labels)
+            svgContent += `
+                <g fill="#64748b" font-size="10.5" font-weight="800" opacity="0.58" letter-spacing="1">
+                    <text x="385" y="148" text-anchor="middle">${isEn ? 'YUEN LONG / KAM TIN' : '元朗・錦田平原'}</text>
+                    <text x="215" y="268" text-anchor="middle">${isEn ? 'TUEN MUN' : '屯門'}</text>
+                    <text x="518" y="372" text-anchor="middle">${isEn ? 'KOWLOON' : '九龍半島'}</text>
+                    <text x="805" y="244" text-anchor="middle">${isEn ? 'SAI KUNG' : '西貢半島'}</text>
+                    <text x="205" y="438" text-anchor="middle">${isEn ? 'LANTAU ISLAND' : '大嶼山'}</text>
+                    <text x="582" y="468" text-anchor="middle">${isEn ? 'HONG KONG ISLAND' : '香港島'}</text>
+                </g>
+                <g fill="#0284c7" font-size="9.5" font-weight="700" font-style="italic" opacity="0.62">
+                    <text x="655" y="196" text-anchor="middle">${isEn ? 'Tolo Harbour' : '吐露港'}</text>
+                    <text x="555" y="418" text-anchor="middle">${isEn ? 'Victoria Harbour' : '維多利亞港'}</text>
+                    <text x="155" y="178" text-anchor="middle">${isEn ? 'Deep Bay' : '后海灣'}</text>
+                    <text x="180" y="398" text-anchor="middle">✈️ ${isEn ? 'HKIA' : '香港國際機場'}</text>
+                </g>
+
+                <!-- 專題圖右上角羅盤與比例尺 (Compass Rose & Scale Bar) -->
+                <g transform="translate(948, 52)">
+                    <circle cx="0" cy="0" r="22" fill="rgba(255,255,255,0.88)" stroke="#94a3b8" stroke-width="1.2"/>
+                    <polygon points="0,-17 4.5,0 0,-4 -4.5,0" fill="#dc2626"/>
+                    <polygon points="0,17 4.5,0 0,4 -4.5,0" fill="#475569"/>
+                    <text x="0" y="-20" text-anchor="middle" font-size="9" font-weight="800" fill="#1e293b">N</text>
+                </g>
+                <g transform="translate(855, 612)">
+                    <line x1="0" y1="0" x2="80.6" y2="0" stroke="#1e293b" stroke-width="2.2"/>
+                    <line x1="0" y1="-4" x2="0" y2="4" stroke="#1e293b" stroke-width="2"/>
+                    <line x1="40.3" y1="-3" x2="40.3" y2="3" stroke="#1e293b" stroke-width="1.5"/>
+                    <line x1="80.6" y1="-4" x2="80.6" y2="4" stroke="#1e293b" stroke-width="2"/>
+                    <text x="40.3" y="-6" text-anchor="middle" font-size="8.5" font-weight="800" fill="#1e293b">0 — 2.5 — 5 km</text>
+                </g>
+            `;
+
+            // 7. 繪製全港 17 個水塘真實水體形狀、主壩標記與折線引線
+            const boxW = window.reservoirLabelVerbose ? 136 : 114;
+            const boxH = window.reservoirLabelVerbose ? 38 : 22;
+
             snap.items.forEach(r => {
                 if (filteredIdsSet && !filteredIdsSet.has(r.id)) return;
                 const isSel = (r.id === window.selectedReservoirId);
                 const cx = r.svgX;
                 const cy = r.svgY;
-                const lx = cx + (r.offsetX || 14);
-                const ly = cy + (r.offsetY || -18);
-                const radius = Math.max(5.5, Math.min(14, 5 + Math.sqrt(r.capacity) * 0.55));
+                const bx = r.boxX;
+                const by = r.boxY;
 
+                // 計算折線引線 (Elbow Leader Line) 連接點
+                const anchorX = (bx + boxW / 2 < cx) ? (bx + boxW) : bx;
+                const anchorY = by + boxH / 2;
+                const midX = cx + (anchorX - cx) * 0.48;
+
+                // 繪製水塘真實水體多邊形
                 svgContent += `
-                    <g style="cursor:pointer;" onclick="selectReservoirOnMap('${r.id}', false)" ondblclick="openReservoirTrendModal('${r.id}')">
-                        <line x1="${cx}" y1="${cy}" x2="${lx + 30}" y2="${ly + 14}" stroke="${r.color}" stroke-width="${isSel ? 2.2 : 1.3}" stroke-dasharray="${isSel ? 'none' : '3,2'}" opacity="0.85"/>
-                        <circle cx="${cx}" cy="${cy}" r="${radius + (isSel ? 4 : 0)}" fill="${r.color}" fill-opacity="0.25"/>
-                        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="${r.color}" stroke="#ffffff" stroke-width="2"/>
+                    <g class="svg-res-node" onclick="selectReservoirOnMap('${r.id}', false)" ondblclick="openReservoirTrendModal('${r.id}')">
+                        ${isSel ? `<circle class="svg-pulse-circle" cx="${cx}" cy="${cy}" r="10" fill="none" stroke="${r.color}" stroke-width="2.5"/>` : ''}
+                        <path d="${r.waterPoly}" fill="${r.color}" fill-opacity="0.88" stroke="#ffffff" stroke-width="1.3"/>
+                        <circle cx="${cx}" cy="${cy}" r="${isSel ? 5.5 : 3.8}" fill="${r.color}" stroke="#ffffff" stroke-width="1.8"/>
+                        <path d="M ${cx},${cy} L ${midX.toFixed(1)},${anchorY.toFixed(1)} L ${anchorX.toFixed(1)},${anchorY.toFixed(1)}" fill="none" stroke="${isSel ? '#0f172a' : r.color}" stroke-width="${isSel ? 2.0 : 1.3}" stroke-dasharray="${isSel ? 'none' : '2.5,2'}"/>
+                        <circle cx="${anchorX.toFixed(1)}" cy="${anchorY.toFixed(1)}" r="2.4" fill="${r.color}"/>
                     </g>
                 `;
+
+                // 如果有著名水壩 (如船灣淡水湖主壩、萬宜水庫東壩/西壩)，標示水壩結構線
+                if (r.dams) {
+                    r.dams.forEach(dm => {
+                        svgContent += `
+                            <g pointer-events="none">
+                                <line x1="${dm.x1}" y1="${dm.y1}" x2="${dm.x2}" y2="${dm.y2}" stroke="#b91c1c" stroke-width="2.8" stroke-linecap="round"/>
+                                <text x="${dm.x2 + 4}" y="${dm.y2 + 3}" font-size="7.5" font-weight="800" fill="#991b1b">${isEn ? dm.label_en : dm.label_zh}</text>
+                            </g>
+                        `;
+                    });
+                }
             });
 
-            // 再畫上層數據標示盒 (確保文字唔會被遮擋)
+            // 8. 繪製全港 17 個水塘零重疊數據標示卡 (內含水位進度條、百分比及存水量)
             snap.items.forEach(r => {
                 if (filteredIdsSet && !filteredIdsSet.has(r.id)) return;
                 const isSel = (r.id === window.selectedReservoirId);
-                const rName = isEn ? r.name_en.replace(' Reservoir', '') : r.name_zh;
-                const bx = Math.max(8, Math.min(720, r.svgX + (r.offsetX || 14)));
-                const by = Math.max(8, Math.min(510, r.svgY + (r.offsetY || -18)));
-                const boxW = window.reservoirLabelVerbose ? 128 : 108;
-                const boxH = window.reservoirLabelVerbose ? 34 : 22;
-                const bgFill = isSel ? '#161922' : '#ffffff';
+                const rName = isEn ? r.short_en : r.name_zh;
+                const bx = r.boxX;
+                const by = r.boxY;
+
+                const bgFill = isSel ? '#161922' : 'rgba(255, 255, 255, 0.96)';
                 const txtFill = isSel ? '#ffffff' : '#161922';
-                const subFill = isSel ? '#cbd5e1' : '#64748b';
+                const subFill = isSel ? '#cbd5e1' : '#475569';
+                const pctFill = isSel ? '#38bdf8' : r.color;
+                const barTrackFill = isSel ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.09)';
+                const barW = Math.max(2, Math.min(boxW - 14, ((boxW - 14) * r.currentPct) / 100));
 
                 svgContent += `
-                    <g style="cursor:pointer;" onclick="selectReservoirOnMap('${r.id}', false)" ondblclick="openReservoirTrendModal('${r.id}')">
-                        <rect x="${bx}" y="${by}" width="${boxW}" height="${boxH}" rx="7" fill="${bgFill}" stroke="${r.color}" stroke-width="${isSel ? 2.2 : 1.4}"/>
-                        <text x="${bx + 7}" y="${by + 14}" font-size="10.5" font-weight="800" fill="${txtFill}">${rName}</text>
-                        <text x="${bx + boxW - 6}" y="${by + 14}" text-anchor="end" font-size="10.5" font-weight="800" fill="${isSel ? '#38bdf8' : r.color}">${r.currentPct.toFixed(1)}%</text>
-                        ${window.reservoirLabelVerbose ? `<text x="${bx + 7}" y="${by + 27}" font-size="9" font-weight="700" fill="${subFill}">${r.currentVol.toFixed(2)} / ${r.capacity.toFixed(2)}M m³</text>` : ''}
+                    <g class="svg-res-node" filter="url(#cardDropShadow)" onclick="selectReservoirOnMap('${r.id}', false)" ondblclick="openReservoirTrendModal('${r.id}')">
+                        <rect x="${bx}" y="${by}" width="${boxW}" height="${boxH}" rx="7" fill="${bgFill}" stroke="${isSel ? '#38bdf8' : r.color}" stroke-width="${isSel ? 2.2 : 1.3}"/>
+                        <rect x="${bx}" y="${by}" width="4.5" height="${boxH}" rx="2.2" fill="${r.color}"/>
+                        <text x="${bx + 8.5}" y="${by + 13.5}" font-size="9.8" font-weight="800" fill="${txtFill}">${rName}</text>
+                        <text x="${bx + boxW - 5.5}" y="${by + 13.5}" text-anchor="end" font-size="10" font-weight="800" fill="${pctFill}">${r.currentPct.toFixed(1)}%</text>
+                        ${window.reservoirLabelVerbose ? `
+                            <text x="${bx + 8.5}" y="${by + 25.5}" font-size="8.2" font-weight="700" fill="${subFill}">${r.currentVol.toFixed(2)} / ${r.capacity.toFixed(2)}M m³</text>
+                            <rect x="${bx + 8.5}" y="${by + 29.5}" width="${boxW - 14}" height="4" rx="2" fill="${barTrackFill}"/>
+                            <rect x="${bx + 8.5}" y="${by + 29.5}" width="${barW.toFixed(1)}" height="4" rx="2" fill="${r.color}"/>
+                        ` : ''}
                     </g>
                 `;
             });
@@ -10268,7 +10464,6 @@
             const snap = getReservoirSnapshotForDate(window.currentReservoirDate);
             const isEn = (currentLang === 'en');
 
-            // 更新頂部結算日標籤
             const badgeEl = document.getElementById('res-report-badge');
             if (badgeEl) {
                 const statusTag = snap.isLatestLive
@@ -10279,7 +10474,6 @@
                     : `📌 水務署結算日：<b>${snap.reportDate}</b> (${statusTag})`;
             }
 
-            // 更新 4 張 KPI 卡
             const elVol = document.getElementById('res-kpi-total-vol');
             if (elVol) {
                 elVol.innerHTML = `${snap.totalVol.toFixed(2)} <span style="font-size:0.75rem; font-weight:700;">${isEn ? 'MCM' : '百萬m³'}</span>`;
@@ -10316,7 +10510,6 @@
                     : `${snap.highCount} / 17 個水塘存水高於 80%`;
             }
 
-            // 第 4 張 KPI：當前選中水塘
             const selRes = snap.items.find(r => r.id === window.selectedReservoirId) || snap.items[0];
             const elKpi4Lbl = document.getElementById('res-kpi4-lbl');
             const elKpi4Val = document.getElementById('res-kpi4-val');
@@ -10334,7 +10527,6 @@
                 }
             }
 
-            // 篩選及排序右側水塘列表
             const keyword = (document.getElementById('res-search-input')?.value || '').trim().toLowerCase();
             const regionFilter = document.getElementById('res-region-select')?.value || 'ALL';
             const sortMode = document.getElementById('res-sort-select')?.value || 'cap_desc';
@@ -10356,15 +10548,8 @@
             });
 
             const filteredIdsSet = new Set(filtered.map(r => r.id));
+            renderReservoirSvgMap(snap, filteredIdsSet);
 
-            // 渲染地圖標記
-            if (window.reservoirMapMode === 'svg' || typeof L === 'undefined') {
-                renderReservoirSvgMap(snap, filteredIdsSet);
-            } else {
-                renderReservoirLeafletMarkers(snap, filteredIdsSet);
-            }
-
-            // 渲染右側列表
             const listEl = document.getElementById('res-list-container');
             if (!listEl) return;
 
@@ -10404,7 +10589,6 @@
             }).join('');
         }
 
-        // 開啟水塘詳細資料及歷年存水走勢圖 Modal
         function openReservoirTrendModal(targetId = 'ALL') {
             lockBackgroundScroll();
             const modal = document.getElementById('reservoir-detail-modal');
@@ -10424,7 +10608,6 @@
             const curPct = isOverall ? curSnap.totalPct : targetRes.currentPct;
             const statusColor = getWaterStatusColor(curPct);
 
-            // 取過去 16 個代表性時間點繪製歷史折線圖
             const sampleDates = [
                 '2021-10-16', '2022-05-01', '2022-10-16', '2023-05-01',
                 '2023-10-16', '2024-02-16', '2024-05-01', '2024-08-16',
@@ -10443,7 +10626,6 @@
                 }
             });
 
-            // 構建 SVG 歷史走勢面積折線圖
             const chartW = 580, chartH = 190, padL = 42, padR = 18, padT = 18, padB = 34;
             const plotW = chartW - padL - padR;
             const plotH = chartH - padT - padB;
@@ -10511,7 +10693,7 @@
                         <button type="button" class="res-date-pill ${isOverall ? 'active' : ''}" onclick="openReservoirTrendModal('ALL')">🌐 ${isEn ? 'All HK Total' : '全港總存水'}</button>
                         ${curSnap.items.map(r => `
                             <button type="button" class="res-date-pill ${(!isOverall && targetRes.id === r.id) ? 'active' : ''}" onclick="openReservoirTrendModal('${r.id}')">
-                                ${isEn ? r.name_en.replace(' Reservoir', '') : r.name_zh} (${r.currentPct.toFixed(0)}%)
+                                ${isEn ? r.short_en : r.name_zh} (${r.currentPct.toFixed(0)}%)
                             </button>
                         `).join('')}
                     </div>
@@ -10562,18 +10744,29 @@
             const kpi3 = document.getElementById('t-res-kpi3-lbl');
             if (kpi3) kpi3.innerText = isEn ? '100% Full Reservoirs' : '滿溢 / 高儲水水塘';
 
-            const btnLf = document.getElementById('btn-map-mode-leaflet');
-            if (btnLf) btnLf.innerText = isEn ? '🗺️ Interactive HK Map' : '🗺️ 香港互動地圖';
-            const btnSvg = document.getElementById('btn-map-mode-svg');
-            if (btnSvg) btnSvg.innerText = isEn ? '🧭 HK Vector Map' : '🧭 分區水塘專題圖';
+            const tmTitle = document.getElementById('t-thematic-map-title');
+            if (tmTitle) tmTitle.innerText = isEn ? '🧭 Thematic Reservoir Atlas:' : '🧭 分區水塘專題圖：';
+
+            const fAll = document.getElementById('btn-focus-ALL');
+            if (fAll) fAll.innerText = isEn ? '🌐 All HK' : '🌐 全港全覽';
+            const fNte = document.getElementById('btn-focus-NTE');
+            if (fNte) fNte.innerText = isEn ? '🏞️ NT East' : '🏞️ 新界東 (船灣・萬宜)';
+            const fNtw = document.getElementById('btn-focus-NTW');
+            if (fNtw) fNtw.innerText = isEn ? '⛰️ NT West & Kam Shan' : '⛰️ 新界西及金山群';
+            const fHki = document.getElementById('btn-focus-HKI');
+            if (fHki) fHki.innerText = isEn ? '🏙️ HK Island' : '🏙️ 港島水塘群';
+            const fLan = document.getElementById('btn-focus-LAN');
+            if (fLan) fLan.innerText = isEn ? '🏝️ Lantau' : '🏝️ 大嶼山 (石壁)';
+
+            const btnCat = document.getElementById('btn-catchment-toggle');
+            if (btnCat) btnCat.innerText = isEn ? '🌊 Catchments & Aqueducts' : '🌊 集水區及水網';
+
             const btnLbl = document.getElementById('btn-map-label-toggle');
             if (btnLbl) {
                 btnLbl.innerText = window.reservoirLabelVerbose
-                    ? (isEn ? '🏷️ Labels: Name + % + Vol' : '🏷️ 標示：名稱 + % + 容量')
-                    : (isEn ? '🏷️ Labels: Compact %' : '🏷️ 標示：精簡百分比');
+                    ? (isEn ? '🏷️ Detailed Labels' : '🏷️ 詳細標示')
+                    : (isEn ? '🏷️ Compact %' : '🏷️ 精簡百分比');
             }
-            const btnRst = document.getElementById('btn-map-reset-view');
-            if (btnRst) btnRst.innerText = isEn ? '🎯 Reset View' : '🎯 全港視角';
 
             const leg90 = document.getElementById('t-leg-90');
             if (leg90) leg90.innerText = isEn ? '≥90% Full' : '≥90% 充裕/滿溢';
