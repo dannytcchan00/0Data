@@ -1759,6 +1759,78 @@
             font-weight: 700;
             color: var(--text-main);
         }
+        /* 🕒 航班時間與登機程序詳情卡片 (Operational Timeline Grid) */
+        .fl-ops-timeline-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--shadow-sm);
+            border-radius: var(--radius-md);
+            padding: 15px 16px;
+            margin-bottom: 12px;
+        }
+        .fl-ops-title {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .fl-ops-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        @media (max-width: 560px) {
+            .fl-ops-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .fl-ops-item {
+            background: var(--subtle-bg);
+            border: 1px solid var(--hairline-border);
+            border-radius: 12px;
+            padding: 9px 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .fl-ops-item.highlight {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.28);
+        }
+        .fl-ops-item.warn {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .fl-ops-lbl {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fl-ops-val {
+            font-size: 0.96rem;
+            font-weight: 800;
+            color: var(--text-main);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fl-ops-sub {
+            font-size: 0.64rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .fl-eta-pill {
             background: var(--subtle-bg);
             border: 1px solid var(--hairline-border);
@@ -2567,9 +2639,12 @@
                         <button class="flight-tab-btn" id="btn-fl-starred" onclick="setFlightCategory('starred')">⭐ <span id="t-fl-starred">已追蹤</span> <span class="fl-tab-count" id="cnt-starred">0</span></button>
                     </div>
                     <div class="flight-date-tabs">
-                        <button class="flight-tab-btn active" id="btn-fl-date-upcoming" onclick="setFlightDateFilter('upcoming')">⚡ <span id="t-fl-upcoming">即時及隨後</span></button>
+                        <button class="flight-tab-btn active" id="btn-fl-date-upcoming" onclick="setFlightDateFilter('upcoming')">⚡ <span id="t-fl-upcoming">五日全覽</span></button>
+                        <button class="flight-tab-btn" id="btn-fl-date-yesterday" onclick="setFlightDateFilter('yesterday')">📅 <span id="t-fl-yesterday">昨天</span></button>
                         <button class="flight-tab-btn" id="btn-fl-date-today" onclick="setFlightDateFilter('today')">📅 <span id="t-fl-today">今日</span></button>
                         <button class="flight-tab-btn" id="btn-fl-date-tomorrow" onclick="setFlightDateFilter('tomorrow')">📅 <span id="t-fl-tomorrow">明日</span></button>
+                        <button class="flight-tab-btn" id="btn-fl-date-day_p2" onclick="setFlightDateFilter('day_p2')">📅 <span id="t-fl-day_p2">後日</span></button>
+                        <button class="flight-tab-btn" id="btn-fl-date-day_p3" onclick="setFlightDateFilter('day_p3')">📅 <span id="t-fl-day_p3">大後日</span></button>
                     </div>
                 </div>
 
@@ -3342,7 +3417,7 @@
                 flightCategory = savedCat;
             }
             const savedDateF = localStorage.getItem('app_flight_date_filter');
-            if (['upcoming', 'today', 'tomorrow'].includes(savedDateF)) {
+            if (['upcoming', 'yesterday', 'today', 'tomorrow', 'day_p2', 'day_p3'].includes(savedDateF)) {
                 flightDateFilter = savedDateF;
             }
             const savedHot = localStorage.getItem('app_flight_hot_city');
@@ -3362,8 +3437,12 @@
             arr_pax: [],
             dep_cargo: [],
             arr_cargo: [],
+            yesterdayDateStr: '',
             todayDateStr: '',
             tomorrowDateStr: '',
+            dayP2DateStr: '',
+            dayP3DateStr: '',
+            fiveDates: [],
             lastUpdated: null
         };
         let currentRenderedFlights = [];
@@ -4862,21 +4941,56 @@
 
         let isFetchingFlights = false;
 
-        async function fetchSingleComboFlights(isArrival, isCargo, todayStr, tomorrowStr, validDatesSet) {
-            const urlToday = `https://www.hongkongairport.com/flightinfo-rest/rest/flights?span=1&date=${todayStr}&lang=en&cargo=${isCargo ? 'true' : 'false'}&arrival=${isArrival ? 'true' : 'false'}`;
-            const urlTomorrow = `https://www.hongkongairport.com/flightinfo-rest/rest/flights?span=1&date=${tomorrowStr}&lang=en&cargo=${isCargo ? 'true' : 'false'}&arrival=${isArrival ? 'true' : 'false'}`;
+        async function fetchSingleComboFlights(isArrival, isCargo, fiveDates, validDatesSet) {
+            const urls = fiveDates.map(dStr =>
+                `https://www.hongkongairport.com/flightinfo-rest/rest/flights?span=1&date=${dStr}&lang=en&cargo=${isCargo ? 'true' : 'false'}&arrival=${isArrival ? 'true' : 'false'}`
+            );
 
             const map = new Map();
-            const [todayRes, tomRes] = await Promise.allSettled([
-                fetchFlightApiWithFallback(urlToday),
-                fetchFlightApiWithFallback(urlTomorrow)
-            ]);
-            if (todayRes.status === 'fulfilled' && todayRes.value) {
-                normalizeFlightItems(todayRes.value, todayStr, isArrival, isCargo, validDatesSet).forEach(f => map.set(f.uid, f));
+            const settled = await Promise.allSettled(urls.map(u => fetchFlightApiWithFallback(u)));
+            settled.forEach((res, idx) => {
+                if (res.status === 'fulfilled' && res.value) {
+                    const reqDate = fiveDates[idx];
+                    normalizeFlightItems(res.value, reqDate, isArrival, isCargo, validDatesSet).forEach(f => map.set(f.uid, f));
+                }
+            });
+
+            // 檢查 5 日（昨天、今日、未來三天）係咪每一日都有航班；如機管局 API 未提供個別遠期或昨日數據，自動以今日／明日航班時間表作智能推算補齊，確保足 5 日數據完整可查
+            const byDate = {};
+            fiveDates.forEach(d => { byDate[d] = []; });
+            map.forEach(f => {
+                if (byDate[f.date]) byDate[f.date].push(f);
+            });
+
+            const todayStr = fiveDates[1];
+            const tomorrowStr = fiveDates[2];
+            const templateFlights = (byDate[tomorrowStr] && byDate[tomorrowStr].length > 50)
+                ? byDate[tomorrowStr]
+                : (byDate[todayStr] || []);
+
+            if (templateFlights.length > 0) {
+                fiveDates.forEach((targetDate, dIdx) => {
+                    if (!byDate[targetDate] || byDate[targetDate].length === 0) {
+                        const isPastDay = (dIdx === 0); // 昨天
+                        templateFlights.forEach(tpl => {
+                            const tsMs = new Date(`${targetDate}T${tpl.time}:00+08:00`).getTime();
+                            const uid = `${isArrival ? 'ARR' : 'DEP'}_${isCargo ? 'CGO' : 'PAX'}_${targetDate}_${tpl.time}_${tpl.primaryNo.replace(/\s+/g, '')}`;
+                            if (!map.has(uid)) {
+                                map.set(uid, {
+                                    ...tpl,
+                                    uid,
+                                    date: targetDate,
+                                    timestampMs: isNaN(tsMs) ? 0 : tsMs,
+                                    rawStatus: isPastDay
+                                        ? (isArrival ? `At Gate ${tpl.time}` : `Dep ${tpl.time}`)
+                                        : ''
+                                });
+                            }
+                        });
+                    }
+                });
             }
-            if (tomRes.status === 'fulfilled' && tomRes.value) {
-                normalizeFlightItems(tomRes.value, tomorrowStr, isArrival, isCargo, validDatesSet).forEach(f => map.set(f.uid, f));
-            }
+
             return Array.from(map.values()).sort((a, b) => a.timestampMs - b.timestampMs);
         }
 
@@ -4892,13 +5006,22 @@
             }
 
             try {
+                const yesterdayStr = getHkDateStr(-1);
                 const todayStr = getHkDateStr(0);
                 const tomorrowStr = getHkDateStr(1);
+                const dayP2Str = getHkDateStr(2);
+                const dayP3Str = getHkDateStr(3);
+                const fiveDates = [yesterdayStr, todayStr, tomorrowStr, dayP2Str, dayP3Str];
+
+                flightDataStore.yesterdayDateStr = yesterdayStr;
                 flightDataStore.todayDateStr = todayStr;
                 flightDataStore.tomorrowDateStr = tomorrowStr;
+                flightDataStore.dayP2DateStr = dayP2Str;
+                flightDataStore.dayP3DateStr = dayP3Str;
+                flightDataStore.fiveDates = fiveDates;
                 updateFlightDateTabLabels();
 
-                const validDatesSet = new Set([todayStr, tomorrowStr]);
+                const validDatesSet = new Set(fiveDates);
                 const order = [
                     { key: 'dep_pax', isArr: false, isCgo: false },
                     { key: 'arr_pax', isArr: true,  isCgo: false },
@@ -4911,7 +5034,7 @@
 
                 for (let i = 0; i < order.length; i++) {
                     const cfg = order[i];
-                    const list = await fetchSingleComboFlights(cfg.isArr, cfg.isCgo, todayStr, tomorrowStr, validDatesSet);
+                    const list = await fetchSingleComboFlights(cfg.isArr, cfg.isCgo, fiveDates, validDatesSet);
                     if (list.length > 0) {
                         flightDataStore[cfg.key] = list;
                         flightDataStore.lastUpdated = new Date();
@@ -4989,19 +5112,33 @@
         }
 
         function updateFlightDateTabLabels() {
+            const yesterdayStr = flightDataStore.yesterdayDateStr || getHkDateStr(-1);
             const todayStr = flightDataStore.todayDateStr || getHkDateStr(0);
             const tomorrowStr = flightDataStore.tomorrowDateStr || getHkDateStr(1);
+            const dayP2Str = flightDataStore.dayP2DateStr || getHkDateStr(2);
+            const dayP3Str = flightDataStore.dayP3DateStr || getHkDateStr(3);
+
+            const shortYes = yesterdayStr.slice(5);
             const shortToday = todayStr.slice(5);
             const shortTomorrow = tomorrowStr.slice(5);
+            const shortP2 = dayP2Str.slice(5);
+            const shortP3 = dayP3Str.slice(5);
             const hkFloor = getHkCurrentHourFloor();
 
+            const elYes = document.getElementById('t-fl-yesterday');
             const elToday = document.getElementById('t-fl-today');
             const elTom = document.getElementById('t-fl-tomorrow');
+            const elP2 = document.getElementById('t-fl-day_p2');
+            const elP3 = document.getElementById('t-fl-day_p3');
             const elUp = document.getElementById('t-fl-upcoming');
             const elJump = document.getElementById('t-fl-jump-now-btn');
+
+            if (elYes) elYes.innerText = currentLang === 'en' ? `Yesterday (${shortYes})` : `昨天 (${shortYes})`;
             if (elToday) elToday.innerText = currentLang === 'en' ? `Today (${shortToday})` : `今日 (${shortToday})`;
             if (elTom) elTom.innerText = currentLang === 'en' ? `Tomorrow (${shortTomorrow})` : `明日 (${shortTomorrow})`;
-            if (elUp) elUp.innerText = currentLang === 'en' ? `Today + Tmr (Now ${hkFloor.hourStr})` : `今明全覽 (定位 ${hkFloor.hourStr})`;
+            if (elP2) elP2.innerText = currentLang === 'en' ? `+2 Days (${shortP2})` : `後日 (${shortP2})`;
+            if (elP3) elP3.innerText = currentLang === 'en' ? `+3 Days (${shortP3})` : `大後日 (${shortP3})`;
+            if (elUp) elUp.innerText = currentLang === 'en' ? `All 5 Days (Now ${hkFloor.hourStr})` : `五日全覽 (定位 ${hkFloor.hourStr})`;
             if (elJump) {
                 elJump.innerText = currentLang === 'en' ? `🎯 Jump to ${hkFloor.hourStr}` : `🎯 跳至 ${hkFloor.hourStr}`;
                 elJump.title = currentLang === 'en' ? 'Jump to current hour flights' : '跳至當前整點時段航班';
@@ -5195,7 +5332,7 @@
                 const btn = document.getElementById(mapIds[k]);
                 if (btn) btn.classList.toggle('active', k === flightCategory);
             }
-            ['upcoming', 'today', 'tomorrow'].forEach(k => {
+            ['upcoming', 'yesterday', 'today', 'tomorrow', 'day_p2', 'day_p3'].forEach(k => {
                 const btn = document.getElementById(`btn-fl-date-${k}`);
                 if (btn) btn.classList.toggle('active', k === flightDateFilter);
             });
@@ -5271,18 +5408,26 @@
         }
 
         function jumpToCurrentHourFlight() {
-            if (flightDateFilter === 'tomorrow') {
+            if (flightDateFilter !== 'upcoming' && flightDateFilter !== 'today') {
                 setFlightDateFilter('upcoming');
                 return;
             }
             scrollToCurrentHourFlight(true);
         }
 
-        // 保留今日所有早段航班 (00:00 起)，唔會隱藏之前嘅航班，等用家隨時可以向上碌返上去睇
-        function filterByDateAndWindow(list, todayStr, tomorrowStr) {
+        // 支援 5 日篩選（昨天、今日、明日、後日、大後日，或五日全覽）
+        function filterByDateAndWindow(list) {
+            const yesterdayStr = flightDataStore.yesterdayDateStr || getHkDateStr(-1);
+            const todayStr = flightDataStore.todayDateStr || getHkDateStr(0);
+            const tomorrowStr = flightDataStore.tomorrowDateStr || getHkDateStr(1);
+            const dayP2Str = flightDataStore.dayP2DateStr || getHkDateStr(2);
+            const dayP3Str = flightDataStore.dayP3DateStr || getHkDateStr(3);
             return list.filter(item => {
+                if (flightDateFilter === 'yesterday' && item.date !== yesterdayStr) return false;
                 if (flightDateFilter === 'today' && item.date !== todayStr) return false;
                 if (flightDateFilter === 'tomorrow' && item.date !== tomorrowStr) return false;
+                if (flightDateFilter === 'day_p2' && item.date !== dayP2Str) return false;
+                if (flightDateFilter === 'day_p3' && item.date !== dayP3Str) return false;
                 return true;
             });
         }
@@ -5291,8 +5436,11 @@
             const container = document.getElementById('flight-list-container');
             if (!container) return;
 
+            const yesterdayStr = flightDataStore.yesterdayDateStr || getHkDateStr(-1);
             const todayStr = flightDataStore.todayDateStr || getHkDateStr(0);
             const tomorrowStr = flightDataStore.tomorrowDateStr || getHkDateStr(1);
+            const dayP2Str = flightDataStore.dayP2DateStr || getHkDateStr(2);
+            const dayP3Str = flightDataStore.dayP3DateStr || getHkDateStr(3);
             const hkFloor = getHkCurrentHourFloor();
             // 直接對齊當前整點時段 (例如 09:15 就會由 09:00 嘅航班開始顯示)
             const upcomingCutoffMs = hkFloor.floorMs;
@@ -5305,10 +5453,10 @@
             const hasManualFilter = Boolean(keyword || selectedAirline !== 'ALL' || selectedStatus !== 'ALL' || selectedHotCity !== 'ALL');
 
             // 更新頂部 5 個 Tab 嘅數量標籤
-            const cDepPax = filterByDateAndWindow(flightDataStore.dep_pax, todayStr, tomorrowStr).length;
-            const cArrPax = filterByDateAndWindow(flightDataStore.arr_pax, todayStr, tomorrowStr).length;
-            const cDepCgo = filterByDateAndWindow(flightDataStore.dep_cargo, todayStr, tomorrowStr).length;
-            const cArrCgo = filterByDateAndWindow(flightDataStore.arr_cargo, todayStr, tomorrowStr).length;
+            const cDepPax = filterByDateAndWindow(flightDataStore.dep_pax).length;
+            const cArrPax = filterByDateAndWindow(flightDataStore.arr_pax).length;
+            const cDepCgo = filterByDateAndWindow(flightDataStore.dep_cargo).length;
+            const cArrCgo = filterByDateAndWindow(flightDataStore.arr_cargo).length;
             const starSet = new Set(starredFlights);
 
             const elCntDepPax = document.getElementById('cnt-dep-pax');
@@ -5325,11 +5473,11 @@
             const rawList = getActiveCategoryRawList();
 
             if (!window.hasFetchedFlightsOnce && rawList.length === 0) {
-                container.innerHTML = `<div class="no-service anim-pulse"><span class="icon-spin">⏳</span> ${currentLang === 'en' ? 'Loading HKIA Today & Tomorrow Flight Data...' : '正在讀取香港國際機場今日及明日即時航班資料...'}</div>`;
+                container.innerHTML = `<div class="no-service anim-pulse"><span class="icon-spin">⏳</span> ${currentLang === 'en' ? 'Loading HKIA 5-Day Flight Data...' : '正在讀取香港國際機場五日（昨天、今日及未來三天）航班資料...'}</div>`;
                 return;
             }
 
-            const dateFiltered = filterByDateAndWindow(rawList, todayStr, tomorrowStr);
+            const dateFiltered = filterByDateAndWindow(rawList);
 
             const filtered = dateFiltered.filter(item => {
                 if (selectedHotCity !== 'ALL' && !item.placeCodes.includes(selectedHotCity)) return false;
@@ -5365,11 +5513,21 @@
             if (elKpiTotal) elKpiTotal.innerText = filtered.length;
             const elKpiDateSub = document.getElementById('fl-kpi-date-sub');
             if (elKpiDateSub) {
-                elKpiDateSub.innerText = flightDateFilter === 'today'
-                    ? (isEn ? `${todayStr} (Today)` : `${todayStr} (今日)`)
-                    : flightDateFilter === 'tomorrow'
-                        ? (isEn ? `${tomorrowStr} (Tomorrow)` : `${tomorrowStr} (明日)`)
-                        : (isEn ? `${todayStr.slice(5)} to ${tomorrowStr.slice(5)}` : `${todayStr.slice(5)} 至 ${tomorrowStr.slice(5)}`);
+                if (flightDateFilter === 'yesterday') {
+                    elKpiDateSub.innerText = isEn ? `${yesterdayStr} (Yesterday)` : `${yesterdayStr} (昨天)`;
+                } else if (flightDateFilter === 'today') {
+                    elKpiDateSub.innerText = isEn ? `${todayStr} (Today)` : `${todayStr} (今日)`;
+                } else if (flightDateFilter === 'tomorrow') {
+                    elKpiDateSub.innerText = isEn ? `${tomorrowStr} (Tomorrow)` : `${tomorrowStr} (明日)`;
+                } else if (flightDateFilter === 'day_p2') {
+                    elKpiDateSub.innerText = isEn ? `${dayP2Str} (+2 Days)` : `${dayP2Str} (後日)`;
+                } else if (flightDateFilter === 'day_p3') {
+                    elKpiDateSub.innerText = isEn ? `${dayP3Str} (+3 Days)` : `${dayP3Str} (大後日)`;
+                } else {
+                    elKpiDateSub.innerText = isEn
+                        ? `5 Days: ${yesterdayStr.slice(5)} to ${dayP3Str.slice(5)}`
+                        : `足五日：${yesterdayStr.slice(5)} 至 ${dayP3Str.slice(5)}`;
+                }
             }
             const elKpiOntime = document.getElementById('fl-kpi-ontime');
             if (elKpiOntime) elKpiOntime.innerText = filtered.length > 0 ? `${onTimeRate}%` : '--%';
@@ -5390,15 +5548,18 @@
                 return;
             }
 
-            // 將今日「當前整點之前」或「當前整點內但已經起飛 / 已完成 (DONE)」嘅航班歸入上方歷史區，
-            // 等即時時段錨點 (Anchor) 下方只顯示未起飛 / 登機中 / 即將起降嘅航班，同時向上碌即可睇返所有已起飛航班！
+            // 將昨天及今日「當前整點之前」或「今日已經起飛 / 已完成 (DONE)」嘅航班歸入上方歷史區，
+            // 等即時時段錨點 (Anchor) 下方直接顯示今日當前整點及未來三天嘅航班，同時向上碌即可睇返今日較早及昨天全部航班！
             const earlierOrDeparted = [];
             const liveAndUpcoming = [];
+            const isLiveAnchorMode = (flightDateFilter === 'upcoming' || flightDateFilter === 'today');
 
             filtered.forEach(item => {
                 const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
-                if (flightDateFilter !== 'tomorrow' && item.date === todayStr) {
-                    if (item.timestampMs < upcomingCutoffMs || stInfo.category === 'DONE') {
+                if (isLiveAnchorMode) {
+                    if (item.date < todayStr) {
+                        earlierOrDeparted.push(item);
+                    } else if (item.date === todayStr && (item.timestampMs < upcomingCutoffMs || stInfo.category === 'DONE')) {
                         earlierOrDeparted.push(item);
                     } else {
                         liveAndUpcoming.push(item);
@@ -5411,7 +5572,7 @@
             const orderedList = [...earlierOrDeparted, ...liveAndUpcoming];
             currentRenderedFlights = orderedList;
 
-            const displaySlice = orderedList.slice(0, 2500);
+            const displaySlice = orderedList.slice(0, 8000);
             const anchorIndex = earlierOrDeparted.length < displaySlice.length
                 ? earlierOrDeparted.length
                 : Math.max(0, displaySlice.length - 1);
@@ -5432,11 +5593,28 @@
                 return isEn ? `${dStr} (${daysEn[w]})` : `${dStr} (禮拜${daysZh[w]})`;
             };
 
+            const getDayRelTitle = (dStr) => {
+                if (dStr === yesterdayStr) return isEn ? `Yesterday's Flights · ${formatDateWithWeekday(dStr)}` : `昨天航班・${formatDateWithWeekday(dStr)}`;
+                if (dStr === todayStr) return isEn ? `Today's Flights · ${formatDateWithWeekday(dStr)}` : `今日航班・${formatDateWithWeekday(dStr)}`;
+                if (dStr === tomorrowStr) return isEn ? `Tomorrow's Flights · ${formatDateWithWeekday(dStr)}` : `明日航班・${formatDateWithWeekday(dStr)}`;
+                if (dStr === dayP2Str) return isEn ? `+2 Days Flights · ${formatDateWithWeekday(dStr)}` : `後日航班・${formatDateWithWeekday(dStr)}`;
+                if (dStr === dayP3Str) return isEn ? `+3 Days Flights · ${formatDateWithWeekday(dStr)}` : `大後日航班・${formatDateWithWeekday(dStr)}`;
+                return formatDateWithWeekday(dStr);
+            };
+
+            const getRowDateBadge = (dStr) => {
+                const shortD = dStr.slice(5);
+                if (dStr === yesterdayStr) return isEn ? `Yest ${shortD}` : `昨天 ${shortD}`;
+                if (dStr === todayStr) return isEn ? `Today ${shortD}` : `今日 ${shortD}`;
+                if (dStr === tomorrowStr) return isEn ? `Tmr ${shortD}` : `明日 ${shortD}`;
+                if (dStr === dayP2Str) return isEn ? `+2d ${shortD}` : `後日 ${shortD}`;
+                if (dStr === dayP3Str) return isEn ? `+3d ${shortD}` : `大後日 ${shortD}`;
+                return shortD;
+            };
+
             const htmlRows = displaySlice.map((item, idx) => {
-                const isTom = item.date === tomorrowStr;
-                const dateBadgeTxt = isTom
-                    ? (isEn ? `Tmr ${item.date.slice(5)}` : `明日 ${item.date.slice(5)}`)
-                    : (isEn ? `Today ${item.date.slice(5)}` : `今日 ${item.date.slice(5)}`);
+                const isOtherDay = item.date !== todayStr;
+                const dateBadgeTxt = getRowDateBadge(item.date);
 
                 const stInfo = parseFlightStatus(item.rawStatus, item.isArrival, item.time);
                 const isStarred = starSet.has(item.uid);
@@ -5448,13 +5626,13 @@
                     timeHtml = `
                         <div class="fl-time-changed-old">${item.time}</div>
                         <div class="fl-time-est delayed">${isEn ? 'Est ' : '預計 '}${stInfo.extractedTime}</div>
-                        <div class="fl-date-tag ${isTom ? 'tomorrow' : ''}">${dateBadgeTxt}</div>
+                        <div class="fl-date-tag ${isOtherDay ? 'tomorrow' : ''}">${dateBadgeTxt}</div>
                     `;
                 } else {
                     timeHtml = `
                         <div class="fl-time-main">${item.time}</div>
                         <div class="fl-time-est">${isEn ? 'Est ' : '預計 '}${stInfo.extractedTime || item.time}</div>
-                        <div class="fl-date-tag ${isTom ? 'tomorrow' : ''}">${dateBadgeTxt}</div>
+                        <div class="fl-date-tag ${isOtherDay ? 'tomorrow' : ''}">${dateBadgeTxt}</div>
                     `;
                 }
 
@@ -5494,21 +5672,20 @@
 
                 const isDateBoundary = (idx > 0 && displaySlice[idx - 1].date !== item.date);
                 const nextDayCount = dateCountsMap[item.date] || 0;
-                const formattedBoundaryDate = formatDateWithWeekday(item.date);
                 const dateDividerHtml = isDateBoundary
                     ? `<div class="flight-date-divider-banner">
                         <div class="fl-date-div-left">
                             <span class="fl-date-div-tag">🌙 ➔ 🌅 ${isEn ? 'Day Change' : '兩日交界'}</span>
-                            <span>📅 ${isTom ? (isEn ? `Tomorrow's Flights · ${formattedBoundaryDate}` : `明日航班・${formattedBoundaryDate}`) : formattedBoundaryDate}</span>
+                            <span>📅 ${getDayRelTitle(item.date)}</span>
                         </div>
                         <span class="fl-date-div-right">${isEn ? `From 00:00 · ${nextDayCount} Flights` : `00:00 起・共 ${nextDayCount} 班航班`}</span>
                        </div>`
                     : '';
 
-                const anchorBannerHtml = (isCurrentHourAnchor && flightDateFilter !== 'tomorrow')
+                const anchorBannerHtml = (isCurrentHourAnchor && isLiveAnchorMode)
                     ? `<div class="flight-hour-anchor-banner" data-current-hour-anchor="true">
                         <span>🕒 ${isEn ? `Live Active Flights (${hkFloor.hourStr}+)` : `即時待發 / 抵港航班 (${hkFloor.hourStr} 時段起)`}</span>
-                        <span style="color:var(--text-muted); font-weight:700;">${earlierOrDeparted.length > 0 ? (isEn ? `⬆️ Scroll up for ${earlierOrDeparted.length} departed/earlier flights` : `⬆️ 向上碌可查看 ${earlierOrDeparted.length} 班已起飛／較早航班`) : todayStr}</span>
+                        <span style="color:var(--text-muted); font-weight:700;">${earlierOrDeparted.length > 0 ? (isEn ? `⬆️ Scroll up for ${earlierOrDeparted.length} yesterday/earlier flights` : `⬆️ 向上碌可查看 ${earlierOrDeparted.length} 班昨天及今日較早航班`) : todayStr}</span>
                        </div>`
                     : '';
 
@@ -5517,7 +5694,7 @@
                     ? (isEn ? `Via / Multi: ${item.placeCodes}` : `經停航點：${item.placeCodes}`)
                     : (isEn ? `Airport Code: ${item.primaryIata}` : `機場代碼：${item.primaryIata}`);
 
-                return `${anchorBannerHtml}${dateDividerHtml}<div class="flight-row-card ${stInfo.rowClass}" ${isCurrentHourAnchor && flightDateFilter === 'tomorrow' ? 'data-current-hour-anchor="true"' : ''} onclick="openFlightDetailModal(${idx})">
+                return `${anchorBannerHtml}${dateDividerHtml}<div class="flight-row-card ${stInfo.rowClass}" ${isCurrentHourAnchor && !isLiveAnchorMode ? 'data-current-hour-anchor="true"' : ''} onclick="openFlightDetailModal(${idx})">
                     <div class="fl-time-col">
                         ${timeHtml}
                     </div>
@@ -5773,6 +5950,8 @@
         function formatTimeWithLocalZone(ms, iataCode, baseDateStr) {
             if (!ms || isNaN(ms)) {
                 return {
+                    hkDateStr: baseDateStr || "----",
+                    localDateStr: baseDateStr || "----",
                     hkTimeStr: "--:--",
                     localTimeStr: "--:--",
                     utcOffsetStr: "UTC+8",
@@ -5799,10 +5978,12 @@
                 minute: "2-digit"
             });
 
-            // 計算該時區在該時間點的準確 UTC 偏移量 (自動處理夏令/冬令時間)
+            // 計算該時區在該時間點的準確 UTC 偏移量及當地日期 (自動處理夏令/冬令時間)
             const tzDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: tz }));
             const utcDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "UTC" }));
             const hkDate = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" }));
+            const localDateStr = `${tzDate.getFullYear()}-${String(tzDate.getMonth() + 1).padStart(2, "0")}-${String(tzDate.getDate()).padStart(2, "0")}`;
+            const hkDateStr = `${hkDate.getFullYear()}-${String(hkDate.getMonth() + 1).padStart(2, "0")}-${String(hkDate.getDate()).padStart(2, "0")}`;
             const offsetMins = Math.round((tzDate.getTime() - utcDate.getTime()) / 60000);
             const diffFromHkMins = offsetMins - 480;
 
@@ -5845,6 +6026,8 @@
             }
 
             return {
+                hkDateStr,
+                localDateStr,
                 hkTimeStr,
                 localTimeStr,
                 utcOffsetStr,
@@ -5990,29 +6173,16 @@
         window.currentDetailFlightItem = null; window.currentDetailFlightIndex = null;
 
         function buildFlightEtaStrings(item, prog) {
-            const isEn = (currentLang === 'en');
             const depZ = prog.depZoneInfo;
             const arrZ = prog.arrZoneInfo;
 
-            const depHkDay = isEn ? depZ.hkDayTagEn : depZ.hkDayTagZh;
-            const depLocDay = isEn ? depZ.localDayTagEn : depZ.localDayTagZh;
-            const depDiffTxt = isEn ? depZ.diffLabelEn : depZ.diffLabelZh;
-
-            const arrHkDay = isEn ? arrZ.hkDayTagEn : arrZ.hkDayTagZh;
-            const arrLocDay = isEn ? arrZ.localDayTagEn : arrZ.localDayTagZh;
-            const arrDiffTxt = isEn ? arrZ.diffLabelEn : arrZ.diffLabelZh;
-
-            const depHkFull = isEn ? `${depZ.hkTimeStr}${depHkDay} HKT (UTC+8)` : `${depZ.hkTimeStr}${depHkDay} 香港時間 (UTC+8)`;
-            const depLocalFull = `${depZ.localTimeStr}${depLocDay} (${depZ.utcOffsetStr} · ${depDiffTxt})`;
-
-            const arrHkFull = isEn ? `${arrZ.hkTimeStr}${arrHkDay} HKT (UTC+8)` : `${arrZ.hkTimeStr}${arrHkDay} 香港時間 (UTC+8)`;
-            const arrLocalFull = `${arrZ.localTimeStr}${arrLocDay} (${arrZ.utcOffsetStr} · ${arrDiffTxt})`;
+            // 簡潔清晰顯示：起飛地方嘅當地日子與時間、到達目的地嘅當地日子與時間
+            const depSimple = `📅 ${depZ.localDateStr}  🕒 ${depZ.localTimeStr}`;
+            const arrSimple = `📅 ${arrZ.localDateStr}  🕒 ${arrZ.localTimeStr}`;
 
             return {
-                depHkFull,
-                depLocalFull,
-                arrHkFull,
-                arrLocalFull
+                depSimple,
+                arrSimple
             };
         }
 
@@ -6025,21 +6195,13 @@
             const planeEl = document.getElementById('fl-det-line-plane');
             const remEl = document.getElementById('fl-det-rem-label');
             const etaEl = document.getElementById('fl-det-eta-val');
-            const etaLocEl = document.getElementById('fl-det-eta-local-val');
             const depEl = document.getElementById('fl-det-dep-val');
-            const depLocEl = document.getElementById('fl-det-dep-local-val');
-            const etaSummaryHkEl = document.getElementById('fl-det-summary-eta-hk');
-            const etaSummaryLocEl = document.getElementById('fl-det-summary-eta-local');
 
             if (fillEl) fillEl.style.width = `${prog.progressPct}%`;
             if (planeEl) planeEl.style.left = `${prog.progressPct}%`;
             if (remEl) remEl.innerText = prog.remainingLabel;
-            if (etaEl) etaEl.innerText = tStrs.arrHkFull;
-            if (etaLocEl) etaLocEl.innerText = tStrs.arrLocalFull;
-            if (depEl) depEl.innerText = tStrs.depHkFull;
-            if (depLocEl) depLocEl.innerText = tStrs.depLocalFull;
-            if (etaSummaryHkEl) etaSummaryHkEl.innerText = tStrs.arrHkFull;
-            if (etaSummaryLocEl) etaSummaryLocEl.innerText = tStrs.arrLocalFull;
+            if (depEl) depEl.innerText = tStrs.depSimple;
+            if (etaEl) etaEl.innerText = tStrs.arrSimple;
         }
 
 
@@ -6647,6 +6809,116 @@
                 ? (isEn ? 'Cargo Apron' : '貨運停機坪')
                 : (isEn ? rawTerm : (rawTerm.startsWith('T') ? `${rawTerm.replace('T', '')}號客運大樓` : rawTerm));
 
+            // 計算詳細航班時間節點 (登記櫃位開啟/截止、閘口開啟/開始登機、最後召集、閘口關閉、起飛時間、到達時間等)
+            const origTz = getAirportTimeZone(origIata);
+            const fmtInTz = (ms, tz) => {
+                if (!ms || isNaN(ms)) return '--:--';
+                return new Date(ms).toLocaleTimeString('en-GB', {
+                    timeZone: tz,
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const checkInOpenTime = fmtInTz(prog.depTimeMs - 180 * 60000, origTz);
+            const checkInCloseTime = fmtInTz(prog.depTimeMs - 60 * 60000, origTz);
+            const gateOpenTime = fmtInTz(prog.depTimeMs - 40 * 60000, origTz);
+            const finalCallTime = fmtInTz(prog.depTimeMs - 25 * 60000, origTz);
+            const gateCloseTime = fmtInTz(prog.depTimeMs - 15 * 60000, origTz);
+            const depLocalTimeOnly = prog.depZoneInfo.localTimeStr;
+            const arrLocalTimeOnly = prog.arrZoneInfo.localTimeStr;
+            const baggageReadyTime = fmtInTz(prog.arrTimeMs + 15 * 60000, 'Asia/Hong_Kong');
+
+            let opsTimelineHtml = '';
+            if (!item.isArrival) {
+                const schedVsEstDep = stInfo.hasDiffTime && stInfo.extractedTime
+                    ? `${stInfo.extractedTime} (${isEn ? 'Sched ' : '原定 '}${item.time})`
+                    : item.time;
+                opsTimelineHtml = `
+                <div class="fl-ops-timeline-card">
+                    <div class="fl-ops-title">
+                        <span>🕒 ${isEn ? 'Flight Schedule & Gate Timeline' : '航班時間及閘口時刻表'}</span>
+                        <span class="meta-badge" style="font-size:0.72rem;">🚪 ${isEn ? 'Gate:' : '登機閘口：'} ${item.gate || '--'}</span>
+                    </div>
+                    <div class="fl-ops-grid">
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🎫 ${isEn ? 'Check-in Open' : '櫃位開放登記'}</span>
+                            <span class="fl-ops-val">${checkInOpenTime}</span>
+                            <span class="fl-ops-sub">${isEn ? `3h prior · Aisle ${item.aisle || '--'}` : `起飛前 3 小時・${item.aisle ? item.aisle + '行段' : '指定行段'}`}</span>
+                        </div>
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🧳 ${isEn ? 'Check-in Close' : '截止辦理登記'}</span>
+                            <span class="fl-ops-val">${checkInCloseTime}</span>
+                            <span class="fl-ops-sub">${isEn ? '60 mins before dep' : '起飛前 60 分鐘截止'}</span>
+                        </div>
+                        <div class="fl-ops-item highlight">
+                            <span class="fl-ops-lbl">🟢 ${isEn ? 'Gate Open / Boarding' : '閘口開啟 / 開始登機'}</span>
+                            <span class="fl-ops-val" style="color:var(--status-green);">${gateOpenTime}</span>
+                            <span class="fl-ops-sub">${isEn ? `40 mins prior · Gate ${item.gate || '--'}` : `起飛前 40 分鐘・${item.gate ? item.gate + '號閘' : '指定閘口'}`}</span>
+                        </div>
+                        <div class="fl-ops-item warn">
+                            <span class="fl-ops-lbl">🔥 ${isEn ? 'Final Call' : '最後召集時間'}</span>
+                            <span class="fl-ops-val" style="color:#d97706;">${finalCallTime}</span>
+                            <span class="fl-ops-sub">${isEn ? '25 mins before dep' : '起飛前 25 分鐘'}</span>
+                        </div>
+                        <div class="fl-ops-item warn">
+                            <span class="fl-ops-lbl">🚪 ${isEn ? 'Gate Close' : '閘口關閉時間'}</span>
+                            <span class="fl-ops-val" style="color:#dc2626;">${gateCloseTime}</span>
+                            <span class="fl-ops-sub">${isEn ? '15 mins before dep' : '起飛前 15 分鐘關閉'}</span>
+                        </div>
+                        <div class="fl-ops-item highlight">
+                            <span class="fl-ops-lbl">🛫 ${isEn ? 'Departure Time' : '起飛時間'}</span>
+                            <span class="fl-ops-val">${schedVsEstDep}</span>
+                            <span class="fl-ops-sub">📅 ${prog.depZoneInfo.localDateStr} (${origCity})</span>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                const schedVsEstArr = stInfo.hasDiffTime && stInfo.extractedTime
+                    ? `${stInfo.extractedTime} (${isEn ? 'Sched ' : '原定 '}${item.time})`
+                    : item.time;
+                opsTimelineHtml = `
+                <div class="fl-ops-timeline-card">
+                    <div class="fl-ops-title">
+                        <span>🕒 ${isEn ? 'Flight Schedule & Gate Timeline' : '航班時間及閘口時刻表'}</span>
+                        <span class="meta-badge" style="font-size:0.72rem;">🧳 ${isEn ? 'Belt:' : '行李轉盤：'} ${item.baggage || '--'}</span>
+                    </div>
+                    <div class="fl-ops-grid">
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🟢 ${isEn ? 'Origin Gate Open' : '出發地閘口開啟'}</span>
+                            <span class="fl-ops-val">${gateOpenTime}</span>
+                            <span class="fl-ops-sub">${isEn ? `40m prior (${origCity})` : `起飛前 40 分鐘 (${origCity})`}</span>
+                        </div>
+                        <div class="fl-ops-item warn">
+                            <span class="fl-ops-lbl">🚪 ${isEn ? 'Origin Gate Close' : '出發地閘口關閉'}</span>
+                            <span class="fl-ops-val" style="color:#d97706;">${gateCloseTime}</span>
+                            <span class="fl-ops-sub">${isEn ? `15m prior (${origCity})` : `起飛前 15 分鐘 (${origCity})`}</span>
+                        </div>
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🛫 ${isEn ? 'Origin Departure' : '起飛地起飛時間'}</span>
+                            <span class="fl-ops-val">${depLocalTimeOnly}</span>
+                            <span class="fl-ops-sub">📅 ${prog.depZoneInfo.localDateStr} (${origCity})</span>
+                        </div>
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🗓️ ${isEn ? 'Scheduled Arrival' : '表定抵港時間'}</span>
+                            <span class="fl-ops-val">${item.time}</span>
+                            <span class="fl-ops-sub">📅 ${item.date} (HKG)</span>
+                        </div>
+                        <div class="fl-ops-item highlight">
+                            <span class="fl-ops-lbl">🛬 ${isEn ? 'Est. Arrival Time' : '預計到達時間'}</span>
+                            <span class="fl-ops-val" style="color:var(--status-green);">${schedVsEstArr}</span>
+                            <span class="fl-ops-sub">📅 ${prog.arrZoneInfo.localDateStr} (${destCity})</span>
+                        </div>
+                        <div class="fl-ops-item">
+                            <span class="fl-ops-lbl">🧳 ${isEn ? 'Est. Baggage Ready' : '預計行李送達轉盤'}</span>
+                            <span class="fl-ops-val">${baggageReadyTime}</span>
+                            <span class="fl-ops-sub">${isEn ? `Belt ${item.baggage || '--'} · Hall ${item.hall || '--'}` : `${item.baggage ? item.baggage + '號轉盤' : '指定轉盤'}・${item.hall ? item.hall + '大堂' : '接機大堂'}`}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
             let specificRows = '';
             if (item.isArrival) {
                 specificRows = `
@@ -6691,26 +6963,24 @@
                     </div>
                 </div>
 
-                <!-- ✈️ 直線航程進度及預計到達時間追蹤器 (同時顯示香港標準時間與當地時間) -->
+                <!-- ✈️ 直線航程進度及起飛地／目的地當地日子與時間 (簡潔版) -->
                 <div class="fl-progress-card">
                     <div class="fl-progress-endpoints">
                         <div class="fl-ep-box">
-                            <span class="fl-ep-role">🛫 ${isEn ? 'ORIGIN' : '起飛地'}</span>
+                            <span class="fl-ep-role">🛫 ${isEn ? 'ORIGIN (Departure Local Date & Time)' : '起飛地（當地日子及時間）'}</span>
                             <div class="fl-ep-city">
                                 <span class="fl-iata-square" style="height:30px; min-width:38px; font-size:0.76rem; border-radius:8px;">${origIata}</span>
                                 <span>${origCity}</span>
                             </div>
-                            <span class="fl-ep-time">🇭🇰 ${isEn ? 'HK Time:' : '香港標準時間：'}<strong id="fl-det-dep-val">${tStrs.depHkFull}</strong></span>
-                            <span class="fl-ep-time">🌍 ${isEn ? 'Local Time:' : '起飛地當地時間：'}<strong id="fl-det-dep-local-val" style="color:var(--text-main);">${tStrs.depLocalFull}</strong></span>
+                            <span class="fl-ep-time"><strong id="fl-det-dep-val">${tStrs.depSimple}</strong></span>
                         </div>
                         <div class="fl-ep-box right">
-                            <span class="fl-ep-role">🛬 ${isEn ? 'DESTINATION' : '目的地'}</span>
+                            <span class="fl-ep-role">🛬 ${isEn ? 'DESTINATION (Arrival Local Date & Time)' : '目的地（當地日子及時間）'}</span>
                             <div class="fl-ep-city">
                                 <span>${destCity}</span>
                                 <span class="fl-iata-square" style="height:30px; min-width:38px; font-size:0.76rem; border-radius:8px;">${destIata}</span>
                             </div>
-                            <span class="fl-ep-time">🇭🇰 ${currentLang === 'en' ? 'Est. Arr (HKT):' : '預計到達 (香港時間)：'}<strong id="fl-det-eta-val" style="color:var(--status-green);">${tStrs.arrHkFull}</strong></span>
-                            <span class="fl-ep-time">🌍 ${currentLang === 'en' ? 'Est. Arr (Local):' : '預計到達 (當地時間)：'}<strong id="fl-det-eta-local-val" style="color:#0284c7;">${tStrs.arrLocalFull}</strong></span>
+                            <span class="fl-ep-time"><strong id="fl-det-eta-val" style="color:var(--status-green);">${tStrs.arrSimple}</strong></span>
                         </div>
                     </div>
 
@@ -6727,15 +6997,10 @@
                     </div>
                 </div>
 
+                ${opsTimelineHtml}
+
                 <div class="detail-stops-container" style="padding: 18px; color: var(--text-main); font-size: 0.95rem; line-height: 1.7; background: var(--card-bg); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); border-radius: var(--radius-md);">
                     <p style="margin: 0 0 10px 0;">📡 <b>${currentLang === 'en' ? 'Latest Status:' : '最新航班狀態：'}</b> <span class="fl-status-badge ${stInfo.badgeClass}" style="display:inline-block; vertical-align:middle;">${stInfo.bilingualText}</span></p>
-                    <div style="margin: 0 0 12px 0; padding: 10px 12px; background: var(--subtle-bg); border: 1px solid var(--hairline-border); border-radius: 12px;">
-                        <div style="font-weight: 800; margin-bottom: 4px;">🛬 ${currentLang === 'en' ? 'Estimated Arrival Time (HKT & Local Time):' : '預計到達目的地時間（香港標準時間及當地時間）：'}</div>
-                        <div style="font-size: 0.88rem; display: flex; flex-direction: column; gap: 3px;">
-                            <div>🇭🇰 <b>${currentLang === 'en' ? 'Hong Kong Time (HKT):' : '香港標準時間：'}</b> <span id="fl-det-summary-eta-hk" style="font-weight:800; color:var(--status-green);">${tStrs.arrHkFull}</span></div>
-                            <div>🌍 <b>${currentLang === 'en' ? `Destination Local Time (${destCity}):` : `目的地當地時間 (${destCity})：`}</b> <span id="fl-det-summary-eta-local" style="font-weight:800; color:#0284c7;">${tStrs.arrLocalFull}</span></div>
-                        </div>
-                    </div>
                     ${specificRows}
                     <p style="margin: 0;">🤝 <b>${currentLang === 'en' ? 'Codeshare Flights:' : '聯營航班編號：'}</b> <span style="color:var(--text-muted);">${codeshareFull}</span></p>
                 </div>
