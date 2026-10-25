@@ -167,12 +167,29 @@
             user-select: none;
             padding: 0;
         }
-        /* 頂部深墨黑主頁按鈕 (對應參考圖左上角焦點按鈕) */
+        /* 分類群組容器 (例如：交通運輸類、公共設施類) */
+        .left-menu-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        /* 類別分隔線 (直向導航欄顯示為橫線) */
+        .left-menu-divider {
+            width: 28px;
+            height: 1.5px;
+            background: rgba(15, 23, 42, 0.14);
+            border-radius: 999px;
+            margin: 2px 0;
+            flex-shrink: 0;
+        }
+        /* 當前選中深墨黑焦點按鈕 */
         .left-menu-rail .rail-btn-primary {
             background: var(--accent-dark);
             color: #ffffff;
             box-shadow: 0 6px 14px rgba(22, 25, 34, 0.22);
-            margin-bottom: 4px;
+            margin-bottom: 0;
         }
         /* 次要 Emoji 按鈕 (懸浮與按壓觸感) */
         .left-menu-rail .rail-btn-sub:hover {
@@ -713,6 +730,16 @@
             padding: 6px 10px !important;
             border-radius: 18px !important;
         }
+        body[data-device-mode="iphone"] .left-menu-group {
+            flex-direction: row !important;
+            width: auto !important;
+            gap: 6px !important;
+        }
+        body[data-device-mode="iphone"] .left-menu-divider {
+            width: 1.5px !important;
+            height: 24px !important;
+            margin: 0 4px !important;
+        }
         body[data-device-mode="iphone"] .left-menu-rail .rail-btn-primary {
             margin-bottom: 0 !important;
         }
@@ -868,6 +895,16 @@
                 justify-content: space-between;
                 padding: 6px 10px;
                 border-radius: 18px;
+            }
+            body[data-device-mode="auto"] .left-menu-group {
+                flex-direction: row;
+                width: auto;
+                gap: 6px;
+            }
+            body[data-device-mode="auto"] .left-menu-divider {
+                width: 1.5px;
+                height: 24px;
+                margin: 0 4px;
             }
             body[data-device-mode="auto"] .left-menu-rail .rail-btn-primary {
                 margin-bottom: 0;
@@ -3199,12 +3236,23 @@
 
     <div id="ptr-indicator" class="ptr-indicator">⬇️ <span id="t-pull">下拉以更新數據</span></div>
 
-    <!-- 🧭 左側永久固定純 Emoji 導航欄 (頂部 🏠 主頁 + 底部 ⚙️ 設定) -->
+    <!-- 🧭 左側永久固定純 Emoji 分類導航欄 (第一類：交通運輸 ｜ 第二類：公共設施 ｜ 底部：系統設定) -->
     <nav id="bottom-menu" class="left-menu-rail" aria-label="Main Navigation">
-        <a href="#" id="t-menu-home" class="rail-btn-primary" title="主頁" onclick="showHome(); event.preventDefault();">🏠</a>
-        <a href="#" id="t-menu-flight" class="rail-btn-sub" title="即時航班資料" onclick="showFlightPage(); event.preventDefault();">✈️</a>
-        <a href="#" id="t-menu-reservoir" class="rail-btn-sub" title="香港水塘即時存水" onclick="showReservoirPage(); event.preventDefault();">💧</a>
-        <a href="#" id="t-menu-ferry" class="rail-btn-sub" title="全港渡輪及街渡班次" onclick="showFerryPage(); event.preventDefault();">⛴️</a>
+        <!-- 第一類：交通運輸類 (Transport) — 日後新增交通頁面請放入此群組 -->
+        <div class="left-menu-group" data-menu-category="transport" aria-label="交通運輸">
+            <a href="#" id="t-menu-home" class="rail-btn-primary" title="巴士及港鐵 (主頁)" onclick="showHome(); event.preventDefault();">🚌</a>
+            <a href="#" id="t-menu-flight" class="rail-btn-sub" title="即時航班資料" onclick="showFlightPage(); event.preventDefault();">✈️</a>
+            <a href="#" id="t-menu-ferry" class="rail-btn-sub" title="全港渡輪及街渡班次" onclick="showFerryPage(); event.preventDefault();">⛴️</a>
+        </div>
+
+        <!-- 類別分隔線 -->
+        <div class="left-menu-divider" role="separator" aria-label="類別分隔線"></div>
+
+        <!-- 第二類：公共設施類 (Public Facilities / Utilities) — 日後新增公共設施頁面請放入此群組 -->
+        <div class="left-menu-group" data-menu-category="facility" aria-label="公共設施">
+            <a href="#" id="t-menu-reservoir" class="rail-btn-sub" title="香港水塘即時存水" onclick="showReservoirPage(); event.preventDefault();">💧</a>
+        </div>
+
         <div class="left-menu-spacer"></div>
         <a href="#" id="t-menu-setting" class="rail-btn-sub" title="系統設定" onclick="openSettingsModal(); event.preventDefault();">⚙️</a>
     </nav>
@@ -4160,7 +4208,7 @@
                 'txt-st-op': '🟢 目前全線地鐵/火車皆正常營運 | 🤍 願我們都記住旺旺。記住她的名字，也記住每一個生命，都值得被溫柔以待。', 'txt-st-attn': '⚠️ 注意：', 'txt-st-norm': '其餘路線皆正常行駛',
                 'txt-st-fail': '無法連線', 'txt-st-delay': '班次延誤', 'txt-st-nodata': '信號故障', 'txt-st-end': '🌙 列車服務經已終止', 'txt-st-longwait': '(候車時間較長)',
                 'txt-st-first': '🌅 各綫首班車大約開出時間：港島綫 05:55｜荃灣綫 06:00｜觀塘綫 05:59｜將軍澳綫 06:00｜屯馬綫 05:40｜東鐵綫 05:30｜東涌綫 06:01｜機場快綫 05:50｜南港島綫 06:00｜迪士尼綫 06:15',
-                'menu-home': '主頁', 'menu-flight': '即時航班資料', 'menu-reservoir': '香港水塘即時存水', 'menu-ferry': '全港渡輪及街渡班次', 'menu-setting': '系統設定',
+                'menu-home': '巴士及港鐵 (主頁)', 'menu-flight': '即時航班資料', 'menu-reservoir': '香港水塘即時存水', 'menu-ferry': '全港渡輪及街渡班次', 'menu-setting': '系統設定',
                 'flight-title': '✈️ 香港機場即時航班 HKIA Live Flights',
                 'fl-dep': '離港航班 Departures', 'fl-arr': '抵港航班 Arrivals',
                 'fl-upcoming': '即時及隨後', 'fl-today': '今日', 'fl-tomorrow': '明日',
@@ -4190,7 +4238,7 @@
                 'txt-st-op': '🟢 All Rapid Transit System Operating Normally | 🤍 May we remember Wang Wang, May we remember her name, and remember that every life deserves to be cherished and treated with kindness.', 'txt-st-attn': '⚠️ Attention:', 'txt-st-norm': 'All other lines are operating on schedule',
                 'txt-st-fail': 'Connection Failed', 'txt-st-delay': 'Delayed', 'txt-st-nodata': 'Signal failure', 'txt-st-end': '🌙 Train services for today have ended', 'txt-st-longwait': '(Longer wait times)',
                 'txt-st-first': '🌅 First train departures: Island Line 05:55 | Tsuen Wan Line 06:00 | Kwun Tong Line 05:59 | Tseung Kwan O Line 06:00 | Tuen Ma Line 05:40 | East Rail Line 05:30 | Tung Chung Line 06:01 | Airport Express 05:50 | South Island Line 06:00 | Disneyland Resort Line 06:15',
-                'menu-home': 'Home', 'menu-flight': 'Live Flights', 'menu-reservoir': 'HK Reservoir Storage', 'menu-ferry': 'HK Ferry Schedules', 'menu-setting': 'Settings',
+                'menu-home': 'Bus & MTR (Home)', 'menu-flight': 'Live Flights', 'menu-reservoir': 'HK Reservoir Storage', 'menu-ferry': 'HK Ferry Schedules', 'menu-setting': 'Settings',
                 'flight-title': '✈️ HKIA Live Flights',
                 'fl-dep': 'Departures', 'fl-arr': 'Arrivals',
                 'fl-upcoming': 'Upcoming', 'fl-today': 'Today', 'fl-tomorrow': 'Tomorrow',
