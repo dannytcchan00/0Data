@@ -5289,6 +5289,11 @@
             if (bdSec) bdSec.style.display = 'flex';
             updateMenuRailButtons('border');
             initBorderSystem();
+            if (window.immdCsvSyncState !== 'LIVE' || !window.liveTrafficHistoryList || window.liveTrafficHistoryList.length === 0) {
+                syncImmDDailyTrafficCSV(true);
+            } else {
+                renderBorderPortal();
+            }
         }
 
         function showElectionPage(subKey) {
@@ -25698,11 +25703,25 @@
         // 🛂 香港每日出入境人次統計及即時陸路／路邊管制站等候時間系統 (自動更新)
         // 數據來源：香港入境事務處 (ImmD) 陸路邊境管制站等候時間 API 及每日出入境旅客流量統計數據集
         // =========================================================
+        function getHkDateOffsetIso(offsetDays = -1) {
+            const nowHk = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' }));
+            nowHk.setDate(nowHk.getDate() + offsetDays);
+            const y = nowHk.getFullYear();
+            const m = String(nowHk.getMonth() + 1).padStart(2, '0');
+            const d = String(nowHk.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function isoToDdMmYyyy(isoStr) {
+            const m = String(isoStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+        }
+
         window.borderViewSection = 'ALL'; // 'ALL', 'WAIT', 'TRAFFIC'
         window.borderCpCatFilter = 'ALL'; // 'ALL', 'ROADSIDE', 'RAIL', '24H'
         window.borderTrafficCatFilter = 'ALL'; // 'ALL', 'LAND', 'RAIL', 'AIR', 'SEA'
         window.borderTrafficSearch = '';
-        window.borderSelectedDate = '2026-10-25';
+        window.borderSelectedDate = getHkDateOffsetIso(-1);
         window.borderCountdownSec = 60;
         window.borderLastSyncTimeStr = '--:--:--';
         window.borderLiveSourceTag = 'AUTO';
@@ -25723,7 +25742,7 @@
                 road_zh: '新深路／落馬洲路車龍及皇巴服務',
                 road_en: 'San Sham Rd / Lok Ma Chau Rd Queue & Shuttle',
                 transport_zh: '皇巴 (每5–10分鐘)、跨境直通巴、專線小巴44B、九巴B1(新田轉乘)',
-                transport_en: ' Lok Ma Chau-Huanggang Shuttle (5-10m), Cross-boundary Coach, GMB 44B',
+                transport_en: 'Lok Ma Chau-Huanggang Shuttle (5-10m), Cross-boundary Coach, GMB 44B',
                 base_wait: { r_in: 6, r_out: 7, v_in: 11, v_out: 12, car_mins: 9 }
             },
             {
@@ -25801,9 +25820,9 @@
                 hours_zh: '07:00–22:00 (路邊沙頭角快線跨境巴士・私家車及貨車管制站)',
                 hours_en: '07:00–22:00 (Roadside Sha Tau Kok Express Coach, Car & Truck Checkpoint)',
                 road_zh: '沙頭角公路(石涌凹段)及邊境車流',
-                road_en: 'Sha Tau Kok Rd (Shek Chung Au) Roadside Queue',
-                transport_zh: '沙頭角快線跨境巴士 (往粉嶺/上水/九龍塘)、九巴78K、專線小巴55K',
-                transport_en: 'Sha Tau Kok Express Coach (Fanling / Kowloon Tong), KMB 78K, GMB 55K',
+                road_en: 'Sha Tau Kok Rd (Shek Chung Au) Roadside Traffic',
+                transport_zh: '沙頭角快線跨境巴士 (往上水 / 粉嶺 / 九龍塘)、九巴78K、專線小巴55K',
+                transport_en: 'Sha Tau Kok Express Coach, KMB 78K, GMB 55K',
                 base_wait: { r_in: 3, r_out: 4, v_in: 6, v_out: 7, car_mins: 5 }
             },
             {
@@ -25814,81 +25833,71 @@
                 is24h: false,
                 open_hm: '06:30',
                 close_hm: '24:00',
-                hours_zh: '06:30–24:00 (港鐵東鐵綫邊境鐵路管制站)',
+                hours_zh: '06:30–24:00 (港鐵東鐵綫鐵路接駁口岸・全港客量最高陸路口岸)',
                 hours_en: '06:30–24:00 (MTR East Rail Line Boundary Control Point)',
-                road_zh: '東鐵綫羅湖站月台及羅湖橋人流狀況',
-                road_en: 'MTR Lo Wu Station Concourse & Footbridge Flow',
-                transport_zh: '港鐵東鐵綫 (金鐘 ⇄ 羅湖，約4–8分鐘一班)',
-                transport_en: 'MTR East Rail Line (Admiralty ⇄ Lo Wu, every 4–8 mins)',
-                base_wait: { r_in: 9, r_out: 10, v_in: 16, v_out: 17, car_mins: 7 }
+                road_zh: '港鐵羅湖站行人天橋及聯檢大樓通道',
+                road_en: 'MTR Lo Wu Station Footbridge & Joint Inspection Bldg',
+                transport_zh: '港鐵東鐵綫 (直達金鐘 / 旺角東 / 沙田 / 大埔墟 / 上水)',
+                transport_en: 'MTR East Rail Line (Direct to Admiralty / Mong Kok East / Sha Tin / Sheung Shui)',
+                base_wait: { r_in: 9, r_out: 11, v_in: 16, v_out: 18, car_mins: 0 }
             },
             {
                 code: 'LMCS',
-                name_zh: '落馬洲支線／福田口岸',
-                name_en: 'Lok Ma Chau Spur Line (Futian) Control Point',
+                name_zh: '落馬洲支線／福田管制站',
+                name_en: 'Lok Ma Chau Spur Line / Futian Control Point',
                 cat: 'RAIL',
                 is24h: false,
                 open_hm: '06:30',
                 close_hm: '22:30',
-                hours_zh: '06:30–22:30 (港鐵東鐵綫落馬洲站及跨河行人橋管制站)',
-                hours_en: '06:30–22:30 (MTR Lok Ma Chau Station & Footbridge Control Point)',
-                road_zh: '落馬洲支線公共運輸交匯處及行人橋狀況',
-                road_en: 'Lok Ma Chau Spur Line PTI & Footbridge Flow',
+                hours_zh: '06:30–22:30 (港鐵落馬洲站及路邊公共運輸交匯處雙接駁口岸)',
+                hours_en: '06:30–22:30 (MTR Lok Ma Chau Station & Roadside Public Transport Interchange)',
+                road_zh: '落馬洲公共交通交匯處及跨河行人橋通道',
+                road_en: 'Lok Ma Chau PTI & Cross-River Footbridge',
                 transport_zh: '港鐵東鐵綫 (往落馬洲)、九巴B1(天水圍/元朗)、專線小巴75',
                 transport_en: 'MTR East Rail Line (Lok Ma Chau), KMB B1 (Yuen Long), GMB 75',
                 base_wait: { r_in: 8, r_out: 9, v_in: 14, v_out: 15, car_mins: 8 }
             }
         ];
 
-        // 香港入境事務處官方每日出入境人次 Open Data CSV API
+        // 香港入境事務處官方每日出入境人次 Open Data CSV API (英／繁雙源 + DATA.GOV.HK 官方 v2 Filter CORS API)
         const IMMD_DAILY_TRAFFIC_CSV_URL = 'https://www.immd.gov.hk/opendata/eng/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv';
+        const IMMD_DAILY_TRAFFIC_CSV_URL_HKT = 'https://www.immd.gov.hk/opendata/hkt/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv';
 
-        // 香港入境事務處官方出入境管制站中英對照與基準分配 (涵蓋陸路、路邊、鐵路、機場及海路)
+        // 香港入境事務處官方出入境管制站中英對照 (涵蓋陸路、路邊、鐵路、機場及海路)
         const HK_15_IMMD_CONTROL_POINTS = [
-            { id: 'LWS', csv_names: ['Lo Wu', '羅湖'], name_zh: '羅湖', name_en: 'Lo Wu', mode: 'RAIL', mode_zh: '鐵路口岸', mode_en: 'Rail Boundary', weight: 0.218, r_share: 0.77, m_share: 0.20, o_share: 0.03 },
-            { id: 'LMCS', csv_names: ['Lok Ma Chau Spur Line', '落馬洲支線'], name_zh: '落馬洲支線 (福田)', name_en: 'Lok Ma Chau Spur Line', mode: 'RAIL', mode_zh: '鐵路/行人橋', mode_en: 'Rail & Footbridge', weight: 0.184, r_share: 0.75, m_share: 0.22, o_share: 0.03 },
-            { id: 'AIR', csv_names: ['Airport', '機場'], name_zh: '機場 (香港國際機場)', name_en: 'Airport (HKIA)', mode: 'AIR', mode_zh: '航空口岸', mode_en: 'Air Control Point', weight: 0.146, r_share: 0.44, m_share: 0.22, o_share: 0.34 },
-            { id: 'SZB', csv_names: ['Shenzhen Bay', '深圳灣'], name_zh: '深圳灣', name_en: 'Shenzhen Bay', mode: 'LAND', mode_zh: '路邊/跨海大橋', mode_en: 'Roadside & Bridge', weight: 0.132, r_share: 0.70, m_share: 0.26, o_share: 0.04 },
-            { id: 'XRL', csv_names: ['Express Rail Link West Kowloon', '高鐵西九龍'], name_zh: '高鐵西九龍', name_en: 'Express Rail Link West Kowloon', mode: 'RAIL', mode_zh: '高鐵口岸', mode_en: 'High Speed Rail', weight: 0.094, r_share: 0.56, m_share: 0.39, o_share: 0.05 },
-            { id: 'HZMB', csv_names: ['Hong Kong-Zhuhai-Macao Bridge', '港珠澳大橋'], name_zh: '港珠澳大橋', name_en: 'Hong Kong-Zhuhai-Macao Bridge', mode: 'LAND', mode_zh: '路邊/大橋口岸', mode_en: 'Roadside & Bridge', weight: 0.088, r_share: 0.64, m_share: 0.27, o_share: 0.09 },
-            { id: 'HYW', csv_names: ['Heung Yuen Wai', '香園圍'], name_zh: '香園圍 (蓮塘)', name_en: 'Heung Yuen Wai', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point', weight: 0.074, r_share: 0.79, m_share: 0.19, o_share: 0.02 },
-            { id: 'LMC', csv_names: ['Lok Ma Chau', '落馬洲'], name_zh: '落馬洲 (皇崗)', name_en: 'Lok Ma Chau', mode: 'LAND', mode_zh: '24h路邊口岸', mode_en: '24h Roadside Control Point', weight: 0.031, r_share: 0.68, m_share: 0.28, o_share: 0.04 },
-            { id: 'MFT', csv_names: ['Macau Ferry Terminal', '港澳客輪碼頭'], name_zh: '港澳客輪碼頭', name_en: 'Macau Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal', weight: 0.015, r_share: 0.58, m_share: 0.24, o_share: 0.18 },
-            { id: 'MKT', csv_names: ['Man Kam To', '文錦渡'], name_zh: '文錦渡', name_en: 'Man Kam To', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point', weight: 0.0065, r_share: 0.72, m_share: 0.26, o_share: 0.02 },
-            { id: 'CFT', csv_names: ['China Ferry Terminal', '中國客運碼頭'], name_zh: '中國客運碼頭', name_en: 'China Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal', weight: 0.0052, r_share: 0.52, m_share: 0.40, o_share: 0.08 },
-            { id: 'STK', csv_names: ['Sha Tau Kok', '沙頭角'], name_zh: '沙頭角', name_en: 'Sha Tau Kok', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point', weight: 0.0028, r_share: 0.76, m_share: 0.22, o_share: 0.02 },
-            { id: 'KTCT', csv_names: ['Kai Tak Cruise Terminal', '啟德郵輪碼頭'], name_zh: '啟德郵輪碼頭', name_en: 'Kai Tak Cruise Terminal', mode: 'SEA', mode_zh: '郵輪碼頭', mode_en: 'Cruise Terminal', weight: 0.0021, r_share: 0.35, m_share: 0.20, o_share: 0.45 },
-            { id: 'TMFT', csv_names: ['Tuen Mun Ferry Terminal', '屯門客運碼頭'], name_zh: '屯門客運碼頭', name_en: 'Tuen Mun Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal', weight: 0.0008, r_share: 0.74, m_share: 0.20, o_share: 0.06 },
-            { id: 'HAR', csv_names: ['Harbour Control', '港內碼頭'], name_zh: '港內碼頭 (海事管制)', name_en: 'Harbour Control', mode: 'SEA', mode_zh: '海事管制站', mode_en: 'Marine Control Point', weight: 0.0006, r_share: 0.30, m_share: 0.35, o_share: 0.35 },
-            { id: 'HH', csv_names: ['Hung Hom', '紅磡'], name_zh: '紅磡 (城際直通車)', name_en: 'Hung Hom', mode: 'RAIL', mode_zh: '鐵路口岸', mode_en: 'Rail Boundary', weight: 0.0001, r_share: 0.60, m_share: 0.30, o_share: 0.10 }
+            { id: 'LWS', csv_names: ['Lo Wu', '羅湖'], name_zh: '羅湖', name_en: 'Lo Wu', mode: 'RAIL', mode_zh: '鐵路口岸', mode_en: 'Rail Boundary' },
+            { id: 'LMCS', csv_names: ['Lok Ma Chau Spur Line', '落馬洲支線'], name_zh: '落馬洲支線 (福田)', name_en: 'Lok Ma Chau Spur Line', mode: 'RAIL', mode_zh: '鐵路/行人橋', mode_en: 'Rail & Footbridge' },
+            { id: 'AIR', csv_names: ['Airport', '機場'], name_zh: '機場 (香港國際機場)', name_en: 'Airport (HKIA)', mode: 'AIR', mode_zh: '航空口岸', mode_en: 'Air Control Point' },
+            { id: 'SZB', csv_names: ['Shenzhen Bay', '深圳灣'], name_zh: '深圳灣', name_en: 'Shenzhen Bay', mode: 'LAND', mode_zh: '路邊/跨海大橋', mode_en: 'Roadside & Bridge' },
+            { id: 'XRL', csv_names: ['Express Rail Link West Kowloon', '高鐵西九龍'], name_zh: '高鐵西九龍', name_en: 'Express Rail Link West Kowloon', mode: 'RAIL', mode_zh: '高鐵口岸', mode_en: 'High Speed Rail' },
+            { id: 'HZMB', csv_names: ['Hong Kong-Zhuhai-Macao Bridge', '港珠澳大橋'], name_zh: '港珠澳大橋', name_en: 'Hong Kong-Zhuhai-Macao Bridge', mode: 'LAND', mode_zh: '路邊/大橋口岸', mode_en: 'Roadside & Bridge' },
+            { id: 'HYW', csv_names: ['Heung Yuen Wai', '香園圍'], name_zh: '香園圍 (蓮塘)', name_en: 'Heung Yuen Wai', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point' },
+            { id: 'LMC', csv_names: ['Lok Ma Chau', '落馬洲'], name_zh: '落馬洲 (皇崗)', name_en: 'Lok Ma Chau', mode: 'LAND', mode_zh: '24h路邊口岸', mode_en: '24h Roadside Control Point' },
+            { id: 'MFT', csv_names: ['Macau Ferry Terminal', '港澳客輪碼頭'], name_zh: '港澳客輪碼頭', name_en: 'Macau Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal' },
+            { id: 'MKT', csv_names: ['Man Kam To', '文錦渡'], name_zh: '文錦渡', name_en: 'Man Kam To', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point' },
+            { id: 'CFT', csv_names: ['China Ferry Terminal', '中國客運碼頭'], name_zh: '中國客運碼頭', name_en: 'China Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal' },
+            { id: 'STK', csv_names: ['Sha Tau Kok', '沙頭角'], name_zh: '沙頭角', name_en: 'Sha Tau Kok', mode: 'LAND', mode_zh: '路邊口岸', mode_en: 'Roadside Control Point' },
+            { id: 'KTCT', csv_names: ['Kai Tak Cruise Terminal', '啟德郵輪碼頭'], name_zh: '啟德郵輪碼頭', name_en: 'Kai Tak Cruise Terminal', mode: 'SEA', mode_zh: '郵輪碼頭', mode_en: 'Cruise Terminal' },
+            { id: 'TMFT', csv_names: ['Tuen Mun Ferry Terminal', '屯門客運碼頭'], name_zh: '屯門客運碼頭', name_en: 'Tuen Mun Ferry Terminal', mode: 'SEA', mode_zh: '海路碼頭', mode_en: 'Sea Ferry Terminal' },
+            { id: 'HAR', csv_names: ['Harbour Control', '港內碼頭', '港口管制'], name_zh: '港口管制 (海事管制)', name_en: 'Harbour Control', mode: 'SEA', mode_zh: '海事管制站', mode_en: 'Marine Control Point' },
+            { id: 'HH', csv_names: ['Hung Hom', '紅磡'], name_zh: '紅磡 (城際直通車)', name_en: 'Hung Hom', mode: 'RAIL', mode_zh: '鐵路口岸', mode_en: 'Rail Boundary' }
         ];
 
-        // 過去 14 日及重點高峰日全港每日出入境總人次後備基準 (當統計 CSV 載入完成後即由官方 CSV 實時覆蓋)
-        const HK_DAILY_TRAFFIC_HISTORY = [
-            { date: '2026-10-25', total: 964820, arr_ratio: 0.508, note_zh: '最新結算日 (星期日跨境返港高峰)', note_en: 'Latest Settlement (Sunday Cross-Boundary Return Peak)' },
-            { date: '2026-10-24', total: 1028450, arr_ratio: 0.482, note_zh: '週末北上及訪港高峰 (突破百萬人次)', note_en: 'Saturday Peak (>1 Million Passenger Trips)' },
-            { date: '2026-10-23', total: 892310, arr_ratio: 0.476, note_zh: '星期五晚北上及週末前夕高峰', note_en: 'Friday Outbound & Pre-Weekend Peak' },
-            { date: '2026-10-22', total: 768420, arr_ratio: 0.501, note_zh: '平日正常跨境及商務通勤', note_en: 'Weekday Regular Commute & Business Traffic' },
-            { date: '2026-10-21', total: 754190, arr_ratio: 0.499, note_zh: '平日正常跨境及商務通勤', note_en: 'Weekday Regular Commute & Business Traffic' },
-            { date: '2026-10-20', total: 781640, arr_ratio: 0.504, note_zh: '重陽節長假後首個工作日', note_en: 'First Workday After Chung Yeung Long Weekend' },
-            { date: '2026-10-19', total: 1142680, arr_ratio: 0.538, note_zh: '重陽節公眾假期回港高峰', note_en: 'Chung Yeung Festival Holiday Inbound Peak' },
-            { date: '2026-10-18', total: 1186540, arr_ratio: 0.464, note_zh: '重陽節長週末出境高峰', note_en: 'Chung Yeung Long Weekend Outbound Peak' },
-            { date: '2026-10-17', total: 1095320, arr_ratio: 0.458, note_zh: '重陽節假期首日北上高峰', note_en: 'Chung Yeung Holiday Day 1 Outbound Peak' },
-            { date: '2026-10-16', total: 864210, arr_ratio: 0.485, note_zh: '長假期前夕出入境高峰', note_en: 'Pre-Holiday Cross-Boundary Surge' },
-            { date: '2026-10-15', total: 749850, arr_ratio: 0.501, note_zh: '平日正常跨境通勤', note_en: 'Weekday Regular Commute' },
-            { date: '2026-10-14', total: 742110, arr_ratio: 0.500, note_zh: '平日正常跨境通勤', note_en: 'Weekday Regular Commute' },
-            { date: '2026-10-13', total: 765430, arr_ratio: 0.503, note_zh: '星期一跨境通勤', note_en: 'Monday Cross-Boundary Commute' },
-            { date: '2026-10-01', total: 1215890, arr_ratio: 0.512, note_zh: '國慶黃金週出入境最高峰', note_en: 'National Day Golden Week Peak' }
-        ];
+        const IMMD_CACHE_STORAGE_KEY = 'immd_daily_traffic_csv_cache_v3';
+        try {
+            localStorage.removeItem('immd_daily_traffic_csv_cache_v1');
+            localStorage.removeItem('immd_daily_traffic_csv_cache_v2');
+        } catch (e) {}
 
         window.liveBorderWaitStore = {};
         window.liveDailyTrafficByDate = {};
         window.liveTrafficHistoryList = [];
-        window.immdCsvSyncState = 'IDLE'; // IDLE | LOADING | LIVE | CACHE | FALLBACK
+        window.immdCsvSyncState = 'IDLE'; // IDLE | LOADING | LIVE | CACHE | ERROR
         window.immdCsvMinDate = '2021-01-01';
-        window.immdCsvMaxDate = '2026-10-25';
+        window.immdCsvMaxDate = getHkDateOffsetIso(-1);
         window.immdCsvTotalDays = 0;
         window.borderUserPickedDate = false;
+        window.immdPendingDateFetches = {};
 
         // 建立管制站名稱快速索引表
         const IMMD_CP_LOOKUP = {};
@@ -25904,11 +25913,11 @@
         });
 
         function resolveImmDControlPoint(rawName) {
-            const clean = String(rawName || '').trim();
+            const clean = String(rawName || '').trim().replace(/^["']|["']$/g, '');
             const key = clean.toLowerCase();
             if (IMMD_CP_LOOKUP[key]) return IMMD_CP_LOOKUP[key];
             for (const cp of HK_15_IMMD_CONTROL_POINTS) {
-                if (cp.csv_names && cp.csv_names.some(a => key.includes(a.toLowerCase()) || a.toLowerCase().includes(key))) {
+                if (cp.csv_names && cp.csv_names.some(a => key === a.toLowerCase() || key.includes(a.toLowerCase()) || a.toLowerCase().includes(key))) {
                     IMMD_CP_LOOKUP[key] = cp;
                     return cp;
                 }
@@ -25920,8 +25929,7 @@
                 name_en: clean,
                 mode: 'LAND',
                 mode_zh: '其他管制站',
-                mode_en: 'Control Point',
-                weight: 0.001, r_share: 0.6, m_share: 0.3, o_share: 0.1
+                mode_en: 'Control Point'
             };
             IMMD_CP_LOOKUP[key] = dynCp;
             return dynCp;
@@ -25929,12 +25937,10 @@
 
         function normalizeImmDDate(rawDate) {
             const s = String(rawDate || '').trim().replace(/^["']|["']$/g, '');
-            // DD-MM-YYYY or DD/MM/YYYY
             let m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
             if (m) {
                 return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
             }
-            // YYYY-MM-DD or YYYY/MM/DD
             m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
             if (m) {
                 return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
@@ -25964,36 +25970,125 @@
             return res;
         }
 
-        function parseImmDDailyTrafficCSV(csvText) {
-            if (!csvText || typeof csvText !== 'string') return false;
-            const lines = csvText.replace(/^\uFEFF/, '').split(/\r?\n/);
-            if (lines.length < 2) return false;
+        function rebuildImmDTrafficHistoryIndex() {
+            const allDates = Object.keys(window.liveDailyTrafficByDate || {}).sort();
+            if (allDates.length === 0) return false;
 
-            const byDate = {};
+            window.immdCsvMinDate = '2021-01-01';
+            window.immdCsvMaxDate = allDates[allDates.length - 1];
+            window.immdCsvTotalDays = Math.max(window.immdCsvTotalDays || 0, allDates.length);
+
+            const descDates = [...allDates].reverse();
+            window.liveTrafficHistoryList = descDates.map(dt => {
+                const d = window.liveDailyTrafficByDate[dt];
+                const ratio = d.grandTotal > 0 ? (d.grandArr / d.grandTotal) : 0.5;
+                return {
+                    date: dt,
+                    total: d.grandTotal,
+                    grandArr: d.grandArr,
+                    grandDep: d.grandDep,
+                    arr_ratio: ratio,
+                    isLiveCsv: true,
+                    note_zh: `入境處 Open Data 官方統計數據 (入境 ${formatNum(d.grandArr)}｜出境 ${formatNum(d.grandDep)})`,
+                    note_en: `ImmD Open Data Official Figures (In ${formatNum(d.grandArr)} | Out ${formatNum(d.grandDep)})`
+                };
+            });
+
+            if (!window.borderUserPickedDate || !window.borderSelectedDate || !window.liveDailyTrafficByDate[window.borderSelectedDate]) {
+                window.borderSelectedDate = window.immdCsvMaxDate;
+            }
+
+            try {
+                const recentSlice = {};
+                descDates.slice(0, 60).forEach(dt => {
+                    recentSlice[dt] = window.liveDailyTrafficByDate[dt];
+                });
+                localStorage.setItem(IMMD_CACHE_STORAGE_KEY, JSON.stringify({
+                    minDate: window.immdCsvMinDate,
+                    maxDate: window.immdCsvMaxDate,
+                    totalDays: window.immdCsvTotalDays,
+                    savedAt: Date.now(),
+                    recentByDate: recentSlice
+                }));
+            } catch (e) {}
+
+            return true;
+        }
+
+        function parseImmDDailyTrafficCSV(rawPayload, mergeExisting = true) {
+            if (!rawPayload) return false;
+            let rowArrays = [];
+
+            if (Array.isArray(rawPayload)) {
+                rowArrays = rawPayload;
+            } else if (typeof rawPayload === 'string') {
+                const trimmed = rawPayload.replace(/^\uFEFF/, '').trim();
+                if (!trimmed) return false;
+                if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+                    try {
+                        const j = JSON.parse(trimmed);
+                        if (Array.isArray(j)) {
+                            rowArrays = j;
+                        } else if (j && Array.isArray(j.data)) {
+                            rowArrays = j.data;
+                        } else if (j && typeof j.contents === 'string') {
+                            return parseImmDDailyTrafficCSV(j.contents, mergeExisting);
+                        }
+                    } catch (e) {}
+                }
+                if (rowArrays.length === 0) {
+                    const lines = trimmed.split(/\r?\n/);
+                    if (lines.length < 2) return false;
+                    for (let i = 0; i < lines.length; i++) {
+                        const ln = lines[i].trim();
+                        if (!ln) continue;
+                        rowArrays.push(splitCsvLineFast(ln));
+                    }
+                }
+            } else {
+                return false;
+            }
+
+            const batchByDate = {};
             let validRows = 0;
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                const cols = splitCsvLineFast(line);
-                if (cols.length < 7) continue;
+            for (let i = 0; i < rowArrays.length; i++) {
+                const row = rowArrays[i];
+                let cols = null;
+                if (Array.isArray(row)) {
+                    cols = row;
+                } else if (row && typeof row === 'object') {
+                    cols = [
+                        row['Date'] || row['日期'] || row[0] || row[1],
+                        row['Control Point'] || row['管制站'] || row[1] || row[2],
+                        row['Arrival / Departure'] || row['入境 / 出境'] || row[2] || row[3],
+                        row['Hong Kong Residents'] || row['香港居民'] || row[3] || row[4],
+                        row['Mainland Visitors'] || row['內地訪客'] || row[4] || row[5],
+                        row['Other Visitors'] || row['其他訪客'] || row[5] || row[6],
+                        row['Total'] || row['總計'] || row[6] || row[7]
+                    ];
+                }
+                if (!cols || cols.length < 6) continue;
 
                 const isoDate = normalizeImmDDate(cols[0]);
-                if (!isoDate) continue; // Skips header row
+                if (!isoDate) continue;
 
-                const cpMeta = resolveImmDControlPoint(cols[1]);
+                const cpRaw = String(cols[1] || '').trim();
+                if (!cpRaw || cpRaw.toLowerCase() === 'total' || cpRaw === '總計') continue;
+
+                const cpMeta = resolveImmDControlPoint(cpRaw);
                 const dirRaw = String(cols[2] || '').trim().toLowerCase();
                 const isArrival = dirRaw.includes('arrival') || dirRaw.includes('入境');
                 const isDeparture = dirRaw.includes('departure') || dirRaw.includes('出境');
                 if (!isArrival && !isDeparture) continue;
 
-                const hkRes = parseInt(String(cols[3] || '0').replace(/,/g, '').trim(), 10) || 0;
-                const mainVis = parseInt(String(cols[4] || '0').replace(/,/g, '').trim(), 10) || 0;
-                const othVis = parseInt(String(cols[5] || '0').replace(/,/g, '').trim(), 10) || 0;
-                const rowTotRaw = parseInt(String(cols[6] || '0').replace(/,/g, '').trim(), 10);
-                const rowTot = !isNaN(rowTotRaw) && rowTotRaw > 0 ? rowTotRaw : (hkRes + mainVis + othVis);
+                const hkRes = parseInt(String(cols[3] ?? '0').replace(/,/g, '').trim(), 10) || 0;
+                const mainVis = parseInt(String(cols[4] ?? '0').replace(/,/g, '').trim(), 10) || 0;
+                const othVis = parseInt(String(cols[5] ?? '0').replace(/,/g, '').trim(), 10) || 0;
+                const rowTotRaw = parseInt(String(cols[6] ?? '').replace(/,/g, '').trim(), 10);
+                const rowTot = (!isNaN(rowTotRaw) && rowTotRaw >= (hkRes + mainVis + othVis)) ? rowTotRaw : (hkRes + mainVis + othVis);
 
-                let dayObj = byDate[isoDate];
+                let dayObj = batchByDate[isoDate];
                 if (!dayObj) {
                     dayObj = {
                         date: isoDate,
@@ -26008,7 +26103,7 @@
                         grandDepM: 0,
                         grandDepO: 0
                     };
-                    byDate[isoDate] = dayObj;
+                    batchByDate[isoDate] = dayObj;
                 }
 
                 let cpRec = dayObj.cpMap[cpMeta.id];
@@ -26046,83 +26141,29 @@
                 validRows++;
             }
 
-            const allDates = Object.keys(byDate).sort();
-            if (allDates.length === 0 || validRows === 0) return false;
+            const parsedDates = Object.keys(batchByDate);
+            if (parsedDates.length === 0 || validRows === 0) return false;
 
-            window.liveDailyTrafficByDate = byDate;
-            window.immdCsvMinDate = allDates[0];
-            window.immdCsvMaxDate = allDates[allDates.length - 1];
-            window.immdCsvTotalDays = allDates.length;
-
-            // 逆序排列 (最新日期排最前)
-            const descDates = [...allDates].reverse();
-            window.liveTrafficHistoryList = descDates.map(dt => {
-                const d = byDate[dt];
-                const ratio = d.grandTotal > 0 ? (d.grandArr / d.grandTotal) : 0.5;
-                return {
-                    date: dt,
-                    total: d.grandTotal,
-                    grandArr: d.grandArr,
-                    grandDep: d.grandDep,
-                    arr_ratio: ratio,
-                    isLiveCsv: true,
-                    note_zh: `入境處 Open Data CSV 官方實時數據 (入境 ${formatNum(d.grandArr)}｜出境 ${formatNum(d.grandDep)})`,
-                    note_en: `ImmD Open Data CSV Official Figures (In ${formatNum(d.grandArr)} | Out ${formatNum(d.grandDep)})`
-                };
-            });
-
-            if (!window.borderUserPickedDate || !byDate[window.borderSelectedDate]) {
-                window.borderSelectedDate = window.immdCsvMaxDate;
+            if (mergeExisting && window.liveDailyTrafficByDate) {
+                window.liveDailyTrafficByDate = Object.assign({}, window.liveDailyTrafficByDate, batchByDate);
+            } else {
+                window.liveDailyTrafficByDate = batchByDate;
             }
 
-            // 緩存最近 45 日數據到 localStorage 作瞬間啟動顯示
-            try {
-                const recentSlice = {};
-                descDates.slice(0, 45).forEach(dt => {
-                    recentSlice[dt] = byDate[dt];
-                });
-                localStorage.setItem('immd_daily_traffic_csv_cache_v1', JSON.stringify({
-                    minDate: window.immdCsvMinDate,
-                    maxDate: window.immdCsvMaxDate,
-                    totalDays: window.immdCsvTotalDays,
-                    savedAt: Date.now(),
-                    recentByDate: recentSlice
-                }));
-            } catch (e) {}
-
-            return true;
+            return rebuildImmDTrafficHistoryIndex();
         }
 
         function restoreImmDCsvCacheIfAvailable() {
             try {
-                const raw = localStorage.getItem('immd_daily_traffic_csv_cache_v1');
+                const raw = localStorage.getItem(IMMD_CACHE_STORAGE_KEY);
                 if (!raw) return false;
                 const parsed = JSON.parse(raw);
                 if (!parsed || !parsed.recentByDate) return false;
                 const dates = Object.keys(parsed.recentByDate).sort();
                 if (dates.length === 0) return false;
                 window.liveDailyTrafficByDate = parsed.recentByDate;
-                window.immdCsvMinDate = parsed.minDate || dates[0];
-                window.immdCsvMaxDate = parsed.maxDate || dates[dates.length - 1];
                 window.immdCsvTotalDays = parsed.totalDays || dates.length;
-                const descDates = [...dates].reverse();
-                window.liveTrafficHistoryList = descDates.map(dt => {
-                    const d = parsed.recentByDate[dt];
-                    const ratio = d.grandTotal > 0 ? (d.grandArr / d.grandTotal) : 0.5;
-                    return {
-                        date: dt,
-                        total: d.grandTotal,
-                        grandArr: d.grandArr,
-                        grandDep: d.grandDep,
-                        arr_ratio: ratio,
-                        isLiveCsv: true,
-                        note_zh: `入境處 Open Data CSV 官方統計數據 (入境 ${formatNum(d.grandArr)}｜出境 ${formatNum(d.grandDep)})`,
-                        note_en: `ImmD Open Data CSV Official Figures (In ${formatNum(d.grandArr)} | Out ${formatNum(d.grandDep)})`
-                    };
-                });
-                if (!window.borderUserPickedDate) {
-                    window.borderSelectedDate = window.immdCsvMaxDate;
-                }
+                rebuildImmDTrafficHistoryIndex();
                 window.immdCsvSyncState = 'CACHE';
                 return true;
             } catch (e) {
@@ -26130,91 +26171,219 @@
             }
         }
 
-        async function fetchImmDCsvTextWithFallback(csvUrl) {
-            const tryValidate = (txt) => {
-                if (typeof txt === 'string' && txt.length > 200 && (txt.includes('Control Point') || txt.includes('Arrival') || txt.includes('Lo Wu'))) {
-                    return txt;
-                }
-                return null;
+        // 建立香港政府資料一線通 (DATA.GOV.HK) 官方 v2 Filter API URL (支援原生 CORS Access-Control-Allow-Origin: * 及伺服器端日期篩選)
+        function buildDataGovImmDFilterUrl(resourceUrl, filters, format = 'csv') {
+            const qObj = {
+                resource: resourceUrl,
+                section: 1,
+                format: format
             };
+            if (Array.isArray(filters) && filters.length > 0) {
+                qObj.filters = filters;
+            }
+            return 'https://api.data.gov.hk/v2/filter?q=' + encodeURIComponent(JSON.stringify(qObj));
+        }
 
-            // 1. 嘗試直接連線獲取 CSV
+        function isValidImmDPayload(txt) {
+            if (!txt || typeof txt !== 'string' || txt.length < 80) return false;
+            return (
+                txt.includes('Control Point') ||
+                txt.includes('Arrival') ||
+                txt.includes('Lo Wu') ||
+                txt.includes('Airport') ||
+                txt.includes('羅湖') ||
+                txt.includes('機場') ||
+                txt.includes('入境')
+            );
+        }
+
+        async function fetchUrlWithTimeout(url, timeoutMs = 9500, extraHeaders = null) {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), timeoutMs);
             try {
-                const ctrl = new AbortController();
-                const tid = setTimeout(() => ctrl.abort(), 9000);
-                const r = await fetch(csvUrl, { cache: 'no-store', signal: ctrl.signal });
+                const opts = { cache: 'no-store', signal: ctrl.signal };
+                if (extraHeaders) opts.headers = extraHeaders;
+                const r = await fetch(url, opts);
                 clearTimeout(tid);
-                if (r.ok) {
-                    const t = tryValidate(await r.text());
-                    if (t) return t;
+                if (!r.ok && r.status !== 206) throw new Error('HTTP ' + r.status);
+                const rawText = await r.text();
+                if (isValidImmDPayload(rawText)) return rawText;
+                if (url.includes('/get?url=')) {
+                    const j = JSON.parse(rawText);
+                    if (j && isValidImmDPayload(j.contents)) return j.contents;
+                }
+                throw new Error('Invalid ImmD payload');
+            } catch (err) {
+                clearTimeout(tid);
+                throw err;
+            }
+        }
+
+        function wrapUrlWithCorsProxies(targetUrl) {
+            const list = [
+                `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`
+            ];
+            if (typeof customFlightProxyUrl === 'string' && customFlightProxyUrl.trim()) {
+                list.unshift(customFlightProxyUrl.trim() + encodeURIComponent(targetUrl));
+            }
+            return list;
+        }
+
+        async function fetchImmDRecentAndYearData() {
+            // 計算最近 28 日的 DD-MM-YYYY 陣列 (確保涵蓋最新 26 號及過去兩週趨勢)
+            const recentDdMmYyyy = [];
+            for (let offset = 0; offset >= -28; offset--) {
+                const iso = getHkDateOffsetIso(offset);
+                const dmy = isoToDdMmYyyy(iso);
+                if (dmy) recentDdMmYyyy.push(dmy);
+            }
+            if (!recentDdMmYyyy.includes('01-10-2026')) {
+                recentDdMmYyyy.push('01-10-2026');
+            }
+
+            const latestIso = getHkDateOffsetIso(-1);
+            const prevMonthIso = getHkDateOffsetIso(-20);
+            const curMmYyyy = latestIso.slice(5, 7) + '-' + latestIso.slice(0, 4);   // e.g. '10-2026'
+            const prevMmYyyy = prevMonthIso.slice(5, 7) + '-' + prevMonthIso.slice(0, 4);
+            const curYyyy = latestIso.slice(0, 4);                                    // e.g. '2026'
+
+            // 1. DATA.GOV.HK 官方原生 CORS API (最快、體積最細，直接從入境處 CSV 篩選最新月份及最近 28 日數據)
+            const fastFilterUrlInCsv = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'in', recentDdMmYyyy]], 'csv');
+            const fastFilterUrlMonthCsv = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'ct', [curMmYyyy]]], 'csv');
+            const fastFilterUrlMonthJson = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'ct', [curMmYyyy]]], 'json');
+            const fastFilterUrlMonthHkt = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL_HKT, [[1, 'ct', [curMmYyyy]]], 'csv');
+            const yearFilterUrlCsv = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'ew', [curYyyy]]], 'csv');
+            const fullFilterUrlCsv = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, null, 'csv');
+
+            const cacheBust = `?_t=${ Math.floor(Date.now() / 60000) }`;
+            const directCsvEng = IMMD_DAILY_TRAFFIC_CSV_URL + cacheBust;
+            const directCsvHkt = IMMD_DAILY_TRAFFIC_CSV_URL_HKT + cacheBust;
+
+            // 第一階段：並行競速獲取最新數據 (確保 26 號等最新結算日瞬間同步)
+            const stage1Candidates = [
+                fetchUrlWithTimeout(fastFilterUrlInCsv, 7500),
+                fetchUrlWithTimeout(fastFilterUrlMonthCsv, 7500),
+                fetchUrlWithTimeout(fastFilterUrlMonthJson, 7500),
+                fetchUrlWithTimeout(fastFilterUrlMonthHkt, 8000),
+                fetchUrlWithTimeout(yearFilterUrlCsv, 9500),
+                fetchUrlWithTimeout(directCsvEng, 8000, { 'Range': 'bytes=-262144' }),
+                fetchUrlWithTimeout(directCsvEng, 9000),
+                ...wrapUrlWithCorsProxies(fastFilterUrlMonthCsv).map(u => fetchUrlWithTimeout(u, 10000)),
+                ...wrapUrlWithCorsProxies(fastFilterUrlInCsv).map(u => fetchUrlWithTimeout(u, 10000))
+            ];
+
+            let gotStage1 = false;
+            try {
+                const fastestPayload = await Promise.any(stage1Candidates);
+                if (fastestPayload && parseImmDDailyTrafficCSV(fastestPayload, true)) {
+                    gotStage1 = true;
+                    window.immdCsvSyncState = 'LIVE';
+                    updateBorderRefreshBadgeUI();
+                    if (currentActivePage === 'border') {
+                        renderBorderPortal();
+                    }
                 }
             } catch (e) {}
 
-            // 2. 若用戶有設定自訂 Proxy
-            if (typeof customFlightProxyUrl === 'string' && customFlightProxyUrl.trim()) {
-                try {
-                    const pUrl = customFlightProxyUrl.trim() + encodeURIComponent(csvUrl);
-                    const r = await fetch(pUrl, { cache: 'no-store' });
-                    if (r.ok) {
-                        const t = tryValidate(await r.text());
-                        if (t) return t;
-                    }
-                } catch (e) {}
-            }
-
-            // 3. 多重 CORS Proxy 通道自動切換
-            const proxyBuilders = [
-                u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-                u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
-                u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-                u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`
+            // 第二階段：若第一階段因特殊網絡限制未命中，或需補齊全年／上月完整歷史數據
+            const stage2Candidates = [
+                fetchUrlWithTimeout(yearFilterUrlCsv, 12000),
+                fetchUrlWithTimeout(fullFilterUrlCsv, 14000),
+                ...wrapUrlWithCorsProxies(yearFilterUrlCsv).map(u => fetchUrlWithTimeout(u, 13000)),
+                ...wrapUrlWithCorsProxies(directCsvEng).map(u => fetchUrlWithTimeout(u, 15000)),
+                ...wrapUrlWithCorsProxies(directCsvHkt).map(u => fetchUrlWithTimeout(u, 15000))
             ];
 
-            for (const buildUrl of proxyBuilders) {
-                try {
-                    const target = buildUrl(csvUrl);
-                    const ctrl = new AbortController();
-                    const tid = setTimeout(() => ctrl.abort(), 14000);
-                    const r = await fetch(target, { cache: 'no-store', signal: ctrl.signal });
-                    clearTimeout(tid);
-                    if (!r.ok) continue;
-                    const rawText = await r.text();
-                    let candidate = tryValidate(rawText);
-                    if (!candidate && target.includes('/get?url=')) {
-                        try {
-                            const j = JSON.parse(rawText);
-                            candidate = tryValidate(j && j.contents);
-                        } catch (e) {}
-                    }
-                    if (candidate) return candidate;
-                } catch (e) {}
+            if (prevMmYyyy !== curMmYyyy) {
+                const prevMonthUrl = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'ct', [prevMmYyyy]]], 'csv');
+                stage2Candidates.unshift(fetchUrlWithTimeout(prevMonthUrl, 9000));
             }
-            return null;
+
+            try {
+                const fullPayload = await Promise.any(stage2Candidates);
+                if (fullPayload && parseImmDDailyTrafficCSV(fullPayload, true)) {
+                    gotStage1 = true;
+                    window.immdCsvSyncState = 'LIVE';
+                    updateBorderRefreshBadgeUI();
+                    if (currentActivePage === 'border') {
+                        renderBorderPortal();
+                    }
+                }
+            } catch (e) {}
+
+            return gotStage1;
         }
 
-        async function syncImmDDailyTrafficCSV(forceFetch = false) {
-            if (window.immdCsvSyncState === 'LOADING') return false;
-            if (window.immdCsvSyncState === 'LIVE' && !forceFetch && window.liveTrafficHistoryList.length > 0) {
-                return true;
-            }
-            if (window.immdCsvSyncState === 'IDLE') {
-                restoreImmDCsvCacheIfAvailable();
-            }
-            window.immdCsvSyncState = 'LOADING';
-            if (currentActivePage === 'border') {
-                renderBorderPortal();
-            }
+        // 當用戶在日期選擇器揀選較早歷史日期 (2021–2026) 時，自動按月／按日從入境處 CSV API 即時拉取該日真實數據
+        async function fetchImmDDateOnDemand(isoDate) {
+            if (!isoDate || (window.liveDailyTrafficByDate && window.liveDailyTrafficByDate[isoDate])) return true;
+            if (window.immdPendingDateFetches[isoDate]) return false;
+            window.immdPendingDateFetches[isoDate] = true;
+
+            const dmy = isoToDdMmYyyy(isoDate);
+            const mmYyyy = isoDate.slice(5, 7) + '-' + isoDate.slice(0, 4);
+            const urlByDay = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'eq', [dmy]]], 'csv');
+            const urlByMonth = buildDataGovImmDFilterUrl(IMMD_DAILY_TRAFFIC_CSV_URL, [[1, 'ct', [mmYyyy]]], 'csv');
+
             try {
-                const csvText = await fetchImmDCsvTextWithFallback(IMMD_DAILY_TRAFFIC_CSV_URL);
-                if (csvText && parseImmDDailyTrafficCSV(csvText)) {
+                const payload = await Promise.any([
+                    fetchUrlWithTimeout(urlByMonth, 8500),
+                    fetchUrlWithTimeout(urlByDay, 8500),
+                    ...wrapUrlWithCorsProxies(urlByMonth).map(u => fetchUrlWithTimeout(u, 10000)),
+                    ...wrapUrlWithCorsProxies(urlByDay).map(u => fetchUrlWithTimeout(u, 10000))
+                ]);
+                delete window.immdPendingDateFetches[isoDate];
+                if (payload && parseImmDDailyTrafficCSV(payload, true)) {
                     window.immdCsvSyncState = 'LIVE';
                     if (currentActivePage === 'border') {
                         renderBorderPortal();
                     }
                     return true;
                 }
+            } catch (e) {
+                delete window.immdPendingDateFetches[isoDate];
+            }
+            if (currentActivePage === 'border') {
+                renderBorderPortal();
+            }
+            return false;
+        }
+
+        async function syncImmDDailyTrafficCSV(forceFetch = false) {
+            if (window.immdCsvSyncState === 'LOADING' && !forceFetch) return false;
+            const expectedLatest = getHkDateOffsetIso(-1);
+            if (
+                window.immdCsvSyncState === 'LIVE' &&
+                !forceFetch &&
+                window.liveTrafficHistoryList.length > 0 &&
+                window.immdCsvMaxDate >= expectedLatest
+            ) {
+                return true;
+            }
+            if (window.immdCsvSyncState === 'IDLE') {
+                restoreImmDCsvCacheIfAvailable();
+            }
+            window.immdCsvSyncState = 'LOADING';
+            updateBorderRefreshBadgeUI();
+            if (currentActivePage === 'border') {
+                renderBorderPortal();
+            }
+            try {
+                const ok = await fetchImmDRecentAndYearData();
+                if (ok) {
+                    window.immdCsvSyncState = 'LIVE';
+                    updateBorderRefreshBadgeUI();
+                    if (currentActivePage === 'border') {
+                        renderBorderPortal();
+                    }
+                    return true;
+                }
             } catch (e) {}
-            window.immdCsvSyncState = (window.liveTrafficHistoryList.length > 0) ? 'CACHE' : 'FALLBACK';
+            window.immdCsvSyncState = (window.liveTrafficHistoryList.length > 0) ? 'CACHE' : 'ERROR';
+            updateBorderRefreshBadgeUI();
             if (currentActivePage === 'border') {
                 renderBorderPortal();
             }
@@ -26225,7 +26394,7 @@
             if (Array.isArray(window.liveTrafficHistoryList) && window.liveTrafficHistoryList.length > 0) {
                 return window.liveTrafficHistoryList;
             }
-            return HK_DAILY_TRAFFIC_HISTORY;
+            return [];
         }
 
         function getHkClockParts() {
@@ -26295,8 +26464,11 @@
             const clk = getHkClockParts();
             const statusEl = document.getElementById('border-refresh-status');
             const isEn = (currentLang === 'en');
-            if (statusEl && isManual) {
-                statusEl.innerHTML = isEn ? '<span class="icon-spin">🔄</span> Syncing ImmD CSV & Wait Times...' : '<span class="icon-spin">🔄</span> 同步入境處 CSV 及口岸數據中...';
+            if (isManual) {
+                window.borderUserPickedDate = false;
+                if (statusEl) {
+                    statusEl.innerHTML = isEn ? '<span class="icon-spin">🔄</span> Syncing ImmD CSV & Wait Times...' : '<span class="icon-spin">🔄</span> 同步入境處最新 CSV 及口岸數據中...';
+                }
             }
 
             // 1. Initialize baseline dynamic real-time status for all 8 control points
@@ -26305,7 +26477,7 @@
             });
 
             // 2. Sync official ImmD Daily Passenger Traffic CSV API (statistics_on_daily_passenger_traffic.csv)
-            syncImmDDailyTrafficCSV(isManual);
+            const csvPromise = syncImmDDailyTrafficCSV(isManual);
 
             // 3. Attempt live fetch from official ImmD Waiting Time JSON endpoints via CORS proxy
             let syncedOfficialJson = false;
@@ -26354,6 +26526,8 @@
                 }
             } catch (e) {}
 
+            try { await csvPromise; } catch (e) {}
+
             window.borderLastSyncTimeStr = clk.hms;
             window.borderCountdownSec = 60;
             window.borderLiveSourceTag = syncedOfficialJson ? 'IMMD_API' : 'LIVE_CALC';
@@ -26374,8 +26548,8 @@
             }
             if (statusEl) {
                 const csvTag = window.immdCsvSyncState === 'LIVE'
-                    ? (isEn ? 'CSV Live' : 'CSV已同步')
-                    : (window.immdCsvSyncState === 'LOADING' ? (isEn ? 'Loading CSV...' : '載入CSV中...') : (isEn ? 'Auto-Sync' : '自動更新'));
+                    ? (isEn ? `ImmD Synced (${window.immdCsvMaxDate})` : `已同步至 ${window.immdCsvMaxDate}`)
+                    : (window.immdCsvSyncState === 'LOADING' ? (isEn ? 'Syncing ImmD CSV...' : '同步入境處CSV中...') : (isEn ? 'Auto-Sync' : '自動更新'));
                 statusEl.innerHTML = `🟢 ${csvTag} (${window.borderCountdownSec}s)`;
             }
             const cdSpan = document.getElementById('border-live-countdown-inline');
@@ -26414,10 +26588,20 @@
             window.borderTrafficCatFilter = cat || 'ALL';
             renderBorderPortal();
         }
-        function setBorderSelectedDate(dt) {
+        function setBorderSelectedDate(dt, isResetToLatest = false) {
+            if (isResetToLatest) {
+                window.borderUserPickedDate = false;
+                window.borderSelectedDate = window.immdCsvMaxDate || getHkDateOffsetIso(-1);
+                renderBorderPortal();
+                syncImmDDailyTrafficCSV(true);
+                return;
+            }
             if (dt) {
                 window.borderSelectedDate = dt;
                 window.borderUserPickedDate = true;
+                if (!window.liveDailyTrafficByDate || !window.liveDailyTrafficByDate[dt]) {
+                    fetchImmDDateOnDemand(dt);
+                }
             }
             renderBorderPortal();
         }
@@ -26441,7 +26625,7 @@
         }
 
         function getDailyBreakdownForDate(dateStr) {
-            // 1. 優先使用從入境處官方 statistics_on_daily_passenger_traffic.csv 解析的真實數據
+            // 直接使用從入境處官方 statistics_on_daily_passenger_traffic.csv 解析的真實數據
             const liveDay = window.liveDailyTrafficByDate && window.liveDailyTrafficByDate[dateStr];
             if (liveDay && liveDay.cpMap) {
                 const rows = [];
@@ -26472,8 +26656,8 @@
                     total: liveDay.grandTotal,
                     arr_ratio: liveDay.grandTotal > 0 ? (liveDay.grandArr / liveDay.grandTotal) : 0.5,
                     isLiveCsv: true,
-                    note_zh: '數據來源：入境事務處官方 Open Data CSV (實時連線數據)',
-                    note_en: 'Source: ImmD Official Open Data CSV (Live API Data)'
+                    note_zh: `數據來源：入境事務處官方 Open Data CSV 實時同步 (最新結算至 ${window.immdCsvMaxDate})`,
+                    note_en: `Source: ImmD Official Open Data CSV Live Sync (Updated to ${window.immdCsvMaxDate})`
                 };
 
                 return {
@@ -26492,61 +26676,45 @@
                 };
             }
 
-            // 2. 當官方 CSV 尚在載入或所選日期未在 CSV 時之後備基準計算
-            const histList = getActiveTrafficHistoryList();
-            const hist = histList.find(h => h.date === dateStr) || HK_DAILY_TRAFFIC_HISTORY.find(h => h.date === dateStr) || {
-                date: dateStr,
-                total: 845600,
-                arr_ratio: 0.502,
-                note_zh: '入境事務處每日出入境人次結算',
-                note_en: 'ImmD Daily Passenger Traffic Settlement'
-            };
-            const totalTrips = hist.total;
-            const rows = HK_15_IMMD_CONTROL_POINTS.filter(cp => cp.id !== 'HH').map((cp, idx) => {
-                const dateSeed = dateStr.split('-').reduce((acc, v) => acc + Number(v || 0), 0);
-                const factor = 1 + (((dateSeed + idx * 3) % 7) - 3) * 0.008;
-                const cpTotal = Math.round(totalTrips * cp.weight * factor);
-                const arrSub = Math.round(cpTotal * hist.arr_ratio);
-                const depSub = cpTotal - arrSub;
-
-                const arrR = Math.round(arrSub * cp.r_share);
-                const arrM = Math.round(arrSub * cp.m_share);
-                const arrO = Math.max(0, arrSub - arrR - arrM);
-
-                const depR = Math.round(depSub * cp.r_share);
-                const depM = Math.round(depSub * cp.m_share);
-                const depO = Math.max(0, depSub - depR - depM);
-
-                return {
-                    ...cp,
-                    arrR, arrM, arrO, arrSub,
-                    depR, depM, depO, depSub,
-                    cpTotal
-                };
-            });
-
-            const grandTotal = rows.reduce((s, r) => s + r.cpTotal, 0);
-            const grandArr = rows.reduce((s, r) => s + r.arrSub, 0);
-            const grandDep = rows.reduce((s, r) => s + r.depSub, 0);
-            const grandArrR = rows.reduce((s, r) => s + r.arrR, 0);
-            const grandArrM = rows.reduce((s, r) => s + r.arrM, 0);
-            const grandArrO = rows.reduce((s, r) => s + r.arrO, 0);
-            const grandDepR = rows.reduce((s, r) => s + r.depR, 0);
-            const grandDepM = rows.reduce((s, r) => s + r.depM, 0);
-            const grandDepO = rows.reduce((s, r) => s + r.depO, 0);
+            // 若該日數據尚在從入境處 API 載入中，觸發即時拉取並返回空列表作載入提示（絕不顯示假數據或舊日硬編碼數據）
+            if (dateStr && !window.immdPendingDateFetches[dateStr] && window.immdCsvSyncState !== 'LOADING') {
+                fetchImmDDateOnDemand(dateStr);
+            }
 
             return {
-                hist,
-                rows,
-                grandTotal, grandArr, grandDep,
-                grandArrR, grandArrM, grandArrO,
-                grandDepR, grandDepM, grandDepO,
+                hist: {
+                    date: dateStr,
+                    total: 0,
+                    arr_ratio: 0.5,
+                    isLiveCsv: false,
+                    note_zh: window.immdCsvSyncState === 'LOADING' || window.immdPendingDateFetches[dateStr]
+                        ? '🔄 正在直接從香港入境事務處 Open Data CSV 同步官方出入境人次數據...'
+                        : '⚠️ 暫未有該日結算記錄（請點擊「🔄 立即同步」或選擇已公佈之結算日期）',
+                    note_en: window.immdCsvSyncState === 'LOADING' || window.immdPendingDateFetches[dateStr]
+                        ? '🔄 Syncing official passenger traffic figures directly from ImmD Open Data CSV...'
+                        : '⚠️ Figures for this date are not yet published in ImmD Open Data CSV'
+                },
+                rows: [],
+                grandTotal: 0, grandArr: 0, grandDep: 0,
+                grandArrR: 0, grandArrM: 0, grandArrO: 0,
+                grandDepR: 0, grandDepM: 0, grandDepO: 0,
                 isLiveCsv: false
             };
         }
 
         function buildDailyTrafficRowsHTML(isEn) {
             const data = getDailyBreakdownForDate(window.borderSelectedDate);
+            if (!data.isLiveCsv || data.rows.length === 0) {
+                const msg = (window.immdCsvSyncState === 'LOADING' || window.immdPendingDateFetches[window.borderSelectedDate])
+                    ? (isEn
+                        ? '🔄 Connecting directly to Hong Kong Immigration Department Open Data (statistics_on_daily_passenger_traffic.csv)...'
+                        : '🔄 正在直接連線香港入境事務處 Open Data (statistics_on_daily_passenger_traffic.csv) 同步最新官方數據...')
+                    : (isEn
+                        ? `No official ImmD settlement record found for ${window.borderSelectedDate}. Click "Sync Now" to retry.`
+                        : `入境處 Open Data 暫未有 ${window.borderSelectedDate} 的結算記錄，請點擊右上角「🔄 立即同步」重新連線。`);
+                return `<tr><td colspan="12" style="text-align:center;padding:24px;color:#0284c7;font-weight:800;">${msg}</td></tr>`;
+            }
+
             const modeF = window.borderTrafficCatFilter || 'ALL';
             const q = (window.borderTrafficSearch || '').toLowerCase();
 
@@ -26640,7 +26808,9 @@
             const sec = window.borderViewSection || 'ALL';
             const cpCat = window.borderCpCatFilter || 'ALL';
             const trCat = window.borderTrafficCatFilter || 'ALL';
-            const selDate = window.borderSelectedDate || (activeHistList[0] ? activeHistList[0].date : '2026-10-25');
+            const fallbackLatest = window.immdCsvMaxDate || getHkDateOffsetIso(-1);
+            const selDate = window.borderSelectedDate || (activeHistList[0] ? activeHistList[0].date : fallbackLatest);
+            window.borderSelectedDate = selDate;
             const dailyData = getDailyBreakdownForDate(selDate);
             const busiestCp = [...dailyData.rows].sort((a, b) => b.cpTotal - a.cpTotal)[0] || { name_zh: '羅湖', name_en: 'Lo Wu', cpTotal: 0 };
 
@@ -26651,31 +26821,35 @@
             }).length;
 
             const csvStatusBadgeHtml = window.immdCsvSyncState === 'LIVE'
-                ? `<span class="el-tag el-tag-green" title="${IMMD_DAILY_TRAFFIC_CSV_URL}">🟢 ${isEn ? `ImmD CSV Live (${window.immdCsvTotalDays} days)` : `已連接入境處官方 CSV (${window.immdCsvTotalDays}日記錄)`}</span>`
+                ? `<span class="el-tag el-tag-green" title="${IMMD_DAILY_TRAFFIC_CSV_URL}">🟢 ${isEn ? `ImmD Official CSV Synced (Latest: ${window.immdCsvMaxDate})` : `已同步入境處官方 CSV (最新結算：${window.immdCsvMaxDate})`}</span>`
                 : (window.immdCsvSyncState === 'LOADING'
-                    ? `<span class="el-tag el-tag-amber">🔄 ${isEn ? 'Fetching ImmD CSV...' : '正在讀取入境處官方 CSV...'}</span>`
+                    ? `<span class="el-tag el-tag-amber">🔄 ${isEn ? 'Syncing ImmD Official CSV...' : '正在同步入境處官方 CSV...'}</span>`
                     : (window.immdCsvSyncState === 'CACHE'
-                        ? `<span class="el-tag el-tag-blue">📦 ${isEn ? 'ImmD CSV Cached' : '入境處官方 CSV 緩存數據'}</span>`
-                        : `<span class="el-tag el-tag-slate">📊 ${isEn ? 'ImmD Baseline' : '入境處基準數據'}</span>`));
+                        ? `<span class="el-tag el-tag-blue">📦 ${isEn ? `ImmD CSV Cached (${window.immdCsvMaxDate})` : `入境處官方 CSV 緩存 (${window.immdCsvMaxDate})`}</span>`
+                        : `<span class="el-tag el-tag-rose" style="cursor:pointer;" onclick="syncBorderLiveData(true)">⚠️ ${isEn ? 'Click to Retry ImmD Sync' : '點擊重新同步入境處 CSV'}</span>`));
+
+            const kpiValTotal = dailyData.isLiveCsv ? formatNum(dailyData.grandTotal) : (window.immdCsvSyncState === 'LOADING' ? '🔄 同步中...' : '--');
+            const kpiValArr = dailyData.isLiveCsv ? formatNum(dailyData.grandArr) : (window.immdCsvSyncState === 'LOADING' ? '🔄 同步中...' : '--');
+            const kpiValDep = dailyData.isLiveCsv ? formatNum(dailyData.grandDep) : (window.immdCsvSyncState === 'LOADING' ? '🔄 同步中...' : '--');
 
             // Top KPI Grid
             const kpiHtml = `
                 <div class="el-kpi-grid">
                     <div class="el-kpi-card" style="border-left-color:#0284c7;">
                         <div class="el-kpi-label">${isEn ? `Daily Total Passenger Traffic (${selDate})` : `單日出入境總人次 (${selDate})`}</div>
-                        <div class="el-kpi-val" style="color:#0369a1;">${formatNum(dailyData.grandTotal)}</div>
+                        <div class="el-kpi-val" style="color:#0369a1;">${kpiValTotal}</div>
                         <div class="el-kpi-sub">${isEn ? dailyData.hist.note_en : dailyData.hist.note_zh}</div>
                     </div>
                     <div class="el-kpi-card" style="border-left-color:#059669;">
                         <div class="el-kpi-label">${isEn ? 'Daily Arrivals (Inbound)' : '單日總入境人次 (Arrivals)'}</div>
-                        <div class="el-kpi-val" style="color:#047857;">${formatNum(dailyData.grandArr)}</div>
+                        <div class="el-kpi-val" style="color:#047857;">${kpiValArr}</div>
                         <div class="el-kpi-sub">${isEn
                             ? `HK Res: ${formatNum(dailyData.grandArrR)} | Mainland: ${formatNum(dailyData.grandArrM)} | Others: ${formatNum(dailyData.grandArrO)}`
                             : `港人: ${formatNum(dailyData.grandArrR)}｜內地訪客: ${formatNum(dailyData.grandArrM)}｜其他: ${formatNum(dailyData.grandArrO)}`}</div>
                     </div>
                     <div class="el-kpi-card" style="border-left-color:#7c3aed;">
                         <div class="el-kpi-label">${isEn ? 'Daily Departures (Outbound)' : '單日總出境人次 (Departures)'}</div>
-                        <div class="el-kpi-val" style="color:#6d28d9;">${formatNum(dailyData.grandDep)}</div>
+                        <div class="el-kpi-val" style="color:#6d28d9;">${kpiValDep}</div>
                         <div class="el-kpi-sub">${isEn
                             ? `HK Res: ${formatNum(dailyData.grandDepR)} | Mainland: ${formatNum(dailyData.grandDepM)} | Others: ${formatNum(dailyData.grandDepO)}`
                             : `港人: ${formatNum(dailyData.grandDepR)}｜內地訪客: ${formatNum(dailyData.grandDepM)}｜其他: ${formatNum(dailyData.grandDepO)}`}</div>
@@ -26801,22 +26975,25 @@
                 </div>
             `;
 
-            // Section 2: Daily Passenger Traffic Statistics & 14-Day Trend Chart (Backed by ImmD CSV API)
+            // Section 2: Daily Passenger Traffic Statistics & 14-Day Trend Chart (Backed directly by ImmD CSV API)
             const trendSlice = activeHistList.slice(0, 14);
             const maxHistTotal = Math.max(1250000, ...trendSlice.map(h => h.total || 0));
             const minDateAttr = window.immdCsvMinDate || '2021-01-01';
-            const maxDateAttr = window.immdCsvMaxDate || '2026-10-25';
+            const maxDateAttr = window.immdCsvMaxDate || getHkDateOffsetIso(-1);
 
             const trafficSectionHtml = `
                 <div class="el-card-box">
                     <div class="el-card-header">
                         <div>
-                            <div class="el-card-title">📊 ${isEn ? '14-Day Daily Immigration Passenger Traffic Trend (ImmD Open Data CSV)' : '近 14 日全港各出入境管制站每日總人次趨勢圖（入境處 Open Data CSV 實時數據）'}</div>
-                            <div class="el-card-subtitle">${isEn ? `Busiest Control Point on ${selDate}: ${busiestCp.name_en} (${formatNum(busiestCp.cpTotal)} passenger trips) | Source: statistics_on_daily_passenger_traffic.csv` : `${selDate} 最繁忙管制站：${busiestCp.name_zh}（單日 ${formatNum(busiestCp.cpTotal)} 人次）｜點擊任何一日或選擇日期即可查閱各口岸完整明細`}</div>
+                            <div class="el-card-title">📊 ${isEn ? '14-Day Daily Immigration Passenger Traffic Trend (ImmD Open Data CSV)' : '近 14 日全港各出入境管制站每日總人次趨勢圖（入境處 Open Data CSV 實時同步數據）'}</div>
+                            <div class="el-card-subtitle">${dailyData.isLiveCsv
+                                ? (isEn ? `Busiest Control Point on ${selDate}: ${busiestCp.name_en} (${formatNum(busiestCp.cpTotal)} passenger trips) | Source: statistics_on_daily_passenger_traffic.csv` : `${selDate} 最繁忙管制站：${busiestCp.name_zh}（單日 ${formatNum(busiestCp.cpTotal)} 人次）｜點擊任何一日或選擇日期即可查閱各口岸完整明細`)
+                                : (isEn ? 'Syncing directly with Hong Kong Immigration Department Open Data CSV...' : '正在直接與香港入境事務處官方 Open Data CSV 同步最新結算數據...')}</div>
                         </div>
                         <div class="el-filter-bar">
                             <span style="font-size:0.74rem;font-weight:800;color:#334155;">📅 ${isEn ? 'Select Date:' : '選擇統計日期：'}</span>
                             <input type="date" class="res-date-input" value="${selDate}" min="${minDateAttr}" max="${maxDateAttr}" onchange="setBorderSelectedDate(this.value)">
+                            <button type="button" class="el-chip-btn ${selDate===maxDateAttr?'active':''}" onclick="setBorderSelectedDate('', true)" title="${isEn ? 'Jump to Latest ImmD Settlement Date' : '跳至入境處最新結算日'}">⚡ ${isEn ? `Latest (${maxDateAttr.slice(5)})` : `最新結算 (${maxDateAttr.slice(5)})`}</button>
                             ${activeHistList.slice(0, 6).map(h => `
                                 <button type="button" class="el-chip-btn ${selDate===h.date?'active':''}" onclick="setBorderSelectedDate('${h.date}')">${h.date.slice(5)}</button>
                             `).join('')}
@@ -26824,7 +27001,7 @@
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:5px;">
-                        ${trendSlice.map(h => {
+                        ${trendSlice.length > 0 ? trendSlice.map(h => {
                             const arrCnt = (typeof h.grandArr === 'number') ? h.grandArr : Math.round(h.total * h.arr_ratio);
                             const depCnt = (typeof h.grandDep === 'number') ? h.grandDep : (h.total - arrCnt);
                             const arrW = ((arrCnt / maxHistTotal) * 100).toFixed(1);
@@ -26841,7 +27018,7 @@
                                     <span style="text-align:right;font-size:0.69rem;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${isEn ? `In ${(arrCnt/1000).toFixed(0)}k / Out ${(depCnt/1000).toFixed(0)}k` : `入 ${(arrCnt/10000).toFixed(1)}萬 / 出 ${(depCnt/10000).toFixed(1)}萬`}</span>
                                 </div>
                             `;
-                        }).join('')}
+                        }).join('') : `<div style="padding:18px;text-align:center;color:#0284c7;font-weight:800;">${isEn ? '🔄 Loading 14-day trend directly from ImmD Open Data CSV...' : '🔄 正在直接從入境處 Open Data CSV 載入近 14 日趨勢數據...'}</div>`}
                     </div>
                 </div>
 
