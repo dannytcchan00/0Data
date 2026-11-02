@@ -4035,6 +4035,7 @@
             <a href="#" id="t-menu-lamppost" class="rail-btn-sub" title="全港路燈維持及保養資料" onclick="showLamppostPage(); event.preventDefault();">💡</a>
             <a href="#" id="t-menu-border" class="rail-btn-sub" title="每日出入境人次及即時管制站等候時間" onclick="showBorderPage(); event.preventDefault();">🛂</a>
             <a href="#" id="t-menu-dc" class="rail-btn-sub" title="香港十八區區議員名單及議席分佈 (2016–2027)" onclick="showDcPage(); event.preventDefault();">🏛️</a>
+            <a href="#" id="t-menu-legco" class="rail-btn-sub" title="歷屆香港立法會議員名單及議席分佈 (第一至第八屆)" onclick="showLegcoPage(); event.preventDefault();">⚖️</a>
         </div>
 
 
@@ -4536,6 +4537,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="dc-portal-container"></div>
+            </div>
+
+            <!-- ⚖️ 香港立法會歷屆議員名單及半圓形議席人仔分佈看板 (第一屆 1998-2000 至 第八屆 2026-2029) -->
+            <div class="panel border-section" id="legco-page-view" style="display: none;">
+                <h2>
+                    <span id="t-legco-title">⚖️ 香港立法會議員名單及議席界別分佈 (第一至第八屆)</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <a href="https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/eighthlegislativecouncil_2026_2029.pdf" target="_blank" rel="noopener noreferrer" class="device-quick-btn" id="btn-legco-pdf-link" style="text-decoration:none;" title="開啟立法會官方議員排名序名單 PDF">📄 官方排名序 PDF</a>
+                        <span class="refresh-indicator" id="legco-refresh-status">🟢 歷屆 1–8 屆官方名單</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="legco-portal-container"></div>
             </div>
 
 
@@ -5132,6 +5147,7 @@
                 if (document.getElementById('t-menu-ferry')) document.getElementById('t-menu-ferry').title = dict['menu-ferry'];
                 if (document.getElementById('t-menu-border')) document.getElementById('t-menu-border').title = (currentLang === 'en') ? 'Daily Passenger Traffic & Live Control Point Waiting Time' : '每日出入境人次及即時管制站等候時間';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
+                if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
                 if (kmbInp) kmbInp.placeholder = (currentLang === 'en') ? 'Ex: 112' : '例 / Ex: 112';
                 const ctbInp = document.getElementById('ctb-route-input');
@@ -5151,6 +5167,7 @@
                 if (typeof applyFerryLanguage === 'function') applyFerryLanguage();
                 if (typeof applyBorderLanguage === 'function') applyBorderLanguage();
                 if (typeof applyDcLanguage === 'function') applyDcLanguage();
+                if (typeof applyLegcoLanguage === 'function') applyLegcoLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
 
@@ -5187,7 +5204,7 @@
         let currentActivePage = 'home';
         try {
             const savedPage = localStorage.getItem('app_active_page');
-            if (savedPage === 'dc' || savedPage === 'lamppost' || savedPage === 'border' || savedPage === 'ferry' || savedPage === 'reservoir' || savedPage === 'flight' || savedPage === 'home' || savedPage === 'iframe') {
+            if (savedPage === 'legco' || savedPage === 'dc' || savedPage === 'lamppost' || savedPage === 'border' || savedPage === 'ferry' || savedPage === 'reservoir' || savedPage === 'flight' || savedPage === 'home' || savedPage === 'iframe') {
                 currentActivePage = savedPage;
             } else if (savedPage === 'election') {
                 currentActivePage = 'dc';
@@ -5205,6 +5222,7 @@
             const btnFerry = document.getElementById('t-menu-ferry');
             const btnBorder = document.getElementById('t-menu-border');
             const btnDc = document.getElementById('t-menu-dc');
+            const btnLegco = document.getElementById('t-menu-legco');
             if (btnHome) btnHome.className = (activeTab === 'home') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnFlight) btnFlight.className = (activeTab === 'flight') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnRes) btnRes.className = (activeTab === 'reservoir') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5212,6 +5230,7 @@
             if (btnFerry) btnFerry.className = (activeTab === 'ferry') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnBorder) btnBorder.className = (activeTab === 'border') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
                 const activeEl = document.querySelector('#bottom-menu .rail-btn-primary');
                 if (activeEl && typeof activeEl.scrollIntoView === 'function') {
@@ -5230,6 +5249,7 @@
             const fySec = document.getElementById('ferry-page-view');
             const bdSec = document.getElementById('border-page-view');
             const dcSec = document.getElementById('dc-page-view');
+            const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
             if (busSec) busSec.style.display = 'none';
             if (flSec) flSec.style.display = 'none';
@@ -5238,6 +5258,7 @@
             if (fySec) fySec.style.display = 'none';
             if (bdSec) bdSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
+            if (lcSec) lcSec.style.display = 'none';
         }
         function showIframe(url) {
             currentActivePage = 'iframe';
@@ -5354,6 +5375,19 @@
             updateMenuRailButtons('dc');
             initDcMembersSystem();
             renderDcPortal();
+        }
+
+        function showLegcoPage() {
+            currentActivePage = 'legco';
+            try { localStorage.setItem('app_active_page', 'legco'); } catch (e) {}
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const lcSec = document.getElementById('legco-page-view');
+            if (lcSec) lcSec.style.display = 'flex';
+            updateMenuRailButtons('legco');
+            renderLegcoPortal();
         }
 
 
@@ -18451,6 +18485,715 @@
         }
 
 
+
+        // =========================================================================
+        // ⚖️ 香港立法會歷屆議員名單及半圓形議席人仔分佈系統 (第一屆 1998-2000 至 第八屆 2026-2029)
+        // 官方排名序名單 PDF 數據源:
+        // - L1: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/firstlegislativecouncil_1998_2000.pdf
+        // - L2: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/secondlegislativecouncil_2000_2004.pdf
+        // - L3: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/thirdlegislativecouncil_2004_2008.pdf
+        // - L4: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/fourthlegislativecouncil_2008_2012.pdf
+        // - L5: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/fifthlegislativecouncil_2012_2016.pdf
+        // - L6: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/sixthlegislativecouncil_2016_2020.pdf
+        // - L7: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/seventhlegislativecouncil_2022_2025.pdf
+        // - L8: https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/eighthlegislativecouncil_2026_2029.pdf
+        // =========================================================================
+        const LEGCO_TERMS_CONFIG = [
+            {
+                code: 'L8',
+                period: '2026–2029',
+                name_zh: '第八屆立法會 (2026–2029)',
+                name_en: '8th Legislative Council (2026–2029)',
+                short_zh: '第八屆 (2026–29)',
+                short_en: '8th Term (2026–29)',
+                total_seats: 90,
+                gc: 20, fc: 30, dc2: 0, ec: 40,
+                pres_zh: '李慧琼', pres_en: 'Starry Lee Wai-king',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/eighthlegislativecouncil_2026_2029.pdf',
+                desc_zh: '現屆共 90 席：地方選區直選 20 席（10區雙議席）、功能界別 30 席、選舉委員會界別 40 席｜主席：李慧琼議員',
+                desc_en: '90 Seats: 20 Geographical Constituencies (10 districts), 30 Functional Constituencies, 40 Election Committee | President: Hon Starry Lee'
+            },
+            {
+                code: 'L7',
+                period: '2022–2025',
+                name_zh: '第七屆立法會 (2022–2025)',
+                name_en: '7th Legislative Council (2022–2025)',
+                short_zh: '第七屆 (2022–25)',
+                short_en: '7th Term (2022–25)',
+                total_seats: 90,
+                gc: 20, fc: 30, dc2: 0, ec: 40,
+                pres_zh: '梁君彥', pres_en: 'Andrew Leung Kwan-yuen',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/seventhlegislativecouncil_2022_2025.pdf',
+                desc_zh: '完善選舉制度後首屆共 90 席：地方選區直選 20 席、功能界別 30 席、選舉委員會界別 40 席｜主席：梁君彥議員',
+                desc_en: '90 Seats: 20 Geographical Constituencies, 30 Functional Constituencies, 40 Election Committee | President: Hon Andrew Leung'
+            },
+            {
+                code: 'L6',
+                period: '2016–2020',
+                name_zh: '第六屆立法會 (2016–2020/21)',
+                name_en: '6th Legislative Council (2016–2020/21)',
+                short_zh: '第六屆 (2016–20)',
+                short_en: '6th Term (2016–20)',
+                total_seats: 70,
+                gc: 35, fc: 30, dc2: 5, ec: 0,
+                pres_zh: '梁君彥', pres_en: 'Andrew Leung Kwan-yuen',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/sixthlegislativecouncil_2016_2020.pdf',
+                desc_zh: '共 70 席：5個地方選區直選 35 席、傳統功能界別 30 席、區議會（第二）功能界別 5 席｜主席：梁君彥議員',
+                desc_en: '70 Seats: 35 Geographical Constituencies, 30 Functional Constituencies, 5 District Council (Second) | President: Hon Andrew Leung'
+            },
+            {
+                code: 'L5',
+                period: '2012–2016',
+                name_zh: '第五屆立法會 (2012–2016)',
+                name_en: '5th Legislative Council (2012–2016)',
+                short_zh: '第五屆 (2012–16)',
+                short_en: '5th Term (2012–16)',
+                total_seats: 70,
+                gc: 35, fc: 30, dc2: 5, ec: 0,
+                pres_zh: '曾鈺成', pres_en: 'Jasper Tsang Yok-sing',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/fifthlegislativecouncil_2012_2016.pdf',
+                desc_zh: '議席增至 70 席：5個地方選區直選 35 席、傳統功能界別 30 席、新增區議會（第二）超區 5 席｜主席：曾鈺成議員',
+                desc_en: '70 Seats: 35 Geographical Constituencies, 30 Functional Constituencies, 5 District Council (Second) | President: Hon Jasper Tsang'
+            },
+            {
+                code: 'L4',
+                period: '2008–2012',
+                name_zh: '第四屆立法會 (2008–2012)',
+                name_en: '4th Legislative Council (2008–2012)',
+                short_zh: '第四屆 (2008–12)',
+                short_en: '4th Term (2008–12)',
+                total_seats: 60,
+                gc: 30, fc: 30, dc2: 0, ec: 0,
+                pres_zh: '曾鈺成', pres_en: 'Jasper Tsang Yok-sing',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/fourthlegislativecouncil_2008_2012.pdf',
+                desc_zh: '共 60 席：5個地方選區直選 30 席、功能界別 30 席｜主席：曾鈺成議員',
+                desc_en: '60 Seats: 30 Geographical Constituencies (5 regions), 30 Functional Constituencies | President: Hon Jasper Tsang'
+            },
+            {
+                code: 'L3',
+                period: '2004–2008',
+                name_zh: '第三屆立法會 (2004–2008)',
+                name_en: '3rd Legislative Council (2004–2008)',
+                short_zh: '第三屆 (2004–08)',
+                short_en: '3rd Term (2004–08)',
+                total_seats: 60,
+                gc: 30, fc: 30, dc2: 0, ec: 0,
+                pres_zh: '范徐麗泰', pres_en: 'Rita Fan Hsu Lai-tai',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/thirdlegislativecouncil_2004_2008.pdf',
+                desc_zh: '取消選委會界別，共 60 席：5個地方選區直選 30 席、功能界別 30 席｜主席：范徐麗泰議員',
+                desc_en: '60 Seats: 30 Geographical Constituencies, 30 Functional Constituencies | President: Hon Rita Fan'
+            },
+            {
+                code: 'L2',
+                period: '2000–2004',
+                name_zh: '第二屆立法會 (2000–2004)',
+                name_en: '2nd Legislative Council (2000–2004)',
+                short_zh: '第二屆 (2000–04)',
+                short_en: '2nd Term (2000–04)',
+                total_seats: 60,
+                gc: 24, fc: 30, dc2: 0, ec: 6,
+                pres_zh: '范徐麗泰', pres_en: 'Rita Fan Hsu Lai-tai',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/secondlegislativecouncil_2000_2004.pdf',
+                desc_zh: '共 60 席：5個地方選區直選增至 24 席、功能界別 30 席、選舉委員會減至 6 席｜主席：范徐麗泰議員',
+                desc_en: '60 Seats: 24 Geographical Constituencies, 30 Functional Constituencies, 6 Election Committee | President: Hon Rita Fan'
+            },
+            {
+                code: 'L1',
+                period: '1998–2000',
+                name_zh: '第一屆立法會 (1998–2000)',
+                name_en: '1st Legislative Council (1998–2000)',
+                short_zh: '第一屆 (1998–2000)',
+                short_en: '1st Term (1998–2000)',
+                total_seats: 60,
+                gc: 20, fc: 30, dc2: 0, ec: 10,
+                pres_zh: '范徐麗泰', pres_en: 'Rita Fan Hsu Lai-tai',
+                pdf_url: 'https://www.legco.gov.hk/general/chinese/members/memberslist/precedence/firstlegislativecouncil_1998_2000.pdf',
+                desc_zh: '特區首屆立法會共 60 席：5個地方選區直選 20 席、功能界別 30 席、選舉委員會 10 席｜主席：范徐麗泰議員',
+                desc_en: '60 Seats: 20 Geographical Constituencies, 30 Functional Constituencies, 10 Election Committee | President: Hon Rita Fan'
+            }
+        ];
+
+        const LEGCO_SEAT_CATEGORIES = {
+            GC:  { key: 'GC',  color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', zh: '地方選區直選議員',         en: 'Geographical Constituencies (GC)',   short_zh: '地方選區直選',     short_en: 'Geographical (GC)' },
+            DC2: { key: 'DC2', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', zh: '區議會（第二）功能界別議員', en: 'District Council (Second) FC',       short_zh: '區議會(第二)超區', short_en: 'DC (Second) Super' },
+            FC:  { key: 'FC',  color: '#d97706', bg: '#fffbeb', border: '#fde68a', zh: '功能界別議員',             en: 'Functional Constituencies (FC)',     short_zh: '功能界別',         short_en: 'Functional (FC)' },
+            EC:  { key: 'EC',  color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', zh: '選舉委員會界別議員',       en: 'Election Committee Constituency',    short_zh: '選舉委員會界別',   short_en: 'Election Committee (EC)' }
+        };
+
+        const LEGCO_SUB_EN_DICT = {
+            '香港島': 'Hong Kong Island',
+            '香港島（立法會主席）': 'Hong Kong Island (President of LegCo)',
+            '香港島東': 'Hong Kong Island East',
+            '香港島西': 'Hong Kong Island West',
+            '九龍西': 'Kowloon West',
+            '九龍西 (補選)': 'Kowloon West (By-election)',
+            '九龍東': 'Kowloon East',
+            '九龍中': 'Kowloon Central',
+            '九龍中（立法會主席）': 'Kowloon Central (President of LegCo)',
+            '新界西': 'New Territories West',
+            '新界東': 'New Territories East',
+            '新界北': 'New Territories North',
+            '新界東北': 'New Territories North East',
+            '新界東南': 'New Territories South East',
+            '新界西北': 'New Territories North West',
+            '新界西南': 'New Territories South West',
+            '選舉委員會': 'Election Committee',
+            '選舉委員會 (補選)': 'Election Committee (By-election)',
+            '選舉委員會（立法會主席）': 'Election Committee (President of LegCo)',
+            '選舉委員會界別': 'Election Committee Constituency',
+            '區議會（第二）': 'District Council (Second)',
+            '區議會（第一）': 'District Council (First)',
+            '區議會': 'District Council',
+            '鄉議局': 'Heung Yee Kuk',
+            '漁農界': 'Agriculture and Fisheries',
+            '保險界': 'Insurance',
+            '航運交通界': 'Transport',
+            '教育界': 'Education',
+            '法律界': 'Legal',
+            '會計界': 'Accountancy',
+            '醫學界': 'Medical',
+            '衛生服務界': 'Health Services',
+            '衞生服務界': 'Health Services',
+            '醫療衛生界': 'Medical and Health Services',
+            '工程界': 'Engineering',
+            '建築、測量及都市規劃界': 'Architectural, Surveying and Planning',
+            '建築、測量、都市規劃及園境界': 'Architectural, Surveying, Planning and Landscape',
+            '勞工界': 'Labour',
+            '社會福利界': 'Social Welfare',
+            '地產及建造界': 'Real Estate and Construction',
+            '旅遊界': 'Tourism',
+            '商界（第一）': 'Commercial (First)',
+            '商界（第二）': 'Commercial (Second)',
+            '商界（第三）': 'Commercial (Third)',
+            '工業界（第一）': 'Industrial (First)',
+            '工業界（第一）（立法會主席）': 'Industrial (First) (President of LegCo)',
+            '工業界（第二）': 'Industrial (Second)',
+            '金融界': 'Finance',
+            '金融服務界': 'Financial Services',
+            '體育、演藝、文化及出版界': 'Sports, Performing Arts, Culture and Publication',
+            '進出口界': 'Import and Export',
+            '紡織及製衣界': 'Textiles and Garment',
+            '批發及零售界': 'Wholesale and Retail',
+            '資訊科技界': 'Information Technology',
+            '科技創新界': 'Technology and Innovation',
+            '飲食界': 'Catering',
+            '市政局': 'Urban Council',
+            '區域市政局': 'Regional Council',
+            '全國人大政協及有關全國性團體代表界': 'HKSAR Deputies to NPC, CPPCC & National Organisations'
+        };
+
+        function translateLegcoSub(zhSub, isEn) {
+            if (!zhSub) return '';
+            if (!isEn) return zhSub;
+            if (LEGCO_SUB_EN_DICT[zhSub]) return LEGCO_SUB_EN_DICT[zhSub];
+            let out = zhSub;
+            Object.keys(LEGCO_SUB_EN_DICT).sort((a, b) => b.length - a.length).forEach(k => {
+                if (out.includes(k)) out = out.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), LEGCO_SUB_EN_DICT[k]);
+            });
+            return out;
+        }
+
+        const LEGCO_RESOLVED_BY_TERM = {"L1":[{"name":"涂謹申","sec":"GC","sub":"九龍西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"GC","sub":"新界西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"馬逢國","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2025.12","is_by":false,"by_note":""},{"name":"陳鑑林","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"曾鈺成","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉皇發","sec":"FC","sub":"鄉議局","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"譚耀宗","sec":"GC","sub":"新界西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"何俊仁","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李卓人","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉慧卿","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"田北俊","sec":"FC","sub":"商界（第一）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"何鍾泰","sec":"FC","sub":"工程界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"李國寶","sec":"FC","sub":"金融界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"梁劉柔芬","sec":"FC","sub":"紡織及製衣界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"陳婉嫻","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃宜弘","sec":"FC","sub":"商界（第二）","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉江華","sec":"GC","sub":"新界東","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉健儀","sec":"FC","sub":"航運交通界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"霍震霆","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"何秀蘭","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李華明","sec":"GC","sub":"九龍東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"吳靄儀","sec":"FC","sub":"法律界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"張文光","sec":"FC","sub":"教育界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"單仲偕","sec":"FC","sub":"資訊科技界","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃容根","sec":"FC","sub":"漁農界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"鄭家富","sec":"GC","sub":"新界東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"范徐麗泰","sec":"EC","sub":"選舉委員會（立法會主席）","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"吳亮星","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"周梁淑怡","sec":"FC","sub":"批發及零售界","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊孝華","sec":"FC","sub":"旅遊界","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"蔡素玉","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"詹培忠","sec":"FC","sub":"金融服務界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"李柱銘","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"呂明華","sec":"FC","sub":"工業界（第二）","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"陳智思","sec":"FC","sub":"保險界","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊森","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"劉千石","sec":"GC","sub":"九龍西","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"李永達","sec":"GC","sub":"新界西","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"朱幼麟","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"李家祥","sec":"FC","sub":"會計界","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"黃宏發","sec":"GC","sub":"新界東","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"楊耀忠","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"劉漢銓","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"鄧兆棠","sec":"FC","sub":"區域市政局","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"吳清輝","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2001.07","is_by":false,"by_note":""},{"name":"丁午壽","sec":"FC","sub":"工業界（第一）","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"許長青","sec":"FC","sub":"進出口界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"陳國強","sec":"FC","sub":"勞工界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"司徒華","sec":"GC","sub":"九龍東","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"羅致光","sec":"FC","sub":"社會福利界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"何世柱","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"何承天","sec":"FC","sub":"建築、測量及都市規劃界","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"李啟明","sec":"FC","sub":"勞工界","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"夏佳理","sec":"FC","sub":"地產及建造界","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"梁智鴻","sec":"FC","sub":"醫學界","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"陳榮燦","sec":"FC","sub":"勞工界","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"程介南","sec":"GC","sub":"香港島","span":"1997.07 – 2000.06","is_by":false,"by_note":""},{"name":"何敏嘉","sec":"FC","sub":"衛生服務界","span":"1998.07 – 2000.06","is_by":false,"by_note":""},{"name":"陸恭蕙","sec":"GC","sub":"香港島","span":"1998.07 – 2000.06","is_by":false,"by_note":""},{"name":"馮志堅","sec":"FC","sub":"金融服務界","span":"1998.10 – 2000.06","is_by":true,"by_note":"1998.10 金融服務界補選接替詹培忠"},{"name":"張永森","sec":"FC","sub":"市政局","span":"1998.07 – 1999.12","is_by":false,"by_note":""}],"L2":[{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"涂謹申","sec":"GC","sub":"九龍西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"GC","sub":"新界西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"馬逢國","sec":"EC","sub":"選舉委員會 (補選)","span":"1997.07 – 2025.12","is_by":true,"by_note":"2001.09 選舉委員會補選接替吳清輝"},{"name":"陳鑑林","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"曾鈺成","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉皇發","sec":"FC","sub":"鄉議局","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"譚耀宗","sec":"GC","sub":"新界西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"石禮謙","sec":"FC","sub":"地產及建造界","span":"2000.10 – 2021.12","is_by":false,"by_note":""},{"name":"何俊仁","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李卓人","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉慧卿","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"馮檢基","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"田北俊","sec":"FC","sub":"商界（第一）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"何鍾泰","sec":"FC","sub":"工程界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"李國寶","sec":"FC","sub":"金融界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"梁劉柔芬","sec":"FC","sub":"紡織及製衣界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"陳婉嫻","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃宜弘","sec":"FC","sub":"商界（第二）","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉江華","sec":"GC","sub":"新界東","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉健儀","sec":"FC","sub":"航運交通界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"霍震霆","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"陳偉業","sec":"GC","sub":"新界西","span":"2000.10 – 2016.09","is_by":false,"by_note":""},{"name":"何秀蘭","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李華明","sec":"GC","sub":"九龍東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"吳靄儀","sec":"FC","sub":"法律界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"張文光","sec":"FC","sub":"教育界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"單仲偕","sec":"FC","sub":"資訊科技界","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃容根","sec":"FC","sub":"漁農界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"鄭家富","sec":"GC","sub":"新界東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"葉國謙","sec":"FC","sub":"區議會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"范徐麗泰","sec":"EC","sub":"選舉委員會（立法會主席）","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"吳亮星","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"周梁淑怡","sec":"FC","sub":"批發及零售界","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊孝華","sec":"FC","sub":"旅遊界","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"蔡素玉","sec":"GC","sub":"香港島","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"李鳳英","sec":"FC","sub":"勞工界","span":"2000.10 – 2012.09","is_by":false,"by_note":""},{"name":"余若薇","sec":"GC","sub":"香港島","span":"2000.12 – 2012.09","is_by":false,"by_note":""},{"name":"李柱銘","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"呂明華","sec":"FC","sub":"工業界（第二）","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"陳智思","sec":"FC","sub":"保險界","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊森","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"劉千石","sec":"GC","sub":"九龍西","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"朱幼麟","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"李家祥","sec":"FC","sub":"會計界","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"黃宏發","sec":"GC","sub":"新界東","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"楊耀忠","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"劉漢銓","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"鄧兆棠","sec":"GC","sub":"新界西","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"吳清輝","sec":"EC","sub":"選舉委員會","span":"1997.07 – 2001.07","is_by":false,"by_note":""},{"name":"黃成智","sec":"GC","sub":"新界東","span":"2000.10 – 2012.09","is_by":false,"by_note":""},{"name":"丁午壽","sec":"FC","sub":"工業界（第一）","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"許長青","sec":"FC","sub":"進出口界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"陳國強","sec":"FC","sub":"勞工界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"司徒華","sec":"GC","sub":"九龍東","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"羅致光","sec":"FC","sub":"社會福利界","span":"1998.07 – 2004.09","is_by":false,"by_note":""},{"name":"胡經昌","sec":"FC","sub":"金融服務界","span":"1997.07 – 2004.09","is_by":false,"by_note":""},{"name":"麥國風","sec":"FC","sub":"衛生服務界","span":"2000.10 – 2004.09","is_by":false,"by_note":""},{"name":"梁富華","sec":"FC","sub":"勞工界","span":"2000.10 – 2004.09","is_by":false,"by_note":""},{"name":"勞永樂","sec":"FC","sub":"醫學界","span":"2000.10 – 2004.09","is_by":false,"by_note":""},{"name":"劉炳章","sec":"FC","sub":"建築、測量及都市規劃界","span":"2000.10 – 2004.09","is_by":false,"by_note":""}],"L3":[{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"涂謹申","sec":"GC","sub":"九龍西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"GC","sub":"新界西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"陳鑑林","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"曾鈺成","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉皇發","sec":"FC","sub":"區議會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"譚耀宗","sec":"GC","sub":"新界西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"石禮謙","sec":"FC","sub":"地產及建造界","span":"2000.10 – 2021.12","is_by":false,"by_note":""},{"name":"林健鋒","sec":"FC","sub":"商界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁君彥","sec":"FC","sub":"工業界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"何俊仁","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李卓人","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉慧卿","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"馮檢基","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"田北俊","sec":"GC","sub":"新界東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"何鍾泰","sec":"FC","sub":"工程界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"李國寶","sec":"FC","sub":"金融界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"梁劉柔芬","sec":"FC","sub":"紡織及製衣界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"陳婉嫻","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃宜弘","sec":"FC","sub":"商界（第二）","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉江華","sec":"GC","sub":"新界東","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉健儀","sec":"FC","sub":"航運交通界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"霍震霆","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃定光","sec":"FC","sub":"進出口界","span":"2004.10 – 2021.12","is_by":false,"by_note":""},{"name":"李國麟","sec":"FC","sub":"衛生服務界","span":"2004.10 – 2020.11","is_by":false,"by_note":""},{"name":"陳偉業","sec":"GC","sub":"新界西","span":"2000.10 – 2016.09","is_by":false,"by_note":""},{"name":"李華明","sec":"GC","sub":"九龍東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"吳靄儀","sec":"FC","sub":"法律界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"張文光","sec":"FC","sub":"教育界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"單仲偕","sec":"FC","sub":"資訊科技界","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃容根","sec":"FC","sub":"漁農界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"鄭家富","sec":"GC","sub":"新界東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"梁國雄","sec":"GC","sub":"新界東","span":"2004.10 – 2016.10","is_by":false,"by_note":""},{"name":"范徐麗泰","sec":"GC","sub":"香港島（立法會主席）","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"周梁淑怡","sec":"GC","sub":"新界西","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊孝華","sec":"FC","sub":"旅遊界","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"蔡素玉","sec":"GC","sub":"香港島","span":"1997.07 – 2008.09","is_by":false,"by_note":""},{"name":"詹培忠","sec":"FC","sub":"金融服務界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"張超雄","sec":"FC","sub":"社會福利界","span":"2004.10 – 2021.11","is_by":false,"by_note":""},{"name":"李鳳英","sec":"FC","sub":"勞工界","span":"2000.10 – 2012.09","is_by":false,"by_note":""},{"name":"方剛","sec":"FC","sub":"批發及零售界","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"王國興","sec":"FC","sub":"勞工界","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"郭家麒","sec":"FC","sub":"醫學界","span":"2004.10 – 2020.07","is_by":false,"by_note":""},{"name":"余若薇","sec":"GC","sub":"香港島","span":"2000.12 – 2012.09","is_by":false,"by_note":""},{"name":"梁家傑","sec":"GC","sub":"九龍東","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"湯家驊","sec":"GC","sub":"新界東","span":"2004.10 – 2015.09","is_by":false,"by_note":""},{"name":"李柱銘","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"呂明華","sec":"FC","sub":"工業界（第二）","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"陳智思","sec":"FC","sub":"保險界","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"楊森","sec":"GC","sub":"香港島","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"劉千石","sec":"GC","sub":"九龍西","span":"1998.07 – 2008.09","is_by":false,"by_note":""},{"name":"李永達","sec":"GC","sub":"新界西","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"張學明","sec":"GC","sub":"新界西","span":"2004.10 – 2012.09","is_by":false,"by_note":""},{"name":"劉秀成","sec":"FC","sub":"建築、測量及都市規劃界","span":"2004.10 – 2012.09","is_by":false,"by_note":""},{"name":"李國英","sec":"GC","sub":"新界東","span":"2004.10 – 2008.09","is_by":false,"by_note":""},{"name":"林偉強","sec":"FC","sub":"鄉議局","span":"2004.10 – 2008.09","is_by":false,"by_note":""},{"name":"鄭經翰","sec":"GC","sub":"九龍東","span":"2004.10 – 2008.09","is_by":false,"by_note":""},{"name":"鄺志堅","sec":"FC","sub":"勞工界","span":"2004.10 – 2008.09","is_by":false,"by_note":""},{"name":"譚香文","sec":"FC","sub":"會計界","span":"2004.10 – 2008.09","is_by":false,"by_note":""},{"name":"馬力","sec":"GC","sub":"香港島","span":"2004.10 – 2007.08","is_by":false,"by_note":""},{"name":"陳方安生","sec":"GC","sub":"香港島","span":"2007.12 – 2008.09","is_by":true,"by_note":"2007.12 香港島補選接替馬力"}],"L4":[{"name":"李慧琼","sec":"GC","sub":"九龍西","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"陳克勤","sec":"GC","sub":"新界東","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"梁美芬","sec":"GC","sub":"九龍西","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"涂謹申","sec":"GC","sub":"九龍西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"GC","sub":"新界西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"陳鑑林","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"曾鈺成","sec":"GC","sub":"香港島（立法會主席）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉皇發","sec":"FC","sub":"鄉議局","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"譚耀宗","sec":"GC","sub":"新界西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"石禮謙","sec":"FC","sub":"地產及建造界","span":"2000.10 – 2021.12","is_by":false,"by_note":""},{"name":"林健鋒","sec":"FC","sub":"商界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁君彥","sec":"FC","sub":"工業界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"何俊仁","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李卓人","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉慧卿","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"馮檢基","sec":"GC","sub":"九龍西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"何鍾泰","sec":"FC","sub":"工程界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"李國寶","sec":"FC","sub":"金融界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"梁劉柔芬","sec":"FC","sub":"紡織及製衣界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃宜弘","sec":"FC","sub":"商界（第二）","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉江華","sec":"GC","sub":"新界東","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"劉健儀","sec":"FC","sub":"航運交通界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"霍震霆","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃定光","sec":"FC","sub":"進出口界","span":"2004.10 – 2021.12","is_by":false,"by_note":""},{"name":"陳健波","sec":"FC","sub":"保險界","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"葉劉淑儀","sec":"GC","sub":"香港島","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"謝偉俊","sec":"FC","sub":"旅遊界","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"李國麟","sec":"FC","sub":"衛生服務界","span":"2004.10 – 2020.11","is_by":false,"by_note":""},{"name":"陳偉業","sec":"GC","sub":"新界西","span":"2000.10 – 2016.09","is_by":false,"by_note":""},{"name":"何秀蘭","sec":"GC","sub":"香港島","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李華明","sec":"GC","sub":"九龍東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"吳靄儀","sec":"FC","sub":"法律界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"張文光","sec":"FC","sub":"教育界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃容根","sec":"FC","sub":"漁農界","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"鄭家富","sec":"GC","sub":"新界東","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"葉國謙","sec":"FC","sub":"區議會","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"梁國雄","sec":"GC","sub":"新界東","span":"2004.10 – 2016.10","is_by":false,"by_note":""},{"name":"詹培忠","sec":"FC","sub":"金融服務界","span":"1997.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃國健","sec":"GC","sub":"九龍東","span":"2008.10 – 2021.12","is_by":false,"by_note":""},{"name":"李鳳英","sec":"FC","sub":"勞工界","span":"2000.10 – 2012.09","is_by":false,"by_note":""},{"name":"方剛","sec":"FC","sub":"批發及零售界","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"王國興","sec":"GC","sub":"新界西","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"余若薇","sec":"GC","sub":"香港島","span":"2000.12 – 2012.09","is_by":false,"by_note":""},{"name":"梁家傑","sec":"GC","sub":"九龍東","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"湯家驊","sec":"GC","sub":"新界東","span":"2004.10 – 2015.09","is_by":false,"by_note":""},{"name":"李永達","sec":"GC","sub":"新界西","span":"1998.07 – 2012.09","is_by":false,"by_note":""},{"name":"黃成智","sec":"GC","sub":"新界東","span":"2000.10 – 2012.09","is_by":false,"by_note":""},{"name":"張學明","sec":"GC","sub":"新界西","span":"2004.10 – 2012.09","is_by":false,"by_note":""},{"name":"劉秀成","sec":"FC","sub":"建築、測量及都市規劃界","span":"2004.10 – 2012.09","is_by":false,"by_note":""},{"name":"林大輝","sec":"FC","sub":"工業界（第二）","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"梁家騮","sec":"FC","sub":"醫學界","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"張國柱","sec":"FC","sub":"社會福利界","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"陳淑莊","sec":"GC","sub":"香港島","span":"2008.10 – 2020.09","is_by":false,"by_note":""},{"name":"黃毓民","sec":"GC","sub":"九龍西","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"甘乃威","sec":"GC","sub":"香港島","span":"2008.10 – 2012.09","is_by":false,"by_note":""},{"name":"葉偉明","sec":"FC","sub":"勞工界","span":"2008.10 – 2012.09","is_by":false,"by_note":""},{"name":"潘佩璆","sec":"FC","sub":"勞工界","span":"2008.10 – 2012.09","is_by":false,"by_note":""},{"name":"譚偉豪","sec":"FC","sub":"資訊科技界","span":"2008.10 – 2012.09","is_by":false,"by_note":""},{"name":"陳茂波","sec":"FC","sub":"會計界","span":"2008.10 – 2012.07","is_by":false,"by_note":""}],"L5":[{"name":"李慧琼","sec":"DC2","sub":"區議會（第二）","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"陳克勤","sec":"GC","sub":"新界東","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"梁美芬","sec":"GC","sub":"九龍西","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"何俊賢","sec":"FC","sub":"漁農界","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"陳恒鑌","sec":"GC","sub":"新界西","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"葛珮帆","sec":"GC","sub":"新界東","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"鄧家彪","sec":"FC","sub":"勞工界","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"涂謹申","sec":"DC2","sub":"區議會（第二）","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"GC","sub":"新界西","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"馬逢國","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2025.12","is_by":false,"by_note":""},{"name":"陳鑑林","sec":"GC","sub":"九龍東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"曾鈺成","sec":"GC","sub":"香港島（立法會主席）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉皇發","sec":"FC","sub":"鄉議局","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"譚耀宗","sec":"GC","sub":"新界西","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"石禮謙","sec":"FC","sub":"地產及建造界","span":"2000.10 – 2021.12","is_by":false,"by_note":""},{"name":"林健鋒","sec":"FC","sub":"商界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁君彥","sec":"FC","sub":"工業界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"何俊仁","sec":"DC2","sub":"區議會（第二）","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"李卓人","sec":"GC","sub":"新界西","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"劉慧卿","sec":"GC","sub":"新界東","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"馮檢基","sec":"DC2","sub":"區議會（第二）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"田北俊","sec":"GC","sub":"新界東","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"陳婉嫻","sec":"DC2","sub":"區議會（第二）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃定光","sec":"FC","sub":"進出口界","span":"2004.10 – 2021.12","is_by":false,"by_note":""},{"name":"陳健波","sec":"FC","sub":"保險界","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"葉劉淑儀","sec":"GC","sub":"香港島","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"謝偉俊","sec":"GC","sub":"九龍東","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"李國麟","sec":"FC","sub":"衛生服務界","span":"2004.10 – 2020.11","is_by":false,"by_note":""},{"name":"陳偉業","sec":"GC","sub":"新界西","span":"2000.10 – 2016.09","is_by":false,"by_note":""},{"name":"何秀蘭","sec":"GC","sub":"香港島","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"單仲偕","sec":"GC","sub":"香港島","span":"1998.07 – 2016.09","is_by":false,"by_note":""},{"name":"葉國謙","sec":"FC","sub":"區議會（第一）","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"梁國雄","sec":"GC","sub":"新界東","span":"2004.10 – 2016.10","is_by":false,"by_note":""},{"name":"吳亮星","sec":"FC","sub":"金融界","span":"1997.07 – 2016.09","is_by":false,"by_note":""},{"name":"黃國健","sec":"GC","sub":"九龍東","span":"2008.10 – 2021.12","is_by":false,"by_note":""},{"name":"田北辰","sec":"GC","sub":"新界西","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"易志明","sec":"FC","sub":"航運交通界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"郭偉强","sec":"FC","sub":"勞工界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"廖長江","sec":"FC","sub":"商界（第二）","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"盧偉國","sec":"FC","sub":"工程界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"張超雄","sec":"GC","sub":"新界東","span":"2004.10 – 2021.11","is_by":false,"by_note":""},{"name":"方剛","sec":"FC","sub":"批發及零售界","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"王國興","sec":"GC","sub":"香港島","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"郭家麒","sec":"GC","sub":"新界西","span":"2004.10 – 2020.07","is_by":false,"by_note":""},{"name":"謝偉銓","sec":"FC","sub":"建築、測量、都市規劃及園境界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁家傑","sec":"GC","sub":"九龍東","span":"2004.10 – 2016.09","is_by":false,"by_note":""},{"name":"湯家驊","sec":"GC","sub":"新界東","span":"2004.10 – 2015.09","is_by":false,"by_note":""},{"name":"麥美娟","sec":"GC","sub":"新界西","span":"2012.10 – 2022.06","is_by":false,"by_note":""},{"name":"姚思榮","sec":"FC","sub":"旅遊界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"梁志祥","sec":"GC","sub":"新界西","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"張華峰","sec":"FC","sub":"金融服務界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"潘兆平","sec":"FC","sub":"勞工界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"蔣麗芸","sec":"GC","sub":"九龍西","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"鍾國斌","sec":"FC","sub":"紡織及製衣界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"胡志偉","sec":"GC","sub":"九龍東","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"莫乃光","sec":"FC","sub":"資訊科技界","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"黃碧雲","sec":"GC","sub":"九龍西","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"葉建源","sec":"FC","sub":"教育界","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"毛孟靜","sec":"GC","sub":"九龍西","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"林大輝","sec":"FC","sub":"工業界（第二）","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"梁家騮","sec":"FC","sub":"醫學界","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"張國柱","sec":"FC","sub":"社會福利界","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"陳志全","sec":"GC","sub":"新界東","span":"2012.10 – 2020.09","is_by":false,"by_note":""},{"name":"梁繼昌","sec":"FC","sub":"會計界","span":"2012.10 – 2020.07","is_by":false,"by_note":""},{"name":"郭榮鏗","sec":"FC","sub":"法律界","span":"2012.10 – 2020.07","is_by":false,"by_note":""},{"name":"黃毓民","sec":"GC","sub":"九龍西","span":"2008.10 – 2016.09","is_by":false,"by_note":""},{"name":"范國威","sec":"GC","sub":"新界東","span":"2012.10 – 2019.12","is_by":false,"by_note":""},{"name":"楊岳橋","sec":"GC","sub":"新界東","span":"2016.02 – 2020.07","is_by":true,"by_note":"2016.02 新界東補選接替湯家驊"},{"name":"陳家洛","sec":"GC","sub":"香港島","span":"2012.10 – 2016.09","is_by":false,"by_note":""},{"name":"鍾樹根","sec":"GC","sub":"香港島","span":"2012.10 – 2016.09","is_by":false,"by_note":""}],"L6":[{"name":"李慧琼","sec":"DC2","sub":"區議會（第二）","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"陳克勤","sec":"GC","sub":"新界東","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"梁美芬","sec":"GC","sub":"九龍西","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"何俊賢","sec":"FC","sub":"漁農界","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"陳恒鑌","sec":"GC","sub":"新界西","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"葛珮帆","sec":"GC","sub":"新界東","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"吳永嘉","sec":"FC","sub":"工業界（第二）","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"何君堯","sec":"GC","sub":"新界西","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"周浩鼎","sec":"DC2","sub":"區議會（第二）","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"邵家輝","sec":"FC","sub":"批發及零售界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"陳振英","sec":"FC","sub":"金融界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"劉業強","sec":"FC","sub":"鄉議局","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"鄭泳舜","sec":"GC","sub":"九龍西","span":"2018.03 – 至今","is_by":true,"by_note":"2018.03 九龍西補選"},{"name":"陳凱欣","sec":"GC","sub":"九龍西 (補選)","span":"2018.11 – 至今","is_by":true,"by_note":"2018.11 九龍西補選"},{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"涂謹申","sec":"DC2","sub":"區議會（第二）","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"梁耀忠","sec":"DC2","sub":"區議會（第二）","span":"1998.07 – 2020.11","is_by":false,"by_note":""},{"name":"馬逢國","sec":"FC","sub":"體育、演藝、文化及出版界","span":"1997.07 – 2025.12","is_by":false,"by_note":""},{"name":"石禮謙","sec":"FC","sub":"地產及建造界","span":"2000.10 – 2021.12","is_by":false,"by_note":""},{"name":"林健鋒","sec":"FC","sub":"商界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁君彥","sec":"FC","sub":"工業界（第一）（立法會主席）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"黃定光","sec":"FC","sub":"進出口界","span":"2004.10 – 2021.12","is_by":false,"by_note":""},{"name":"陳健波","sec":"FC","sub":"保險界","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"葉劉淑儀","sec":"GC","sub":"香港島","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"謝偉俊","sec":"GC","sub":"九龍東","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"李國麟","sec":"FC","sub":"衛生服務界","span":"2004.10 – 2020.11","is_by":false,"by_note":""},{"name":"梁國雄","sec":"GC","sub":"新界東","span":"2004.10 – 2016.10","is_by":false,"by_note":""},{"name":"黃國健","sec":"GC","sub":"九龍東","span":"2008.10 – 2021.12","is_by":false,"by_note":""},{"name":"田北辰","sec":"GC","sub":"新界西","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"易志明","sec":"FC","sub":"航運交通界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"郭偉强","sec":"GC","sub":"香港島","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"廖長江","sec":"FC","sub":"商界（第二）","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"盧偉國","sec":"FC","sub":"工程界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"張超雄","sec":"GC","sub":"新界東","span":"2004.10 – 2021.11","is_by":false,"by_note":""},{"name":"郭家麒","sec":"GC","sub":"新界西","span":"2004.10 – 2020.07","is_by":false,"by_note":""},{"name":"謝偉銓","sec":"FC","sub":"建築、測量、都市規劃及園境界","span":"2012.10 – 2025.12","is_by":true,"by_note":"2018.03 建築、測量、都市規劃及園境界補選"},{"name":"麥美娟","sec":"GC","sub":"新界西","span":"2012.10 – 2022.06","is_by":false,"by_note":""},{"name":"姚思榮","sec":"FC","sub":"旅遊界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"梁志祥","sec":"GC","sub":"新界西","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"張華峰","sec":"FC","sub":"金融服務界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"潘兆平","sec":"FC","sub":"勞工界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"蔣麗芸","sec":"GC","sub":"九龍西","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"鍾國斌","sec":"FC","sub":"紡織及製衣界","span":"2012.10 – 2021.12","is_by":false,"by_note":""},{"name":"容海恩","sec":"GC","sub":"新界東","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"陸頌雄","sec":"FC","sub":"勞工界","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"劉國勳","sec":"FC","sub":"區議會（第一）","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"胡志偉","sec":"GC","sub":"九龍東","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"莫乃光","sec":"FC","sub":"資訊科技界","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"黃碧雲","sec":"GC","sub":"九龍西","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"葉建源","sec":"FC","sub":"教育界","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"毛孟靜","sec":"GC","sub":"九龍西","span":"2012.10 – 2020.11","is_by":false,"by_note":""},{"name":"陳志全","sec":"GC","sub":"新界東","span":"2012.10 – 2020.09","is_by":false,"by_note":""},{"name":"梁繼昌","sec":"FC","sub":"會計界","span":"2012.10 – 2020.07","is_by":false,"by_note":""},{"name":"郭榮鏗","sec":"FC","sub":"法律界","span":"2012.10 – 2020.07","is_by":false,"by_note":""},{"name":"陳淑莊","sec":"GC","sub":"香港島","span":"2008.10 – 2020.09","is_by":false,"by_note":""},{"name":"范國威","sec":"GC","sub":"新界東","span":"2012.10 – 2019.12","is_by":true,"by_note":"2018.03 新界東補選"},{"name":"張國鈞","sec":"GC","sub":"香港島","span":"2016.10 – 2022.06","is_by":false,"by_note":""},{"name":"楊岳橋","sec":"GC","sub":"新界東","span":"2016.02 – 2020.07","is_by":false,"by_note":""},{"name":"柯創盛","sec":"GC","sub":"九龍東","span":"2016.10 – 2021.12","is_by":false,"by_note":""},{"name":"陳沛然","sec":"FC","sub":"醫學界","span":"2016.10 – 2021.12","is_by":false,"by_note":""},{"name":"鄭松泰","sec":"GC","sub":"新界西","span":"2016.10 – 2021.08","is_by":false,"by_note":""},{"name":"尹兆堅","sec":"GC","sub":"新界西","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"林卓廷","sec":"GC","sub":"新界東","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"邵家臻","sec":"FC","sub":"社會福利界","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"鄺俊宇","sec":"DC2","sub":"區議會（第二）","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"譚文豪","sec":"GC","sub":"九龍東","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"許智峯","sec":"GC","sub":"香港島","span":"2016.10 – 2020.11","is_by":false,"by_note":""},{"name":"朱凱廸","sec":"GC","sub":"新界西","span":"2016.10 – 2020.09","is_by":false,"by_note":""},{"name":"何啟明","sec":"FC","sub":"勞工界","span":"2016.10 – 2020.05","is_by":false,"by_note":""},{"name":"區諾軒","sec":"GC","sub":"香港島","span":"2018.03 – 2019.12","is_by":true,"by_note":"2018.03 香港島補選"},{"name":"姚松炎","sec":"FC","sub":"建築、測量、都市規劃及園境界","span":"2016.10 – 2016.10","is_by":false,"by_note":""},{"name":"梁頌恆","sec":"GC","sub":"新界東","span":"2016.10 – 2016.10","is_by":false,"by_note":""},{"name":"游蕙禎","sec":"GC","sub":"九龍西","span":"2016.10 – 2016.10","is_by":false,"by_note":""},{"name":"劉小麗","sec":"GC","sub":"九龍西","span":"2016.10 – 2016.10","is_by":false,"by_note":""},{"name":"羅冠聰","sec":"GC","sub":"香港島","span":"2016.10 – 2016.10","is_by":false,"by_note":""}],"L7":[{"name":"李慧琼","sec":"GC","sub":"九龍中","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"陳克勤","sec":"GC","sub":"新界東北","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"梁美芬","sec":"EC","sub":"選舉委員會界別","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"何俊賢","sec":"FC","sub":"漁農界","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"陳恒鑌","sec":"GC","sub":"新界西南","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"葛珮帆","sec":"EC","sub":"選舉委員會界別","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"吳永嘉","sec":"FC","sub":"工業界（第二）","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"何君堯","sec":"EC","sub":"選舉委員會界別","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"周浩鼎","sec":"GC","sub":"新界西北","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"邵家輝","sec":"FC","sub":"批發及零售界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"陳振英","sec":"FC","sub":"金融界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"劉業強","sec":"FC","sub":"鄉議局","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"鄧家彪","sec":"GC","sub":"九龍東","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"鄭泳舜","sec":"GC","sub":"九龍西","span":"2018.03 – 至今","is_by":false,"by_note":""},{"name":"陳凱欣","sec":"EC","sub":"選舉委員會界別","span":"2018.11 – 至今","is_by":false,"by_note":""},{"name":"李浩然","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李惟宏","sec":"FC","sub":"金融服務界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李梓敬","sec":"GC","sub":"新界東北","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李鎮強","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"吳秋北","sec":"GC","sub":"香港島東","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"吳傑莊","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"周小松","sec":"FC","sub":"勞工界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林哲玄","sec":"FC","sub":"醫療衛生界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林振昇","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林琳","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林筱魯","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"邱達根","sec":"FC","sub":"科技創新界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"姚柏良","sec":"FC","sub":"旅遊界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"梁子穎","sec":"FC","sub":"勞工界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"梁文廣","sec":"GC","sub":"九龍西","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳仲尼","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳沛良","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳勇","sec":"FC","sub":"港區人大政協及有關全國性團體代表界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳祖恒","sec":"FC","sub":"紡織及製衣界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳家珮","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳曼琪","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳紹雄","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳穎欣","sec":"GC","sub":"新界西南","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳學鋒","sec":"GC","sub":"香港島西","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"黃國","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"楊永杰","sec":"GC","sub":"九龍中","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"管浩鳴","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"鄧飛","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"劉智鵬","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"霍啟剛","sec":"FC","sub":"體育、演藝、文化及出版界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"簡慧敏","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"嚴剛","sec":"FC","sub":"商界（第三）","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"何敬康","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 至今","is_by":true,"by_note":"2022.12 選舉委員會界別補選"},{"name":"陳永光","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 至今","is_by":true,"by_note":"2022.12 選舉委員會界別補選"},{"name":"張宇人","sec":"FC","sub":"飲食界","span":"2000.10 – 2025.12","is_by":false,"by_note":""},{"name":"馬逢國","sec":"EC","sub":"選舉委員會界別","span":"1997.07 – 2025.12","is_by":false,"by_note":""},{"name":"林健鋒","sec":"FC","sub":"商界（第一）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"梁君彥","sec":"FC","sub":"工業界（第一）（立法會主席）","span":"2004.10 – 2025.12","is_by":false,"by_note":""},{"name":"陳健波","sec":"FC","sub":"保險界","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"葉劉淑儀","sec":"GC","sub":"香港島西","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"謝偉俊","sec":"EC","sub":"選舉委員會界別","span":"2008.10 – 2025.12","is_by":false,"by_note":""},{"name":"田北辰","sec":"GC","sub":"新界西北","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"易志明","sec":"FC","sub":"航運交通界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"郭偉强","sec":"FC","sub":"勞工界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"廖長江","sec":"FC","sub":"商界（第二）","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"盧偉國","sec":"FC","sub":"工程界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"謝偉銓","sec":"FC","sub":"建築、測量、都市規劃及園境界","span":"2012.10 – 2025.12","is_by":false,"by_note":""},{"name":"麥美娟","sec":"EC","sub":"選舉委員會界別","span":"2012.10 – 2022.06","is_by":false,"by_note":""},{"name":"容海恩","sec":"EC","sub":"選舉委員會界別","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"陸頌雄","sec":"EC","sub":"選舉委員會界別","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"劉國勳","sec":"GC","sub":"新界北","span":"2016.10 – 2025.12","is_by":false,"by_note":""},{"name":"張國鈞","sec":"EC","sub":"選舉委員會界別","span":"2016.10 – 2022.06","is_by":false,"by_note":""},{"name":"黃英豪","sec":"FC","sub":"進出口界","span":"1997.07 – 2025.12","is_by":false,"by_note":""},{"name":"黃錦輝","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 2026.07","is_by":true,"by_note":"2022.12 選舉委員會界別補選"},{"name":"江玉歡","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"朱國強","sec":"FC","sub":"教育界","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"李世榮","sec":"GC","sub":"新界東南","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"狄志遠","sec":"FC","sub":"社會福利界","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"周文港","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"林素蔚","sec":"GC","sub":"新界東南","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"林順潮","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"林新強","sec":"FC","sub":"法律界","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"洪雯","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"梁熙","sec":"GC","sub":"香港島東","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"梁毓偉","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"陳月明","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"張欣宇","sec":"GC","sub":"新界北","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"郭玲麗","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"陸瀚民","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"黃俊碩","sec":"FC","sub":"會計界","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"黎棟國","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"龍漢標","sec":"FC","sub":"地產及建造界","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"顏汶羽","sec":"GC","sub":"九龍東","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"譚岳衡","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"蘇長榮","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2025.12","is_by":false,"by_note":""},{"name":"尚海龍","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 2025.12","is_by":true,"by_note":"2022.12 選舉委員會界別補選"},{"name":"黃元山","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2022.12","is_by":false,"by_note":""},{"name":"林智遠","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2022.06","is_by":false,"by_note":""},{"name":"孫東","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 2022.06","is_by":false,"by_note":""}],"L8":[{"name":"李慧琼","sec":"GC","sub":"九龍中（立法會主席）","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"陳克勤","sec":"GC","sub":"新界東北","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"梁美芬","sec":"EC","sub":"選舉委員會界別","span":"2008.10 – 至今","is_by":false,"by_note":""},{"name":"何俊賢","sec":"EC","sub":"選舉委員會界別","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"陳恒鑌","sec":"EC","sub":"選舉委員會界別","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"葛珮帆","sec":"EC","sub":"選舉委員會界別","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"吳永嘉","sec":"FC","sub":"工業界（第二）","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"何君堯","sec":"EC","sub":"選舉委員會界別","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"周浩鼎","sec":"GC","sub":"新界西北","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"邵家輝","sec":"FC","sub":"批發及零售界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"陳振英","sec":"FC","sub":"金融界","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"劉業強","sec":"FC","sub":"鄉議局","span":"2016.10 – 至今","is_by":false,"by_note":""},{"name":"鄧家彪","sec":"GC","sub":"九龍東","span":"2012.10 – 至今","is_by":false,"by_note":""},{"name":"鄭泳舜","sec":"GC","sub":"九龍西","span":"2018.03 – 至今","is_by":false,"by_note":""},{"name":"陳凱欣","sec":"EC","sub":"選舉委員會界別","span":"2018.11 – 至今","is_by":false,"by_note":""},{"name":"李浩然","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李惟宏","sec":"FC","sub":"金融服務界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李梓敬","sec":"GC","sub":"新界東北","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"李鎮強","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"吳秋北","sec":"GC","sub":"香港島東","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"吳傑莊","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"周小松","sec":"FC","sub":"勞工界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林哲玄","sec":"FC","sub":"醫療衛生界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林振昇","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林琳","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"林筱魯","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"邱達根","sec":"FC","sub":"科技創新界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"姚柏良","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"梁子穎","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"梁文廣","sec":"GC","sub":"九龍西","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳仲尼","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳沛良","sec":"FC","sub":"保險界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳勇","sec":"FC","sub":"港區人大政協及有關全國性團體代表界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳祖恒","sec":"FC","sub":"紡織及製衣界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳家珮","sec":"GC","sub":"香港島西","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳曼琪","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳紹雄","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳穎欣","sec":"GC","sub":"新界西南","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"陳學鋒","sec":"GC","sub":"香港島西","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"黃國","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"楊永杰","sec":"GC","sub":"九龍中","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"管浩鳴","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"鄧飛","sec":"FC","sub":"教育界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"劉智鵬","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"霍啟剛","sec":"FC","sub":"體育、演藝、文化及出版界","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"簡慧敏","sec":"EC","sub":"選舉委員會界別","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"嚴剛","sec":"FC","sub":"商界（第三）","span":"2022.01 – 至今","is_by":false,"by_note":""},{"name":"何敬康","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 至今","is_by":false,"by_note":""},{"name":"陳永光","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 至今","is_by":false,"by_note":""},{"name":"卜國明","sec":"FC","sub":"工程界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"方國珊","sec":"GC","sub":"新界東南","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"文穎怡","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"江旻憓","sec":"FC","sub":"旅遊界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"朱立威","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"伍煥傑","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"李家駒","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"李廣宇","sec":"FC","sub":"勞工界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"吳英鵬","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"吳錦華","sec":"FC","sub":"會計界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"林銘鋒","sec":"FC","sub":"航運交通界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"林偉江","sec":"FC","sub":"勞工界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"林偉全","sec":"FC","sub":"商界（第一）","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"范凱傑","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"范駿華","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"姚祖輝","sec":"FC","sub":"商界（第二）","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"姚銘","sec":"GC","sub":"新界北","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"洪錦鉉","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"梁進","sec":"FC","sub":"飲食界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"郭芙蓉","sec":"GC","sub":"新界西南","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"莊家彬","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"莊豪鋒","sec":"GC","sub":"新界西北","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"張培剛","sec":"GC","sub":"九龍東","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"陳文宜","sec":"FC","sub":"社會福利界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"陳宗彝","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"陳祖光","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"陳博智","sec":"FC","sub":"漁農界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"陳曉峰","sec":"FC","sub":"法律界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"黃永威","sec":"FC","sub":"工業界（第一）","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"黃浩明","sec":"FC","sub":"地產及建造界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"黃錦良","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"植潔鈴","sec":"GC","sub":"香港島東","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"葉傲冬","sec":"GC","sub":"新界東南","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"鄧銘心","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"劉文君","sec":"FC","sub":"建築、測量、都市規劃及園境界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"樓家強","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"鍾奇峰","sec":"FC","sub":"進出口界","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"魏明德","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"譚鎮國","sec":"GC","sub":"新界北","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"蘇紹聰","sec":"EC","sub":"選舉委員會界別","span":"2026.01 – 至今","is_by":false,"by_note":""},{"name":"黃錦輝","sec":"EC","sub":"選舉委員會界別","span":"2022.12 – 2026.07","is_by":false,"by_note":""}]};
+
+        window.legcoSelectedTerm = 'L8'; // 'L8' down to 'L1'
+        window.legcoSelectedCategory = 'ALL'; // 'ALL' | 'GC' | 'FC' | 'DC2' | 'EC'
+        window.legcoSelectedSubGroup = 'ALL';
+        window.legcoShowByElectionsInTable = true;
+        window.legcoSearchQuery = '';
+        window.legcoCurrentHemicycleSeats = [];
+
+        function buildLegcoHemicycleSVG(seatsList, termCfg, isEn) {
+            const N = seatsList.length;
+            if (N === 0) {
+                return `<div style="text-align:center; padding:32px; color:#64748b; font-weight:700;">${isEn ? 'No seats match the current filter.' : '目前篩選條件下沒有對應議席。'}</div>`;
+            }
+
+            // 按界別排序 (地方選區 GC -> 區議會(第二) DC2 -> 功能界別 FC -> 選舉委員會界別 EC)
+            const catOrder = { GC: 1, DC2: 2, FC: 3, EC: 4 };
+            const orderedSeats = [...seatsList].sort((a, b) => {
+                if (catOrder[a.sec] !== catOrder[b.sec]) return catOrder[a.sec] - catOrder[b.sec];
+                return a.sub.localeCompare(b.sub, 'zh-HK');
+            });
+            window.legcoCurrentHemicycleSeats = orderedSeats;
+
+            const svgW = 800;
+            const svgH = 370;
+            const cx = 400;
+            const cy = 330;
+
+            let radii = [];
+            let personScale = 1.6;
+            if (N <= 25) {
+                radii = [132, 198];
+                personScale = 2.35;
+            } else if (N <= 45) {
+                radii = [118, 172, 226];
+                personScale = 1.92;
+            } else if (N <= 65) {
+                // 60 席 (第一至第四屆)
+                radii = [112, 154, 196, 238];
+                personScale = 1.65;
+            } else if (N <= 75) {
+                // 70 席 (第五至第六屆)
+                radii = [108, 148, 188, 228];
+                personScale = 1.54;
+            } else {
+                // 90 席 (第七至第八屆)
+                radii = [102, 136, 170, 204, 238];
+                personScale = 1.40;
+            }
+
+            const totalR = radii.reduce((a, b) => a + b, 0);
+            let rowCounts = radii.map(r => Math.max(1, Math.round((N * r) / totalR)));
+            let diff = N - rowCounts.reduce((a, b) => a + b, 0);
+            let rIdx = rowCounts.length - 1;
+            while (diff !== 0) {
+                if (diff > 0) {
+                    rowCounts[rIdx]++;
+                    diff--;
+                } else if (rowCounts[rIdx] > 1) {
+                    rowCounts[rIdx]--;
+                    diff++;
+                }
+                rIdx = (rIdx - 1 + rowCounts.length) % rowCounts.length;
+            }
+
+            const slotCoords = [];
+            for (let row = 0; row < radii.length; row++) {
+                const r = radii[row];
+                const cnt = rowCounts[row];
+                for (let j = 0; j < cnt; j++) {
+                    const frac = cnt === 1 ? 0.5 : (j + 0.5) / cnt;
+                    const deg = 174 - frac * 168;
+                    const theta = (deg * Math.PI) / 180;
+                    const x = cx + r * Math.cos(theta);
+                    const y = cy - r * Math.sin(theta);
+                    slotCoords.push({ x, y, deg, row, r });
+                }
+            }
+
+            slotCoords.sort((a, b) => {
+                if (Math.abs(b.deg - a.deg) > 0.4) return b.deg - a.deg;
+                return a.r - b.r;
+            });
+
+            const guideArcsSvg = radii.map(r => {
+                const x1 = (cx - r * Math.cos((6 * Math.PI) / 180)).toFixed(1);
+                const y1 = (cy - r * Math.sin((6 * Math.PI) / 180)).toFixed(1);
+                const x2 = (cx + r * Math.cos((6 * Math.PI) / 180)).toFixed(1);
+                const y2 = y1;
+                return `<path d="M ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2}" fill="none" stroke="rgba(148,163,184,0.18)" stroke-width="1" stroke-dasharray="3,3"/>`;
+            }).join('');
+
+            const personNodesSvg = orderedSeats.map((seat, idx) => {
+                const pt = slotCoords[idx] || { x: cx, y: cy };
+                const catMeta = LEGCO_SEAT_CATEGORIES[seat.sec] || LEGCO_SEAT_CATEGORIES.GC;
+                const catLabel = isEn ? catMeta.short_en : catMeta.short_zh;
+                const subLabel = translateLegcoSub(seat.sub, isEn);
+                const tipText = `#${idx + 1} ${seat.name} | ${catLabel} | ${subLabel}`.replace(/"/g, '&quot;');
+
+                return `<g class="dc-person-seat" transform="translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) scale(${personScale.toFixed(2)})" style="cursor:pointer; color:${catMeta.color};" onmouseenter="inspectLegcoSeatNode(${idx})" onclick="inspectLegcoSeatNode(${idx})">
+                    <title>${tipText}</title>
+                    <circle cx="0" cy="-3.4" r="2.35" fill="currentColor" stroke="#ffffff" stroke-width="0.68"/>
+                    <path d="M -3.9,3.3 C -3.9,-0.25 3.9,-0.25 3.9,3.3 Z" fill="currentColor" stroke="#ffffff" stroke-width="0.68" stroke-linejoin="round"/>
+                </g>`;
+            }).join('');
+
+            const centerTopLabel = isEn ? termCfg.short_en : termCfg.short_zh;
+            const centerSubLabel = isEn ? `${N} LegCo Seats` : `共 ${N} 個議席人仔`;
+
+            return `
+                <div style="background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px 6px 12px;">
+                    <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; max-height:350px; height:auto; display:block; overflow:visible;">
+                        ${guideArcsSvg}
+                        <path d="M ${cx - 72},${cy + 4} A 72,72 0 0,1 ${cx + 72},${cy + 4} Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+                        <text x="${cx}" y="${cy - 34}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#475569">${centerTopLabel}</text>
+                        <text x="${cx}" y="${cy - 10}" text-anchor="middle" font-size="25" font-weight="900" fill="#0f172a">${formatNum(N)}</text>
+                        <text x="${cx}" y="${cy + 14}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#64748b">${centerSubLabel}</text>
+                        ${personNodesSvg}
+                    </svg>
+                </div>
+            `;
+        }
+
+        function inspectLegcoSeatNode(seatIdx) {
+            const seat = (window.legcoCurrentHemicycleSeats || [])[seatIdx];
+            if (!seat) return;
+            const isEn = (currentLang === 'en');
+            const bar = document.getElementById('legco-seat-inspector-bar');
+            const catMeta = LEGCO_SEAT_CATEGORIES[seat.sec] || LEGCO_SEAT_CATEGORIES.GC;
+            const catLabel = isEn ? catMeta.en : catMeta.zh;
+            const subLabel = translateLegcoSub(seat.sub, isEn);
+
+            if (bar) {
+                bar.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; font-weight:900;">
+                        👤 #${seatIdx + 1} ${seat.name}
+                    </span>
+                    <span style="font-weight:800; color:${catMeta.color};">🏷️ ${catLabel}</span>
+                    <span style="font-weight:800; color:#1e3a8a;">📍 ${subLabel}</span>
+                    <span style="color:#64748b; font-weight:700;">⏳ ${seat.span}</span>
+                `;
+            }
+        }
+
+        function setLegcoTerm(tCode) {
+            window.legcoSelectedTerm = tCode || 'L8';
+            window.legcoSelectedCategory = 'ALL';
+            window.legcoSelectedSubGroup = 'ALL';
+            renderLegcoPortal();
+        }
+
+        function setLegcoCategory(catKey) {
+            window.legcoSelectedCategory = (window.legcoSelectedCategory === catKey && catKey !== 'ALL') ? 'ALL' : (catKey || 'ALL');
+            window.legcoSelectedSubGroup = 'ALL';
+            renderLegcoPortal();
+        }
+
+        function setLegcoSubGroup(subVal) {
+            window.legcoSelectedSubGroup = (window.legcoSelectedSubGroup === subVal && subVal !== 'ALL') ? 'ALL' : (subVal || 'ALL');
+            renderLegcoPortal();
+        }
+
+        function onLegcoSearchInput(val) {
+            window.legcoSearchQuery = String(val || '');
+            renderLegcoTableOnly();
+        }
+
+        function getFilteredLegcoMembersForTable() {
+            const termCode = window.legcoSelectedTerm || 'L8';
+            const allMems = LEGCO_RESOLVED_BY_TERM[termCode] || [];
+            const q = (window.legcoSearchQuery || '').trim().toLowerCase();
+
+            return allMems.filter(m => {
+                if (window.legcoSelectedCategory !== 'ALL' && m.sec !== window.legcoSelectedCategory) return false;
+                if (window.legcoSelectedSubGroup !== 'ALL') {
+                    const cleanSub = m.sub.replace(/（立法會主席）/g, '').replace(/\s*\(補選\)/g, '').trim();
+                    if (cleanSub !== window.legcoSelectedSubGroup) return false;
+                }
+                if (q) {
+                    const catMeta = LEGCO_SEAT_CATEGORIES[m.sec];
+                    const subEn = translateLegcoSub(m.sub, true);
+                    const haystack = `${m.name} ${m.sub} ${subEn} ${m.by_note || ''} ${catMeta ? catMeta.zh + ' ' + catMeta.en : ''}`.toLowerCase();
+                    if (!haystack.includes(q)) return false;
+                }
+                return true;
+            });
+        }
+
+        function buildLegcoMembersTableHTML(isEn) {
+            const filtered = getFilteredLegcoMembersForTable();
+            const rowsHtml = filtered.length === 0
+                ? `<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b; font-weight:700;">${isEn ? 'No matching Legislative Council members found.' : '找不到符合篩選條件的立法會議員紀錄。'}</td></tr>`
+                : filtered.map((m, idx) => {
+                    const catMeta = LEGCO_SEAT_CATEGORIES[m.sec] || LEGCO_SEAT_CATEGORIES.GC;
+                    const catLabel = isEn ? catMeta.short_en : catMeta.short_zh;
+                    const subLabel = translateLegcoSub(m.sub, isEn);
+                    const byBadge = m.is_by
+                        ? `<span style="margin-left:6px; padding:2px 7px; border-radius:6px; background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-size:0.7rem; font-weight:800;">🔄 ${isEn ? 'By-election' : m.by_note || '補選入局'}</span>`
+                        : '';
+
+                    return `
+                        <tr>
+                            <td style="font-weight:800; color:#64748b; width:54px;">#${idx + 1}</td>
+                            <td style="font-weight:900; color:#0f172a; font-size:0.9rem;">👤 ${m.name} ${byBadge}</td>
+                            <td>
+                                <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; font-size:0.73rem; font-weight:800;">
+                                    ● ${catLabel}
+                                </span>
+                            </td>
+                            <td style="font-weight:800; color:#1e3a8a;">${subLabel}</td>
+                            <td style="color:#475569; font-weight:600; font-size:0.78rem;">${m.span}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            return `
+                <div class="el-table-wrap">
+                    <table class="el-table">
+                        <thead>
+                            <tr>
+                                <th>${isEn ? '#' : '序號'}</th>
+                                <th>${isEn ? 'LegCo Member Name' : '立法會議員姓名'}</th>
+                                <th>${isEn ? 'Election Sector (Category)' : '議席產生界別'}</th>
+                                <th>${isEn ? 'Constituency / Functional Sector' : '所屬地方選區／功能界別'}</th>
+                                <th>${isEn ? 'Service Span' : '任職期間'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderLegcoTableOnly() {
+            const wrap = document.getElementById('legco-members-table-region');
+            if (wrap) {
+                wrap.innerHTML = buildLegcoMembersTableHTML(currentLang === 'en');
+            }
+        }
+
+        function renderLegcoPortal() {
+            const container = document.getElementById('legco-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const termCode = window.legcoSelectedTerm || 'L8';
+            const termCfg = LEGCO_TERMS_CONFIG.find(t => t.code === termCode) || LEGCO_TERMS_CONFIG[0];
+            const allTermMembers = LEGCO_RESOLVED_BY_TERM[termCode] || [];
+
+            // 更新頂部 PDF 按鈕連結
+            const pdfBtn = document.getElementById('btn-legco-pdf-link');
+            if (pdfBtn) {
+                pdfBtn.href = termCfg.pdf_url;
+                pdfBtn.innerText = isEn ? `📄 Official ${termCfg.short_en} PDF` : `📄 ${termCfg.short_zh} 官方排名序 PDF`;
+            }
+
+            // 法定議席 (不含中途補選重疊席位，精確等於 60 / 70 / 90 席)
+            const statutorySeats = allTermMembers.filter(m => !m.is_by);
+            const filteredStatutory = statutorySeats.filter(m => {
+                if (window.legcoSelectedCategory !== 'ALL' && m.sec !== window.legcoSelectedCategory) return false;
+                if (window.legcoSelectedSubGroup !== 'ALL') {
+                    const cleanSub = m.sub.replace(/（立法會主席）/g, '').replace(/\s*\(補選\)/g, '').trim();
+                    if (cleanSub !== window.legcoSelectedSubGroup) return false;
+                }
+                return true;
+            });
+
+            const countsByCat = { GC: 0, DC2: 0, FC: 0, EC: 0 };
+            statutorySeats.forEach(m => {
+                countsByCat[m.sec] = (countsByCat[m.sec] || 0) + 1;
+            });
+            const totalStat = statutorySeats.length || 1;
+
+            // 統計各地方選區及主要界別席數供快速篩選
+            const gcSubCounts = {};
+            statutorySeats.filter(m => m.sec === 'GC').forEach(m => {
+                const cleanSub = m.sub.replace(/（立法會主席）/g, '').replace(/\s*\(補選\)/g, '').trim();
+                gcSubCounts[cleanSub] = (gcSubCounts[cleanSub] || 0) + 1;
+            });
+
+            // 1. 頂部 4 大 KPI 指標卡
+            const kpiHtml = `
+                <div class="el-kpi-grid">
+                    <div class="el-kpi-card">
+                        <div class="el-kpi-label">${isEn ? '⚖️ Statutory Council Seats' : '⚖️ 立法會法定議席總數'}</div>
+                        <div class="el-kpi-val" style="color:#0f172a;">${formatNum(termCfg.total_seats)} <span style="font-size:0.78rem; font-weight:700;">${isEn ? 'Seats' : '席'}</span></div>
+                        <div class="el-kpi-sub">${isEn ? `President: ${termCfg.pres_en}` : `立法會主席：${termCfg.pres_zh}議員`} (${termCfg.period})</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setLegcoCategory('GC')">
+                        <div class="el-kpi-label">🟦 ${isEn ? 'Geographical Constituencies (GC)' : '地方選區直選議席'}</div>
+                        <div class="el-kpi-val" style="color:#2563eb;">${formatNum(countsByCat.GC)} <span style="font-size:0.76rem;">(${((countsByCat.GC / totalStat) * 100).toFixed(1)}%)</span></div>
+                        <div class="el-kpi-sub">${isEn ? `${Object.keys(gcSubCounts).length} Geographical Constituencies` : `涵蓋全港 ${Object.keys(gcSubCounts).length} 個地方選區`}</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setLegcoCategory('FC')">
+                        <div class="el-kpi-label">🟧 ${isEn ? 'Functional Constituencies (FC)' : '功能界別議席'}</div>
+                        <div class="el-kpi-val" style="color:#d97706;">${formatNum(countsByCat.FC + countsByCat.DC2)} <span style="font-size:0.76rem;">(${(((countsByCat.FC + countsByCat.DC2) / totalStat) * 100).toFixed(1)}%)</span></div>
+                        <div class="el-kpi-sub">${countsByCat.DC2 > 0
+                            ? (isEn ? `30 Traditional FC + 5 DC (Second)` : `傳統功能界別 30 席 + 區議會(第二) 5 席`)
+                            : (isEn ? `30 Functional Constituency Seats` : `代表專業、商界、勞工及社會各界別共 30 席`)}</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setLegcoCategory('EC')">
+                        <div class="el-kpi-label">🟪 ${isEn ? 'Election Committee (EC)' : '選舉委員會界別議席'}</div>
+                        <div class="el-kpi-val" style="color:#7c3aed;">${formatNum(countsByCat.EC)} <span style="font-size:0.76rem;">(${((countsByCat.EC / totalStat) * 100).toFixed(1)}%)</span></div>
+                        <div class="el-kpi-sub">${countsByCat.EC > 0
+                            ? (isEn ? `Elected by Election Committee` : `由選舉委員會全體委員投票選出`)
+                            : (isEn ? `0 EC seats in 3rd–6th Terms (2004–2021)` : `第3至第6屆 (2004–2021) 不設選委會界別`)}</div>
+                    </div>
+                </div>
+            `;
+
+            // 2. 第一至第八屆切換列 + 官方排名序 PDF 直接連結
+            const termSelectorHtml = `
+                <div class="el-filter-bar" style="justify-content:space-between; background:rgba(255,255,255,0.94);">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span class="el-filter-label">${isEn ? '📅 Select LegCo Term (1st–8th):' : '📅 選擇立法會屆別 (第一至第八屆)：'}</span>
+                        ${LEGCO_TERMS_CONFIG.map(t => `
+                            <button type="button" class="el-chip-btn ${termCode === t.code ? 'active' : ''}" onclick="setLegcoTerm('${t.code}')">
+                                ${isEn ? t.short_en : t.short_zh} (${t.total_seats}${isEn ? ' seats' : '席'})
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div style="font-size:0.72rem; font-weight:700; color:#64748b;">
+                        📄 <a href="${termCfg.pdf_url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:underline;">${isEn ? 'Official LegCo Precedence List PDF' : '立法會官方議員排名序名單 PDF'}</a>
+                    </div>
+                </div>
+            `;
+
+            // 3. 地方選區及界別快速篩選卡
+            const subFilterHtml = `
+                <div class="el-card-box" style="padding:10px 12px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                        <span style="font-size:0.8rem; font-weight:900; color:#0f172a;">🗺️ ${isEn ? 'Filter by Geographical Constituency / Sector:' : '按地方選區及產生界別篩選（點擊即時切換半圓形議席人仔圖及名單）：'}</span>
+                        ${(window.legcoSelectedCategory !== 'ALL' || window.legcoSelectedSubGroup !== 'ALL') ? `<button type="button" class="el-chip-btn" onclick="window.legcoSelectedCategory='ALL'; window.legcoSelectedSubGroup='ALL'; renderLegcoPortal();">↺ ${isEn ? 'Show All Seats' : '顯示全體議席'}</button>` : ''}
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button type="button" class="el-chip-btn ${window.legcoSelectedCategory === 'ALL' && window.legcoSelectedSubGroup === 'ALL' ? 'active' : ''}" onclick="window.legcoSelectedCategory='ALL'; window.legcoSelectedSubGroup='ALL'; renderLegcoPortal();">
+                            🌐 ${isEn ? `All Statutory Seats (${statutorySeats.length})` : `全體法定議席 (${statutorySeats.length}席)`}
+                        </button>
+                        ${Object.keys(gcSubCounts).map(gName => {
+                            const cnt = gcSubCounts[gName];
+                            const dispName = translateLegcoSub(gName, isEn);
+                            return `<button type="button" class="el-chip-btn ${window.legcoSelectedSubGroup === gName ? 'active' : ''}" onclick="setLegcoSubGroup('${gName}')">
+                                🟦 ${dispName} (${cnt})
+                            </button>`;
+                        }).join('')}
+                        ${countsByCat.DC2 > 0 ? `
+                            <button type="button" class="el-chip-btn ${window.legcoSelectedCategory === 'DC2' ? 'active' : ''}" onclick="setLegcoCategory('DC2')">
+                                🟩 ${isEn ? `DC (Second) Super (${countsByCat.DC2})` : `區議會(第二)超區 (${countsByCat.DC2}席)`}
+                            </button>
+                        ` : ''}
+                        <button type="button" class="el-chip-btn ${window.legcoSelectedCategory === 'FC' ? 'active' : ''}" onclick="setLegcoCategory('FC')">
+                            🟧 ${isEn ? `Functional Constituencies (${countsByCat.FC})` : `功能界別 (${countsByCat.FC}席)`}
+                        </button>
+                        ${countsByCat.EC > 0 ? `
+                            <button type="button" class="el-chip-btn ${window.legcoSelectedCategory === 'EC' ? 'active' : ''}" onclick="setLegcoCategory('EC')">
+                                🟪 ${isEn ? `Election Committee (${countsByCat.EC})` : `選舉委員會界別 (${countsByCat.EC}席)`}
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // 4. 半圓形立法會議席「人仔」分佈圖示卡片
+            const firstSeat = filteredStatutory[0];
+            const firstCatMeta = firstSeat ? LEGCO_SEAT_CATEGORIES[firstSeat.sec] : LEGCO_SEAT_CATEGORIES.GC;
+
+            const hemicycleCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">👥 ${isEn
+                                ? `Semicircle LegCo Chamber Seat Diagram — ${termCfg.name_en} (${filteredStatutory.length} Person Icons)`
+                                : `半圓形立法會議席「人仔」界別分佈圖示 — ${termCfg.name_zh}（共 ${filteredStatutory.length} 個人仔議席）`}</div>
+                            <div class="el-card-subtitle">${isEn ? termCfg.desc_en : termCfg.desc_zh}</div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            ${Object.keys(LEGCO_SEAT_CATEGORIES).map(cKey => {
+                                const cMeta = LEGCO_SEAT_CATEGORIES[cKey];
+                                const cnt = countsByCat[cKey] || 0;
+                                if (cnt === 0) return '';
+                                const isAct = window.legcoSelectedCategory === cKey;
+                                return `<button type="button" class="el-chip-btn ${isAct ? 'active' : ''}" style="${isAct ? '' : `border-color:${cMeta.border}; color:${cMeta.color}; background:${cMeta.bg};`}" onclick="setLegcoCategory('${cKey}')">
+                                    👤 ${isEn ? cMeta.short_en : cMeta.short_zh} (${cnt})
+                                </button>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    ${buildLegcoHemicycleSVG(filteredStatutory, termCfg, isEn)}
+
+                    <div id="legco-seat-inspector-bar" style="margin-top:8px; padding:8px 12px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:0.78rem;">
+                        ${firstSeat ? `
+                            <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:${firstCatMeta.bg}; color:${firstCatMeta.color}; border:1px solid ${firstCatMeta.border}; font-weight:900;">
+                                👤 #1 ${firstSeat.name}
+                            </span>
+                            <span style="font-weight:800; color:${firstCatMeta.color};">🏷️ ${isEn ? firstCatMeta.en : firstCatMeta.zh}</span>
+                            <span style="font-weight:800; color:#1e3a8a;">📍 ${translateLegcoSub(firstSeat.sub, isEn)}</span>
+                            <span style="color:#64748b; font-weight:700;">⏳ ${firstSeat.span}</span>
+                            <span style="margin-left:auto; font-size:0.72rem; color:#64748b;">💡 ${isEn ? 'Hover or tap any person icon above to inspect legislator' : '將滑鼠移過或點擊上方半圓形內任何「人仔」即可查看該位立法會議員'}</span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // 5. 當屆立法會議員詳細名單
+            const membersTableCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📋 ${isEn ? `${termCfg.name_en} — Complete Members Directory` : `${termCfg.name_zh} — 議員詳細名單`}</div>
+                            <div class="el-card-subtitle">${isEn
+                                ? `Includes all ${statutorySeats.length} statutory seats and mid-term by-election members.`
+                                : `完整收錄當屆 ${statutorySeats.length} 席法定議席及任內補選繼任議員。`}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <input
+                                type="text"
+                                class="el-search-input"
+                                style="min-width:230px;"
+                                value="${(window.legcoSearchQuery || '').replace(/"/g, '&quot;')}"
+                                oninput="onLegcoSearchInput(this.value)"
+                                placeholder="${isEn ? '🔍 Search legislator name, constituency, sector...' : '🔍 搜尋立法會議員姓名、地方選區、功能界別...'}"
+                            />
+                        </div>
+                    </div>
+                    <div id="legco-members-table-region">
+                        ${buildLegcoMembersTableHTML(isEn)}
+                    </div>
+                </div>
+            `;
+
+            // 6. 第一至第八屆立法會議席組成及官方排名序 PDF 總覽表
+            const allTermsRowsHtml = LEGCO_TERMS_CONFIG.map(t => {
+                const isSel = (t.code === termCode);
+                return `
+                    <tr style="${isSel ? 'background:#eff6ff;' : ''} cursor:pointer;" onclick="setLegcoTerm('${t.code}')">
+                        <td style="font-weight:900; color:#1e3a8a;">${isEn ? t.name_en : t.name_zh}</td>
+                        <td style="font-weight:700; color:#475569;">${t.period}</td>
+                        <td style="font-weight:800; color:#0f172a;">${isEn ? t.pres_en : t.pres_zh}</td>
+                        <td class="num-col" style="color:#2563eb; font-weight:800;">${t.gc}</td>
+                        <td class="num-col" style="color:#d97706; font-weight:800;">${t.fc}</td>
+                        <td class="num-col" style="color:#059669; font-weight:800;">${t.dc2}</td>
+                        <td class="num-col" style="color:#7c3aed; font-weight:800;">${t.ec}</td>
+                        <td class="num-col" style="font-weight:900; color:#0f172a;">${t.total_seats}</td>
+                        <td><a href="${t.pdf_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#2563eb; font-weight:800; text-decoration:underline; font-size:0.74rem;">📄 PDF</a></td>
+                    </tr>
+                `;
+            }).join('');
+
+            const termsSummaryCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📊 ${isEn ? '1st to 8th Legislative Council Seat Composition & Official Precedence PDFs (1998–2029)' : '歷屆香港立法會（第一屆至第八屆）議席界別組成及官方排名序 PDF 總覽'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Click any term row below to switch the semicircle diagram and member list above.' : '點擊下方任何一屆即可切換上方半圓形議席人仔圖示及議員名單，或點擊右側 PDF 查看立法會官方排名序文件。'}</div>
+                        </div>
+                    </div>
+                    <div class="el-table-wrap">
+                        <table class="el-table">
+                            <thead>
+                                <tr>
+                                    <th>${isEn ? 'LegCo Term' : '立法會屆別'}</th>
+                                    <th>${isEn ? 'Term Period' : '任期年份'}</th>
+                                    <th>${isEn ? 'President' : '立法會主席'}</th>
+                                    <th>🟦 ${isEn ? 'Geographical (GC)' : '地方選區直選'}</th>
+                                    <th>🟧 ${isEn ? 'Functional (FC)' : '傳統功能界別'}</th>
+                                    <th>🟩 ${isEn ? 'DC (Second)' : '區議會(第二)'}</th>
+                                    <th>🟪 ${isEn ? 'Election Comm. (EC)' : '選舉委員會'}</th>
+                                    <th>${isEn ? 'Total Seats' : '法定總席數'}</th>
+                                    <th>${isEn ? 'Official PDF' : '官方排名表'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>${allTermsRowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = kpiHtml + termSelectorHtml + subFilterHtml + hemicycleCardHtml + membersTableCardHtml + termsSummaryCardHtml;
+        }
+
+        function applyLegcoLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-legco');
+            if (btn) btn.title = isEn ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
+            const titleEl = document.getElementById('t-legco-title');
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '⚖️ HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)'
+                    : '⚖️ 香港立法會議員名單及議席界別分佈 (第一至第八屆)';
+            }
+            const stEl = document.getElementById('legco-refresh-status');
+            if (stEl) {
+                stEl.innerText = isEn ? '🟢 1st–8th LegCo Official Precedence' : '🟢 歷屆 1–8 屆官方名單';
+            }
+            if (currentActivePage === 'legco') {
+                renderLegcoPortal();
+            }
+        }
+
+
         async function boot() {
             setDeviceMode(currentDeviceMode);
 
@@ -18465,7 +19208,9 @@
             try { syncFlightFilterButtonsUI(); } catch(e){}
             try { applyLanguage(); } catch(e){}
             try {
-                if (currentActivePage === 'dc') {
+                if (currentActivePage === 'legco') {
+                    showLegcoPage();
+                } else if (currentActivePage === 'dc') {
                     showDcPage();
                 } else if (currentActivePage === 'lamppost') {
                     showLamppostPage();
