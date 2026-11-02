@@ -4034,6 +4034,7 @@
             <a href="#" id="t-menu-reservoir" class="rail-btn-sub" title="香港水塘即時存水" onclick="showReservoirPage(); event.preventDefault();">💧</a>
             <a href="#" id="t-menu-lamppost" class="rail-btn-sub" title="全港路燈維持及保養資料" onclick="showLamppostPage(); event.preventDefault();">💡</a>
             <a href="#" id="t-menu-border" class="rail-btn-sub" title="每日出入境人次及即時管制站等候時間" onclick="showBorderPage(); event.preventDefault();">🛂</a>
+            <a href="#" id="t-menu-dc" class="rail-btn-sub" title="香港十八區區議員名單及議席分佈 (2016–2027)" onclick="showDcPage(); event.preventDefault();">🏛️</a>
         </div>
 
 
@@ -4521,6 +4522,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="border-portal-container"></div>
+            </div>
+
+            <!-- 🏛️ 香港十八區區議員名單及半圓形議席人仔分佈看板 (2016-19 / 2020-23 / 2024-27 官方 CSV API) -->
+            <div class="panel border-section" id="dc-page-view" style="display: none;">
+                <h2>
+                    <span id="t-dc-title">🏛️ 香港十八區區議員名單及議席界別分佈</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-dc-sync-now" onclick="syncAllDcTermsCSV(true)" title="立即從區議會開放數據 API 同步三屆區議員 CSV 名單">🔄 立即同步 API</button>
+                        <span class="refresh-indicator" id="dc-refresh-status" onclick="syncAllDcTermsCSV(true)" style="cursor:pointer;" title="點擊重新同步區議會官方 CSV">🟢 官方 CSV 已同步</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="dc-portal-container"></div>
             </div>
 
 
@@ -5116,6 +5131,7 @@
                 if (document.getElementById('t-menu-lamppost')) document.getElementById('t-menu-lamppost').title = dict['menu-lamppost'];
                 if (document.getElementById('t-menu-ferry')) document.getElementById('t-menu-ferry').title = dict['menu-ferry'];
                 if (document.getElementById('t-menu-border')) document.getElementById('t-menu-border').title = (currentLang === 'en') ? 'Daily Passenger Traffic & Live Control Point Waiting Time' : '每日出入境人次及即時管制站等候時間';
+                if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 const kmbInp = document.getElementById('kmb-route-input');
                 if (kmbInp) kmbInp.placeholder = (currentLang === 'en') ? 'Ex: 112' : '例 / Ex: 112';
                 const ctbInp = document.getElementById('ctb-route-input');
@@ -5134,6 +5150,7 @@
                 if (typeof applyLamppostLanguage === 'function') applyLamppostLanguage();
                 if (typeof applyFerryLanguage === 'function') applyFerryLanguage();
                 if (typeof applyBorderLanguage === 'function') applyBorderLanguage();
+                if (typeof applyDcLanguage === 'function') applyDcLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
 
@@ -5170,11 +5187,11 @@
         let currentActivePage = 'home';
         try {
             const savedPage = localStorage.getItem('app_active_page');
-            if (savedPage === 'lamppost' || savedPage === 'border' || savedPage === 'ferry' || savedPage === 'reservoir' || savedPage === 'flight' || savedPage === 'home' || savedPage === 'iframe') {
+            if (savedPage === 'dc' || savedPage === 'lamppost' || savedPage === 'border' || savedPage === 'ferry' || savedPage === 'reservoir' || savedPage === 'flight' || savedPage === 'home' || savedPage === 'iframe') {
                 currentActivePage = savedPage;
             } else if (savedPage === 'election') {
-                currentActivePage = 'home';
-                localStorage.setItem('app_active_page', 'home');
+                currentActivePage = 'dc';
+                localStorage.setItem('app_active_page', 'dc');
             }
             const savedBusTag = localStorage.getItem('app_selected_bus_stop_tag');
             if (savedBusTag) window.selectedBusStopTag = savedBusTag;
@@ -5187,12 +5204,14 @@
             const btnLamp = document.getElementById('t-menu-lamppost');
             const btnFerry = document.getElementById('t-menu-ferry');
             const btnBorder = document.getElementById('t-menu-border');
+            const btnDc = document.getElementById('t-menu-dc');
             if (btnHome) btnHome.className = (activeTab === 'home') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnFlight) btnFlight.className = (activeTab === 'flight') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnRes) btnRes.className = (activeTab === 'reservoir') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLamp) btnLamp.className = (activeTab === 'lamppost') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnFerry) btnFerry.className = (activeTab === 'ferry') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnBorder) btnBorder.className = (activeTab === 'border') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
                 const activeEl = document.querySelector('#bottom-menu .rail-btn-primary');
                 if (activeEl && typeof activeEl.scrollIntoView === 'function') {
@@ -5210,6 +5229,7 @@
             const lpSec = document.getElementById('lamppost-page-view');
             const fySec = document.getElementById('ferry-page-view');
             const bdSec = document.getElementById('border-page-view');
+            const dcSec = document.getElementById('dc-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
             if (busSec) busSec.style.display = 'none';
             if (flSec) flSec.style.display = 'none';
@@ -5217,6 +5237,7 @@
             if (lpSec) lpSec.style.display = 'none';
             if (fySec) fySec.style.display = 'none';
             if (bdSec) bdSec.style.display = 'none';
+            if (dcSec) dcSec.style.display = 'none';
         }
         function showIframe(url) {
             currentActivePage = 'iframe';
@@ -5319,6 +5340,20 @@
             } else {
                 renderBorderPortal();
             }
+        }
+
+        function showDcPage() {
+            currentActivePage = 'dc';
+            try { localStorage.setItem('app_active_page', 'dc'); } catch (e) {}
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const dcSec = document.getElementById('dc-page-view');
+            if (dcSec) dcSec.style.display = 'flex';
+            updateMenuRailButtons('dc');
+            initDcMembersSystem();
+            renderDcPortal();
         }
 
 
@@ -8992,7 +9027,7 @@
             ptrMainContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'; ptrIndicator.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
             if (distance * 0.4 > 55) {
                 ptrMainContent.style.transform = `translateY(50px)`; ptrIndicator.style.transform = `translateY(50px)`;
-                fetchWeather(); if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); fetchMTR(); fetchRealBusData(); if(currentActivePage === 'flight') fetchFlightData(true); if(currentActivePage === 'reservoir') syncLiveReservoirData(true); if(currentActivePage === 'ferry') renderFerryDashboard(); if(currentActivePage === 'border') syncBorderLiveData(true); if(currentActivePage === 'lamppost') syncLamppostLiveCSV(true);
+                fetchWeather(); if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); fetchMTR(); fetchRealBusData(); if(currentActivePage === 'flight') fetchFlightData(true); if(currentActivePage === 'reservoir') syncLiveReservoirData(true); if(currentActivePage === 'ferry') renderFerryDashboard(); if(currentActivePage === 'border') syncBorderLiveData(true); if(currentActivePage === 'lamppost') syncLamppostLiveCSV(true); if(currentActivePage === 'dc') syncAllDcTermsCSV(true);
                 setTimeout(() => { ptrMainContent.style.transform = `translateY(0)`; ptrIndicator.style.transform = `translateY(0)`; }, 1200);
             } else { ptrMainContent.style.transform = `translateY(0)`; ptrIndicator.style.transform = `translateY(0)`; }
             ptrStartY = 0; ptrCurrentY = 0;
@@ -17496,6 +17531,926 @@
             }
         }
 
+
+        // =========================================================================
+        // 🏛️ 香港十八區區議員名單及半圓形議席人仔分佈系統 (2016-19 / 2020-23 / 2024-27)
+        // 官方 CSV API:
+        // - https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2016-19_en.csv
+        // - https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2020-23_en.csv
+        // - https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2024-27_en.csv
+        // =========================================================================
+        const DC_CSV_APIS = {
+            '2024-27': {
+                termCode: 'T7',
+                period: '2024–2027',
+                name_zh: '第七屆區議會 (2024–2027)',
+                name_en: '7th Term District Councils (2024–2027)',
+                en_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2024-27_en.csv',
+                tc_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2024-27_tc.csv',
+                total_seats: 470,
+                desc_zh: '由 88 名地方選區民選議員、176 名地區委員會界別議員、179 名委任議員及 27 名當然議員組成（合共 470 席）',
+                desc_en: 'Comprises 88 Geographical Constituency Elected, 176 District Committees Constituency, 179 Appointed & 27 Ex-officio members (470 seats)'
+            },
+            '2020-23': {
+                termCode: 'T6',
+                period: '2020–2023',
+                name_zh: '第六屆區議會 (2020–2023)',
+                name_en: '6th Term District Councils (2020–2023)',
+                en_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2020-23_en.csv',
+                tc_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2020-23_tc.csv',
+                total_seats: 479,
+                desc_zh: '由 452 名民選議員及 27 名新界鄉事委員會主席當然議員組成（合共 479 席）',
+                desc_en: 'Comprises 452 Elected members and 27 New Territories Rural Committee Ex-officio members (479 seats)'
+            },
+            '2016-19': {
+                termCode: 'T5',
+                period: '2016–2019',
+                name_zh: '第五屆區議會 (2016–2019)',
+                name_en: '5th Term District Councils (2016–2019)',
+                en_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2016-19_en.csv',
+                tc_url: 'https://www.districtcouncils.gov.hk/datagovhk/psi/List_of_DC_members/List_of_DC_members_2016-19_tc.csv',
+                total_seats: 458,
+                desc_zh: '全面取消委任議席後首屆，由 431 名民選議員及 27 名新界鄉事委員會主席當然議員組成（合共 458 席）',
+                desc_en: 'Comprises 431 Elected members and 27 New Territories Rural Committee Ex-officio members (458 seats)'
+            }
+        };
+
+        // 香港十八區法定議席配置表 (涵蓋 2016-19、2020-23 及 2024-27 各區民選、地委會、委任、當然議席確切數目)
+        const DC_18_DISTRICTS_META = [
+            { code: 'CW',  region: 'HKI', reg_zh: '香港島', reg_en: 'HK Island',       zh: '中西區',   en: 'Central & Western', aliases: ['central and western', 'central & western', '中西區'], seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 15, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 15, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'WC',  region: 'HKI', reg_zh: '香港島', reg_en: 'HK Island',       zh: '灣仔區',   en: 'Wan Chai',          aliases: ['wan chai', 'wanchai', '灣仔區', '灣仔'],             seats: { '2024-27': { ELECTED: 2, DHC: 4,  APPOINTED: 4,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 13, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 13, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'EA',  region: 'HKI', reg_zh: '香港島', reg_en: 'HK Island',       zh: '東區',     en: 'Eastern',           aliases: ['eastern', '東區'],                                  seats: { '2024-27': { ELECTED: 6, DHC: 12, APPOINTED: 12, EX_OFFICIO: 0 }, '2020-23': { ELECTED: 35, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 35, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'SO',  region: 'HKI', reg_zh: '香港島', reg_en: 'HK Island',       zh: '南區',     en: 'Southern',          aliases: ['southern', '南區'],                                 seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 17, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 17, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'YTM', region: 'KLN', reg_zh: '九龍',   reg_en: 'Kowloon',         zh: '油尖旺區', en: 'Yau Tsim Mong',     aliases: ['yau tsim mong', '油尖旺區', '油尖旺'],               seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 20, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 19, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'SSP', region: 'KLN', reg_zh: '九龍',   reg_en: 'Kowloon',         zh: '深水埗區', en: 'Sham Shui Po',      aliases: ['sham shui po', '深水埗區', '深水埗'],               seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 25, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 23, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'KLC', region: 'KLN', reg_zh: '九龍',   reg_en: 'Kowloon',         zh: '九龍城區', en: 'Kowloon City',      aliases: ['kowloon city', '九龍城區', '九龍城'],               seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 25, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 24, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'WTS', region: 'KLN', reg_zh: '九龍',   reg_en: 'Kowloon',         zh: '黃大仙區', en: 'Wong Tai Sin',      aliases: ['wong tai sin', '黃大仙區', '黃大仙'],               seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 0 }, '2020-23': { ELECTED: 25, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 25, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'KT',  region: 'KLN', reg_zh: '九龍',   reg_en: 'Kowloon',         zh: '觀塘區',   en: 'Kwun Tong',         aliases: ['kwun tong', '觀塘區', '觀塘'],                     seats: { '2024-27': { ELECTED: 8, DHC: 16, APPOINTED: 16, EX_OFFICIO: 0 }, '2020-23': { ELECTED: 40, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 }, '2016-19': { ELECTED: 37, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 } } },
+            { code: 'TW',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '荃灣區',   en: 'Tsuen Wan',         aliases: ['tsuen wan', '荃灣區', '荃灣'],                     seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 2 }, '2020-23': { ELECTED: 19, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 }, '2016-19': { ELECTED: 18, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 } } },
+            { code: 'TM',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '屯門區',   en: 'Tuen Mun',          aliases: ['tuen mun', '屯門區', '屯門'],                      seats: { '2024-27': { ELECTED: 6, DHC: 12, APPOINTED: 13, EX_OFFICIO: 1 }, '2020-23': { ELECTED: 31, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 }, '2016-19': { ELECTED: 29, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 } } },
+            { code: 'YL',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '元朗區',   en: 'Yuen Long',         aliases: ['yuen long', '元朗區', '元朗'],                     seats: { '2024-27': { ELECTED: 8, DHC: 16, APPOINTED: 16, EX_OFFICIO: 6 }, '2020-23': { ELECTED: 39, DHC: 0, APPOINTED: 0, EX_OFFICIO: 6 }, '2016-19': { ELECTED: 35, DHC: 0, APPOINTED: 0, EX_OFFICIO: 6 } } },
+            { code: 'NO',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '北區',     en: 'North',             aliases: ['north', 'northern', '北區'],                       seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 4 }, '2020-23': { ELECTED: 18, DHC: 0, APPOINTED: 0, EX_OFFICIO: 4 }, '2016-19': { ELECTED: 18, DHC: 0, APPOINTED: 0, EX_OFFICIO: 4 } } },
+            { code: 'TP',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '大埔區',   en: 'Tai Po',            aliases: ['tai po', '大埔區', '大埔'],                        seats: { '2024-27': { ELECTED: 4, DHC: 8,  APPOINTED: 8,  EX_OFFICIO: 2 }, '2020-23': { ELECTED: 19, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 }, '2016-19': { ELECTED: 19, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 } } },
+            { code: 'SK',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '西貢區',   en: 'Sai Kung',          aliases: ['sai kung', '西貢區', '西貢'],                      seats: { '2024-27': { ELECTED: 6, DHC: 12, APPOINTED: 12, EX_OFFICIO: 2 }, '2020-23': { ELECTED: 29, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 }, '2016-19': { ELECTED: 27, DHC: 0, APPOINTED: 0, EX_OFFICIO: 2 } } },
+            { code: 'ST',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '沙田區',   en: 'Sha Tin',           aliases: ['sha tin', 'shatin', '沙田區', '沙田'],             seats: { '2024-27': { ELECTED: 8, DHC: 16, APPOINTED: 17, EX_OFFICIO: 1 }, '2020-23': { ELECTED: 41, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 }, '2016-19': { ELECTED: 38, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 } } },
+            { code: 'KWT', region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '葵青區',   en: 'Kwai Tsing',        aliases: ['kwai tsing', '葵青區', '葵青'],                    seats: { '2024-27': { ELECTED: 6, DHC: 12, APPOINTED: 13, EX_OFFICIO: 1 }, '2020-23': { ELECTED: 31, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 }, '2016-19': { ELECTED: 29, DHC: 0, APPOINTED: 0, EX_OFFICIO: 1 } } },
+            { code: 'IS',  region: 'NT',  reg_zh: '新界',   reg_en: 'New Territories', zh: '離島區',   en: 'Islands',           aliases: ['islands', 'island', '離島區', '離島'],             seats: { '2024-27': { ELECTED: 2, DHC: 4,  APPOINTED: 4,  EX_OFFICIO: 8 }, '2020-23': { ELECTED: 10, DHC: 0, APPOINTED: 0, EX_OFFICIO: 8 }, '2016-19': { ELECTED: 10, DHC: 0, APPOINTED: 0, EX_OFFICIO: 8 } } }
+        ];
+
+        const DC_SEAT_CATEGORIES = {
+            ELECTED:    { key: 'ELECTED',    color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', zh: '民選／地方選區議員', en: 'Elected (Geographical Constituency)', short_zh: '民選議員', short_en: 'Elected' },
+            DHC:        { key: 'DHC',        color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', zh: '地區委員會界別議員', en: 'District Committees Constituency',   short_zh: '地區委員會界別', short_en: 'District Committees' },
+            APPOINTED:  { key: 'APPOINTED',  color: '#d97706', bg: '#fffbeb', border: '#fde68a', zh: '委任議員',           en: 'Appointed Member',                   short_zh: '委任議員', short_en: 'Appointed' },
+            EX_OFFICIO: { key: 'EX_OFFICIO', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', zh: '當然議員 (鄉事會主席)', en: 'Ex-officio (Rural Committee)',     short_zh: '當然議員', short_en: 'Ex-officio' }
+        };
+
+        const DC_SEED_MEMBERS = [{"dist":"CW","name":"施永泰","seat_type":"直選","sub":"A1中區地方選區","terms":["T7"]},{"dist":"CW","name":"馮家亮","seat_type":"直選","sub":"A1中區地方選區","terms":["T7"]},{"dist":"CW","name":"劉天正","seat_type":"直選","sub":"A2西區地方選區","terms":["T7"]},{"dist":"CW","name":"王倩雯","seat_type":"直選","sub":"A2西區地方選區","terms":["T7"]},{"dist":"CW","name":"李志恒","seat_type":"地委會","sub":"地區委員會界別 / 前正街","terms":["T5","T7"]},{"dist":"CW","name":"楊學明","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"張嘉恩","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"張宗","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"羅錦輝","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"趙華娟","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"胡汶軒","seat_type":"地委會","sub":"中西區地區委員會界別","terms":["T7"]},{"dist":"CW","name":"楊開永","seat_type":"地委會","sub":"地區委員會界別 / 前觀龍","terms":["T5","T7"]},{"dist":"CW","name":"吳然","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"CW","name":"呂鴻賓","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"CW","name":"邱松慶","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"CW","name":"金玲","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"CW","name":"陳建強","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"CW","name":"楊哲安","seat_type":"委任","sub":"中西區委任 / 前山頂","terms":["T5","T6","T7"]},{"dist":"CW","name":"葉永成","seat_type":"委任","sub":"中西區委任 / 前寶翠","terms":["T5","T7"]},{"dist":"CW","name":"葉亦楠","seat_type":"委任","sub":"中西區委任議員","terms":["T7"]},{"dist":"WC","name":"穆家駿","seat_type":"直選","sub":"B1灣仔地方選區","terms":["T7"]},{"dist":"WC","name":"李碧儀","seat_type":"直選","sub":"B1灣仔地方選區 / 前修頓","terms":["T5","T6","T7"]},{"dist":"WC","name":"林偉文","seat_type":"地委會","sub":"地區委員會界別 / 前渣甸山","terms":["T5","T6","T7"]},{"dist":"WC","name":"李文龍","seat_type":"地委會","sub":"地區委員會界別 / 前天后","terms":["T5","T7"]},{"dist":"WC","name":"莫繡安","seat_type":"地委會","sub":"灣仔地區委員會界別","terms":["T7"]},{"dist":"WC","name":"吳澤森","seat_type":"地委會","sub":"灣仔地區委員會界別","terms":["T7"]},{"dist":"WC","name":"周錦威","seat_type":"委任","sub":"灣仔委任 / 前大佛口","terms":["T5","T7"]},{"dist":"WC","name":"林偉江","seat_type":"委任","sub":"灣仔區委任議員","terms":["T7"]},{"dist":"WC","name":"孫道弘","seat_type":"委任","sub":"灣仔區委任議員","terms":["T7"]},{"dist":"WC","name":"劉珮珊","seat_type":"委任","sub":"灣仔區委任議員","terms":["T7"]},{"dist":"EA","name":"丁江浩","seat_type":"直選","sub":"C1太北地方選區 / 前杏花邨","terms":["T5","T7"]},{"dist":"EA","name":"阮建中","seat_type":"直選","sub":"C1太北地方選區 / 前寶馬山","terms":["T6","T7"]},{"dist":"EA","name":"李清霞","seat_type":"直選","sub":"C2康灣地方選區 / 前柏架山","terms":["T6","T7"]},{"dist":"EA","name":"吳清清","seat_type":"直選","sub":"C2康灣地方選區","terms":["T7"]},{"dist":"EA","name":"植潔鈴","seat_type":"直選","sub":"C3柴灣地方選區 / 前佳曉","terms":["T5","T7"]},{"dist":"EA","name":"何毅淦","seat_type":"直選","sub":"C3柴灣地方選區 / 前杏花邨","terms":["T5","T7"]},{"dist":"EA","name":"洪志傑","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"王志鍾","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"林永祥","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"劉淑燕","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"陳凱榮","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"林彩英","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"林永晟","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"曾卓兒","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"賴暖新","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"郭詠健","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"洪超群","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"劉聖雪","seat_type":"地委會","sub":"東區地區委員會界別","terms":["T7"]},{"dist":"EA","name":"丁煌","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"何秀賢","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"李莉","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"周致人","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"林心亷","seat_type":"委任","sub":"東區委任 / 前城市花園","terms":["T5","T7"]},{"dist":"EA","name":"洪連杉","seat_type":"委任","sub":"東區委任 / 前堡壘","terms":["T5","T7"]},{"dist":"EA","name":"梁力","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"郭浩景","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"陳杏","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"EA","name":"劉慶揚","seat_type":"委任","sub":"東區委任 / 前小西灣","terms":["T5","T7"]},{"dist":"EA","name":"鄭志成","seat_type":"委任","sub":"東區委任 / 前丹拿","terms":["T5","T7"]},{"dist":"EA","name":"盧曉楓","seat_type":"委任","sub":"東區委任議員","terms":["T7"]},{"dist":"SO","name":"陳榮恩","seat_type":"直選","sub":"D1南區東南地方選區","terms":["T7"]},{"dist":"SO","name":"梁進","seat_type":"直選","sub":"D1南區東南地方選區 / 前碧瑤","terms":["T6","T7"]},{"dist":"SO","name":"張偉楠","seat_type":"直選","sub":"D2南區西北地方選區","terms":["T7"]},{"dist":"SO","name":"林詠欣","seat_type":"直選","sub":"D2南區西北地方選區","terms":["T7"]},{"dist":"SO","name":"黃雨程","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"林穎儀","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"張展聰","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"蕭煒忠","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"黃才立","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"劉毅","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"趙式浩","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"賴家智","seat_type":"地委會","sub":"南區地區委員會界別","terms":["T7"]},{"dist":"SO","name":"朱立威","seat_type":"委任","sub":"南區委任 / 前石漁","terms":["T5","T7"]},{"dist":"SO","name":"何沅蔚","seat_type":"委任","sub":"南區委任議員","terms":["T7"]},{"dist":"SO","name":"李嘉盈","seat_type":"委任","sub":"南區委任議員","terms":["T7"]},{"dist":"SO","name":"林玉珍","seat_type":"委任","sub":"南區委任 / 前鴨脷洲邨","terms":["T5","T7"]},{"dist":"SO","name":"陳文俊","seat_type":"委任","sub":"南區委任議員","terms":["T7"]},{"dist":"SO","name":"陳郁傑","seat_type":"委任","sub":"南區委任","terms":["T7"]},{"dist":"SO","name":"彭兆基","seat_type":"委任","sub":"南區委任 / 前赤柱及石澳","terms":["T6","T7"]},{"dist":"SO","name":"楊上進","seat_type":"委任","sub":"南區委任議員","terms":["T7"]},{"dist":"YTM","name":"葉傲冬","seat_type":"直選","sub":"E1油尖旺南地方選區 / 前佐敦南","terms":["T5","T7"]},{"dist":"YTM","name":"關煒曦","seat_type":"直選","sub":"E1油尖旺南地方選區","terms":["T7"]},{"dist":"YTM","name":"李家軒","seat_type":"直選","sub":"E2油尖旺北地方選區","terms":["T7"]},{"dist":"YTM","name":"李思敏","seat_type":"直選","sub":"E2油尖旺北地方選區","terms":["T7"]},{"dist":"YTM","name":"蔡少峰","seat_type":"地委會","sub":"地區委員會界別 / 前佐敦北","terms":["T5","T7"]},{"dist":"YTM","name":"楊鎮華","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"孫智敏","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"陸子峯","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"黃建新","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"劉柏祺","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"鄧銘心","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"潘景和","seat_type":"地委會","sub":"油尖旺地區委員會界別","terms":["T7"]},{"dist":"YTM","name":"許德亮","seat_type":"委任","sub":"油尖旺委任 / 前富柏","terms":["T5","T6","T7"]},{"dist":"YTM","name":"陳少棠","seat_type":"委任","sub":"油尖旺委任 / 前尖沙咀北","terms":["T5","T7"]},{"dist":"YTM","name":"黃舒明","seat_type":"委任","sub":"油尖旺委任 / 前旺角北","terms":["T5","T7"]},{"dist":"YTM","name":"楊子熙","seat_type":"委任","sub":"油尖旺委任 / 前油麻地南","terms":["T5","T7"]},{"dist":"YTM","name":"歐楚筠","seat_type":"委任","sub":"油尖旺區委任議員","terms":["T7"]},{"dist":"YTM","name":"鍾港武","seat_type":"委任","sub":"油尖旺委任 / 前富榮","terms":["T5","T7"]},{"dist":"YTM","name":"鍾澤暉","seat_type":"委任","sub":"油尖旺委任 / 前旺角南","terms":["T5","T7"]},{"dist":"YTM","name":"Aruna Gurung","seat_type":"委任","sub":"油尖旺區委任議員","terms":["T7"]},{"dist":"SSP","name":"何坤洲","seat_type":"直選","sub":"F1深水埗西地方選區 / 前蘇屋","terms":["T6","T7"]},{"dist":"SSP","name":"胡詩韻","seat_type":"直選","sub":"F1深水埗西地方選區","terms":["T7"]},{"dist":"SSP","name":"林偉文","seat_type":"直選","sub":"F2深水埗東地方選區","terms":["T7"]},{"dist":"SSP","name":"陳國偉","seat_type":"直選","sub":"F2深水埗東地方選區 / 前石硤尾","terms":["T5","T7"]},{"dist":"SSP","name":"覃碧華","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"龐朝輝","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"張德偉","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"梁秉堅","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"黃俊雄","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"陳麗紅","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"陳龍傑","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"吳婉秋","seat_type":"地委會","sub":"深水埗地區委員會界別","terms":["T7"]},{"dist":"SSP","name":"李詠民","seat_type":"委任","sub":"深水埗區委任議員","terms":["T7"]},{"dist":"SSP","name":"林家輝","seat_type":"委任","sub":"深水埗委任 / 前下白田","terms":["T5","T6","T7"]},{"dist":"SSP","name":"郭彦麗","seat_type":"委任","sub":"深水埗區委任議員","terms":["T7"]},{"dist":"SSP","name":"陳偉明","seat_type":"委任","sub":"深水埗委任 / 前元州","terms":["T5","T7"]},{"dist":"SSP","name":"黃頌良","seat_type":"委任","sub":"深水埗委任","terms":["T7"]},{"dist":"SSP","name":"劉佩玉","seat_type":"委任","sub":"深水埗委任 / 前南昌中","terms":["T5","T6","T7"]},{"dist":"SSP","name":"鍾婧薇","seat_type":"委任","sub":"深水埗區委任議員","terms":["T7"]},{"dist":"SSP","name":"羅志超","seat_type":"委任","sub":"深水埗區委任議員","terms":["T7"]},{"dist":"KLC","name":"林博","seat_type":"直選","sub":"G1九龍城北地方選區 / 前土瓜灣南","terms":["T5","T7"]},{"dist":"KLC","name":"關浩洋","seat_type":"直選","sub":"G1九龍城北地方選區 / 前家維","terms":["T5","T7"]},{"dist":"KLC","name":"吳寶強","seat_type":"直選","sub":"G2九龍城南地方選區 / 前龍城","terms":["T5","T6","T7"]},{"dist":"KLC","name":"李超宇","seat_type":"直選","sub":"G2九龍城南地方選區","terms":["T7"]},{"dist":"KLC","name":"梁婉婷","seat_type":"地委會","sub":"九龍城地區委員會界別","terms":["T7"]},{"dist":"KLC","name":"馮務君","seat_type":"地委會","sub":"九龍城地區委員會界別","terms":["T7"]},{"dist":"KLC","name":"丁健華","seat_type":"地委會","sub":"地區委員會界別 / 前海心","terms":["T5","T7"]},{"dist":"KLC","name":"黃馳","seat_type":"地委會","sub":"九龍城地區委員會界別","terms":["T7"]},{"dist":"KLC","name":"張景勛","seat_type":"地委會","sub":"地區委員會界別 / 前啟德北","terms":["T6","T7"]},{"dist":"KLC","name":"陳治華","seat_type":"地委會","sub":"九龍城地區委員會界別","terms":["T7"]},{"dist":"KLC","name":"吳奮金","seat_type":"地委會","sub":"地區委員會界別 / 前常樂","terms":["T5","T7"]},{"dist":"KLC","name":"劉婉燕","seat_type":"地委會","sub":"九龍城地區委員會界別","terms":["T7"]},{"dist":"KLC","name":"左滙雄","seat_type":"委任","sub":"九龍城委任 / 前愛俊","terms":["T5","T6","T7"]},{"dist":"KLC","name":"何華漢","seat_type":"委任","sub":"九龍城委任 / 前啟德東","terms":["T5","T6","T7"]},{"dist":"KLC","name":"林德成","seat_type":"委任","sub":"九龍城委任 / 前紅磡","terms":["T5","T6","T7"]},{"dist":"KLC","name":"黃文莉","seat_type":"委任","sub":"九龍城區委任議員","terms":["T7"]},{"dist":"KLC","name":"黃文港","seat_type":"委任","sub":"九龍城區委任議員","terms":["T7"]},{"dist":"KLC","name":"潘國華","seat_type":"委任","sub":"九龍城委任 / 前海心","terms":["T5","T6","T7"]},{"dist":"KLC","name":"賴彥宗","seat_type":"委任","sub":"九龍城區委任議員","terms":["T7"]},{"dist":"KLC","name":"利哲宏 (Rizwan Ullah)","seat_type":"委任","sub":"九龍城區委任議員","terms":["T7"]},{"dist":"WTS","name":"譚美普","seat_type":"直選","sub":"H1黃大仙東地方選區 / 前彩雲南","terms":["T5","T7"]},{"dist":"WTS","name":"越毅強","seat_type":"直選","sub":"H1黃大仙東地方選區","terms":["T7"]},{"dist":"WTS","name":"潘卓斌","seat_type":"直選","sub":"H2黃大仙西地方選區","terms":["T7"]},{"dist":"WTS","name":"楊諾軒","seat_type":"直選","sub":"H2黃大仙西地方選區","terms":["T7"]},{"dist":"WTS","name":"黎榮浩","seat_type":"地委會","sub":"地區委員會界別 / 前橫頭磡","terms":["T5","T7"]},{"dist":"WTS","name":"袁國強","seat_type":"地委會","sub":"地區委員會界別 / 前慈雲東","terms":["T5","T7"]},{"dist":"WTS","name":"莫健榮","seat_type":"地委會","sub":"地區委員會界別 / 前東頭","terms":["T7"]},{"dist":"WTS","name":"陳偉坤","seat_type":"地委會","sub":"地區委員會界別 / 前正安","terms":["T5","T7"]},{"dist":"WTS","name":"李東江","seat_type":"地委會","sub":"黃大仙地區委員會界別","terms":["T7"]},{"dist":"WTS","name":"陳英","seat_type":"地委會","sub":"黃大仙地區委員會界別","terms":["T7"]},{"dist":"WTS","name":"馮健樂","seat_type":"地委會","sub":"黃大仙地區委員會界別","terms":["T7"]},{"dist":"WTS","name":"雷啟蓮","seat_type":"地委會","sub":"黃大仙地區委員會界別","terms":["T7"]},{"dist":"WTS","name":"丘燿誠","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"李鎧麟","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"姚逸華","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"洪楚英","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"梁騰丰","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"劉婉儀","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"鄧雯蕙","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"WTS","name":"魏仕成","seat_type":"委任","sub":"黃大仙區委任議員","terms":["T7"]},{"dist":"KT","name":"簡銘東","seat_type":"直選","sub":"J1觀塘東南地方選區 / 前藍田","terms":["T5","T6","T7"]},{"dist":"KT","name":"龐智笙","seat_type":"直選","sub":"J1觀塘東南地方選區 / 前油翠","terms":["T6","T7"]},{"dist":"KT","name":"柯創盛","seat_type":"直選","sub":"J2觀塘中地方選區 / 前廣德","terms":["T5","T6","T7"]},{"dist":"KT","name":"馬軼超","seat_type":"直選","sub":"J2觀塘中地方選區 / 前康樂","terms":["T5","T7"]},{"dist":"KT","name":"張培剛","seat_type":"直選","sub":"J3觀塘北地方選區 / 前秀茂坪中","terms":["T5","T6","T7"]},{"dist":"KT","name":"符碧珍","seat_type":"直選","sub":"J3觀塘北地方選區 / 前雙順","terms":["T5","T6","T7"]},{"dist":"KT","name":"譚肇卓","seat_type":"直選","sub":"J4觀塘西地方選區 / 前彩德","terms":["T5","T6","T7"]},{"dist":"KT","name":"李嘉恒","seat_type":"直選","sub":"J4觀塘西地方選區","terms":["T7"]},{"dist":"KT","name":"鄭強峰","seat_type":"地委會","sub":"地區委員會界別 / 前寶達","terms":["T5","T7"]},{"dist":"KT","name":"李淑媛","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"詹寶瑜","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"吳庭鋒","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"金堅","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"歐陽均諾","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"房逸君","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"馮韻斯","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"林峰","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"程海欣","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"張姚彬","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"曾榮輝","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"鄧咏駿","seat_type":"地委會","sub":"地區委員會界別 / 前安利","terms":["T5","T7"]},{"dist":"KT","name":"余嘉明","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"黃啟燊","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"關堅榮","seat_type":"地委會","sub":"觀塘地區委員會界別","terms":["T7"]},{"dist":"KT","name":"余邵倫","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"余敏","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"吳承華","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"呂東孩","seat_type":"委任","sub":"觀塘委任 / 前油塘西","terms":["T5","T6","T7"]},{"dist":"KT","name":"林瑋","seat_type":"委任","sub":"觀塘委任 / 前觀塘安泰","terms":["T6","T7"]},{"dist":"KT","name":"洪錦鉉","seat_type":"委任","sub":"觀塘委任 / 前翠屏","terms":["T5","T7"]},{"dist":"KT","name":"張琪騰","seat_type":"委任","sub":"觀塘委任 / 前油塘東","terms":["T5","T7"]},{"dist":"KT","name":"梁思韻","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"許有為","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"連浩民","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"陳耀雄","seat_type":"委任","sub":"觀塘委任 / 前寶樂","terms":["T5","T6","T7"]},{"dist":"KT","name":"黃春平","seat_type":"委任","sub":"觀塘委任 / 前秀茂坪北","terms":["T5","T7"]},{"dist":"KT","name":"楊莉瑤","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"劉嘉華","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"諸樂為","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"KT","name":"賴永春","seat_type":"委任","sub":"觀塘區委任議員","terms":["T7"]},{"dist":"TW","name":"黃啟進","seat_type":"直選","sub":"K1荃灣西北地方選區","terms":["T7"]},{"dist":"TW","name":"葛兆源","seat_type":"直選","sub":"K1荃灣西北地方選區 / 前福來","terms":["T5","T6","T7"]},{"dist":"TW","name":"伍俊瑜","seat_type":"直選","sub":"K2荃灣東南地方選區","terms":["T7"]},{"dist":"TW","name":"馮卓森","seat_type":"直選","sub":"K2荃灣東南地方選區","terms":["T7"]},{"dist":"TW","name":"莫遠君","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"鄭捷彬","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"曾大","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"陳振中","seat_type":"地委會","sub":"地區委員會界別 / 前象石","terms":["T5","T7"]},{"dist":"TW","name":"周森明","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"劉松剛","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"朱德榮","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"林婉濱","seat_type":"地委會","sub":"荃灣地區委員會界別","terms":["T7"]},{"dist":"TW","name":"王淑芬","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"古揚邦","seat_type":"委任","sub":"荃灣委任 / 前祈德尊","terms":["T5","T7"]},{"dist":"TW","name":"張文嘉","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"梁昌明","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"陳純純","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"陳曉津","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"華美玲","seat_type":"委任","sub":"荃灣區委任議員","terms":["T7"]},{"dist":"TW","name":"黃偉傑","seat_type":"委任","sub":"荃灣委任 / 前麗濤","terms":["T5","T7"]},{"dist":"TW","name":"邱錦平","seat_type":"當然","sub":"荃灣鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"TW","name":"陳崇業","seat_type":"當然","sub":"馬灣鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"TM","name":"葉文斌","seat_type":"直選","sub":"L1屯門東地方選區 / 前兆康","terms":["T5","T7"]},{"dist":"TM","name":"馮沛賢","seat_type":"直選","sub":"L1屯門東地方選區","terms":["T7"]},{"dist":"TM","name":"鍾健峰","seat_type":"直選","sub":"L2屯門西地方選區","terms":["T7"]},{"dist":"TM","name":"徐帆","seat_type":"直選","sub":"L2屯門西地方選區 / 前蝴蝶","terms":["T5","T7"]},{"dist":"TM","name":"賴嘉汶","seat_type":"直選","sub":"L3屯門北地方選區 / 前欣田","terms":["T6","T7"]},{"dist":"TM","name":"蘇嘉雯","seat_type":"直選","sub":"L3屯門北地方選區 / 前寶田","terms":["T5","T7"]},{"dist":"TM","name":"陳文偉","seat_type":"地委會","sub":"地區委員會界別 / 前富泰","terms":["T5","T7"]},{"dist":"TM","name":"林的徽","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"蔡承憲","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"曾憲康","seat_type":"地委會","sub":"地區委員會界別 / 前友愛北","terms":["T5","T7"]},{"dist":"TM","name":"陳暹恆","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"程志紅","seat_type":"地委會","sub":"地區委員會界別 / 前良景","terms":["T5","T7"]},{"dist":"TM","name":"葉俊遠","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"崔景恒","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"鄺珉樀","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"甘文鋒","seat_type":"地委會","sub":"地區委員會界別 / 前富新","terms":["T5","T7"]},{"dist":"TM","name":"李超雄","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"謝玉玲","seat_type":"地委會","sub":"屯門地區委員會界別","terms":["T7"]},{"dist":"TM","name":"何俊亨","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"巫成鋒","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"陳有海","seat_type":"委任","sub":"屯門委任 / 前景興","terms":["T5","T6","T7"]},{"dist":"TM","name":"陳孟宜","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"陳浩庭","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"陳貴和","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"麥美儀","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"曾慶忠","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"雲天壯","seat_type":"委任","sub":"屯門委任","terms":["T7"]},{"dist":"TM","name":"馮鈺鋒","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"葉吉江","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"鄭彥鈞","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"謝永恒","seat_type":"委任","sub":"屯門區委任議員","terms":["T7"]},{"dist":"TM","name":"劉業強","seat_type":"當然","sub":"屯門鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"YL","name":"李啟立","seat_type":"直選","sub":"M1元朗市中心地方選區","terms":["T7"]},{"dist":"YL","name":"施駿興","seat_type":"直選","sub":"M1元朗市中心地方選區","terms":["T7"]},{"dist":"YL","name":"梁明堅","seat_type":"直選","sub":"M2元朗鄉郊東地方選區 / 前八鄉北","terms":["T5","T6","T7"]},{"dist":"YL","name":"徐君紹","seat_type":"直選","sub":"M2元朗鄉郊東地方選區","terms":["T7"]},{"dist":"YL","name":"蘇淵","seat_type":"直選","sub":"M3天水圍南及屏廈地方選區","terms":["T7"]},{"dist":"YL","name":"陳燕君","seat_type":"直選","sub":"M3天水圍南及屏廈地方選區","terms":["T7"]},{"dist":"YL","name":"姚國威","seat_type":"直選","sub":"M4天水圍北地方選區 / 前宏逸","terms":["T5","T7"]},{"dist":"YL","name":"賴玥均","seat_type":"直選","sub":"M4天水圍北地方選區","terms":["T7"]},{"dist":"YL","name":"黃元弟","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"何曉雯","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"黃紹聰","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"鄧鎔耀","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"林慧明","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"文亦揚","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"袁敏兒","seat_type":"地委會","sub":"地區委員會界別 / 前頌華","terms":["T5","T7"]},{"dist":"YL","name":"劉桂容","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"司徒駿軒","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"徐偉凱","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"湯德駿","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"林偉明","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"李靜儀","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"馬淑燕","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"林宗賢","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"梁業鵬","seat_type":"地委會","sub":"元朗地區委員會界別","terms":["T7"]},{"dist":"YL","name":"文嘉豪","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"王偉樑","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"王曉山","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"余仲良","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"呂堅","seat_type":"委任","sub":"元朗委任 / 前富恩","terms":["T5","T7"]},{"dist":"YL","name":"沈豪傑","seat_type":"委任","sub":"元朗委任 / 前十八鄉北 (前主席)","terms":["T5","T6","T7"]},{"dist":"YL","name":"林添福","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"張偉琛","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"莊健成","seat_type":"委任","sub":"元朗委任 / 前鳳翔","terms":["T7"]},{"dist":"YL","name":"陳嘉輝","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"湛家雄","seat_type":"委任","sub":"元朗委任 / 前嘉湖南","terms":["T5","T7"]},{"dist":"YL","name":"馮振榮","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"黃煒鈴","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"黃頴灝","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"趙秀嫻","seat_type":"委任","sub":"元朗委任 / 前天盛","terms":["T5","T7"]},{"dist":"YL","name":"譚德開","seat_type":"委任","sub":"元朗區委任議員","terms":["T7"]},{"dist":"YL","name":"鄧善恒","seat_type":"當然","sub":"屏山鄉事委員會主席 (當然議員)","terms":["T7"]},{"dist":"YL","name":"鄧志強","seat_type":"當然","sub":"厦村鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"YL","name":"程振明","seat_type":"當然","sub":"十八鄉鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"YL","name":"郭永昌","seat_type":"當然","sub":"八鄉鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"YL","name":"鄧賀年","seat_type":"當然","sub":"錦田鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"YL","name":"文祿星","seat_type":"當然","sub":"新田鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"NO","name":"姚銘","seat_type":"直選","sub":"N1蝴蝶山地方選區","terms":["T7"]},{"dist":"NO","name":"宋冰冰","seat_type":"直選","sub":"N1蝴蝶山地方選區","terms":["T7"]},{"dist":"NO","name":"高維基","seat_type":"直選","sub":"N2紅花嶺地方選區 / 前清河","terms":["T6","T7"]},{"dist":"NO","name":"曾勁聰","seat_type":"直選","sub":"N2紅花嶺地方選區","terms":["T7"]},{"dist":"NO","name":"潘孝汶","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"柯倩儀","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"胡景鵬","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"曾興隆","seat_type":"地委會","sub":"地區委員會界別 / 前聯和墟","terms":["T5","T7"]},{"dist":"NO","name":"劉鎮海","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"侯漢碩","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"吳耀祖","seat_type":"地委會","sub":"北區地區委員會界別","terms":["T7"]},{"dist":"NO","name":"温和達","seat_type":"地委會","sub":"地區委員會界別 / 前盛福","terms":["T5","T6","T7"]},{"dist":"NO","name":"朱浩賢","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"朱偉林","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"周天意","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"洪志富","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"温和輝","seat_type":"委任","sub":"北區委任 / 前御太","terms":["T5","T6","T7"]},{"dist":"NO","name":"廖宇軒","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"賴心","seat_type":"委任","sub":"北區委任 / 前粉嶺市","terms":["T7"]},{"dist":"NO","name":"譚鎮國","seat_type":"委任","sub":"北區委任議員","terms":["T7"]},{"dist":"NO","name":"李國鳳","seat_type":"當然","sub":"粉嶺區鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"NO","name":"侯志強","seat_type":"當然","sub":"上水區鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"NO","name":"陳月明","seat_type":"當然","sub":"打鼓嶺區鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"NO","name":"李冠洪","seat_type":"當然","sub":"沙頭角區鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"TP","name":"黃碧嬌","seat_type":"直選","sub":"P1大埔南地方選區 / 前廣福及寶湖","terms":["T5","T7"]},{"dist":"TP","name":"羅曉楓","seat_type":"直選","sub":"P1大埔南地方選區 / 前新富","terms":["T5","T7"]},{"dist":"TP","name":"駱小鸞","seat_type":"直選","sub":"P2大埔北地方選區","terms":["T7"]},{"dist":"TP","name":"胡綽謙","seat_type":"直選","sub":"P2大埔北地方選區 / 前富亨","terms":["T5","T7"]},{"dist":"TP","name":"陳笑權","seat_type":"地委會","sub":"地區委員會界別 / 前頌汀","terms":["T5","T7"]},{"dist":"TP","name":"余智榮","seat_type":"地委會","sub":"地區委員會界別 / 前宏福","terms":["T5","T7"]},{"dist":"TP","name":"李華光","seat_type":"地委會","sub":"地區委員會界別 / 前大埔滘","terms":["T5","T7"]},{"dist":"TP","name":"梅少峰","seat_type":"地委會","sub":"大埔地區委員會界別","terms":["T7"]},{"dist":"TP","name":"李文傑","seat_type":"地委會","sub":"大埔地區委員會界別","terms":["T7"]},{"dist":"TP","name":"黃偉憧","seat_type":"地委會","sub":"大埔地區委員會界別","terms":["T7"]},{"dist":"TP","name":"陳建君","seat_type":"地委會","sub":"大埔地區委員會界別","terms":["T7"]},{"dist":"TP","name":"麥成灝","seat_type":"地委會","sub":"大埔地區委員會界別","terms":["T7"]},{"dist":"TP","name":"李細燕","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"李漢祥","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"梅政雄","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"陳子健","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"陳灶良","seat_type":"委任","sub":"大埔委任 / 前太和","terms":["T5","T7"]},{"dist":"TP","name":"陳勇華","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"陳博智","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"温官球","seat_type":"委任","sub":"大埔區委任議員","terms":["T7"]},{"dist":"TP","name":"李耀斌","seat_type":"當然","sub":"西貢北約鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"TP","name":"林奕權","seat_type":"當然","sub":"大埔鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"SK","name":"方國珊","seat_type":"直選","sub":"Q1西貢及坑口地方選區 / 前環保北","terms":["T5","T6","T7"]},{"dist":"SK","name":"邱浩麟","seat_type":"直選","sub":"Q1西貢及坑口地方選區","terms":["T7"]},{"dist":"SK","name":"施彬彬","seat_type":"直選","sub":"Q2將軍澳南地方選區","terms":["T7"]},{"dist":"SK","name":"黃遠康","seat_type":"直選","sub":"Q2將軍澳南地方選區","terms":["T7"]},{"dist":"SK","name":"温啟明","seat_type":"直選","sub":"Q3將軍澳北地方選區 / 前東明","terms":["T5","T7"]},{"dist":"SK","name":"陳志豪","seat_type":"直選","sub":"Q3將軍澳北地方選區","terms":["T7"]},{"dist":"SK","name":"李天賜","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"陳廣輝","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"鄭宇曦","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"靳彤彤","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"周家樂","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"李家良","seat_type":"地委會","sub":"地區委員會界別 / 前白沙灣","terms":["T5","T7"]},{"dist":"SK","name":"曾國家","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"張美雄","seat_type":"地委會","sub":"地區委員會界別 / 前環保南","terms":["T5","T6","T7"]},{"dist":"SK","name":"張展鵬","seat_type":"地委會","sub":"地區委員會界別 / 前都善","terms":["T5","T6","T7"]},{"dist":"SK","name":"陳繼偉","seat_type":"地委會","sub":"地區委員會界別 / 前維景","terms":["T5","T7"]},{"dist":"SK","name":"譚竹君","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"陳健浚","seat_type":"地委會","sub":"西貢地區委員會界別","terms":["T7"]},{"dist":"SK","name":"王文","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"李嘉欣","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"林俊嘉","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"祁麗媚","seat_type":"委任","sub":"西貢委任 / 前欣英","terms":["T5","T7"]},{"dist":"SK","name":"邱少雄","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"俞卓君","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"胡雪蓮","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"張萬添","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"莊元苳","seat_type":"委任","sub":"西貢委任 / 前健明","terms":["T5","T7"]},{"dist":"SK","name":"莊雅婷","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"陳權軍","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"黃宏滔","seat_type":"委任","sub":"西貢區委任議員","terms":["T7"]},{"dist":"SK","name":"王水生","seat_type":"當然","sub":"西貢鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"SK","name":"劉啟康","seat_type":"當然","sub":"坑口鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"ST","name":"鄧肇峰","seat_type":"直選","sub":"R1沙田西地方選區","terms":["T7"]},{"dist":"ST","name":"陳壇丹","seat_type":"直選","sub":"R1沙田西地方選區","terms":["T7"]},{"dist":"ST","name":"姚嘉俊","seat_type":"直選","sub":"R2沙田東地方選區 / 前第一城","terms":["T5","T7"]},{"dist":"ST","name":"朱煥釗","seat_type":"直選","sub":"R2沙田東地方選區","terms":["T7"]},{"dist":"ST","name":"林宇星","seat_type":"直選","sub":"R3沙田南地方選區","terms":["T7"]},{"dist":"ST","name":"古偉冰","seat_type":"直選","sub":"R3沙田南地方選區","terms":["T7"]},{"dist":"ST","name":"蔡惠誠","seat_type":"直選","sub":"R4沙田北地方選區","terms":["T7"]},{"dist":"ST","name":"羅伊琳","seat_type":"直選","sub":"R4沙田北地方選區","terms":["T7"]},{"dist":"ST","name":"莫熹雯","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"劉德榮","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"梁振邦","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"林玉華","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"羅婉珮","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"楊英瀚","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"李貞儀","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"龔美姿","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"吳啟泰","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"羅棣萱","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"陳曉盈","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"林小文","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"郭宣彤","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"夏劍琨","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"張柏源","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"梁家瑋","seat_type":"地委會","sub":"沙田地區委員會界別","terms":["T7"]},{"dist":"ST","name":"王惠成","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"林松茵","seat_type":"委任","sub":"沙田委任 / 前顯嘉","terms":["T5","T7"]},{"dist":"ST","name":"林港坤","seat_type":"委任","sub":"沙田委任 / 前帝怡","terms":["T5","T6","T7"]},{"dist":"ST","name":"區子安","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"梁家輝","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"陳敏娟","seat_type":"委任","sub":"沙田委任 / 前頌安","terms":["T5","T7"]},{"dist":"ST","name":"陳善明","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"黃宇翰","seat_type":"委任","sub":"沙田委任 / 前瀝源","terms":["T5","T7"]},{"dist":"ST","name":"黃敬","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"黃寶儀","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"董健莉","seat_type":"委任","sub":"沙田委任 / 前大圍","terms":["T5","T7"]},{"dist":"ST","name":"廖子聰","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"潘國山","seat_type":"委任","sub":"沙田委任 / 前田心","terms":["T5","T7"]},{"dist":"ST","name":"蔡明揚","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"鄧開荣","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"鄭家豪","seat_type":"委任","sub":"沙田區委任議員","terms":["T7"]},{"dist":"ST","name":"龐愛蘭","seat_type":"委任","sub":"沙田委任 / 前火炭","terms":["T5","T7"]},{"dist":"ST","name":"莫錦貴","seat_type":"當然","sub":"沙田鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"KWT","name":"彭熠銘","seat_type":"直選","sub":"S1青衣地方選區","terms":["T7"]},{"dist":"KWT","name":"盧婉婷","seat_type":"直選","sub":"S1青衣地方選區 / 前長亨","terms":["T5","T6","T7"]},{"dist":"KWT","name":"周潔莹","seat_type":"直選","sub":"S2葵涌東地方選區","terms":["T7"]},{"dist":"KWT","name":"郭芙蓉","seat_type":"直選","sub":"S2葵涌東地方選區 / 前大白田西","terms":["T5","T6","T7"]},{"dist":"KWT","name":"陳安妮","seat_type":"直選","sub":"S3葵涌西地方選區","terms":["T7"]},{"dist":"KWT","name":"黃俊揚","seat_type":"直選","sub":"S3葵涌西地方選區","terms":["T7"]},{"dist":"KWT","name":"李偉樂","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"伍景華","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"鄧麗玲","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"林映惠","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"莫綺琪","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"袁潤洪","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"黃淑雯","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"吳任豐","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"劉興華","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"郭慧敏","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"伍志華","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"黃紹焜","seat_type":"地委會","sub":"葵青地區委員會界別","terms":["T7"]},{"dist":"KWT","name":"王聰穎","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"朱麗玲","seat_type":"委任","sub":"葵青委任 / 前荔華","terms":["T5","T7"]},{"dist":"KWT","name":"周劍豪","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"林翠玲","seat_type":"委任","sub":"葵青委任 / 前青衣邨","terms":["T5","T7"]},{"dist":"KWT","name":"徐曉杰","seat_type":"委任","sub":"葵青委任 / 前長康","terms":["T5","T6","T7"]},{"dist":"KWT","name":"梁嘉銘","seat_type":"委任","sub":"葵青委任 / 前盛康","terms":["T6","T7"]},{"dist":"KWT","name":"陳藹怡","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"葉長春","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"劉美璐","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"歐志輝","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"潘志成","seat_type":"委任","sub":"葵青委任 / 前翠怡","terms":["T5","T7"]},{"dist":"KWT","name":"鄭臨","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"蘇栢燦","seat_type":"委任","sub":"葵青區委任議員","terms":["T7"]},{"dist":"KWT","name":"陳志榮","seat_type":"當然","sub":"青衣鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"IS","name":"葉培基","seat_type":"直選","sub":"T1離島地方選區","terms":["T7"]},{"dist":"IS","name":"劉展鵬","seat_type":"直選","sub":"T1離島地方選區","terms":["T7"]},{"dist":"IS","name":"羅成煥","seat_type":"地委會","sub":"離島地區委員會界別","terms":["T7"]},{"dist":"IS","name":"郭慧文","seat_type":"地委會","sub":"地區委員會界別 / 前逸東邨北","terms":["T5","T7"]},{"dist":"IS","name":"劉舜婷","seat_type":"地委會","sub":"地區委員會界別 / 前南丫及蒲台","terms":["T6","T7"]},{"dist":"IS","name":"周元谷","seat_type":"地委會","sub":"離島地區委員會界別","terms":["T7"]},{"dist":"IS","name":"余漢坤","seat_type":"委任","sub":"離島委任 / 前大嶼山","terms":["T5","T6","T7"]},{"dist":"IS","name":"吳彩華","seat_type":"委任","sub":"離島區委任議員","terms":["T7"]},{"dist":"IS","name":"許振隆","seat_type":"委任","sub":"離島區委任議員","terms":["T7"]},{"dist":"IS","name":"劉淑嫻","seat_type":"委任","sub":"離島區委任議員","terms":["T7"]},{"dist":"IS","name":"吳文傑","seat_type":"當然","sub":"離島八鄉鄉事委員會主席","terms":["T7"]},{"dist":"IS","name":"黃漢權","seat_type":"當然","sub":"坪洲鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"IS","name":"黃秋萍","seat_type":"當然","sub":"離島八鄉鄉事委員會主席","terms":["T7"]},{"dist":"IS","name":"何紹基","seat_type":"當然","sub":"大澳鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"IS","name":"黃文漢","seat_type":"當然","sub":"梅窩鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"IS","name":"何進輝","seat_type":"當然","sub":"大嶼山南區鄉事委員會主席 (當然議員)","terms":["T6","T7"]},{"dist":"IS","name":"周玉堂","seat_type":"當然","sub":"南丫島南段鄉事委員會主席 (當然議員)","terms":["T5","T6","T7"]},{"dist":"IS","name":"温揚堅","seat_type":"當然","sub":"離島八鄉鄉事委員會主席","terms":["T7"]},{"dist":"CW","name":"甘乃威","seat_type":"直選","sub":"上環選區 (前任)","terms":["T5","T6"]},{"dist":"CW","name":"陳財喜","seat_type":"直選","sub":"石塘咀選區 (前任)","terms":["T5"]},{"dist":"CW","name":"陳學鋒","seat_type":"直選","sub":"堅摩選區 (前任)","terms":["T5"]},{"dist":"WC","name":"黃宏泰","seat_type":"直選","sub":"司徒拔道選區 (前灣仔主席)","terms":["T5","T6"]},{"dist":"WC","name":"伍婉婷","seat_type":"直選","sub":"喜匯選區 (前任)","terms":["T5"]},{"dist":"EA","name":"黃建彬","seat_type":"直選","sub":"康山 / 翠灣選區 (前東區主席)","terms":["T5"]},{"dist":"EA","name":"郭偉强","seat_type":"直選","sub":"和富選區 (前任)","terms":["T5","T6"]},{"dist":"EA","name":"趙家賢","seat_type":"直選","sub":"太古城西選區 (前任)","terms":["T5","T6"]},{"dist":"SO","name":"柴文瀚","seat_type":"直選","sub":"華富北選區 (前任)","terms":["T5"]},{"dist":"YTM","name":"涂謹申","seat_type":"直選","sub":"奧運選區 (前任)","terms":["T5","T6"]},{"dist":"YTM","name":"孔昭華","seat_type":"直選","sub":"尖東及京士柏 (前任)","terms":["T5"]},{"dist":"SSP","name":"譚國僑","seat_type":"直選","sub":"南山、大坑東及大坑西 (前主席)","terms":["T5","T6"]},{"dist":"SSP","name":"覃德誠","seat_type":"直選","sub":"荔枝角北選區 (前深水埗主席)","terms":["T5","T6"]},{"dist":"SSP","name":"梁美芬","seat_type":"直選","sub":"黃埔東選區 (前任)","terms":["T5"]},{"dist":"KLC","name":"李慧琼","seat_type":"直選","sub":"土瓜灣北選區 (前任)","terms":["T5","T6"]},{"dist":"WTS","name":"李德康","seat_type":"直選","sub":"瓊富 / 彩雲西 (前黃大仙主席)","terms":["T5"]},{"dist":"WTS","name":"簡志豪","seat_type":"委任","sub":"鳳德選區 (前黃大仙主席)","terms":["T5"]},{"dist":"WTS","name":"胡志偉","seat_type":"直選","sub":"瓊富選區 (前任)","terms":["T5","T6"]},{"dist":"KT","name":"陳振彬","seat_type":"直選","sub":"協康選區 (前觀塘主席)","terms":["T5"]},{"dist":"KT","name":"蘇麗珍","seat_type":"直選","sub":"曉麗選區 (前任)","terms":["T5"]},{"dist":"KT","name":"潘任惠珍","seat_type":"直選","sub":"九龍灣選區 (前任)","terms":["T5","T6"]},{"dist":"TW","name":"陳恒鑌","seat_type":"直選","sub":"楊屋道選區 (前任)","terms":["T5"]},{"dist":"TW","name":"田北辰","seat_type":"直選","sub":"愉景選區 (前任)","terms":["T5"]},{"dist":"TM","name":"蘇炤成","seat_type":"直選","sub":"三聖選區 (前任)","terms":["T5"]},{"dist":"YL","name":"梁志祥","seat_type":"直選","sub":"天耀選區 (前元朗主席)","terms":["T5"]},{"dist":"YL","name":"周永勤","seat_type":"直選","sub":"瑞華選區 (前任)","terms":["T5"]},{"dist":"NO","name":"蘇西智","seat_type":"直選","sub":"華明 / 鳳翠 (前北區主席)","terms":["T5"]},{"dist":"NO","name":"劉國勳","seat_type":"直選","sub":"欣盛選區 (前任)","terms":["T5"]},{"dist":"SK","name":"吳仕福","seat_type":"委任","sub":"西貢市中心 / 委任 (前西貢主席)","terms":["T5"]},{"dist":"SK","name":"周賢明","seat_type":"直選","sub":"南安選區 (前任)","terms":["T5","T6"]},{"dist":"ST","name":"何厚祥","seat_type":"直選","sub":"雲城選區 (前沙田主席)","terms":["T5"]},{"dist":"KWT","name":"羅競成","seat_type":"直選","sub":"長安選區 (前葵青主席)","terms":["T5"]},{"dist":"KWT","name":"梁耀忠","seat_type":"直選","sub":"葵芳選區 (前任)","terms":["T5","T6"]},{"dist":"IS","name":"周轉香","seat_type":"直選","sub":"新翠 / 東涌中 (前離島副主席)","terms":["T5"]}];
+
+        window.dcSystemInitialized = false;
+        window.dcSelectedTerm = '2024-27'; // '2024-27' | '2020-23' | '2016-19'
+        window.dcSelectedRegion = 'ALL';   // 'ALL' | 'HKI' | 'KLN' | 'NT'
+        window.dcSelectedDistrict = 'ALL'; // 'ALL' or 18 district code
+        window.dcSelectedCategory = 'ALL'; // 'ALL' | 'ELECTED' | 'DHC' | 'APPOINTED' | 'EX_OFFICIO'
+        window.dcSearchQuery = '';
+        window.dcCurrentPage = 1;
+        window.dcPageSize = 50;
+        window.dcSyncState = 'IDLE'; // 'IDLE' | 'SYNCING' | 'LIVE'
+        window.dcLastSyncTime = '--:--:--';
+        window.dcLiveCsvMembersByTerm = {
+            '2024-27': null,
+            '2020-23': null,
+            '2016-19': null
+        };
+        window.dcCurrentHemicycleSeats = [];
+
+        function resolveDcDistrictMeta(rawVal) {
+            if (!rawVal) return null;
+            const s = String(rawVal).trim();
+            const low = s.toLowerCase().replace(/district\s*council/ig, '').replace(/區議會/g, '').replace(/\s+/g, ' ').trim();
+            for (const d of DC_18_DISTRICTS_META) {
+                if (d.code.toLowerCase() === low || d.aliases.some(a => low === a || low.includes(a))) {
+                    return d;
+                }
+            }
+            return null;
+        }
+
+        function resolveDcSeatCategory(rawCap, rawConstituency, termKey) {
+            const combined = `${rawCap || ''} ${rawConstituency || ''}`.toLowerCase();
+            if (combined.includes('ex-officio') || combined.includes('ex officio') || combined.includes('當然') || combined.includes('鄉事')) {
+                return 'EX_OFFICIO';
+            }
+            if (termKey === '2016-19' || termKey === '2020-23') {
+                return 'ELECTED';
+            }
+            if (combined.includes('appointed') || combined.includes('委任')) {
+                return 'APPOINTED';
+            }
+            if (combined.includes('district committees') || combined.includes('地區委員會') || combined.includes('地委會')) {
+                return 'DHC';
+            }
+            return 'ELECTED';
+        }
+
+        function parseDcCsvTextToRows(rawText) {
+            if (!rawText || typeof rawText !== 'string') return null;
+            const trimmed = rawText.replace(/^\uFEFF/, '').trim();
+            if (!trimmed || trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) return null;
+
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (parsed && typeof parsed.contents === 'string') return parseDcCsvTextToRows(parsed.contents);
+                } catch (e) {}
+            }
+
+            const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (lines.length < 2) return null;
+            return lines.map(l => (typeof splitCsvLineFast === 'function') ? splitCsvLineFast(l) : l.split(',').map(c => c.replace(/^["']|["']$/g, '').trim()));
+        }
+
+        function buildLiveMembersFromCsvRows(enRows, tcRows, termKey) {
+            const primaryRows = (enRows && enRows.length >= 2) ? enRows : tcRows;
+            if (!primaryRows || primaryRows.length < 2) return null;
+
+            const findColIdx = (hdrs, patterns, fallback) => {
+                for (let i = 0; i < hdrs.length; i++) {
+                    const h = String(hdrs[i] || '').toLowerCase().trim();
+                    if (patterns.some(p => h === p || h.includes(p))) return i;
+                }
+                return fallback;
+            };
+
+            const enHdr = (enRows && enRows[0]) ? enRows[0] : primaryRows[0];
+            const distIdxEn = findColIdx(enHdr, ['district council', 'district', '區議會', '地區'], 0);
+            const nameIdxEn = findColIdx(enHdr, ['name', 'member', 'dc member', '議員姓名', '姓名'], 1);
+            const capIdxEn  = findColIdx(enHdr, ['capacity', 'seat', 'category', 'type', '席位', '界別', '身分'], 2);
+            const conIdxEn  = findColIdx(enHdr, ['constituency', '選區', '所屬選區'], 3);
+            const remIdxEn  = findColIdx(enHdr, ['remark', 'post', 'role', '備註', '職銜'], 4);
+
+            const tcHdr = (tcRows && tcRows[0]) ? tcRows[0] : null;
+            const distIdxTc = tcHdr ? findColIdx(tcHdr, ['區議會', '地區', 'district'], distIdxEn) : distIdxEn;
+            const nameIdxTc = tcHdr ? findColIdx(tcHdr, ['議員姓名', '姓名', '議員', 'name'], nameIdxEn) : nameIdxEn;
+            const capIdxTc  = tcHdr ? findColIdx(tcHdr, ['席位', '界別', '身分', 'capacity'], capIdxEn) : capIdxEn;
+            const conIdxTc  = tcHdr ? findColIdx(tcHdr, ['選區', '所屬選區', 'constituency'], conIdxEn) : conIdxEn;
+
+            const result = [];
+            const maxLen = Math.max(enRows ? enRows.length : 0, tcRows ? tcRows.length : 0);
+
+            for (let i = 1; i < maxLen; i++) {
+                const rEn = (enRows && enRows[i]) ? enRows[i] : null;
+                const rTc = (tcRows && tcRows[i]) ? tcRows[i] : null;
+                const rMain = rEn || rTc;
+                if (!rMain || rMain.length < 2) continue;
+
+                const rawDist = (rEn ? rEn[distIdxEn] : '') || (rTc ? rTc[distIdxTc] : '');
+                const distMeta = resolveDcDistrictMeta(rawDist);
+                if (!distMeta) continue;
+
+                const nameEn = rEn ? String(rEn[nameIdxEn] || '').trim() : '';
+                const nameZh = rTc ? String(rTc[nameIdxTc] || '').trim() : '';
+                if (!nameEn && !nameZh) continue;
+
+                const capEn = (rEn && capIdxEn >= 0 && rEn[capIdxEn]) ? String(rEn[capIdxEn]).trim() : '';
+                const capZh = (rTc && capIdxTc >= 0 && rTc[capIdxTc]) ? String(rTc[capIdxTc]).trim() : '';
+                const conEn = (rEn && conIdxEn >= 0 && rEn[conIdxEn]) ? String(rEn[conIdxEn]).trim() : '';
+                const conZh = (rTc && conIdxTc >= 0 && rTc[conIdxTc]) ? String(rTc[conIdxTc]).trim() : '';
+                const remEn = (rEn && remIdxEn >= 0 && rEn[remIdxEn]) ? String(rEn[remIdxEn]).trim() : '';
+
+                const catKey = resolveDcSeatCategory(`${capEn} ${capZh}`, `${conEn} ${conZh}`, termKey);
+
+                result.push({
+                    dist: distMeta.code,
+                    catKey,
+                    name_zh: nameZh || nameEn,
+                    name_en: nameEn || nameZh,
+                    sub_zh: conZh || capZh || conEn || DC_SEAT_CATEGORIES[catKey].zh,
+                    sub_en: conEn || capEn || conZh || DC_SEAT_CATEGORIES[catKey].en,
+                    role_zh: capZh || DC_SEAT_CATEGORIES[catKey].short_zh,
+                    role_en: capEn || remEn || DC_SEAT_CATEGORIES[catKey].short_en,
+                    isLiveCsv: true
+                });
+            }
+
+            return result.length >= 10 ? result : null;
+        }
+
+        async function fetchCsvWithFallbacks(targetUrl) {
+            const bust = Math.floor(Date.now() / 30000);
+            const fileName = targetUrl.split('/').pop();
+            const candidates = [
+                `${targetUrl}?t=${bust}`,
+                targetUrl,
+                `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&t=${bust}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+                `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
+                `https://dannytcchan00.github.io/0Data/data/${fileName}?t=${bust}`
+            ];
+            for (const url of candidates) {
+                try {
+                    const ctrl = new AbortController();
+                    const tid = setTimeout(() => ctrl.abort(), 7500);
+                    const resp = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+                    clearTimeout(tid);
+                    if (resp.ok) {
+                        const text = await resp.text();
+                        const rows = parseDcCsvTextToRows(text);
+                        if (rows && rows.length >= 10) return rows;
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        async function syncAllDcTermsCSV(isManual = false) {
+            window.dcSyncState = 'SYNCING';
+            updateDcRefreshBadgeUI();
+
+            const termsToSync = [window.dcSelectedTerm, ...Object.keys(DC_CSV_APIS).filter(k => k !== window.dcSelectedTerm)];
+            let anyLoaded = false;
+
+            for (const tKey of termsToSync) {
+                const cfg = DC_CSV_APIS[tKey];
+                if (!cfg) continue;
+                try {
+                    const [enRows, tcRows] = await Promise.all([
+                        fetchCsvWithFallbacks(cfg.en_url),
+                        fetchCsvWithFallbacks(cfg.tc_url)
+                    ]);
+                    const parsedList = buildLiveMembersFromCsvRows(enRows, tcRows, tKey);
+                    if (parsedList && parsedList.length > 0) {
+                        window.dcLiveCsvMembersByTerm[tKey] = parsedList;
+                        anyLoaded = true;
+                        if (tKey === window.dcSelectedTerm && currentActivePage === 'dc') {
+                            renderDcPortal();
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            const now = new Date();
+            window.dcLastSyncTime = now.toLocaleTimeString('en-GB', { hour12: false });
+            window.dcSyncState = anyLoaded ? 'LIVE' : 'READY';
+            updateDcRefreshBadgeUI();
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showGlobalToast(isEn
+                    ? '✅ Synced District Council Members CSV APIs (2016-19, 2020-23, 2024-27)!'
+                    : '✅ 已同步香港十八區區議員名單官方 CSV API (2016-19、2020-23、2024-27)！');
+            }
+            if (currentActivePage === 'dc') {
+                renderDcPortal();
+            }
+        }
+
+        function updateDcRefreshBadgeUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-dc-title');
+            const syncBtn = document.getElementById('btn-dc-sync-now');
+            const badge = document.getElementById('dc-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🏛️ HK 18 Districts District Council Members & Seat Hemicycle'
+                    : '🏛️ 香港十八區區議員名單及議席界別分佈';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Sync CSV API' : '🔄 立即同步 API';
+            }
+            if (!badge) return;
+
+            if (window.dcSyncState === 'SYNCING') {
+                badge.innerHTML = isEn
+                    ? '<span class="icon-spin">🔄</span> Syncing DC CSV APIs...'
+                    : '<span class="icon-spin">🔄</span> 正在同步區議會 CSV API...';
+            } else if (window.dcSyncState === 'LIVE') {
+                badge.innerHTML = isEn
+                    ? `🟢 Live CSV Synced (${window.dcLastSyncTime})`
+                    : `🟢 已同步官方 CSV (${window.dcLastSyncTime})`;
+            } else {
+                badge.innerHTML = isEn
+                    ? '🟢 Official DC Dataset Ready'
+                    : '🟢 官方區議會數據已就緒';
+            }
+        }
+
+        // 為指定屆別建立完整議席與議員名單 (結合官方 CSV 實時資料與 18 區法定議席配額)
+        function getDcTermFullSeatsAndMembers(termKey) {
+            const cfg = DC_CSV_APIS[termKey] || DC_CSV_APIS['2024-27'];
+            const liveList = window.dcLiveCsvMembersByTerm[termKey];
+            if (liveList && liveList.length > 0) {
+                return liveList;
+            }
+
+            // 由內建實名區議員資料庫提取該屆議員，並對齊 18 區法定議席配額
+            const termCode = cfg.termCode;
+            const seedForTerm = DC_SEED_MEMBERS.filter(m => Array.isArray(m.terms) && m.terms.includes(termCode));
+
+            const fullSeatsList = [];
+            DC_18_DISTRICTS_META.forEach(distMeta => {
+                const quota = distMeta.seats[termKey] || distMeta.seats['2024-27'];
+                const distSeeds = seedForTerm.filter(m => m.dist === distMeta.code);
+
+                if (termKey === '2024-27') {
+                    // 2024-27 內建完整 470 名實名區議員
+                    distSeeds.forEach(m => {
+                        let catKey = 'ELECTED';
+                        if (m.seat_type === '地委會') catKey = 'DHC';
+                        else if (m.seat_type === '委任') catKey = 'APPOINTED';
+                        else if (m.seat_type === '當然') catKey = 'EX_OFFICIO';
+                        fullSeatsList.push({
+                            dist: distMeta.code,
+                            catKey,
+                            name_zh: m.name,
+                            name_en: m.name,
+                            sub_zh: m.sub || DC_SEAT_CATEGORIES[catKey].zh,
+                            sub_en: m.sub || DC_SEAT_CATEGORIES[catKey].en,
+                            role_zh: DC_SEAT_CATEGORIES[catKey].short_zh,
+                            role_en: DC_SEAT_CATEGORIES[catKey].short_en,
+                            isLiveCsv: false
+                        });
+                    });
+                } else {
+                    // 2016-19 (458席) 及 2020-23 (479席)：僅設民選議員 (ELECTED) 及新界當然議員 (EX_OFFICIO)
+                    const exSeeds = distSeeds.filter(m => m.seat_type === '當然');
+                    const elSeeds = distSeeds.filter(m => m.seat_type !== '當然');
+
+                    for (let i = 0; i < quota.ELECTED; i++) {
+                        const m = elSeeds[i];
+                        const cleanSub = m && m.sub ? m.sub.replace(/地區委員會界別\s*\/\s*前?/g, '').replace(/^.*?委任\s*\/\s*前?/g, '').trim() : `${distMeta.zh}民選選區 #${i + 1}`;
+                        fullSeatsList.push({
+                            dist: distMeta.code,
+                            catKey: 'ELECTED',
+                            name_zh: m ? m.name : `${distMeta.zh}民選議員席位 #${i + 1}`,
+                            name_en: m ? m.name : `${distMeta.en} Elected Seat #${i + 1}`,
+                            sub_zh: cleanSub || `${distMeta.zh}民選選區`,
+                            sub_en: cleanSub || `${distMeta.en} Elected Constituency`,
+                            role_zh: '民選議員',
+                            role_en: 'Elected Member',
+                            isLiveCsv: false
+                        });
+                    }
+                    for (let i = 0; i < quota.EX_OFFICIO; i++) {
+                        const m = exSeeds[i];
+                        fullSeatsList.push({
+                            dist: distMeta.code,
+                            catKey: 'EX_OFFICIO',
+                            name_zh: m ? m.name : `${distMeta.zh}鄉事會當然議員 #${i + 1}`,
+                            name_en: m ? m.name : `${distMeta.en} Ex-officio Seat #${i + 1}`,
+                            sub_zh: m && m.sub ? m.sub : `${distMeta.zh}鄉事委員會主席`,
+                            sub_en: m && m.sub ? m.sub : `${distMeta.en} Rural Committee Chairman`,
+                            role_zh: '當然議員',
+                            role_en: 'Ex-officio Member',
+                            isLiveCsv: false
+                        });
+                    }
+                }
+            });
+
+            return fullSeatsList;
+        }
+
+        // 建立半圓形議席「人仔」分佈 SVG 圖示 (有幾多個議席就畫幾多個人仔，按界別顏色排列)
+        function buildDcHemicycleSVG(filteredSeats, isEn) {
+            const N = filteredSeats.length;
+            if (N === 0) {
+                return `<div style="text-align:center; padding:32px; color:#64748b; font-weight:700;">${isEn ? 'No seats match the current filter.' : '目前篩選條件下沒有對應議席。'}</div>`;
+            }
+
+            // 按界別排序 (民選 -> 地區委員會界別 -> 委任 -> 當然)，令半圓形人仔呈現清晰界別扇區
+            const catOrder = { ELECTED: 1, DHC: 2, APPOINTED: 3, EX_OFFICIO: 4 };
+            const orderedSeats = [...filteredSeats].sort((a, b) => {
+                if (catOrder[a.catKey] !== catOrder[b.catKey]) return catOrder[a.catKey] - catOrder[b.catKey];
+                return a.dist.localeCompare(b.dist);
+            });
+            window.dcCurrentHemicycleSeats = orderedSeats;
+
+            const svgW = 800;
+            const svgH = 380;
+            const cx = 400;
+            const cy = 336;
+
+            // 根據議席數量 N 自動決定半圓形層數 (numRows)、半徑範圍及「人仔」縮放比例 (personScale)
+            let radii = [];
+            let personScale = 1.0;
+            if (N <= 15) {
+                radii = [145, 210];
+                personScale = 2.65;
+            } else if (N <= 26) {
+                radii = [130, 185, 240];
+                personScale = 2.25;
+            } else if (N <= 50) {
+                radii = [118, 162, 206, 250];
+                personScale = 1.88;
+            } else if (N <= 120) {
+                radii = [105, 142, 179, 216, 253];
+                personScale = 1.38;
+            } else if (N <= 240) {
+                radii = [96, 122, 148, 174, 200, 226, 252];
+                personScale = 1.08;
+            } else {
+                radii = [90, 110, 130, 150, 170, 190, 210, 230, 250];
+                personScale = 0.88;
+            }
+
+            // 按各層弧長比例分配每層人仔數目，確保總和精確等於 N
+            const totalR = radii.reduce((a, b) => a + b, 0);
+            let rowCounts = radii.map(r => Math.max(1, Math.round((N * r) / totalR)));
+            let diff = N - rowCounts.reduce((a, b) => a + b, 0);
+            let rIdx = rowCounts.length - 1;
+            while (diff !== 0) {
+                if (diff > 0) {
+                    rowCounts[rIdx]++;
+                    diff--;
+                } else if (rowCounts[rIdx] > 1) {
+                    rowCounts[rIdx]--;
+                    diff++;
+                }
+                rIdx = (rIdx - 1 + rowCounts.length) % rowCounts.length;
+            }
+
+            // 計算所有座位座標 (x, y, theta)，再按角度 theta 由左至右 (π -> 0) 排序，令相同界別人仔形成整齊扇形區塊
+            const slotCoords = [];
+            for (let row = 0; row < radii.length; row++) {
+                const r = radii[row];
+                const cnt = rowCounts[row];
+                for (let j = 0; j < cnt; j++) {
+                    const frac = cnt === 1 ? 0.5 : (j + 0.5) / cnt;
+                    // 角度由 174° (左端) 至 6° (右端)
+                    const deg = 174 - frac * 168;
+                    const theta = (deg * Math.PI) / 180;
+                    const x = cx + r * Math.cos(theta);
+                    const y = cy - r * Math.sin(theta);
+                    slotCoords.push({ x, y, deg, row, r });
+                }
+            }
+
+            slotCoords.sort((a, b) => {
+                if (Math.abs(b.deg - a.deg) > 0.4) return b.deg - a.deg;
+                return a.r - b.r;
+            });
+
+            // 繪製半圓形背景參考弧線
+            const guideArcsSvg = radii.map(r => {
+                const x1 = (cx - r * Math.cos((6 * Math.PI) / 180)).toFixed(1);
+                const y1 = (cy - r * Math.sin((6 * Math.PI) / 180)).toFixed(1);
+                const x2 = (cx + r * Math.cos((6 * Math.PI) / 180)).toFixed(1);
+                const y2 = y1;
+                return `<path d="M ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2}" fill="none" stroke="rgba(148,163,184,0.18)" stroke-width="1" stroke-dasharray="3,3"/>`;
+            }).join('');
+
+            // 繪製每一個議席「人仔」圖示 (Head + Shoulders Silhouette)
+            const personNodesSvg = orderedSeats.map((seat, idx) => {
+                const pt = slotCoords[idx] || { x: cx, y: cy };
+                const catMeta = DC_SEAT_CATEGORIES[seat.catKey] || DC_SEAT_CATEGORIES.ELECTED;
+                const distMeta = DC_18_DISTRICTS_META.find(d => d.code === seat.dist);
+                const distName = distMeta ? (isEn ? distMeta.en : distMeta.zh) : seat.dist;
+                const memName = isEn ? seat.name_en : seat.name_zh;
+                const catName = isEn ? catMeta.short_en : catMeta.short_zh;
+                const subName = isEn ? seat.sub_en : seat.sub_zh;
+                const tipText = `#${idx + 1} ${memName} | ${distName} | ${catName} (${subName})`.replace(/"/g, '&quot;');
+
+                return `<g class="dc-person-seat" transform="translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)}) scale(${personScale.toFixed(2)})" style="cursor:pointer; color:${catMeta.color}; transition:transform 0.12s ease;" onmouseenter="inspectDcSeatNode(${idx})" onclick="inspectDcSeatNode(${idx}, true)">
+                    <title>${tipText}</title>
+                    <circle cx="0" cy="-3.4" r="2.35" fill="currentColor" stroke="#ffffff" stroke-width="0.68"/>
+                    <path d="M -3.9,3.3 C -3.9,-0.25 3.9,-0.25 3.9,3.3 Z" fill="currentColor" stroke="#ffffff" stroke-width="0.68" stroke-linejoin="round"/>
+                </g>`;
+            }).join('');
+
+            const distMetaSel = window.dcSelectedDistrict === 'ALL'
+                ? null
+                : DC_18_DISTRICTS_META.find(d => d.code === window.dcSelectedDistrict);
+            const centerTopLabel = distMetaSel
+                ? (isEn ? `${distMetaSel.en} DC` : `${distMetaSel.zh}區議會`)
+                : (isEn ? 'All 18 Districts Total' : '全港十八區總計');
+            const centerSubLabel = isEn ? `${N} Council Seats` : `共 ${N} 個議席人仔`;
+
+            return `
+                <div style="background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px 6px 12px;">
+                    <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; max-height:360px; height:auto; display:block; overflow:visible;">
+                        ${guideArcsSvg}
+                        <!-- 中央主席台／議席總數拱心石 -->
+                        <path d="M ${cx - 68},${cy + 4} A 68,68 0 0,1 ${cx + 68},${cy + 4} Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+                        <text x="${cx}" y="${cy - 34}" text-anchor="middle" font-size="12" font-weight="800" fill="#475569">${centerTopLabel}</text>
+                        <text x="${cx}" y="${cy - 10}" text-anchor="middle" font-size="25" font-weight="900" fill="#0f172a">${formatNum(N)}</text>
+                        <text x="${cx}" y="${cy + 14}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#64748b">${centerSubLabel}</text>
+                        ${personNodesSvg}
+                    </svg>
+                </div>
+            `;
+        }
+
+        function inspectDcSeatNode(seatIdx, scrollToRow = false) {
+            const seat = (window.dcCurrentHemicycleSeats || [])[seatIdx];
+            if (!seat) return;
+            const isEn = (currentLang === 'en');
+            const bar = document.getElementById('dc-seat-inspector-bar');
+            const catMeta = DC_SEAT_CATEGORIES[seat.catKey] || DC_SEAT_CATEGORIES.ELECTED;
+            const distMeta = DC_18_DISTRICTS_META.find(d => d.code === seat.dist);
+            const distName = distMeta ? (isEn ? distMeta.en : distMeta.zh) : seat.dist;
+            const memName = isEn ? seat.name_en : seat.name_zh;
+            const catName = isEn ? catMeta.en : catMeta.zh;
+            const subName = isEn ? seat.sub_en : seat.sub_zh;
+
+            if (bar) {
+                bar.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; font-weight:900;">
+                        👤 #${seatIdx + 1} ${memName}
+                    </span>
+                    <span style="font-weight:800; color:#1e3a8a;">📍 ${distName}</span>
+                    <span style="font-weight:800; color:${catMeta.color};">🏷️ ${catName}</span>
+                    <span style="color:#475569; font-weight:700;">🗺️ ${subName}</span>
+                `;
+            }
+        }
+
+        function setDcTerm(termKey) {
+            if (!DC_CSV_APIS[termKey]) return;
+            window.dcSelectedTerm = termKey;
+            window.dcSelectedCategory = 'ALL';
+            window.dcCurrentPage = 1;
+            renderDcPortal();
+            if (!window.dcLiveCsvMembersByTerm[termKey]) {
+                syncAllDcTermsCSV(false);
+            }
+        }
+
+        function setDcDistrict(distCode) {
+            window.dcSelectedDistrict = distCode || 'ALL';
+            window.dcCurrentPage = 1;
+            renderDcPortal();
+        }
+
+        function setDcCategory(catKey) {
+            window.dcSelectedCategory = (window.dcSelectedCategory === catKey && catKey !== 'ALL') ? 'ALL' : (catKey || 'ALL');
+            window.dcCurrentPage = 1;
+            renderDcPortal();
+        }
+
+        function onDcSearchInput(val) {
+            window.dcSearchQuery = String(val || '');
+            window.dcCurrentPage = 1;
+            renderDcMembersTableOnly();
+        }
+
+        function setDcPage(p) {
+            window.dcCurrentPage = Math.max(1, p);
+            renderDcMembersTableOnly();
+        }
+
+        function getFilteredDcMembers() {
+            const allTermSeats = getDcTermFullSeatsAndMembers(window.dcSelectedTerm);
+            const q = (window.dcSearchQuery || '').trim().toLowerCase();
+
+            return allTermSeats.filter(m => {
+                if (window.dcSelectedDistrict !== 'ALL' && m.dist !== window.dcSelectedDistrict) return false;
+                if (window.dcSelectedCategory !== 'ALL' && m.catKey !== window.dcSelectedCategory) return false;
+                if (q) {
+                    const distMeta = DC_18_DISTRICTS_META.find(d => d.code === m.dist);
+                    const catMeta = DC_SEAT_CATEGORIES[m.catKey];
+                    const haystack = `${m.name_zh} ${m.name_en} ${m.sub_zh} ${m.sub_en} ${distMeta ? distMeta.zh + ' ' + distMeta.en : ''} ${catMeta ? catMeta.zh + ' ' + catMeta.en : ''}`.toLowerCase();
+                    if (!haystack.includes(q)) return false;
+                }
+                return true;
+            });
+        }
+
+        function buildDcMembersTableHTML(isEn) {
+            const filtered = getFilteredDcMembers();
+            const totalFiltered = filtered.length;
+            const pageSize = window.dcPageSize || 50;
+            const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+            if (window.dcCurrentPage > totalPages) window.dcCurrentPage = totalPages;
+            const curPage = window.dcCurrentPage;
+            const startIdx = (curPage - 1) * pageSize;
+            const slice = filtered.slice(startIdx, startIdx + pageSize);
+
+            const rowsHtml = slice.length === 0
+                ? `<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b; font-weight:700;">${isEn ? 'No matching District Council members found.' : '找不到符合篩選條件的區議員紀錄。'}</td></tr>`
+                : slice.map((m, idx) => {
+                    const distMeta = DC_18_DISTRICTS_META.find(d => d.code === m.dist);
+                    const catMeta = DC_SEAT_CATEGORIES[m.catKey] || DC_SEAT_CATEGORIES.ELECTED;
+                    const distLabel = distMeta ? (isEn ? distMeta.en : distMeta.zh) : m.dist;
+                    const regLabel = distMeta ? (isEn ? distMeta.reg_en : distMeta.reg_zh) : '';
+                    const memName = isEn ? m.name_en : m.name_zh;
+                    const subLabel = isEn ? m.sub_en : m.sub_zh;
+                    const catLabel = isEn ? catMeta.short_en : catMeta.short_zh;
+
+                    return `
+                        <tr>
+                            <td style="font-weight:800; color:#64748b; width:56px;">#${startIdx + idx + 1}</td>
+                            <td>
+                                <span style="font-weight:900; color:#1e3a8a; cursor:pointer;" onclick="setDcDistrict('${m.dist}')">${distLabel}</span>
+                                <span style="font-size:0.7rem; color:#64748b; margin-left:4px;">(${regLabel})</span>
+                            </td>
+                            <td style="font-weight:900; color:#0f172a; font-size:0.88rem;">👤 ${memName}</td>
+                            <td>
+                                <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; font-size:0.73rem; font-weight:800;">
+                                    ● ${catLabel}
+                                </span>
+                            </td>
+                            <td style="color:#334155; font-weight:600;">${subLabel}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            const startDisp = totalFiltered === 0 ? 0 : startIdx + 1;
+            const endDisp = Math.min(totalFiltered, startIdx + pageSize);
+
+            return `
+                <div class="el-table-wrap">
+                    <table class="el-table">
+                        <thead>
+                            <tr>
+                                <th>${isEn ? 'Seat #' : '序號'}</th>
+                                <th>${isEn ? '18 Districts' : '所屬十八區'}</th>
+                                <th>${isEn ? 'DC Member Name' : '區議員姓名'}</th>
+                                <th>${isEn ? 'Seat Category (Capacity)' : '議席界別 (身分)'}</th>
+                                <th>${isEn ? 'Constituency / Sector' : '選區／界別詳情'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:10px 4px 2px 4px; font-size:0.76rem; color:#475569; font-weight:700;">
+                    <div>
+                        ${isEn
+                            ? `Showing <b>${formatNum(startDisp)}–${formatNum(endDisp)}</b> of <b>${formatNum(totalFiltered)}</b> seats`
+                            : `顯示第 <b>${formatNum(startDisp)}–${formatNum(endDisp)}</b> 席（共 <b>${formatNum(totalFiltered)}</b> 名區議員／議席）`}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="el-chip-btn" onclick="setDcPage(1)" ${curPage <= 1 ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>⏮</button>
+                        <button type="button" class="el-chip-btn" onclick="setDcPage(${curPage - 1})" ${curPage <= 1 ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>◀ ${isEn ? 'Prev' : '上一頁'}</button>
+                        <span style="padding:0 6px; font-weight:900; color:#0f172a;">${curPage} / ${totalPages}</span>
+                        <button type="button" class="el-chip-btn" onclick="setDcPage(${curPage + 1})" ${curPage >= totalPages ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>${isEn ? 'Next' : '下一頁'} ▶</button>
+                        <button type="button" class="el-chip-btn" onclick="setDcPage(${totalPages})" ${curPage >= totalPages ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>⏭</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDcMembersTableOnly() {
+            const region = document.getElementById('dc-members-table-region');
+            if (region) {
+                region.innerHTML = buildDcMembersTableHTML(currentLang === 'en');
+            }
+        }
+
+        function renderDcPortal() {
+            const container = document.getElementById('dc-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const termKey = window.dcSelectedTerm || '2024-27';
+            const termCfg = DC_CSV_APIS[termKey] || DC_CSV_APIS['2024-27'];
+            const allTermSeats = getDcTermFullSeatsAndMembers(termKey);
+
+            // 按當前選取地區 (或全港 18 區) 統計各界別議席數
+            const districtSeats = window.dcSelectedDistrict === 'ALL'
+                ? allTermSeats
+                : allTermSeats.filter(m => m.dist === window.dcSelectedDistrict);
+
+            const hemicycleSeats = window.dcSelectedCategory === 'ALL'
+                ? districtSeats
+                : districtSeats.filter(m => m.catKey === window.dcSelectedCategory);
+
+            const countsByCat = { ELECTED: 0, DHC: 0, APPOINTED: 0, EX_OFFICIO: 0 };
+            districtSeats.forEach(m => {
+                countsByCat[m.catKey] = (countsByCat[m.catKey] || 0) + 1;
+            });
+            const totalInScope = districtSeats.length || 1;
+
+            const distMetaSel = window.dcSelectedDistrict === 'ALL'
+                ? null
+                : DC_18_DISTRICTS_META.find(d => d.code === window.dcSelectedDistrict);
+            const scopeTitle = distMetaSel
+                ? (isEn ? `${distMetaSel.en} District Council` : `${distMetaSel.zh}區議會`)
+                : (isEn ? 'All 18 Districts of Hong Kong' : '全港十八區區議會總覽');
+
+            // 1. 頂部 4 大 KPI 指標卡
+            const kpiHtml = `
+                <div class="el-kpi-grid">
+                    <div class="el-kpi-card">
+                        <div class="el-kpi-label">${isEn ? '🏛️ Total Council Seats' : '🏛️ 區議會議席總數'}</div>
+                        <div class="el-kpi-val" style="color:#0f172a;">${formatNum(districtSeats.length)} <span style="font-size:0.78rem; font-weight:700;">${isEn ? 'Seats' : '席'}</span></div>
+                        <div class="el-kpi-sub">${scopeTitle} (${termCfg.period})</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setDcCategory('ELECTED')">
+                        <div class="el-kpi-label">🟦 ${isEn ? 'Elected (Geographical)' : '民選／地方選區議員'}</div>
+                        <div class="el-kpi-val" style="color:#2563eb;">${formatNum(countsByCat.ELECTED)} <span style="font-size:0.76rem;">(${((countsByCat.ELECTED / totalInScope) * 100).toFixed(1)}%)</span></div>
+                        <div class="el-kpi-sub">${isEn ? 'Direct Geographical Constituency Seats' : '由地方選區選民直接投票選出'}</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setDcCategory('${termKey === '2024-27' ? 'DHC' : 'EX_OFFICIO'}')">
+                        <div class="el-kpi-label">🟪 ${isEn ? 'District Committees (DHC)' : '地區委員會界別議員'}</div>
+                        <div class="el-kpi-val" style="color:#7c3aed;">${formatNum(countsByCat.DHC)} <span style="font-size:0.76rem;">(${((countsByCat.DHC / totalInScope) * 100).toFixed(1)}%)</span></div>
+                        <div class="el-kpi-sub">${termKey === '2024-27'
+                            ? (isEn ? 'Elected by 3 District Committees' : '由地區三會（分區／防火／滅罪）委員選出')
+                            : (isEn ? 'Introduced in 2024–2027 Term' : '於 2024–2027 第七屆起增設')}</div>
+                    </div>
+                    <div class="el-kpi-card" style="cursor:pointer;" onclick="setDcCategory('APPOINTED')">
+                        <div class="el-kpi-label">🟧 ${isEn ? 'Appointed & 🟩 Ex-officio' : '委任議員及 🟩 當然議員'}</div>
+                        <div class="el-kpi-val" style="color:#d97706;">${formatNum(countsByCat.APPOINTED)} <span style="font-size:0.82rem; color:#64748b;">/</span> <span style="color:#059669;">${formatNum(countsByCat.EX_OFFICIO)}</span></div>
+                        <div class="el-kpi-sub">${isEn
+                            ? `Appointed: ${countsByCat.APPOINTED} | Ex-officio: ${countsByCat.EX_OFFICIO}`
+                            : `委任：${countsByCat.APPOINTED} 席 ｜ 新界鄉事會當然：${countsByCat.EX_OFFICIO} 席`}</div>
+                    </div>
+                </div>
+            `;
+
+            // 2. 屆別切換列 (2024-27 / 2020-23 / 2016-19) 及 官方 CSV 連結
+            const termBarHtml = `
+                <div class="el-filter-bar" style="justify-content:space-between; background:rgba(255,255,255,0.94);">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span class="el-filter-label">${isEn ? '📅 Select DC Term:' : '📅 選擇區議會屆別：'}</span>
+                        ${Object.keys(DC_CSV_APIS).map(tKey => {
+                            const c = DC_CSV_APIS[tKey];
+                            return `<button type="button" class="el-chip-btn ${termKey === tKey ? 'active' : ''}" onclick="setDcTerm('${tKey}')">
+                                ${isEn ? c.name_en : c.name_zh} (${c.total_seats}${isEn ? ' seats' : '席'})
+                            </button>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size:0.72rem; font-weight:700; color:#64748b;">
+                        🔗 API: <a href="${termCfg.en_url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:underline;">List_of_DC_members_${termKey}_en.csv</a>
+                    </div>
+                </div>
+            `;
+
+            // 3. 十八區快速分區選擇器 (按港島、九龍、新界排列，顯示每區議席數)
+            const distCountsMap = {};
+            allTermSeats.forEach(m => {
+                distCountsMap[m.dist] = (distCountsMap[m.dist] || 0) + 1;
+            });
+
+            const districtSelectorHtml = `
+                <div class="el-card-box" style="padding:10px 12px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                        <span style="font-size:0.8rem; font-weight:900; color:#0f172a;">🗺️ ${isEn ? 'Select District (18 Districts of Hong Kong):' : '按香港十八區篩選（點擊任何一區即時切換半圓形議席人仔圖及名單）：'}</span>
+                        ${window.dcSelectedDistrict !== 'ALL' ? `<button type="button" class="el-chip-btn" onclick="setDcDistrict('ALL')">↺ ${isEn ? 'Show All 18 Districts' : '返回全港十八區總覽'}</button>` : ''}
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button type="button" class="el-chip-btn ${window.dcSelectedDistrict === 'ALL' ? 'active' : ''}" onclick="setDcDistrict('ALL')">
+                            🌐 ${isEn ? `All 18 Districts (${allTermSeats.length})` : `全港十八區 (${allTermSeats.length}席)`}
+                        </button>
+                        ${DC_18_DISTRICTS_META.map(d => {
+                            const cnt = distCountsMap[d.code] || 0;
+                            return `<button type="button" class="el-chip-btn ${window.dcSelectedDistrict === d.code ? 'active' : ''}" onclick="setDcDistrict('${d.code}')">
+                                ${isEn ? d.en : d.zh} (${cnt})
+                            </button>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            // 4. 半圓形議席「人仔」分佈圖示卡片 (Hemicycle Little-Person Seat Diagram)
+            const firstSeat = hemicycleSeats[0];
+            const firstCatMeta = firstSeat ? DC_SEAT_CATEGORIES[firstSeat.catKey] : DC_SEAT_CATEGORIES.ELECTED;
+            const firstDistMeta = firstSeat ? DC_18_DISTRICTS_META.find(d => d.code === firstSeat.dist) : null;
+
+            const hemicycleCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">👥 ${isEn
+                                ? `Semicircle Council Seat Diagram — ${scopeTitle} (${hemicycleSeats.length} Person Icons)`
+                                : `半圓形區議會議席「人仔」界別分佈圖示 — ${scopeTitle}（共 ${hemicycleSeats.length} 個人仔議席）`}</div>
+                            <div class="el-card-subtitle">${isEn ? termCfg.desc_en : termCfg.desc_zh}</div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <button type="button" class="el-chip-btn ${window.dcSelectedCategory === 'ALL' ? 'active' : ''}" onclick="setDcCategory('ALL')">
+                                ${isEn ? `All Sectors (${districtSeats.length})` : `全部界別 (${districtSeats.length})`}
+                            </button>
+                            ${Object.keys(DC_SEAT_CATEGORIES).map(cKey => {
+                                const cMeta = DC_SEAT_CATEGORIES[cKey];
+                                const cnt = countsByCat[cKey] || 0;
+                                if (cnt === 0 && termKey !== '2024-27') return '';
+                                const isAct = window.dcSelectedCategory === cKey;
+                                return `<button type="button" class="el-chip-btn ${isAct ? 'active' : ''}" style="${isAct ? '' : `border-color:${cMeta.border}; color:${cMeta.color}; background:${cMeta.bg};`}" onclick="setDcCategory('${cKey}')">
+                                    👤 ${isEn ? cMeta.short_en : cMeta.short_zh} (${cnt})
+                                </button>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    ${buildDcHemicycleSVG(hemicycleSeats, isEn)}
+
+                    <!-- 互動人仔議席檢視列 (滑鼠移過或點擊半圓形內任何一個人仔即時顯示該議員詳情) -->
+                    <div id="dc-seat-inspector-bar" style="margin-top:8px; padding:8px 12px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:0.78rem;">
+                        ${firstSeat ? `
+                            <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:${firstCatMeta.bg}; color:${firstCatMeta.color}; border:1px solid ${firstCatMeta.border}; font-weight:900;">
+                                👤 #1 ${isEn ? firstSeat.name_en : firstSeat.name_zh}
+                            </span>
+                            <span style="font-weight:800; color:#1e3a8a;">📍 ${firstDistMeta ? (isEn ? firstDistMeta.en : firstDistMeta.zh) : firstSeat.dist}</span>
+                            <span style="font-weight:800; color:${firstCatMeta.color};">🏷️ ${isEn ? firstCatMeta.en : firstCatMeta.zh}</span>
+                            <span style="color:#475569; font-weight:700;">🗺️ ${isEn ? firstSeat.sub_en : firstSeat.sub_zh}</span>
+                            <span style="margin-left:auto; font-size:0.72rem; color:#64748b;">💡 ${isEn ? 'Hover or tap any person icon above to inspect seat' : '將滑鼠移過或點擊上方半圓形內任何「人仔」即可查看該席議員'}</span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // 5. 十八區議席界別組成一覽表 (點擊任何一區可即時切換)
+            const distBreakdownRowsHtml = DC_18_DISTRICTS_META.map(d => {
+                const dSeats = allTermSeats.filter(m => m.dist === d.code);
+                const elC = dSeats.filter(m => m.catKey === 'ELECTED').length;
+                const dhcC = dSeats.filter(m => m.catKey === 'DHC').length;
+                const appC = dSeats.filter(m => m.catKey === 'APPOINTED').length;
+                const exC = dSeats.filter(m => m.catKey === 'EX_OFFICIO').length;
+                const totC = dSeats.length;
+                const isSel = (window.dcSelectedDistrict === d.code);
+
+                return `
+                    <tr style="${isSel ? 'background:#eff6ff;' : ''} cursor:pointer;" onclick="setDcDistrict('${d.code}')">
+                        <td style="font-weight:900; color:#1e3a8a;">${isEn ? d.en : d.zh}</td>
+                        <td style="color:#64748b; font-weight:700;">${isEn ? d.reg_en : d.reg_zh}</td>
+                        <td class="num-col" style="color:#2563eb; font-weight:800;">${elC}</td>
+                        <td class="num-col" style="color:#7c3aed; font-weight:800;">${dhcC}</td>
+                        <td class="num-col" style="color:#d97706; font-weight:800;">${appC}</td>
+                        <td class="num-col" style="color:#059669; font-weight:800;">${exC}</td>
+                        <td class="num-col" style="font-weight:900; color:#0f172a;">${totC}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const distSummaryCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📊 ${isEn ? `18 Districts Seat Composition Breakdown (${termCfg.period})` : `香港十八區區議會議席界別組成統計表 (${termCfg.period})`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Click any district row to view its semicircle seat diagram and member list.' : '點擊下方任何一區，即可自動切換上方半圓形人仔圖示及下方區議員名單。'}</div>
+                        </div>
+                    </div>
+                    <div class="el-table-wrap">
+                        <table class="el-table">
+                            <thead>
+                                <tr>
+                                    <th>${isEn ? 'District Council' : '十八區區議會'}</th>
+                                    <th>${isEn ? 'Region' : '區域'}</th>
+                                    <th>🟦 ${isEn ? 'Elected' : '民選／地方選區'}</th>
+                                    <th>🟪 ${isEn ? 'District Committees' : '地區委員會界別'}</th>
+                                    <th>🟧 ${isEn ? 'Appointed' : '委任議員'}</th>
+                                    <th>🟩 ${isEn ? 'Ex-officio' : '當然議員'}</th>
+                                    <th>${isEn ? 'Total Seats' : '議席總數'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>${distBreakdownRowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            // 6. 區議員詳細名單卡片 (支援搜尋、分區、界別篩選及分頁)
+            const membersDirectoryCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📋 ${isEn ? `List of District Council Members — ${scopeTitle} (${termCfg.period})` : `香港區議員詳細名單 — ${scopeTitle} (${termCfg.period})`}</div>
+                            <div class="el-card-subtitle">${isEn
+                                ? `Source API: ${termCfg.en_url}`
+                                : `數據源 API：${termCfg.en_url}`}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <input
+                                type="text"
+                                class="el-search-input"
+                                style="min-width:230px;"
+                                value="${(window.dcSearchQuery || '').replace(/"/g, '&quot;')}"
+                                oninput="onDcSearchInput(this.value)"
+                                placeholder="${isEn ? '🔍 Search member name, district, constituency...' : '🔍 搜尋區議員姓名、十八區、選區或界別...'}"
+                            />
+                            ${(window.dcSelectedDistrict !== 'ALL' || window.dcSelectedCategory !== 'ALL' || window.dcSearchQuery) ? `
+                                <button type="button" class="el-chip-btn" onclick="window.dcSelectedDistrict='ALL'; window.dcSelectedCategory='ALL'; window.dcSearchQuery=''; window.dcCurrentPage=1; renderDcPortal();">
+                                    ↺ ${isEn ? 'Reset' : '重設篩選'}
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div id="dc-members-table-region">
+                        ${buildDcMembersTableHTML(isEn)}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = kpiHtml + termBarHtml + districtSelectorHtml + hemicycleCardHtml + membersDirectoryCardHtml + distSummaryCardHtml;
+        }
+
+        function applyDcLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-dc');
+            if (btn) btn.title = isEn ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
+            updateDcRefreshBadgeUI();
+            if (window.dcSystemInitialized || currentActivePage === 'dc') {
+                renderDcPortal();
+            }
+        }
+
+        function initDcMembersSystem() {
+            if (window.dcSystemInitialized) return;
+            window.dcSystemInitialized = true;
+            syncAllDcTermsCSV(false);
+        }
+
+
         async function boot() {
             setDeviceMode(currentDeviceMode);
 
@@ -17510,7 +18465,9 @@
             try { syncFlightFilterButtonsUI(); } catch(e){}
             try { applyLanguage(); } catch(e){}
             try {
-                if (currentActivePage === 'lamppost') {
+                if (currentActivePage === 'dc') {
+                    showDcPage();
+                } else if (currentActivePage === 'lamppost') {
                     showLamppostPage();
                 } else if (currentActivePage === 'border') {
                     showBorderPage();
