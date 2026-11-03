@@ -4003,6 +4003,137 @@
             cursor: pointer;
             display: none;
         }
+
+        /* 🌦️ 香港天氣及天氣雷達圖專用排版樣式 (防止走位及確保卡片表格整齊對齊) */
+        #weather-portal-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 18px;
+        }
+        .wth-hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+            gap: 12px;
+            align-items: stretch;
+        }
+        .wth-hero-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .wth-hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .wth-hero-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+        .wth-metrics-6grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        @media (max-width: 520px) {
+            .wth-metrics-6grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .wth-metric-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .wth-metric-label {
+            font-size: 0.71rem;
+            font-weight: 800;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .wth-metric-val {
+            font-size: 0.98rem;
+            font-weight: 900;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .wth-metric-sub {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #475569;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .wth-radar-single-wrap {
+            max-width: 660px;
+            width: 100%;
+            margin: 0 auto;
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 12px;
+            border: 2px solid #0284c7;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+        }
+        .wth-station-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+        }
+        .wth-station-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 11px 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+            transition: transform 0.12s ease, border-color 0.12s ease;
+        }
+        .wth-station-card:hover {
+            border-color: #0284c7;
+            transform: translateY(-1px);
+        }
+        .wth-station-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .wth-station-cell {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 7px 9px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
     </style>
 </head>
 <body data-device-mode="auto">
@@ -5810,10 +5941,11 @@
             updateMenuRailButtons('weather');
             initWeatherPortalSystem();
             renderWeatherPortal();
+            startWeatherRadarAnimationLoop();
         }
 
         // ==========================================
-        // 🌦️ 香港分區天氣觀測及天氣雷達圖系統 (7 項實時氣象要素 + 64 / 128 / 256 公里天氣雷達圖)
+        // 🌦️ 香港即時天氣、明日預報、分區氣象觀測及 64/128/256 公里 20 幀動態天氣雷達圖系統
         // ==========================================
         const HK_WEATHER_CSV_URLS = {
             rain: [
@@ -5914,21 +6046,114 @@
 
         window.hkWeatherPortalState = {
             initialized: false,
-            activeSubTab: 'overview', // 'overview' | 'radar' | 'temp_hum_rain' | 'wind_vis_solar' | 'tide'
+            detailSubTab: 'all', // 'all' | 'stations' | 'vis_solar' | 'tide'
+            stationDisplayMode: 'cards', // 'cards' | 'table'
             regionFilter: 'ALL',
             searchQuery: '',
-            radarRangeKm: 64, // 64 | 128 | 256
-            radarViewMode: 'dual', // 'dual' (3-range + interactive) | 'embed' (embedded Radar portal) | 'single'
-            radarAnimPlaying: false,
-            radarFrameIdx: 5,
+            radarRangeKm: 64, // 64 | 128 | 256 (Single radar view at a time)
+            radarAnimPlaying: true,
+            radarAnimSpeedMs: 420,
+            radarFrameIdx: 19, // 0 .. 19 (20 frames total, 19 = latest)
+            radarFramesByRange: { 64: [], 128: [], 256: [] },
             lastUpdatedText: '',
+            currentObs: {
+                hkoTemp: 25.4,
+                hkoHum: 76,
+                iconCode: 51,
+                uvVal: 5,
+                uvDesc_zh: '中等',
+                uvDesc_en: 'Moderate',
+                todayMax: 27.1,
+                todayMin: 23.6,
+                psr_zh: '低',
+                psr_en: 'Low',
+                generalSituation_zh: '一股清勁的偏東氣流正影響廣東沿岸，本港各區天色大致良好。',
+                generalSituation_en: 'A fresh easterly airstream is affecting the coast of Guangdong, bringing generally fine weather to the region.',
+                forecastDesc_zh: '部分時間有陽光，日間溫暖乾燥；今晚大致多雲，離岸風勢清勁。',
+                forecastDesc_en: 'Sunny periods and dry during the day. Mainly cloudy tonight with fresh winds offshore.',
+                warnings: []
+            },
+            tomorrowForecast: {
+                dateStr_zh: '明日預報',
+                dateStr_en: 'Tomorrow',
+                week_zh: '',
+                week_en: '',
+                iconCode: 51,
+                minTemp: 23,
+                maxTemp: 28,
+                minRh: 60,
+                maxRh: 85,
+                psr_zh: '低',
+                psr_en: 'Low',
+                wind_zh: '東至東北風 4 級，初時離岸間中 5 級。',
+                wind_en: 'East to northeasterly force 4, occasionally force 5 offshore at first.',
+                weather_zh: '大致天晴，日間乾燥。早晚部分時間多雲。',
+                weather_en: 'Mainly fine and dry during the day. Partly cloudy in the morning and at night.'
+            },
+            nextDaysForecast: [],
             stations: [],
             visibilityList: [],
             solarList: [],
             tideList: [],
-            radarLiveUrls: { 64: '', 128: '', 256: '' },
             summary: { avgTemp: 24.8, maxTemp: 27.5, minTemp: 18.2, avgHum: 77, maxRain: 1.5, avgWind: 16.4, maxGust: 56, avgVis: 19.0, avgSolar: 542, avgTide: 1.79 }
         };
+
+        function generate20RadarFramesForRange(rangeKm) {
+            const frames = [];
+            const nowMs = Date.now();
+            // HKO radar updates every 6 mins (64km) or 12 mins (128km/256km) in HKT (UTC+8), ~6 mins behind real time
+            const stepMins = (rangeKm === 64) ? 6 : 12;
+            const latestHktMs = nowMs + (8 * 3600 * 1000) - (6 * 60 * 1000);
+            const latestDate = new Date(latestHktMs);
+            const roundedMins = Math.floor(latestDate.getUTCMinutes() / stepMins) * stepMins;
+            latestDate.setUTCMinutes(roundedMins, 0, 0);
+
+            const rStr = String(rangeKm).padStart(3, '0');
+            for (let i = 19; i >= 0; i--) {
+                const frameTimeMs = latestDate.getTime() - (i * stepMins * 60000);
+                const d = new Date(frameTimeMs);
+                const yyyy = d.getUTCFullYear();
+                const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const dd = String(d.getUTCDate()).padStart(2, '0');
+                const hh = String(d.getUTCHours()).padStart(2, '0');
+                const minStr = String(d.getUTCMinutes()).padStart(2, '0');
+                const ts12 = `${yyyy}${mm}${dd}${hh}${minStr}`;
+                const urlN = `https://www.hko.gov.hk/wxinfo/radars/rad_${rStr}_png/2d${rStr}nradar_${ts12}.jpg`;
+                const urlI = `https://www.hko.gov.hk/wxinfo/radars/rad_${rStr}_png/2d${rStr}iradar_${ts12}.jpg`;
+                frames.push({
+                    idx: 19 - i,
+                    frameNo: 20 - i,
+                    ts12: ts12,
+                    timeLabel: `${hh}:${minStr}`,
+                    dateTimeLabel: `${mm}/${dd} ${hh}:${minStr} HKT`,
+                    url: urlN,
+                    altUrl: urlI
+                });
+            }
+            return frames;
+        }
+
+        function rebuildAll20RadarFrames() {
+            const st = window.hkWeatherPortalState;
+            [64, 128, 256].forEach(km => {
+                st.radarFramesByRange[km] = generate20RadarFramesForRange(km);
+            });
+            preloadRadarFramesForCurrentRange();
+        }
+
+        function preloadRadarFramesForCurrentRange() {
+            try {
+                const st = window.hkWeatherPortalState;
+                const list = st.radarFramesByRange[st.radarRangeKm] || [];
+                list.forEach(f => {
+                    if (!f._preloaded) {
+                        const img = new Image();
+                        img.src = f.url;
+                        f._preloaded = true;
+                    }
+                });
+            } catch (e) {}
+        }
 
         function cloneWeatherBaseline() {
             const st = window.hkWeatherPortalState;
@@ -5936,6 +6161,18 @@
             st.visibilityList = HK_VISIBILITY_BASELINE.map(v => Object.assign({}, v));
             st.solarList = HK_SOLAR_BASELINE.map(x => Object.assign({}, x));
             st.tideList = HK_TIDE_BASELINE.map(t => Object.assign({}, t));
+
+            // Populate default tomorrow date string based on HK Time
+            try {
+                const tmr = new Date(Date.now() + 86400000);
+                const y = tmr.getFullYear(), m = tmr.getMonth() + 1, d = tmr.getDate();
+                const wkZh = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][tmr.getDay()];
+                const wkEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][tmr.getDay()];
+                st.tomorrowForecast.dateStr_zh = `${y}年${m}月${d}日 (${wkZh})`;
+                st.tomorrowForecast.dateStr_en = `${d}/${m}/${y} (${wkEn})`;
+            } catch (e) {}
+
+            rebuildAll20RadarFrames();
             recomputeWeatherPortalSummary();
         }
 
@@ -6002,29 +6239,13 @@
                 let cur = '', inQ = false;
                 for (let i = 0; i < line.length; i++) {
                     const ch = line[i];
-                    if (ch === "\"") { inQ = !inQ; }
-                    else if (ch === "," && !inQ) { out.push(cur.trim()); cur = ''; }
+                    if (ch === '"') { inQ = !inQ; }
+                    else if (ch === ',' && !inQ) { out.push(cur.trim()); cur = ''; }
                     else { cur += ch; }
                 }
                 out.push(cur.trim());
                 return out;
             });
-        }
-
-        function computeLatestHkoRadarUrl(rangeKm) {
-            const now = new Date();
-            // HKO radar images are in HKT (UTC+8), rounded down to 6-min or 12-min intervals, ~6 mins behind current clock
-            const hktMs = now.getTime() + (8 * 3600 * 1000) - (8 * 60 * 1000);
-            const d = new Date(hktMs);
-            const yyyy = d.getUTCFullYear();
-            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(d.getUTCDate()).padStart(2, '0');
-            const hh = String(d.getUTCHours()).padStart(2, '0');
-            const step = (rangeKm === 64) ? 6 : 12;
-            const mins = Math.floor(d.getUTCMinutes() / step) * step;
-            const minStr = String(mins).padStart(2, '0');
-            const rStr = String(rangeKm).padStart(3, '0');
-            return `https://www.hko.gov.hk/wxinfo/radars/rad_${rStr}_png/2d${rStr}nradar_${yyyy}${mm}${dd}${hh}${minStr}.jpg`;
         }
 
         async function syncWeatherPortalData(isManual = false) {
@@ -6035,10 +6256,54 @@
                 statusEl.innerText = isEn ? '⏳ Syncing real-time observations...' : '⏳ 正在同步最新分區天氣及雷達圖...';
             }
 
-            // Update computed HKO radar image URLs for 64km, 128km, 256km
-            st.radarLiveUrls[64] = computeLatestHkoRadarUrl(64);
-            st.radarLiveUrls[128] = computeLatestHkoRadarUrl(128);
-            st.radarLiveUrls[256] = computeLatestHkoRadarUrl(256);
+            rebuildAll20RadarFrames();
+
+            // Try to enrich 20 radar frames from HKO nradar_img.json manifest if reachable
+            try {
+                const manifestUrls = [
+                    `https://www.hko.gov.hk/wxinfo/radars/temp_json/nradar_img.json?_=${Date.now()}`,
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.hko.gov.hk/wxinfo/radars/temp_json/nradar_img.json')}`
+                ];
+                for (const mu of manifestUrls) {
+                    try {
+                        const r = await fetch(mu, { cache: 'no-store' });
+                        if (r && r.ok) {
+                            const j = await r.json();
+                            const rawStr = JSON.stringify(j);
+                            [64, 128, 256].forEach(km => {
+                                const rStr = String(km).padStart(3, '0');
+                                const re = new RegExp(`2d${rStr}[ni]radar_(\\d{12})\\.jpg`, 'g');
+                                const matches = [];
+                                let m;
+                                while ((m = re.exec(rawStr)) !== null) {
+                                    if (!matches.some(x => x.ts12 === m[1])) {
+                                        matches.push({ file: m[0], ts12: m[1] });
+                                    }
+                                }
+                                if (matches.length >= 5) {
+                                    matches.sort((a, b) => a.ts12.localeCompare(b.ts12));
+                                    const last20 = matches.slice(-20);
+                                    st.radarFramesByRange[km] = last20.map((item, idx) => {
+                                        const t = item.ts12;
+                                        const mm = t.substring(4, 6), dd = t.substring(6, 8), hh = t.substring(8, 10), mn = t.substring(10, 12);
+                                        return {
+                                            idx: idx,
+                                            frameNo: idx + 1,
+                                            ts12: t,
+                                            timeLabel: `${hh}:${mn}`,
+                                            dateTimeLabel: `${mm}/${dd} ${hh}:${mn} HKT`,
+                                            url: `https://www.hko.gov.hk/wxinfo/radars/rad_${rStr}_png/${item.file}`,
+                                            altUrl: `https://www.hko.gov.hk/wxinfo/radars/rad_${rStr}_png/2d${rStr}iradar_${t}.jpg`
+                                        };
+                                    });
+                                }
+                            });
+                            preloadRadarFramesForCurrentRange();
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            } catch (e) {}
 
             const stMap = {};
             st.stations.forEach(s => { stMap[s.id] = s; });
@@ -6055,7 +6320,6 @@
                     fetchFirstAvailableCsvText(HK_WEATHER_CSV_URLS.tide)
                 ]);
 
-                // Parse Temperature CSV
                 if (tempTxt) {
                     const rows = parseCsvRowsGeneric(tempTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6073,7 +6337,6 @@
                     }
                 }
 
-                // Parse Latest 1-min Humidity CSV
                 if (humTxt) {
                     const rows = parseCsvRowsGeneric(humTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6089,7 +6352,6 @@
                     }
                 }
 
-                // Parse Rain CSV
                 if (rainTxt) {
                     const rows = parseCsvRowsGeneric(rainTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6105,7 +6367,6 @@
                     }
                 }
 
-                // Parse Wind CSV
                 if (windTxt) {
                     const rows = parseCsvRowsGeneric(windTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6125,7 +6386,6 @@
                     }
                 }
 
-                // Parse Visibility CSV
                 if (visTxt) {
                     const rows = parseCsvRowsGeneric(visTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6147,7 +6407,6 @@
                     }
                 }
 
-                // Parse Solar CSV
                 if (solarTxt) {
                     const rows = parseCsvRowsGeneric(solarTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6168,7 +6427,6 @@
                     }
                 }
 
-                // Parse Tide CSV
                 if (tideTxt) {
                     const rows = parseCsvRowsGeneric(tideTxt);
                     for (let i = 1; i < rows.length; i++) {
@@ -6184,23 +6442,39 @@
                     }
                 }
 
-                // Also enrich from HKO rhrread live JSON API
-                try {
-                    const wLang = isEn ? 'en' : 'tc';
-                    const rhr = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=${wLang}&_=${Date.now()}`, { cache: 'no-store' }).then(r => r.json());
-                    if (rhr && rhr.temperature && Array.isArray(rhr.temperature.data)) {
+                // 2. Fetch live Current Weather (rhrread), Local Forecast (flw), and 9-Day Forecast (fnd) for Tomorrow's Forecast
+                const wLang = isEn ? 'en' : 'tc';
+                const ts = Date.now();
+                const [rhr, flw, fnd] = await Promise.all([
+                    fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+                    fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=flw&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+                    fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
+                ]);
+
+                if (rhr) {
+                    if (rhr.icon && rhr.icon[0]) st.currentObs.iconCode = rhr.icon[0];
+                    if (rhr.uvindex && rhr.uvindex.data && rhr.uvindex.data[0]) {
+                        st.currentObs.uvVal = rhr.uvindex.data[0].value;
+                        if (isEn) st.currentObs.uvDesc_en = rhr.uvindex.data[0].desc || 'Moderate';
+                        else st.currentObs.uvDesc_zh = rhr.uvindex.data[0].desc || '中等';
+                    }
+                    if (rhr.temperature && Array.isArray(rhr.temperature.data)) {
                         rhr.temperature.data.forEach(item => {
                             const meta = matchStationMetaByName(item.place);
                             if (meta && stMap[meta.id] && Number.isFinite(Number(item.value))) {
                                 stMap[meta.id].temp = Number(item.value);
                             }
                         });
+                        if (stMap['HKO']) st.currentObs.hkoTemp = stMap['HKO'].temp;
                     }
-                    if (rhr && rhr.humidity && Array.isArray(rhr.humidity.data) && rhr.humidity.data[0]) {
+                    if (rhr.humidity && Array.isArray(rhr.humidity.data) && rhr.humidity.data[0]) {
                         const hkoH = Number(rhr.humidity.data[0].value);
-                        if (Number.isFinite(hkoH) && stMap['HKO']) stMap['HKO'].hum = hkoH;
+                        if (Number.isFinite(hkoH)) {
+                            st.currentObs.hkoHum = hkoH;
+                            if (stMap['HKO']) stMap['HKO'].hum = hkoH;
+                        }
                     }
-                    if (rhr && rhr.rainfall && Array.isArray(rhr.rainfall.data)) {
+                    if (rhr.rainfall && Array.isArray(rhr.rainfall.data)) {
                         rhr.rainfall.data.forEach(item => {
                             const meta = matchStationMetaByName(item.place);
                             if (meta && stMap[meta.id] && Number.isFinite(Number(item.max))) {
@@ -6208,7 +6482,63 @@
                             }
                         });
                     }
-                } catch (e) {}
+                }
+
+                if (flw) {
+                    if (isEn) {
+                        if (flw.generalSituation) st.currentObs.generalSituation_en = flw.generalSituation;
+                        if (flw.forecastDesc) st.currentObs.forecastDesc_en = flw.forecastDesc;
+                    } else {
+                        if (flw.generalSituation) st.currentObs.generalSituation_zh = flw.generalSituation;
+                        if (flw.forecastDesc) st.currentObs.forecastDesc_zh = flw.forecastDesc;
+                    }
+                }
+
+                if (fnd && Array.isArray(fnd.weatherForecast) && fnd.weatherForecast.length > 0) {
+                    const todayFc = fnd.weatherForecast[0];
+                    if (todayFc) {
+                        if (todayFc.forecastMaxtemp && Number.isFinite(Number(todayFc.forecastMaxtemp.value))) st.currentObs.todayMax = Number(todayFc.forecastMaxtemp.value);
+                        if (todayFc.forecastMintemp && Number.isFinite(Number(todayFc.forecastMintemp.value))) st.currentObs.todayMin = Number(todayFc.forecastMintemp.value);
+                        if (todayFc.PSR) {
+                            if (isEn) st.currentObs.psr_en = todayFc.PSR;
+                            else st.currentObs.psr_zh = todayFc.PSR;
+                        }
+                    }
+                    // Find tomorrow's forecast entry
+                    const nowHk = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' }));
+                    nowHk.setHours(0, 0, 0, 0);
+                    const futureFcs = fnd.weatherForecast.filter(fc => {
+                        if (!fc.forecastDate || fc.forecastDate.length < 8) return true;
+                        const y = parseInt(fc.forecastDate.substring(0, 4), 10);
+                        const m = parseInt(fc.forecastDate.substring(4, 6), 10) - 1;
+                        const d = parseInt(fc.forecastDate.substring(6, 8), 10);
+                        return new Date(y, m, d) > nowHk;
+                    });
+                    const tmrFc = futureFcs[0] || fnd.weatherForecast[1] || fnd.weatherForecast[0];
+                    if (tmrFc) {
+                        const dtRaw = String(tmrFc.forecastDate || '');
+                        const mInt = dtRaw.length >= 8 ? parseInt(dtRaw.substring(4, 6), 10) : 11;
+                        const dInt = dtRaw.length >= 8 ? parseInt(dtRaw.substring(6, 8), 10) : 5;
+                        const yInt = dtRaw.length >= 8 ? parseInt(dtRaw.substring(0, 4), 10) : 2026;
+                        if (isEn) {
+                            st.tomorrowForecast.dateStr_en = `${dInt}/${mInt}/${yInt} (${tmrFc.week || 'Tomorrow'})`;
+                            st.tomorrowForecast.wind_en = tmrFc.forecastWind || st.tomorrowForecast.wind_en;
+                            st.tomorrowForecast.weather_en = tmrFc.forecastWeather || st.tomorrowForecast.weather_en;
+                            st.tomorrowForecast.psr_en = tmrFc.PSR || st.tomorrowForecast.psr_en;
+                        } else {
+                            st.tomorrowForecast.dateStr_zh = `${yInt}年${mInt}月${dInt}日 (${tmrFc.week || '明日'})`;
+                            st.tomorrowForecast.wind_zh = tmrFc.forecastWind || st.tomorrowForecast.wind_zh;
+                            st.tomorrowForecast.weather_zh = tmrFc.forecastWeather || st.tomorrowForecast.weather_zh;
+                            st.tomorrowForecast.psr_zh = tmrFc.PSR || st.tomorrowForecast.psr_zh;
+                        }
+                        if (tmrFc.ForecastIcon) st.tomorrowForecast.iconCode = tmrFc.ForecastIcon;
+                        if (tmrFc.forecastMintemp) st.tomorrowForecast.minTemp = tmrFc.forecastMintemp.value;
+                        if (tmrFc.forecastMaxtemp) st.tomorrowForecast.maxTemp = tmrFc.forecastMaxtemp.value;
+                        if (tmrFc.forecastMinrh) st.tomorrowForecast.minRh = tmrFc.forecastMinrh.value;
+                        if (tmrFc.forecastMaxrh) st.tomorrowForecast.maxRh = tmrFc.forecastMaxrh.value;
+                    }
+                    st.nextDaysForecast = futureFcs.slice(1, 5);
+                }
             } catch (err) {}
 
             recomputeWeatherPortalSummary();
@@ -6247,8 +6577,13 @@
             }
         }
 
-        function setWeatherPortalSubTab(tabId) {
-            window.hkWeatherPortalState.activeSubTab = tabId;
+        function setWeatherDetailSubTab(tabId) {
+            window.hkWeatherPortalState.detailSubTab = tabId;
+            renderWeatherPortal();
+        }
+
+        function setWeatherStationDisplayMode(mode) {
+            window.hkWeatherPortalState.stationDisplayMode = mode;
             renderWeatherPortal();
         }
 
@@ -6263,376 +6598,473 @@
         }
 
         function setWeatherRadarRange(rangeKm) {
-            window.hkWeatherPortalState.radarRangeKm = Number(rangeKm) || 64;
+            const st = window.hkWeatherPortalState;
+            st.radarRangeKm = Number(rangeKm) || 64;
+            preloadRadarFramesForCurrentRange();
             renderWeatherPortal();
         }
 
-        function setWeatherRadarViewMode(mode) {
-            window.hkWeatherPortalState.radarViewMode = mode;
-            renderWeatherPortal();
+        function setWeatherRadarFrameIdx(idx) {
+            const st = window.hkWeatherPortalState;
+            st.radarFrameIdx = Math.max(0, Math.min(19, Number(idx) || 0));
+            updateRadarFrameInPlace();
         }
 
         function stepWeatherRadarFrame(delta) {
             const st = window.hkWeatherPortalState;
-            st.radarFrameIdx = (st.radarFrameIdx + delta + 6) % 6;
-            renderWeatherPortal();
+            st.radarFrameIdx = (st.radarFrameIdx + delta + 20) % 20;
+            updateRadarFrameInPlace();
+        }
+
+        function setWeatherRadarSpeed(ms) {
+            const st = window.hkWeatherPortalState;
+            st.radarAnimSpeedMs = Number(ms) || 420;
+            if (st.radarAnimPlaying) {
+                startWeatherRadarAnimationLoop();
+            }
+            updateRadarFrameInPlace();
+        }
+
+        function startWeatherRadarAnimationLoop() {
+            if (window.weatherRadarAnimTimer) {
+                clearInterval(window.weatherRadarAnimTimer);
+                window.weatherRadarAnimTimer = null;
+            }
+            const st = window.hkWeatherPortalState;
+            if (!st.radarAnimPlaying) return;
+            window.weatherRadarAnimTimer = setInterval(() => {
+                if (currentActivePage !== 'weather' || !window.hkWeatherPortalState.radarAnimPlaying) {
+                    clearInterval(window.weatherRadarAnimTimer);
+                    window.weatherRadarAnimTimer = null;
+                    return;
+                }
+                const s = window.hkWeatherPortalState;
+                s.radarFrameIdx = (s.radarFrameIdx + 1) % 20;
+                updateRadarFrameInPlace();
+            }, st.radarAnimSpeedMs || 420);
         }
 
         function toggleWeatherRadarAnim() {
             const st = window.hkWeatherPortalState;
             st.radarAnimPlaying = !st.radarAnimPlaying;
-            if (window.weatherRadarAnimTimer) {
+            if (st.radarAnimPlaying) {
+                startWeatherRadarAnimationLoop();
+            } else if (window.weatherRadarAnimTimer) {
                 clearInterval(window.weatherRadarAnimTimer);
                 window.weatherRadarAnimTimer = null;
             }
-            if (st.radarAnimPlaying) {
-                window.weatherRadarAnimTimer = setInterval(() => {
-                    if (currentActivePage !== 'weather' || !window.hkWeatherPortalState.radarAnimPlaying) {
-                        clearInterval(window.weatherRadarAnimTimer);
-                        window.weatherRadarAnimTimer = null;
-                        return;
-                    }
-                    window.hkWeatherPortalState.radarFrameIdx = (window.hkWeatherPortalState.radarFrameIdx + 1) % 6;
-                    renderWeatherPortal();
-                }, 1100);
+            const btn = document.getElementById('wth-radar-play-btn');
+            const isEn = (currentLang === 'en');
+            if (btn) {
+                btn.style.background = st.radarAnimPlaying ? '#dc2626' : '#0284c7';
+                btn.style.borderColor = st.radarAnimPlaying ? '#dc2626' : '#0284c7';
+                btn.innerText = st.radarAnimPlaying
+                    ? (isEn ? '⏸️ Pause (20-Frame Loop)' : '⏸️ 暫停動畫 (20張連播中)')
+                    : (isEn ? '▶️ Play 20-Frame Animation' : '▶️ 播放最近 20 張雷達動畫');
             }
-            renderWeatherPortal();
         }
 
-        function buildRadarGraphicSvg(rangeKm, frameIdx, isEn) {
-            // Generates a high-precision meteorological Doppler radar composite SVG for 64km, 128km, or 256km range
-            const shiftX = (frameIdx - 5) * 4.5;
-            const shiftY = (5 - frameIdx) * 2.5;
+        function updateRadarFrameInPlace() {
+            const st = window.hkWeatherPortalState;
+            const isEn = (currentLang === 'en');
+            const rangeKm = st.radarRangeKm || 64;
+            const frames = st.radarFramesByRange[rangeKm] || [];
+            const frame = frames[st.radarFrameIdx] || { frameNo: st.radarFrameIdx + 1, timeLabel: '--:--', dateTimeLabel: '--:-- HKT', url: '' };
+
+            // 1. Update live HKO radar image element
+            const imgEl = document.getElementById('wth-radar-live-img');
+            if (imgEl && frame.url && imgEl.getAttribute('data-cur-url') !== frame.url) {
+                imgEl.setAttribute('data-cur-url', frame.url);
+                imgEl.src = frame.url;
+            }
+
+            // 2. Update 20-frame SVG echo group transform smoothly
+            const echoG = document.getElementById('wth-radar-echo-group');
+            if (echoG) {
+                const scaleFactor = rangeKm === 64 ? 1.35 : (rangeKm === 128 ? 0.92 : 0.56);
+                const shiftX = (st.radarFrameIdx - 19) * 1.9;
+                const shiftY = (19 - st.radarFrameIdx) * 1.05;
+                echoG.setAttribute('transform', `translate(200, 150) scale(${scaleFactor}) translate(${-200 + shiftX}, ${-150 + shiftY})`);
+            }
+
+            // 3. Update timestamp & frame counter badges
+            const timeEl = document.getElementById('wth-radar-frame-time');
+            if (timeEl) {
+                timeEl.innerText = `🕒 ${frame.dateTimeLabel || (frame.timeLabel + ' HKT')}`;
+            }
+            const countEl = document.getElementById('wth-radar-frame-counter');
+            if (countEl) {
+                countEl.innerText = isEn
+                    ? `Frame ${st.radarFrameIdx + 1} / 20 ${st.radarFrameIdx === 19 ? '(Latest)' : ''}`
+                    : `第 ${st.radarFrameIdx + 1} / 20 張 ${st.radarFrameIdx === 19 ? '(最新)' : ''}`;
+            }
+
+            // 4. Update slider value & 20-frame tick buttons
+            const sliderEl = document.getElementById('wth-radar-slider');
+            if (sliderEl && Number(sliderEl.value) !== st.radarFrameIdx) {
+                sliderEl.value = st.radarFrameIdx;
+            }
+            for (let i = 0; i < 20; i++) {
+                const dot = document.getElementById(`wth-radar-dot-${i}`);
+                if (dot) {
+                    const isCur = (i === st.radarFrameIdx);
+                    dot.style.background = isCur ? '#38bdf8' : (i < st.radarFrameIdx ? '#0284c7' : '#334155');
+                    dot.style.color = isCur ? '#0f172a' : '#e2e8f0';
+                    dot.style.transform = isCur ? 'scale(1.12)' : 'scale(1)';
+                }
+            }
+        }
+
+        function buildSingleAnimatedRadarHTML(isEn) {
+            const st = window.hkWeatherPortalState;
+            const rangeKm = st.radarRangeKm || 64;
+            const frames = st.radarFramesByRange[rangeKm] || generate20RadarFramesForRange(rangeKm);
+            const curFrame = frames[st.radarFrameIdx] || frames[frames.length - 1];
+
             const scaleFactor = rangeKm === 64 ? 1.35 : (rangeKm === 128 ? 0.92 : 0.56);
+            const shiftX = (st.radarFrameIdx - 19) * 1.9;
+            const shiftY = (19 - st.radarFrameIdx) * 1.05;
             const r1 = Math.round(rangeKm / 4);
             const r2 = Math.round(rangeKm / 2);
             const r3 = Math.round((rangeKm * 3) / 4);
             const r4 = rangeKm;
-            const now = new Date();
-            const minsAgo = (5 - (frameIdx % 6)) * (rangeKm === 64 ? 6 : 12);
-            const frameTime = new Date(now.getTime() - minsAgo * 60000).toLocaleTimeString('zh-HK', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
-            const rangeLabel = isEn ? `${rangeKm} km Range · 3 km Altitude CAPPI` : `${rangeKm} 公里範圍 · 3 公里高空等高平面反射率`;
-            const liveUrl = window.hkWeatherPortalState.radarLiveUrls[rangeKm] || computeLatestHkoRadarUrl(rangeKm);
+            const rangeTitle = isEn
+                ? `${rangeKm} km Range · 3 km Altitude CAPPI`
+                : `${rangeKm} 公里範圍 · 3 公里高空等高平面反射率`;
 
-            return `
-            <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 50% 50%, #0c243c 0%, #071526 70%, #030b14 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f; box-shadow: inset 0 0 24px rgba(0,0,0,0.65);">
-                <!-- Live HKO Radar Image Layer (automatically displays when network image loads) -->
-                <img src="${liveUrl}" alt="${rangeKm}km Radar" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:2; opacity:0; transition:opacity 0.3s;" onload="this.style.opacity='0.92'" onerror="this.style.display='none'">
+            const rangeDesc = rangeKm === 64
+                ? (isEn ? 'Covers all 18 HK districts & coastal waters (6-min interval, 20 frames = past 2 hours)' : '覆蓋全港十八區及近岸水域（每 6 分鐘一幀 · 最近 20 張合共過去 2 小時動態）')
+                : (rangeKm === 128
+                    ? (isEn ? 'Covers Pearl River Estuary, Shenzhen & Macao (12-min interval, 20 frames = past 4 hours)' : '覆蓋珠江口、深圳灣及澳門水域（每 12 分鐘一幀 · 最近 20 張合共過去 4 小時動態）')
+                    : (isEn ? 'Covers Guangdong coast & northern South China Sea (12-min interval, 20 frames = past 4 hours)' : '覆蓋廣東沿岸及南海北部廣域（每 12 分鐘一幀 · 最近 20 張合共過去 4 小時動態）'));
 
-                <!-- High-Precision Vector Radar Base & Precipitation Echo Layer -->
-                <svg viewBox="0 0 400 300" style="width:100%; height:100%; display:block; position:relative; z-index:1;">
-                    <defs>
-                        <radialGradient id="echoGreen_${rangeKm}" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#eab308" stop-opacity="0.82"/>
-                            <stop offset="40%" stop-color="#22c55e" stop-opacity="0.68"/>
-                            <stop offset="75%" stop-color="#06b6d4" stop-opacity="0.45"/>
-                            <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
-                        </radialGradient>
-                        <radialGradient id="echoCore_${rangeKm}" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.88"/>
-                            <stop offset="45%" stop-color="#f59e0b" stop-opacity="0.78"/>
-                            <stop offset="80%" stop-color="#22c55e" stop-opacity="0.52"/>
-                            <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
-                        </radialGradient>
-                    </defs>
-
-                    <!-- Pearl River Estuary & HK Coastline Simplified Vector Outline (scaled by range) -->
-                    <g transform="translate(200, 150) scale(${scaleFactor}) translate(-200, -150)" stroke="#1e4976" stroke-width="1.2" fill="#0f2942" fill-opacity="0.65">
-                        <!-- Mainland Coast & Shenzhen / Dongguan / Dapeng -->
-                        <path d="M 30,20 L 370,20 L 370,95 L 315,112 L 268,125 L 245,112 L 222,126 L 185,120 L 155,95 L 130,60 L 105,92 L 75,135 L 30,165 Z"/>
-                        <!-- New Territories & Kowloon Peninsula -->
-                        <path d="M 162,125 L 225,122 L 242,136 L 228,154 L 204,164 L 186,158 L 160,148 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
-                        <!-- Lantau Island -->
-                        <path d="M 148,158 L 178,154 L 182,167 L 152,175 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
-                        <!-- Hong Kong Island -->
-                        <path d="M 192,168 L 216,166 L 218,176 L 194,177 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
-                        <!-- Lamma & Cheung Chau & Wanshan Archipelago -->
-                        <circle cx="187" cy="182" r="4" fill="#153759" stroke="#38bdf8" stroke-width="0.8"/>
-                        <circle cx="172" cy="179" r="3" fill="#153759" stroke="#38bdf8" stroke-width="0.8"/>
-                        <circle cx="145" cy="205" r="5" fill="#0f2942" stroke="#1e4976"/>
-                        <circle cx="168" cy="215" r="4" fill="#0f2942" stroke="#1e4976"/>
-                        <circle cx="225" cy="202" r="4.5" fill="#0f2942" stroke="#1e4976"/>
-                    </g>
-
-                    <!-- Precipitation Rainband Echoes (Animated with frameIdx & scaled with rangeKm) -->
-                    <g transform="translate(200, 150) scale(${scaleFactor}) translate(${-200 + shiftX}, ${-150 + shiftY})">
-                        <ellipse cx="242" cy="138" rx="46" ry="26" transform="rotate(-18 242 138)" fill="url(#echoGreen_${rangeKm})"/>
-                        <ellipse cx="255" cy="132" rx="22" ry="12" transform="rotate(-18 255 132)" fill="url(#echoCore_${rangeKm})"/>
-                        <ellipse cx="148" cy="178" rx="38" ry="20" transform="rotate(-12 148 178)" fill="url(#echoGreen_${rangeKm})"/>
-                        <ellipse cx="285" cy="195" rx="58" ry="30" transform="rotate(-24 285 195)" fill="url(#echoGreen_${rangeKm})"/>
-                        <ellipse cx="292" cy="192" rx="26" ry="14" transform="rotate(-24 292 192)" fill="url(#echoCore_${rangeKm})"/>
-                    </g>
-
-                    <!-- Radar Crosshairs & Azimuth Grid -->
-                    <line x1="200" y1="10" x2="200" y2="290" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="0.8" stroke-dasharray="3,3"/>
-                    <line x1="60" y1="150" x2="340" y2="150" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="0.8" stroke-dasharray="3,3"/>
-                    <line x1="101" y1="51" x2="299" y2="249" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="0.7" stroke-dasharray="2,4"/>
-                    <line x1="299" y1="51" x2="101" y2="249" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="0.7" stroke-dasharray="2,4"/>
-
-                    <!-- Equidistant Radar Range Rings -->
-                    <circle cx="200" cy="150" r="32" fill="none" stroke="#38bdf8" stroke-opacity="0.38" stroke-width="0.9"/>
-                    <circle cx="200" cy="150" r="65" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="0.9"/>
-                    <circle cx="200" cy="150" r="98" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="0.9"/>
-                    <circle cx="200" cy="150" r="130" fill="none" stroke="#38bdf8" stroke-opacity="0.7" stroke-width="1.2"/>
-
-                    <!-- Range Ring Distance Labels -->
-                    <text x="204" y="116" fill="#7dd3fc" font-size="8.5" font-weight="700">${r1}km</text>
-                    <text x="204" y="83" fill="#7dd3fc" font-size="8.5" font-weight="700">${r2}km</text>
-                    <text x="204" y="50" fill="#7dd3fc" font-size="8.5" font-weight="700">${r3}km</text>
-                    <text x="204" y="18" fill="#38bdf8" font-size="9.5" font-weight="800">${r4}km</text>
-
-                    <!-- Center Radar Marker (Tai Mo Shan / Tate's Cairn) -->
-                    <circle cx="200" cy="150" r="3" fill="#facc15" stroke="#000" stroke-width="0.8"/>
-                    <text x="206" y="153" fill="#fde047" font-size="9" font-weight="800">${isEn ? 'HK (HKO)' : '香港'}</text>
-                </svg>
-
-                <!-- Top-left Range Badge -->
-                <div style="position:absolute; top:8px; left:8px; z-index:3; background:rgba(15,23,42,0.82); color:#e0f2fe; padding:3px 8px; border-radius:6px; font-size:0.74rem; font-weight:800; border:1px solid rgba(56,189,248,0.4);">
-                    📡 ${rangeLabel}
-                </div>
-                <!-- Bottom-right Frame Timestamp -->
-                <div style="position:absolute; bottom:8px; right:8px; z-index:3; background:rgba(15,23,42,0.85); color:#38bdf8; padding:2px 8px; border-radius:5px; font-size:0.72rem; font-weight:700; font-family:monospace; border:1px solid rgba(56,189,248,0.35);">
-                    🕒 ${frameTime} HKT
-                </div>
-            </div>`;
-        }
-
-        function renderWeatherPortal() {
-            const container = document.getElementById('weather-portal-container');
-            if (!container) return;
-            const st = window.hkWeatherPortalState;
-            if (!st.initialized) initWeatherPortalSystem();
-
-            const isEn = (currentLang === 'en');
-            const titleEl = document.getElementById('t-weather-page-title');
-            if (titleEl) {
-                titleEl.innerText = isEn
-                    ? '🌦️ HK Regional Weather Observations & Weather Radar (64 / 128 / 256 km)'
-                    : '🌦️ 香港分區天氣觀測及天氣雷達圖 (64 / 128 / 256 公里)';
-            }
-
-            const s = st.summary;
-            // Top KPI Strip covering all 7 datasets + Radar
-            const kpiHtml = `
-                <div class="border-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px;">
-                    <div class="border-kpi-card" style="border-left:4px solid #ef4444; cursor:pointer;" onclick="setWeatherPortalSubTab('temp_hum_rain')">
-                        <div class="border-kpi-label">${isEn ? '🌡️ Mean Air Temp' : '🌡️ 全港平均氣溫'}</div>
-                        <div class="border-kpi-val" style="color:#dc2626;">${s.avgTemp.toFixed(1)}°C</div>
-                        <div class="border-kpi-sub">${isEn ? `Range: ${s.minTemp.toFixed(1)}°C – ${s.maxTemp.toFixed(1)}°C` : `各區範圍：${s.minTemp.toFixed(1)}°C – ${s.maxTemp.toFixed(1)}°C`}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #0284c7; cursor:pointer;" onclick="setWeatherPortalSubTab('temp_hum_rain')">
-                        <div class="border-kpi-label">${isEn ? '💧 1-Min Mean Humidity' : '💧 最新一分鐘相對濕度'}</div>
-                        <div class="border-kpi-val" style="color:#0284c7;">${Math.round(s.avgHum)}%</div>
-                        <div class="border-kpi-sub">${isEn ? `${st.stations.length} Automatic Weather Stations` : `涵蓋全港 ${st.stations.length} 個自動氣象站`}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #2563eb; cursor:pointer;" onclick="setWeatherPortalSubTab('temp_hum_rain')">
-                        <div class="border-kpi-label">${isEn ? '🌧️ Max Regional Rainfall' : '🌧️ 最高分區雨量'}</div>
-                        <div class="border-kpi-val" style="color:#1d4ed8;">${s.maxRain.toFixed(1)} mm</div>
-                        <div class="border-kpi-sub">${isEn ? 'Hourly Regional Rainfall' : '分區自動氣象站雨量紀錄'}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #0d9488; cursor:pointer;" onclick="setWeatherPortalSubTab('wind_vis_solar')">
-                        <div class="border-kpi-label">${isEn ? '💨 Wind Speed & Max Gust' : '💨 平均風速及最高陣風'}</div>
-                        <div class="border-kpi-val" style="color:#0f766e;">${s.avgWind.toFixed(1)} <span style="font-size:0.78rem;">km/h</span></div>
-                        <div class="border-kpi-sub">${isEn ? `Max Gust: ${s.maxGust} km/h` : `最高陣風：${s.maxGust} 公里/小時`}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #7c3aed; cursor:pointer;" onclick="setWeatherPortalSubTab('wind_vis_solar')">
-                        <div class="border-kpi-label">${isEn ? '👁️ Mean Visibility' : '👁️ 全港平均能見度'}</div>
-                        <div class="border-kpi-val" style="color:#6d28d9;">${s.avgVis.toFixed(1)} km</div>
-                        <div class="border-kpi-sub">${isEn ? '10-Min Mean Visibility' : '10 分鐘平均能見度觀測'}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #f59e0b; cursor:pointer;" onclick="setWeatherPortalSubTab('wind_vis_solar')">
-                        <div class="border-kpi-label">${isEn ? '☀️ Global Solar Radiation' : '☀️ 太陽總輻射水平'}</div>
-                        <div class="border-kpi-val" style="color:#d97706;">${Math.round(s.avgSolar)} <span style="font-size:0.78rem;">W/m²</span></div>
-                        <div class="border-kpi-sub">${isEn ? 'Global / Direct / Diffuse' : '總輻射・直接輻射・漫射輻射'}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #0891b2; cursor:pointer;" onclick="setWeatherPortalSubTab('tide')">
-                        <div class="border-kpi-label">${isEn ? '🌊 Mean Tide Height' : '🌊 沿岸平均潮汐水位'}</div>
-                        <div class="border-kpi-val" style="color:#0e7490;">${s.avgTide.toFixed(2)} m</div>
-                        <div class="border-kpi-sub">${isEn ? `${st.tideList.length} Tide Gauge Stations (Chart Datum)` : `全港 ${st.tideList.length} 個潮汐站 (海圖基準面)`}</div>
-                    </div>
-                    <div class="border-kpi-card" style="border-left:4px solid #10b981; cursor:pointer;" onclick="setWeatherPortalSubTab('radar')">
-                        <div class="border-kpi-label">${isEn ? '📡 Weather Radar Range' : '📡 天氣雷達覆蓋範圍'}</div>
-                        <div class="border-kpi-val" style="color:#059669; font-size:1.05rem;">64 / 128 / 256 <span style="font-size:0.75rem;">km</span></div>
-                        <div class="border-kpi-sub">${isEn ? 'Click to view 3-range radar imagery' : '點擊檢視三種距離天氣雷達圖'}</div>
-                    </div>
-                </div>
-            `;
-
-            // Sub-tab navigation bar
-            const tabs = [
-                { id: 'overview', zh: '🌐 綜合天氣及雷達總覽', en: '🌐 Weather & Radar Overview' },
-                { id: 'radar', zh: '📡 天氣雷達圖 (64 / 128 / 256 公里)', en: '📡 Weather Radar (64 / 128 / 256 km)' },
-                { id: 'temp_hum_rain', zh: '🌡️ 氣溫・相對濕度・雨量', en: '🌡️ Temp, Humidity & Rainfall' },
-                { id: 'wind_vis_solar', zh: '💨 風速風向・能見度・太陽輻射', en: '💨 Wind, Visibility & Solar' },
-                { id: 'tide', zh: '🌊 潮汐水位觀測', en: '🌊 Tide Gauge Observations' }
-            ];
-
-            const subTabsHtml = `
-                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; background:#f1f5f9; padding:6px; border-radius:10px; border:1px solid #cbd5e1;">
-                    ${tabs.map(t => {
-                        const active = (st.activeSubTab === t.id);
-                        return `<button type="button" onclick="setWeatherPortalSubTab('${t.id}')" style="flex:1 1 auto; padding:8px 12px; border-radius:8px; border:${active ? '1px solid #0284c7' : '1px solid transparent'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-weight:800; font-size:0.84rem; cursor:pointer; transition:all 0.15s;">${isEn ? t.en : t.zh}</button>`;
-                    }).join('')}
-                </div>
-            `;
-
-            let bodyHtml = '';
-            if (st.activeSubTab === 'radar') {
-                bodyHtml = buildWeatherRadarSubTabHTML(isEn);
-            } else if (st.activeSubTab === 'temp_hum_rain') {
-                bodyHtml = buildWeatherTempHumRainHTML(isEn);
-            } else if (st.activeSubTab === 'wind_vis_solar') {
-                bodyHtml = buildWeatherWindVisSolarHTML(isEn);
-            } else if (st.activeSubTab === 'tide') {
-                bodyHtml = buildWeatherTideSubTabHTML(isEn);
-            } else {
-                bodyHtml = buildWeatherOverviewSubTabHTML(isEn);
-            }
-
-            container.innerHTML = kpiHtml + subTabsHtml + bodyHtml;
-        }
-
-        function buildRadarLegendBarHTML(isEn) {
             const bins = [
                 { c: '#0284c7', v: '0.5' }, { c: '#06b6d4', v: '1' }, { c: '#10b981', v: '2' },
                 { c: '#22c55e', v: '5' }, { c: '#84cc16', v: '10' }, { c: '#eab308', v: '20' },
                 { c: '#f59e0b', v: '30' }, { c: '#f97316', v: '50' }, { c: '#ef4444', v: '70' },
                 { c: '#dc2626', v: '100' }, { c: '#a855f7', v: '150+' }
             ];
+
             return `
-                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; background:#0f172a; color:#e2e8f0; padding:8px 12px; border-radius:8px; margin-top:8px; font-size:0.76rem;">
-                    <span style="font-weight:800; color:#38bdf8;">${isEn ? '🌧️ Radar Rainfall Intensity Scale (mm/hr):' : '🌧️ 雷達降雨強度色標 (毫米/小時 mm/hr)：'}</span>
-                    <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
-                        ${bins.map(b => `<span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px;"><span style="width:10px; height:10px; border-radius:2px; background:${b.c}; display:inline-block;"></span><b>${b.v}</b></span>`).join('')}
+                <div class="el-card-box" style="background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-color:#bae6fd; padding:14px 16px;">
+                    <!-- Top Header & Range Switching Buttons (64km / 128km / 256km) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #bae6fd; padding-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.98rem; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:6px;">
+                                📡 ${isEn ? 'Hong Kong Weather Radar (Latest 20 Frames Animation)' : '香港天文台天氣雷達圖（讀取最近 20 張圖動態連播）'}
+                            </div>
+                            <div style="font-size:0.75rem; color:#475569; font-weight:600; margin-top:2px;">
+                                ${rangeDesc}
+                            </div>
+                        </div>
+
+                        <!-- Range Switcher Buttons -->
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            ${[64, 128, 256].map(km => {
+                                const active = (rangeKm === km);
+                                return `<button type="button" onclick="setWeatherRadarRange(${km})" style="padding:7px 14px; border-radius:999px; font-weight:800; font-size:0.8rem; cursor:pointer; border:1px solid ${active ? '#0284c7' : '#94a3b8'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#0f172a'}; box-shadow:${active ? '0 2px 8px rgba(2,132,199,0.28)' : 'none'}; transition:all 0.15s;">
+                                    📡 ${km} ${isEn ? 'km' : '公里'}
+                                </button>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Single Radar Stage -->
+                    <div class="wth-radar-single-wrap">
+                        <!-- Top Bar inside Dark Radar Console -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; color:#f8fafc;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="background:#0284c7; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.78rem; font-weight:900;">
+                                    ${rangeKm} ${isEn ? 'km Radar' : '公里雷達'}
+                                </span>
+                                <span id="wth-radar-frame-counter" style="font-size:0.82rem; font-weight:800; color:#38bdf8; font-variant-numeric:tabular-nums;">
+                                    ${isEn ? `Frame ${st.radarFrameIdx + 1} / 20 ${st.radarFrameIdx === 19 ? '(Latest)' : ''}` : `第 ${st.radarFrameIdx + 1} / 20 張 ${st.radarFrameIdx === 19 ? '(最新)' : ''}`}
+                                </span>
+                            </div>
+                            <div id="wth-radar-frame-time" style="font-size:0.8rem; font-weight:800; color:#fde047; font-family:monospace; background:rgba(255,255,255,0.08); padding:3px 9px; border-radius:6px;">
+                                🕒 ${curFrame ? curFrame.dateTimeLabel : '--:-- HKT'}
+                            </div>
+                        </div>
+
+                        <!-- Single Radar Viewport (4:3 aspect ratio) -->
+                        <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 50% 50%, #0c243c 0%, #071526 70%, #030b14 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f;">
+                            <!-- Live HKO Radar Frame Image (automatically displays when reachable) -->
+                            <img id="wth-radar-live-img" data-cur-url="${curFrame ? curFrame.url : ''}" src="${curFrame ? curFrame.url : ''}" alt="${rangeKm}km Weather Radar" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:2; opacity:0; transition:opacity 0.15s;" onload="this.style.opacity='0.94'" onerror="if(this.src !== '${curFrame ? curFrame.altUrl : ''}'){this.src='${curFrame ? curFrame.altUrl : ''}';}else{this.style.opacity='0';}">
+
+                            <!-- High-Precision Vector Doppler Radar Base & 20-Frame Animated Rainband Layer -->
+                            <svg viewBox="0 0 400 300" style="width:100%; height:100%; display:block; position:relative; z-index:1;">
+                                <defs>
+                                    <radialGradient id="wthEchoGreen" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#eab308" stop-opacity="0.82"/>
+                                        <stop offset="40%" stop-color="#22c55e" stop-opacity="0.68"/>
+                                        <stop offset="75%" stop-color="#06b6d4" stop-opacity="0.45"/>
+                                        <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+                                    </radialGradient>
+                                    <radialGradient id="wthEchoCore" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#ef4444" stop-opacity="0.88"/>
+                                        <stop offset="45%" stop-color="#f59e0b" stop-opacity="0.78"/>
+                                        <stop offset="80%" stop-color="#22c55e" stop-opacity="0.52"/>
+                                        <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+
+                                <!-- Pearl River Estuary & HK Coastline Vector Basemap -->
+                                <g transform="translate(200, 150) scale(${scaleFactor}) translate(-200, -150)" stroke="#1e4976" stroke-width="1.2" fill="#0f2942" fill-opacity="0.65">
+                                    <path d="M 30,20 L 370,20 L 370,95 L 315,112 L 268,125 L 245,112 L 222,126 L 185,120 L 155,95 L 130,60 L 105,92 L 75,135 L 30,165 Z"/>
+                                    <path d="M 162,125 L 225,122 L 242,136 L 228,154 L 204,164 L 186,158 L 160,148 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
+                                    <path d="M 148,158 L 178,154 L 182,167 L 152,175 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
+                                    <path d="M 192,168 L 216,166 L 218,176 L 194,177 Z" fill="#153759" stroke="#38bdf8" stroke-width="1"/>
+                                    <circle cx="187" cy="182" r="4" fill="#153759" stroke="#38bdf8" stroke-width="0.8"/>
+                                    <circle cx="172" cy="179" r="3" fill="#153759" stroke="#38bdf8" stroke-width="0.8"/>
+                                    <circle cx="145" cy="205" r="5" fill="#0f2942" stroke="#1e4976"/>
+                                    <circle cx="168" cy="215" r="4" fill="#0f2942" stroke="#1e4976"/>
+                                    <circle cx="225" cy="202" r="4.5" fill="#0f2942" stroke="#1e4976"/>
+                                </g>
+
+                                <!-- 20-Frame Animated Rainband Echoes -->
+                                <g id="wth-radar-echo-group" transform="translate(200, 150) scale(${scaleFactor}) translate(${-200 + shiftX}, ${-150 + shiftY})">
+                                    <ellipse cx="242" cy="138" rx="46" ry="26" transform="rotate(-18 242 138)" fill="url(#wthEchoGreen)"/>
+                                    <ellipse cx="255" cy="132" rx="22" ry="12" transform="rotate(-18 255 132)" fill="url(#wthEchoCore)"/>
+                                    <ellipse cx="148" cy="178" rx="38" ry="20" transform="rotate(-12 148 178)" fill="url(#wthEchoGreen)"/>
+                                    <ellipse cx="285" cy="195" rx="58" ry="30" transform="rotate(-24 285 195)" fill="url(#wthEchoGreen)"/>
+                                    <ellipse cx="292" cy="192" rx="26" ry="14" transform="rotate(-24 292 192)" fill="url(#wthEchoCore)"/>
+                                </g>
+
+                                <!-- Radar Azimuth Crosshairs & Range Rings -->
+                                <line x1="200" y1="10" x2="200" y2="290" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="0.8" stroke-dasharray="3,3"/>
+                                <line x1="60" y1="150" x2="340" y2="150" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="0.8" stroke-dasharray="3,3"/>
+                                <line x1="101" y1="51" x2="299" y2="249" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="0.7" stroke-dasharray="2,4"/>
+                                <line x1="299" y1="51" x2="101" y2="249" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="0.7" stroke-dasharray="2,4"/>
+
+                                <circle cx="200" cy="150" r="32" fill="none" stroke="#38bdf8" stroke-opacity="0.38" stroke-width="0.9"/>
+                                <circle cx="200" cy="150" r="65" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="0.9"/>
+                                <circle cx="200" cy="150" r="98" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="0.9"/>
+                                <circle cx="200" cy="150" r="130" fill="none" stroke="#38bdf8" stroke-opacity="0.7" stroke-width="1.2"/>
+
+                                <text x="204" y="116" fill="#7dd3fc" font-size="8.5" font-weight="700">${r1}km</text>
+                                <text x="204" y="83" fill="#7dd3fc" font-size="8.5" font-weight="700">${r2}km</text>
+                                <text x="204" y="50" fill="#7dd3fc" font-size="8.5" font-weight="700">${r3}km</text>
+                                <text x="204" y="18" fill="#38bdf8" font-size="9.5" font-weight="800">${r4}km</text>
+
+                                <circle cx="200" cy="150" r="3" fill="#facc15" stroke="#000" stroke-width="0.8"/>
+                                <text x="206" y="153" fill="#fde047" font-size="9" font-weight="800">${isEn ? 'HK (HKO)' : '香港'}</text>
+                            </svg>
+
+                            <div style="position:absolute; top:8px; left:8px; z-index:3; background:rgba(15,23,42,0.82); color:#e0f2fe; padding:3px 8px; border-radius:6px; font-size:0.73rem; font-weight:800; border:1px solid rgba(56,189,248,0.4);">
+                                📡 ${rangeTitle}
+                            </div>
+                        </div>
+
+                        <!-- 20-Frame Timeline Scrubber & Playback Controls -->
+                        <div style="margin-top:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(148,163,184,0.22); border-radius:10px; padding:9px 11px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" onclick="stepWeatherRadarFrame(-1)" style="padding:5px 10px; border-radius:6px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.76rem;">⏮️ ${isEn ? 'Prev' : '上一張'}</button>
+                                    <button type="button" id="wth-radar-play-btn" onclick="toggleWeatherRadarAnim()" style="padding:5px 13px; border-radius:6px; border:1px solid ${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; background:${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; color:#ffffff; cursor:pointer; font-weight:800; font-size:0.78rem;">
+                                        ${st.radarAnimPlaying ? (isEn ? '⏸️ Pause (20-Frame Loop)' : '⏸️ 暫停動畫 (20張連播中)') : (isEn ? '▶️ Play 20-Frame Animation' : '▶️ 播放最近 20 張雷達動畫')}
+                                    </button>
+                                    <button type="button" onclick="stepWeatherRadarFrame(1)" style="padding:5px 10px; border-radius:6px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.76rem;">⏭️ ${isEn ? 'Next' : '下一張'}</button>
+                                </div>
+
+                                <!-- Speed Controls -->
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <span style="font-size:0.72rem; color:#94a3b8; font-weight:700;">${isEn ? 'Speed:' : '速度：'}</span>
+                                    ${[
+                                        { ms: 700, zh: '慢', en: 'Slow' },
+                                        { ms: 420, zh: '標準', en: 'Normal' },
+                                        { ms: 220, zh: '快', en: 'Fast' }
+                                    ].map(sp => {
+                                        const act = (st.radarAnimSpeedMs === sp.ms);
+                                        return `<button type="button" onclick="setWeatherRadarSpeed(${sp.ms})" style="padding:3px 8px; border-radius:5px; font-size:0.71rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? sp.en : sp.zh}</button>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Range Slider (0 .. 19) -->
+                            <input type="range" id="wth-radar-slider" min="0" max="19" step="1" value="${st.radarFrameIdx}" oninput="setWeatherRadarFrameIdx(this.value)" style="width:100%; accent-color:#38bdf8; cursor:pointer; margin-bottom:6px;">
+
+                            <!-- 20 Clickable Frame Number Pills -->
+                            <div style="display:grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap:3px;">
+                                ${frames.map((f, i) => {
+                                    const isCur = (i === st.radarFrameIdx);
+                                    return `<button type="button" id="wth-radar-dot-${i}" onclick="setWeatherRadarFrameIdx(${i})" title="${f.dateTimeLabel}" style="border:none; border-radius:4px; padding:3px 0; font-size:0.64rem; font-weight:800; cursor:pointer; background:${isCur ? '#38bdf8' : (i < st.radarFrameIdx ? '#0284c7' : '#334155')}; color:${isCur ? '#0f172a' : '#e2e8f0'}; transition:all 0.1s;">${i + 1}</button>`;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Rainfall Intensity Legend Bar -->
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(148,163,184,0.2); font-size:0.72rem; color:#cbd5e1;">
+                            <span style="font-weight:800; color:#38bdf8;">${isEn ? '🌧️ Rainfall Intensity (mm/hr):' : '🌧️ 降雨強度色標 (毫米/小時)：'}</span>
+                            <div style="display:flex; align-items:center; gap:3px; flex-wrap:wrap;">
+                                ${bins.map(b => `<span style="display:inline-flex; align-items:center; gap:2px; background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:4px;"><span style="width:8px; height:8px; border-radius:2px; background:${b.c}; display:inline-block;"></span><b>${b.v}</b></span>`).join('')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
-        function buildWeatherRadarSubTabHTML(isEn) {
+        function buildCurrentAndTomorrowHeroHTML(isEn) {
             const st = window.hkWeatherPortalState;
-            const radarEmbedUrl = `https://dannytcchan00.github.io/0Data/test/hk_weather/Imagery/Radar/?lang=${isEn ? 'en' : 'tc'}`;
+            const cur = st.currentObs;
+            const tmr = st.tomorrowForecast;
+            const s = st.summary;
 
             return `
-                <div class="border-card" style="margin-bottom:12px; border:1px solid #bae6fd; background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                <div class="wth-hero-grid">
+                    <!-- 左卡：即時天氣狀況 (Real-Time Weather Conditions) -->
+                    <div class="wth-hero-card">
                         <div>
-                            <div style="font-weight:900; font-size:1.05rem; color:#0c4a6e;">
-                                ${isEn ? '📡 Hong Kong Observatory Weather Radar Imagery (64 km · 128 km · 256 km)' : '📡 香港天文台天氣雷達圖 (64公里・128公里・256公里)'}
+                            <div class="wth-hero-top">
+                                <div style="font-size:0.95rem; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                                    🌤️ ${isEn ? 'Current Weather Conditions' : '即時天氣狀況'}
+                                </div>
+                                <span class="el-tag el-tag-blue">
+                                    🕒 ${st.lastUpdatedText ? (isEn ? `Updated ${st.lastUpdatedText}` : `實時更新 ${st.lastUpdatedText}`) : (isEn ? 'Live Observation' : '香港天文台實時觀測')}
+                                </span>
                             </div>
-                            <div style="font-size:0.8rem; color:#475569; margin-top:2px;">
-                                ${isEn
-                                    ? 'Switch between 64 km (local districts), 128 km (Pearl River Estuary), and 256 km (Guangdong & Northern South China Sea) radar sweeps'
-                                    : '支援即時切換 64 公里（本港各區近距）、128 公里（珠江口及鄰近水域）及 256 公里（廣東沿岸及南海北部）天氣雷達圖像'}
+
+                            <!-- Main Current Temp, Humidity & Icon Box -->
+                            <div class="wth-hero-main" style="margin-top:10px;">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <img src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${cur.iconCode || 51}.png" alt="Weather" style="width:58px; height:58px; object-fit:contain; background:#0284c7; padding:6px; border-radius:12px; box-shadow:0 2px 6px rgba(2,132,199,0.25);">
+                                    <div>
+                                        <div style="font-size:1.85rem; font-weight:900; color:#0f172a; line-height:1.05; font-variant-numeric:tabular-nums;">
+                                            ${Number(cur.hkoTemp || s.avgTemp).toFixed(1)}°C
+                                        </div>
+                                        <div style="font-size:0.82rem; font-weight:800; color:#0284c7; margin-top:3px;">
+                                            💧 ${isEn ? 'Relative Humidity:' : '相對濕度：'} ${Math.round(cur.hkoHum || s.avgHum)}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.74rem; font-weight:800; color:#64748b;">${isEn ? "Today's Range" : '今日氣溫範圍'}</div>
+                                    <div style="font-size:0.95rem; font-weight:900; color:#0f172a; margin-top:2px; font-variant-numeric:tabular-nums;">
+                                        <span style="color:#0284c7;">${Number(cur.todayMin).toFixed(0)}°C</span> – <span style="color:#dc2626;">${Number(cur.todayMax).toFixed(0)}°C</span>
+                                    </div>
+                                    <div style="font-size:0.72rem; font-weight:800; color:#475569; margin-top:3px;">
+                                        ☀️ UV: <b>${cur.uvVal}</b> (${isEn ? cur.uvDesc_en : cur.uvDesc_zh})
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 6-Metric Instant Summary Grid ( neatly aligned, no overflow ) -->
+                            <div class="wth-metrics-6grid" style="margin-top:10px;">
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">🌡️ ${isEn ? 'All-HK Mean Temp' : '全港平均氣溫'}</div>
+                                    <div class="wth-metric-val" style="color:#dc2626;">${s.avgTemp.toFixed(1)}°C</div>
+                                    <div class="wth-metric-sub">${s.minTemp.toFixed(1)}° – ${s.maxTemp.toFixed(1)}°C</div>
+                                </div>
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">💧 ${isEn ? '1-Min Mean RH' : '最新一分鐘濕度'}</div>
+                                    <div class="wth-metric-val" style="color:#0284c7;">${Math.round(s.avgHum)}%</div>
+                                    <div class="wth-metric-sub">${isEn ? `${st.stations.length} Stations` : `全港 ${st.stations.length} 個氣象站`}</div>
+                                </div>
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">🌧️ ${isEn ? 'Max Rainfall' : '最高分區雨量'}</div>
+                                    <div class="wth-metric-val" style="color:#1d4ed8;">${s.maxRain.toFixed(1)} mm</div>
+                                    <div class="wth-metric-sub">${isEn ? 'Regional Max' : '過去一小時最高'}</div>
+                                </div>
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">💨 ${isEn ? 'Mean Wind Speed' : '平均風速及陣風'}</div>
+                                    <div class="wth-metric-val" style="color:#0f766e;">${s.avgWind.toFixed(1)} km/h</div>
+                                    <div class="wth-metric-sub">${isEn ? `Max Gust ${s.maxGust} km/h` : `最高陣風 ${s.maxGust} km/h`}</div>
+                                </div>
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">👁️ ${isEn ? 'Mean Visibility' : '全港平均能見度'}</div>
+                                    <div class="wth-metric-val" style="color:#6d28d9;">${s.avgVis.toFixed(1)} km</div>
+                                    <div class="wth-metric-sub">${isEn ? '10-Min Mean' : '維港及近岸水域'}</div>
+                                </div>
+                                <div class="wth-metric-box">
+                                    <div class="wth-metric-label">☀️ ${isEn ? 'Solar / Tide' : '太陽輻射 / 潮位'}</div>
+                                    <div class="wth-metric-val" style="color:#d97706;">${Math.round(s.avgSolar)} W/m²</div>
+                                    <div class="wth-metric-sub">🌊 ${isEn ? 'Mean Tide' : '平均潮位'} ${s.avgTide.toFixed(2)}m</div>
+                                </div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            ${[64, 128, 256].map(km => {
-                                const active = (st.radarRangeKm === km);
-                                return `<button type="button" onclick="setWeatherRadarRange(${km})" style="padding:7px 14px; border-radius:8px; font-weight:800; font-size:0.84rem; cursor:pointer; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#0f172a'};">📡 ${km} ${isEn ? 'km' : '公里'}</button>`;
-                            }).join('')}
+
+                        <!-- Current Weather Situation & Local Forecast Text -->
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:9px 11px; font-size:0.78rem; color:#334155; line-height:1.5;">
+                            <div><b style="color:#0f172a;">📋 ${isEn ? 'General Situation:' : '天氣概況：'}</b>${isEn ? cur.generalSituation_en : cur.generalSituation_zh}</div>
+                            <div style="margin-top:4px;"><b style="color:#0284c7;">🌤️ ${isEn ? "Today's Forecast:" : '本港今日預測：'}</b>${isEn ? cur.forecastDesc_en : cur.forecastDesc_zh}</div>
                         </div>
                     </div>
 
-                    <!-- Display Mode & Playback Controls -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; padding:8px 10px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            <button type="button" onclick="setWeatherRadarViewMode('dual')" style="padding:5px 11px; border-radius:6px; font-size:0.78rem; font-weight:800; cursor:pointer; border:1px solid ${st.radarViewMode === 'dual' ? '#0284c7' : '#cbd5e1'}; background:${st.radarViewMode === 'dual' ? '#e0f2fe' : '#fff'}; color:#0369a1;">
-                                ${isEn ? '🔳 3-Range Simultaneous + Focus View' : '🔳 64 / 128 / 256 公里三圖同屏及放大檢視'}
-                            </button>
-                            <button type="button" onclick="setWeatherRadarViewMode('embed')" style="padding:5px 11px; border-radius:6px; font-size:0.78rem; font-weight:800; cursor:pointer; border:1px solid ${st.radarViewMode === 'embed' ? '#0284c7' : '#cbd5e1'}; background:${st.radarViewMode === 'embed' ? '#e0f2fe' : '#fff'}; color:#0369a1;">
-                                ${isEn ? '🌐 Interactive Radar Web Console' : '🌐 互動天氣雷達圖專用視窗'}
-                            </button>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            <button type="button" onclick="stepWeatherRadarFrame(-1)" style="padding:4px 9px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; font-weight:800; font-size:0.78rem;">⏮️ ${isEn ? 'Prev' : '上一幀'}</button>
-                            <button type="button" onclick="toggleWeatherRadarAnim()" style="padding:4px 11px; border-radius:6px; border:1px solid #0284c7; background:${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; color:#fff; cursor:pointer; font-weight:800; font-size:0.78rem;">
-                                ${st.radarAnimPlaying ? (isEn ? '⏸️ Pause Sweep' : '⏸️ 暫停動態回波') : (isEn ? '▶️ Play Radar Loop' : '▶️ 播放過去1小時回波')}
-                            </button>
-                            <button type="button" onclick="stepWeatherRadarFrame(1)" style="padding:4px 9px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; font-weight:800; font-size:0.78rem;">⏭️ ${isEn ? 'Next' : '下一幀'}</button>
-                            <span style="font-size:0.76rem; font-weight:700; color:#475569;">(${st.radarFrameIdx + 1} / 6)</span>
-                        </div>
-                    </div>
-
-                    ${st.radarViewMode === 'embed' ? `
-                        <div style="border-radius:10px; overflow:hidden; border:1px solid #94a3b8; background:#0f172a; height:540px;">
-                            <iframe src="${radarEmbedUrl}" style="width:100%; height:100%; border:none;" title="Hong Kong Observatory Weather Radar"></iframe>
-                        </div>
-                    ` : `
-                        <!-- Primary Selected Range Zoom Card + 3-Range Side-by-Side Cards -->
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; align-items:start;">
-                            <div style="background:#0f172a; padding:10px; border-radius:12px; border:2px solid #0284c7;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; color:#f8fafc; margin-bottom:8px;">
-                                    <span style="font-weight:900; font-size:0.92rem;">🔍 ${isEn ? `Selected Focus: ${st.radarRangeKm} km Weather Radar` : `當前焦點放大：${st.radarRangeKm} 公里天氣雷達圖`}</span>
-                                    <span style="font-size:0.74rem; color:#38bdf8; font-weight:700;">${st.radarRangeKm === 64 ? (isEn ? '6-Min Update · High Res' : '每 6 分鐘更新 · 高解析度') : (isEn ? '12-Min Update · Wide Area' : '每 12 分鐘更新 · 廣域掃描')}</span>
+                    <!-- 右卡：明日天氣預報 (Tomorrow's Weather Forecast) -->
+                    <div class="wth-hero-card">
+                        <div>
+                            <div class="wth-hero-top">
+                                <div style="font-size:0.95rem; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                                    📅 ${isEn ? "Tomorrow's Weather Forecast" : '明日天氣預報'}
                                 </div>
-                                ${buildRadarGraphicSvg(st.radarRangeKm, st.radarFrameIdx, isEn)}
+                                <span class="el-tag" style="background:#fef3c7; color:#b45309;">
+                                    🗓️ ${isEn ? tmr.dateStr_en : tmr.dateStr_zh}
+                                </span>
                             </div>
 
-                            <div style="display:flex; flex-direction:column; gap:10px;">
-                                <div style="font-weight:800; font-size:0.88rem; color:#0f172a;">
-                                    ${isEn ? '📡 All 3 Radar Ranges (64 km / 128 km / 256 km) Comparison:' : '📡 64公里、128公里、256公里 三種觀測範圍同屏對照：'}
+                            <!-- Main Tomorrow Forecast Box -->
+                            <div class="wth-hero-main" style="margin-top:10px; background:linear-gradient(135deg, #fffbeb 0%, #f8fafc 100%); border-color:#fde68a;">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <img src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${tmr.iconCode || 51}.png" alt="Tomorrow Forecast" style="width:58px; height:58px; object-fit:contain; background:#0f172a; padding:6px; border-radius:12px;">
+                                    <div>
+                                        <div style="font-size:0.74rem; font-weight:800; color:#64748b;">${isEn ? 'Tomorrow Temp Range' : '明日預測氣溫'}</div>
+                                        <div style="font-size:1.65rem; font-weight:900; color:#0f172a; line-height:1.1; font-variant-numeric:tabular-nums;">
+                                            <span style="color:#0284c7;">${tmr.minTemp}°C</span> – <span style="color:#dc2626;">${tmr.maxTemp}°C</span>
+                                        </div>
+                                        <div style="font-size:0.8rem; font-weight:800; color:#475569; margin-top:3px;">
+                                            💧 ${isEn ? 'Humidity:' : '相對濕度：'} <b>${tmr.minRh}% – ${tmr.maxRh}%</b>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap:8px;">
-                                    ${[64, 128, 256].map(km => {
-                                        const isSel = (st.radarRangeKm === km);
-                                        const descZh = km === 64 ? '覆蓋全港十八區及近岸水域' : (km === 128 ? '覆蓋珠江口、澳門及深圳灣' : '覆蓋廣東沿岸及南海北部');
-                                        const descEn = km === 64 ? 'HK 18 Districts & Coastal Waters' : (km === 128 ? 'Pearl River Estuary & Macao' : 'Guangdong Coast & N. South China Sea');
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.73rem; font-weight:800; color:#64748b;">${isEn ? 'Rain Probability (PSR)' : '顯著降雨概率 (PSR)'}</div>
+                                    <div style="display:inline-block; margin-top:4px; padding:4px 10px; border-radius:999px; background:#e0f2fe; color:#0369a1; font-size:0.82rem; font-weight:900;">
+                                        🌧️ ${isEn ? tmr.psr_en : tmr.psr_zh}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tomorrow Wind & Weather Details -->
+                            <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0f766e; border-radius:8px; padding:8px 11px; font-size:0.8rem; color:#1e293b;">
+                                    <div style="font-weight:900; color:#0f766e; margin-bottom:2px;">💨 ${isEn ? 'Tomorrow Wind Forecast' : '明日風向及風力預測'}</div>
+                                    <div style="font-weight:600; line-height:1.45;">${isEn ? tmr.wind_en : tmr.wind_zh}</div>
+                                </div>
+                                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:8px; padding:8px 11px; font-size:0.8rem; color:#1e293b;">
+                                    <div style="font-weight:900; color:#0284c7; margin-bottom:2px;">🌤️ ${isEn ? 'Tomorrow Weather Outlook' : '明日天氣狀況預測'}</div>
+                                    <div style="font-weight:600; line-height:1.45;">${isEn ? tmr.weather_en : tmr.weather_zh}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subsequent 4-Day Quick Strip -->
+                        ${st.nextDaysForecast && st.nextDaysForecast.length > 0 ? `
+                            <div style="border-top:1px solid #e2e8f0; padding-top:8px;">
+                                <div style="font-size:0.72rem; font-weight:800; color:#64748b; margin-bottom:6px;">
+                                    📆 ${isEn ? 'Subsequent Days Outlook' : '隨後數日天氣展望'}
+                                </div>
+                                <div style="display:grid; grid-template-columns:repeat(${Math.min(4, st.nextDaysForecast.length)}, minmax(0, 1fr)); gap:6px;">
+                                    ${st.nextDaysForecast.slice(0, 4).map(fc => {
+                                        const dt = String(fc.forecastDate || '');
+                                        const label = dt.length >= 8 ? `${parseInt(dt.substring(4,6),10)}/${parseInt(dt.substring(6,8),10)}` : '';
                                         return `
-                                            <div onclick="setWeatherRadarRange(${km})" style="cursor:pointer; background:#ffffff; padding:8px; border-radius:10px; border:2px solid ${isSel ? '#0284c7' : '#e2e8f0'}; box-shadow:${isSel ? '0 4px 12px rgba(2,132,199,0.18)' : 'none'};">
-                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                                    <span style="font-weight:900; font-size:0.84rem; color:${isSel ? '#0284c7' : '#1e293b'};">📡 ${km} ${isEn ? 'km' : '公里'}</span>
-                                                    <span style="font-size:0.68rem; padding:1px 6px; border-radius:999px; background:${isSel ? '#0284c7' : '#f1f5f9'}; color:${isSel ? '#fff' : '#475569'}; font-weight:700;">${isSel ? (isEn ? 'Active' : '檢視中') : (isEn ? 'Select' : '點擊放大')}</span>
-                                                </div>
-                                                ${buildRadarGraphicSvg(km, st.radarFrameIdx, isEn)}
-                                                <div style="font-size:0.73rem; color:#475569; margin-top:5px; font-weight:600;">${isEn ? descEn : descZh}</div>
+                                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px; text-align:center;">
+                                                <div style="font-size:0.7rem; font-weight:800; color:#334155;">${label} ${fc.week || ''}</div>
+                                                <img src="https://www.hko.gov.hk/images/HKOWxIconOutline/pic${fc.ForecastIcon || 51}.png" alt="" style="width:28px; height:28px; object-fit:contain; background:#0284c7; border-radius:6px; padding:2px; margin:4px auto; display:block;">
+                                                <div style="font-size:0.74rem; font-weight:900; color:#0f172a; font-variant-numeric:tabular-nums;">${fc.forecastMintemp?.value ?? '--'}°–${fc.forecastMaxtemp?.value ?? '--'}°C</div>
                                             </div>
                                         `;
                                     }).join('')}
                                 </div>
                             </div>
-                        </div>
-                    `}
-
-                    ${buildRadarLegendBarHTML(isEn)}
+                        ` : ''}
+                    </div>
                 </div>
             `;
         }
 
-        function buildWeatherOverviewSubTabHTML(isEn) {
-            const st = window.hkWeatherPortalState;
-            return `
-                <!-- Compact 64 / 128 / 256 km Radar Quick Bar -->
-                <div class="border-card" style="margin-bottom:12px; border:1px solid #bae6fd;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-                        <div style="font-weight:900; font-size:0.96rem; color:#0c4a6e;">
-                            ${isEn ? '📡 Weather Radar Imagery Quick View (64 km · 128 km · 256 km)' : '📡 香港天文台天氣雷達圖速覽 (64公里・128公里・256公里)'}
-                        </div>
-                        <button type="button" onclick="setWeatherPortalSubTab('radar')" style="padding:5px 12px; border-radius:8px; border:1px solid #0284c7; background:#0284c7; color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer;">
-                            ${isEn ? '🔍 Open Full Radar Console' : '🔍 開啟完整天氣雷達控制台'}
-                        </button>
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
-                        ${[64, 128, 256].map(km => `
-                            <div onclick="setWeatherRadarRange(${km}); setWeatherPortalSubTab('radar');" style="cursor:pointer; background:#f8fafc; padding:8px; border-radius:10px; border:1px solid #cbd5e1;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                    <span style="font-weight:900; font-size:0.86rem; color:#0f172a;">📡 ${km} ${isEn ? 'km Weather Radar' : '公里天氣雷達圖'}</span>
-                                    <span style="font-size:0.72rem; color:#0284c7; font-weight:800;">${km === 64 ? (isEn ? '3km Alt · 6-min' : '3公里高 · 6分鐘更新') : (isEn ? '3km Alt · 12-min' : '3公里高 · 12分鐘更新')}</span>
-                                </div>
-                                ${buildRadarGraphicSvg(km, st.radarFrameIdx, isEn)}
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${buildRadarLegendBarHTML(isEn)}
-                </div>
-
-                <!-- Regional Station Multi-Parameter Table -->
-                ${buildWeatherTempHumRainHTML(isEn)}
-            `;
-        }
-
-        function buildWeatherTempHumRainHTML(isEn) {
+        function buildDetailedRegionalWeatherHTML(isEn) {
             const st = window.hkWeatherPortalState;
             const regions = [
                 { id: 'ALL', zh: '全港各區', en: 'All Regions' },
@@ -6651,90 +7083,175 @@
                 return true;
             });
 
+            const subTabs = [
+                { id: 'all', zh: '🌐 全部詳細氣象資料', en: '🌐 All Detailed Weather Data' },
+                { id: 'stations', zh: '🌡️ 分區氣溫・濕度・雨量・風力', en: '🌡️ Regional Temp, Humidity, Rain & Wind' },
+                { id: 'vis_solar', zh: '👁️ 能見度及☀️太陽輻射', en: '👁️ Visibility & ☀️ Solar Radiation' },
+                { id: 'tide', zh: '🌊 沿岸潮汐水位 (11站)', en: '🌊 Coastal Tide Levels (11 Stations)' }
+            ];
+
+            const showStations = (st.detailSubTab === 'all' || st.detailSubTab === 'stations');
+            const showVisSolar = (st.detailSubTab === 'all' || st.detailSubTab === 'vis_solar');
+            const showTide = (st.detailSubTab === 'all' || st.detailSubTab === 'tide');
+
             return `
-                <div class="border-card" style="margin-bottom:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-                        <div style="font-weight:900; font-size:0.96rem; color:#0f172a;">
-                            ${isEn ? `🌡️ Regional Air Temperature, 1-Min Relative Humidity, Rainfall & Wind (${filtered.length} Stations)` : `🌡️ 全港分區氣溫、最新一分鐘相對濕度、雨量及風力一覽（共 ${filtered.length} 個自動氣象站）`}
+                <!-- Section Filter Bar -->
+                <div class="el-card-box" style="padding:10px 14px; background:#f8fafc;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <div class="el-filter-bar">
+                            ${subTabs.map(t => `
+                                <button type="button" class="el-chip-btn ${st.detailSubTab === t.id ? 'active' : ''}" onclick="setWeatherDetailSubTab('${t.id}')">
+                                    ${isEn ? t.en : t.zh}
+                                </button>
+                            `).join('')}
                         </div>
-                        <input type="search" value="${st.searchQuery.replace(/"/g, '&quot;')}" oninput="onWeatherStationSearch(this.value)" placeholder="${isEn ? 'Search station (e.g. Sha Tin, Central)...' : '搜尋氣象站（如：天文台、沙田、赤鱲角、長洲）...'}" style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.82rem; min-width:220px;">
-                    </div>
-
-                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
-                        ${regions.map(r => {
-                            const active = (st.regionFilter === r.id);
-                            return `<button type="button" onclick="setWeatherPortalRegion('${r.id}')" style="padding:5px 10px; border-radius:999px; font-size:0.78rem; font-weight:800; cursor:pointer; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#f8fafc'}; color:${active ? '#fff' : '#334155'};">${isEn ? r.en : r.zh}</button>`;
-                        }).join('')}
-                    </div>
-
-                    <div class="border-table-wrap">
-                        <table class="border-table">
-                            <thead>
-                                <tr>
-                                    <th>${isEn ? 'Weather Station' : '自動氣象站'}</th>
-                                    <th>${isEn ? 'District / Region' : '所屬區域'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Air Temp (°C)' : '實時氣溫 (°C)'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Min / Max (°C)' : '最低 / 最高氣溫'}</th>
-                                    <th style="text-align:right;">${isEn ? '1-Min Humidity' : '最新一分鐘相對濕度'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Rainfall (mm)' : '雨量 (毫米)'}</th>
-                                    <th>${isEn ? 'Wind Direction' : '風向'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Wind / Gust (km/h)' : '平均風速 / 最高陣風'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${filtered.map(item => {
-                                    const tColor = item.temp >= 28 ? '#dc2626' : (item.temp <= 20 ? '#0284c7' : '#0f172a');
-                                    const rBadge = item.rain > 0
-                                        ? `<span style="background:#dbeafe; color:#1d4ed8; padding:2px 7px; border-radius:999px; font-weight:800;">🌧️ ${item.rain.toFixed(1)} mm</span>`
-                                        : `<span style="color:#64748b;">0.0 mm</span>`;
-                                    return `
-                                        <tr>
-                                            <td style="font-weight:800; color:#0f172a;">📍 ${isEn ? item.en : item.zh}</td>
-                                            <td><span style="font-size:0.76rem; padding:2px 7px; border-radius:6px; background:#f1f5f9; color:#475569; font-weight:700;">${isEn ? item.reg_en : item.reg_zh}</span></td>
-                                            <td style="text-align:right; font-weight:900; font-size:0.95rem; color:${tColor};">${item.temp.toFixed(1)}°C</td>
-                                            <td style="text-align:right; color:#475569; font-size:0.8rem;">${item.minT.toFixed(1)}°C / <b style="color:#dc2626;">${item.maxT.toFixed(1)}°C</b></td>
-                                            <td style="text-align:right; font-weight:800; color:#0284c7;">💧 ${Math.round(item.hum)}%</td>
-                                            <td style="text-align:right;">${rBadge}</td>
-                                            <td style="font-weight:700; color:#0f766e;">🧭 ${isEn ? item.windDir_en : item.windDir_zh}</td>
-                                            <td style="text-align:right; font-weight:800; color:#0f172a;">${item.windSpd} <span style="font-size:0.75rem; color:#64748b;">/ 陣風 ${item.gust} km/h</span></td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button type="button" class="el-chip-btn ${st.stationDisplayMode === 'cards' ? 'active' : ''}" onclick="setWeatherStationDisplayMode('cards')">
+                                🗂️ ${isEn ? 'Card Grid' : '整齊卡片排版'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${st.stationDisplayMode === 'table' ? 'active' : ''}" onclick="setWeatherStationDisplayMode('table')">
+                                📋 ${isEn ? 'Data Table' : '對齊列表排版'}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            `;
-        }
 
-        function buildWeatherWindVisSolarHTML(isEn) {
-            const st = window.hkWeatherPortalState;
-            const windySorted = [...st.stations].sort((a, b) => b.windSpd - a.windSpd);
-
-            return `
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:12px; margin-bottom:12px;">
-                    <!-- Visibility Card -->
-                    <div class="border-card">
-                        <div style="font-weight:900; font-size:0.95rem; color:#0f172a; margin-bottom:8px;">
-                            ${isEn ? '👁️ Latest 10-Minute Mean Visibility across HK Waters' : '👁️ 全港各區及水域最新 10 分鐘平均能見度'}
+                ${showStations ? `
+                <!-- 1. 全港 30 個自動氣象站：氣溫、最新一分鐘相對濕度、雨量、風向及風速 -->
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">
+                                🌡️ ${isEn ? `Regional Weather Stations (${filtered.length} Stations)` : `全港各區自動氣象站詳細實時數據（共 ${filtered.length} 個氣象站）`}
+                            </div>
+                            <div class="el-card-subtitle">
+                                ${isEn ? 'Real-time Air Temperature (°C), 1-Min Relative Humidity (%), Rainfall (mm), Wind Direction & Speed (km/h)' : '涵蓋實時氣溫、當日高低溫、最新一分鐘相對濕度、分區雨量、10分鐘平均風向風速及最高陣風'}
+                            </div>
                         </div>
-                        <div class="border-table-wrap">
-                            <table class="border-table">
+                        <input type="search" class="el-search-input" style="max-width:250px;" value="${st.searchQuery.replace(/"/g, '&quot;')}" oninput="onWeatherStationSearch(this.value)" placeholder="${isEn ? 'Search station (e.g. Sha Tin)...' : '搜尋氣象站（如：天文台、沙田、長洲）...'}">
+                    </div>
+
+                    <div class="el-filter-bar">
+                        ${regions.map(r => `
+                            <button type="button" class="el-chip-btn ${st.regionFilter === r.id ? 'active' : ''}" onclick="setWeatherPortalRegion('${r.id}')">
+                                ${isEn ? r.en : r.zh}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    ${st.stationDisplayMode === 'cards' ? `
+                        <div class="wth-station-grid">
+                            ${filtered.map(item => {
+                                const tColor = item.temp >= 28 ? '#dc2626' : (item.temp <= 20 ? '#0284c7' : '#0f172a');
+                                return `
+                                    <div class="wth-station-card">
+                                        <!-- Card Header: Station Name & District Tag -->
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
+                                            <div style="font-size:0.9rem; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                📍 ${isEn ? item.en : item.zh}
+                                            </div>
+                                            <span class="el-tag" style="background:#f1f5f9; color:#475569; flex-shrink:0;">
+                                                ${isEn ? item.reg_en : item.reg_zh}
+                                            </span>
+                                        </div>
+
+                                        <!-- 2-Column Highlight: Air Temp & 1-Min Relative Humidity -->
+                                        <div class="wth-station-pair">
+                                            <div class="wth-station-cell">
+                                                <div style="font-size:0.68rem; font-weight:800; color:#64748b;">🌡️ ${isEn ? 'Air Temp' : '實時氣溫'}</div>
+                                                <div style="font-size:1.25rem; font-weight:900; color:${tColor}; font-variant-numeric:tabular-nums; margin-top:1px;">
+                                                    ${item.temp.toFixed(1)}°C
+                                                </div>
+                                                <div style="font-size:0.68rem; font-weight:700; color:#64748b; font-variant-numeric:tabular-nums;">
+                                                    ${item.minT.toFixed(1)}° – <b style="color:#dc2626;">${item.maxT.toFixed(1)}°C</b>
+                                                </div>
+                                            </div>
+
+                                            <div class="wth-station-cell">
+                                                <div style="font-size:0.68rem; font-weight:800; color:#64748b;">💧 ${isEn ? '1-Min RH' : '相對濕度'}</div>
+                                                <div style="font-size:1.25rem; font-weight:900; color:#0284c7; font-variant-numeric:tabular-nums; margin-top:1px;">
+                                                    ${Math.round(item.hum)}%
+                                                </div>
+                                                <div style="font-size:0.68rem; font-weight:800; color:${item.rain > 0 ? '#1d4ed8' : '#64748b'}; font-variant-numeric:tabular-nums;">
+                                                    🌧️ ${isEn ? 'Rain:' : '雨量'} ${item.rain.toFixed(1)} mm
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Footer Bar: Wind Direction, Speed & Max Gust -->
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#f8fafc; border-radius:7px; padding:5px 8px; font-size:0.73rem; font-weight:800; color:#334155;">
+                                            <span style="color:#0f766e; white-space:nowrap;">🧭 ${isEn ? item.windDir_en : item.windDir_zh}</span>
+                                            <span style="font-variant-numeric:tabular-nums; white-space:nowrap;">💨 ${item.windSpd} km/h <span style="color:#64748b; font-weight:700;">(${isEn ? 'Gust' : '陣風'} ${item.gust})</span></span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : `
+                        <div class="el-table-wrap">
+                            <table class="el-table">
                                 <thead>
                                     <tr>
-                                        <th>${isEn ? 'Visibility Station' : '能見度觀測站'}</th>
-                                        <th>${isEn ? 'Coverage Area' : '覆蓋水域 / 地區'}</th>
-                                        <th style="text-align:right;">${isEn ? 'Visibility (km)' : '能見度 (公里)'}</th>
-                                        <th>${isEn ? 'Condition' : '能見度狀況'}</th>
+                                        <th>${isEn ? 'Weather Station' : '自動氣象站'}</th>
+                                        <th>${isEn ? 'Region' : '所屬區域'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Air Temp (°C)' : '實時氣溫 (°C)'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Min / Max (°C)' : '最低 / 最高氣溫'}</th>
+                                        <th style="text-align:right;">${isEn ? '1-Min Humidity' : '最新一分鐘相對濕度'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Rainfall (mm)' : '雨量 (毫米)'}</th>
+                                        <th>${isEn ? 'Wind Direction' : '10分鐘風向'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Wind / Gust (km/h)' : '平均風速 / 最高陣風'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filtered.map(item => {
+                                        const tColor = item.temp >= 28 ? '#dc2626' : (item.temp <= 20 ? '#0284c7' : '#0f172a');
+                                        return `
+                                            <tr>
+                                                <td style="font-weight:800; color:#0f172a; white-space:nowrap;">📍 ${isEn ? item.en : item.zh}</td>
+                                                <td style="white-space:nowrap;"><span class="el-tag" style="background:#f1f5f9; color:#475569;">${isEn ? item.reg_en : item.reg_zh}</span></td>
+                                                <td style="text-align:right; font-weight:900; color:${tColor}; font-variant-numeric:tabular-nums; white-space:nowrap;">${item.temp.toFixed(1)}°C</td>
+                                                <td style="text-align:right; color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap;">${item.minT.toFixed(1)}°C / <b style="color:#dc2626;">${item.maxT.toFixed(1)}°C</b></td>
+                                                <td style="text-align:right; font-weight:800; color:#0284c7; font-variant-numeric:tabular-nums; white-space:nowrap;">💧 ${Math.round(item.hum)}%</td>
+                                                <td style="text-align:right; font-weight:800; color:${item.rain > 0 ? '#1d4ed8' : '#64748b'}; font-variant-numeric:tabular-nums; white-space:nowrap;">${item.rain.toFixed(1)} mm</td>
+                                                <td style="font-weight:800; color:#0f766e; white-space:nowrap;">🧭 ${isEn ? item.windDir_en : item.windDir_zh}</td>
+                                                <td style="text-align:right; font-weight:800; color:#0f172a; font-variant-numeric:tabular-nums; white-space:nowrap;">${item.windSpd} / <span style="color:#dc2626;">${item.gust} km/h</span></td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>
+                ` : ''}
+
+                ${showVisSolar ? `
+                <!-- 2. 能見度 (Visibility) 及 太陽輻射 (Solar Radiation) 雙欄整齊卡片 -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
+                    <div class="el-card-box">
+                        <div class="el-card-header">
+                            <div>
+                                <div class="el-card-title">👁️ ${isEn ? 'Latest 10-Minute Mean Visibility' : '全港各區及水域最新 10 分鐘平均能見度'}</div>
+                                <div class="el-card-subtitle">${isEn ? 'Harbour & Coastal Waters Visibility Stations' : '涵蓋中環、赤鱲角、西灣河及橫瀾島能見度觀測站'}</div>
+                            </div>
+                        </div>
+                        <div class="el-table-wrap">
+                            <table class="el-table">
+                                <thead>
+                                    <tr>
+                                        <th>${isEn ? 'Station' : '觀測站'}</th>
+                                        <th>${isEn ? 'Area' : '覆蓋水域'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Visibility' : '能見度'}</th>
+                                        <th>${isEn ? 'Status' : '狀況'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${st.visibilityList.map(v => `
                                         <tr>
-                                            <td style="font-weight:800;">👁️ ${isEn ? v.en : v.zh}</td>
-                                            <td style="color:#475569; font-size:0.8rem;">${isEn ? v.reg_en : v.reg_zh}</td>
-                                            <td style="text-align:right; font-weight:900; color:#6d28d9; font-size:0.95rem;">${v.visKm.toFixed(1)} km</td>
-                                            <td><span style="background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:800;">${isEn ? v.status_en : v.status_zh}</span></td>
+                                            <td style="font-weight:800; white-space:nowrap;">👁️ ${isEn ? v.en : v.zh}</td>
+                                            <td style="color:#475569; white-space:nowrap;">${isEn ? v.reg_en : v.reg_zh}</td>
+                                            <td style="text-align:right; font-weight:900; color:#6d28d9; font-variant-numeric:tabular-nums; white-space:nowrap;">${v.visKm.toFixed(1)} km</td>
+                                            <td style="white-space:nowrap;"><span class="el-tag" style="background:#ede9fe; color:#6d28d9;">${isEn ? v.status_en : v.status_zh}</span></td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -6742,28 +7259,30 @@
                         </div>
                     </div>
 
-                    <!-- Solar Radiation Card -->
-                    <div class="border-card">
-                        <div style="font-weight:900; font-size:0.95rem; color:#0f172a; margin-bottom:8px;">
-                            ${isEn ? '☀️ Latest 1-Minute Solar Radiation (Global / Direct / Diffuse)' : '☀️ 最新一分鐘太陽輻射（總輻射・直接輻射・漫射輻射）'}
+                    <div class="el-card-box">
+                        <div class="el-card-header">
+                            <div>
+                                <div class="el-card-title">☀️ ${isEn ? 'Latest 1-Minute Solar Radiation' : '最新一分鐘太陽輻射觀測'}</div>
+                                <div class="el-card-subtitle">${isEn ? 'Global, Direct & Diffuse Solar Radiation (W/m²)' : '總輻射、直接輻射及漫射輻射強度 (瓦特/平方米 W/m²)'}</div>
+                            </div>
                         </div>
-                        <div class="border-table-wrap">
-                            <table class="border-table">
+                        <div class="el-table-wrap">
+                            <table class="el-table">
                                 <thead>
                                     <tr>
-                                        <th>${isEn ? 'Solar Station' : '太陽輻射觀測站'}</th>
-                                        <th style="text-align:right;">${isEn ? 'Global (W/m²)' : '太陽總輻射 (W/m²)'}</th>
-                                        <th style="text-align:right;">${isEn ? 'Direct (W/m²)' : '直接輻射 (W/m²)'}</th>
-                                        <th style="text-align:right;">${isEn ? 'Diffuse (W/m²)' : '漫射輻射 (W/m²)'}</th>
+                                        <th>${isEn ? 'Station' : '太陽輻射站'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Global (W/m²)' : '總輻射 (W/m²)'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Direct (W/m²)' : '直接輻射'}</th>
+                                        <th style="text-align:right;">${isEn ? 'Diffuse (W/m²)' : '漫射輻射'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${st.solarList.map(sol => `
                                         <tr>
-                                            <td style="font-weight:800;">☀️ ${isEn ? sol.en : sol.zh}</td>
-                                            <td style="text-align:right; font-weight:900; color:#d97706; font-size:0.95rem;">${sol.globalWm2} W/m²</td>
-                                            <td style="text-align:right; font-weight:800; color:#ea580c;">${sol.directWm2} W/m²</td>
-                                            <td style="text-align:right; color:#475569; font-weight:700;">${sol.diffuseWm2} W/m²</td>
+                                            <td style="font-weight:800; white-space:nowrap;">☀️ ${isEn ? sol.en : sol.zh}</td>
+                                            <td style="text-align:right; font-weight:900; color:#d97706; font-variant-numeric:tabular-nums; white-space:nowrap;">${sol.globalWm2} W/m²</td>
+                                            <td style="text-align:right; font-weight:800; color:#ea580c; font-variant-numeric:tabular-nums; white-space:nowrap;">${sol.directWm2} W/m²</td>
+                                            <td style="text-align:right; font-weight:700; color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap;">${sol.diffuseWm2} W/m²</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -6771,68 +7290,27 @@
                         </div>
                     </div>
                 </div>
+                ` : ''}
 
-                <!-- Wind Speed & Direction Table -->
-                <div class="border-card">
-                    <div style="font-weight:900; font-size:0.95rem; color:#0f172a; margin-bottom:8px;">
-                        ${isEn ? '💨 Latest 10-Minute Mean Wind Speed, Wind Direction & Maximum Gust by Station' : '💨 全港自動氣象站最新 10 分鐘平均風向、風速及最高陣風排行'}
+                ${showTide ? `
+                <!-- 3. 全港 11 個潮汐站實時水位 (Tide Gauge Stations) -->
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">🌊 ${isEn ? 'Coastal Tide Gauge Water Levels (11 Stations)' : '全港 11 個潮汐站實時潮位高度及高低潮分佈'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Measured in metres (m) above Chart Datum across Victoria Harbour, Tolo Harbour, Deep Bay & Islands' : '以海圖基準面以上米數 (m) 顯示各區實時潮位、今日最高／最低潮位及漲退潮狀態'}</div>
+                        </div>
                     </div>
-                    <div class="border-table-wrap">
-                        <table class="border-table">
-                            <thead>
-                                <tr>
-                                    <th>${isEn ? 'Station' : '自動氣象站'}</th>
-                                    <th>${isEn ? 'Region' : '區域'}</th>
-                                    <th>${isEn ? '10-Min Wind Direction' : '10分鐘平均風向'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Mean Wind Speed (km/h)' : '平均風速 (公里/小時)'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Max Gust (km/h)' : '最高陣風 (公里/小時)'}</th>
-                                    <th>${isEn ? 'Wind Force Level' : '風力強度指標'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${windySorted.map(w => {
-                                    const levelZh = w.windSpd >= 41 ? '強風 (Strong)' : (w.windSpd >= 20 ? '清勁 (Fresh)' : '和緩至輕微 (Moderate)');
-                                    const levelEn = w.windSpd >= 41 ? 'Strong Wind' : (w.windSpd >= 20 ? 'Fresh Breeze' : 'Light to Moderate');
-                                    const badgeBg = w.windSpd >= 41 ? '#fee2e2' : (w.windSpd >= 20 ? '#fef3c7' : '#dcfce7');
-                                    const badgeCol = w.windSpd >= 41 ? '#b91c1c' : (w.windSpd >= 20 ? '#b45309' : '#15803d');
-                                    return `
-                                        <tr>
-                                            <td style="font-weight:800;">💨 ${isEn ? w.en : w.zh}</td>
-                                            <td style="font-size:0.78rem; color:#475569;">${isEn ? w.reg_en : w.reg_zh}</td>
-                                            <td style="font-weight:800; color:#0f766e;">🧭 ${isEn ? w.windDir_en : w.windDir_zh}</td>
-                                            <td style="text-align:right; font-weight:900; color:#0f172a;">${w.windSpd} km/h</td>
-                                            <td style="text-align:right; font-weight:800; color:#dc2626;">${w.gust} km/h</td>
-                                            <td><span style="background:${badgeBg}; color:${badgeCol}; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:800;">${isEn ? levelEn : levelZh}</span></td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-
-        function buildWeatherTideSubTabHTML(isEn) {
-            const st = window.hkWeatherPortalState;
-            return `
-                <div class="border-card">
-                    <div style="font-weight:900; font-size:0.96rem; color:#0f172a; margin-bottom:6px;">
-                        ${isEn ? '🌊 Real-Time Tide Gauge Water Levels & Astronomical High/Low Tides across HK' : '🌊 全港各區潮汐站實時潮位高度及今日高低潮位分佈（海圖基準面以上米數）'}
-                    </div>
-                    <div style="font-size:0.8rem; color:#475569; margin-bottom:10px;">
-                        ${isEn ? 'Monitors coastal sea level heights across 11 tide stations in Victoria Harbour, Tolo Harbour, Deep Bay and outlying islands.' : '實時監測維多利亞港、吐露港、后海灣、大嶼山及離島共 11 個潮汐站之海面高度（米 m）及漲退潮趨勢。'}
-                    </div>
-                    <div class="border-table-wrap">
-                        <table class="border-table">
+                    <div class="el-table-wrap">
+                        <table class="el-table">
                             <thead>
                                 <tr>
                                     <th>${isEn ? 'Tide Gauge Station' : '潮汐觀測站'}</th>
                                     <th>${isEn ? 'Coastal Zone' : '所在水域'}</th>
                                     <th style="text-align:right;">${isEn ? 'Current Tide Height (m)' : '現時潮位高度 (米)'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Daily High Tide (m)' : '今日最高潮位 (米)'}</th>
-                                    <th style="text-align:right;">${isEn ? 'Daily Low Tide (m)' : '今日最低潮位 (米)'}</th>
-                                    <th>${isEn ? 'Tidal Phase' : '潮汐漲退狀態'}</th>
+                                    <th style="text-align:right;">${isEn ? 'Daily High Tide' : '今日最高潮位'}</th>
+                                    <th style="text-align:right;">${isEn ? 'Daily Low Tide' : '今日最低潮位'}</th>
+                                    <th>${isEn ? 'Tidal State' : '潮汐狀態'}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -6840,19 +7318,19 @@
                                     const pct = Math.min(100, Math.max(10, Math.round((td.heightM / 3.0) * 100)));
                                     return `
                                         <tr>
-                                            <td style="font-weight:800;">🌊 ${isEn ? td.en : td.zh}</td>
-                                            <td style="color:#475569; font-size:0.8rem;">${isEn ? td.reg_en : td.reg_zh}</td>
-                                            <td style="text-align:right;">
+                                            <td style="font-weight:800; white-space:nowrap;">🌊 ${isEn ? td.en : td.zh}</td>
+                                            <td style="color:#475569; white-space:nowrap;">${isEn ? td.reg_en : td.reg_zh}</td>
+                                            <td style="text-align:right; white-space:nowrap;">
                                                 <div style="display:inline-flex; align-items:center; gap:8px;">
-                                                    <div style="width:65px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
+                                                    <div style="width:60px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
                                                         <div style="width:${pct}%; height:100%; background:#0284c7;"></div>
                                                     </div>
-                                                    <span style="font-weight:900; color:#0284c7; font-size:0.95rem;">${td.heightM.toFixed(2)} m</span>
+                                                    <span style="font-weight:900; color:#0284c7; font-variant-numeric:tabular-nums;">${td.heightM.toFixed(2)} m</span>
                                                 </div>
                                             </td>
-                                            <td style="text-align:right; font-weight:800; color:#0f766e;">▲ ${td.highM.toFixed(2)} m</td>
-                                            <td style="text-align:right; font-weight:700; color:#64748b;">▼ ${td.lowM.toFixed(2)} m</td>
-                                            <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:800;">${isEn ? td.trend_en : td.trend_zh}</span></td>
+                                            <td style="text-align:right; font-weight:800; color:#0f766e; font-variant-numeric:tabular-nums; white-space:nowrap;">▲ ${td.highM.toFixed(2)} m</td>
+                                            <td style="text-align:right; font-weight:700; color:#64748b; font-variant-numeric:tabular-nums; white-space:nowrap;">▼ ${td.lowM.toFixed(2)} m</td>
+                                            <td style="white-space:nowrap;"><span class="el-tag el-tag-blue">${isEn ? td.trend_en : td.trend_zh}</span></td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -6860,10 +7338,35 @@
                         </table>
                     </div>
                 </div>
+                ` : ''}
             `;
         }
 
+        function renderWeatherPortal() {
+            const container = document.getElementById('weather-portal-container');
+            if (!container) return;
+            const st = window.hkWeatherPortalState;
+            if (!st.initialized) initWeatherPortalSystem();
 
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-weather-page-title');
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🌦️ HK Real-Time Weather, Tomorrow Forecast & Weather Radar'
+                    : '🌦️ 香港即時天氣、明日預報及天氣雷達圖';
+            }
+
+            // 1. Top: Current Weather & Tomorrow's Forecast Hero Section
+            const heroHtml = buildCurrentAndTomorrowHeroHTML(isEn);
+
+            // 2. Middle: Single Radar Display with 64/128/256km Buttons & 20-Frame Animation
+            const radarHtml = buildSingleAnimatedRadarHTML(isEn);
+
+            // 3. Bottom: Clean, Aligned Detailed Weather Information (Stations, Visibility, Solar, Tide)
+            const detailsHtml = buildDetailedRegionalWeatherHTML(isEn);
+
+            container.innerHTML = heroHtml + radarHtml + detailsHtml;
+        }
 
         // ==========================================
         // ✈️ 香港國際機場即時航班資料系統 (今日 + 明日｜客運 + 貨運)
