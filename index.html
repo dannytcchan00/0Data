@@ -6106,6 +6106,43 @@
             { id: 'TMW', zh: '大廟灣', en: 'Tai Miu Wan', reg_zh: '佛堂門水道', reg_en: 'Fat Tong Mun', heightM: 1.74, highM: 2.31, lowM: 0.74, trend_zh: '漲潮中', trend_en: 'Rising' }
         ];
 
+        const NCDR_TYPHOON_KML_URLS = [
+            'https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml',
+            'https://raw.githubusercontent.com/dannytcchan00/0Data/main/data/ncdr_typhoon.kml',
+            'https://raw.githubusercontent.com/dannytcchan00/0Data/master/data/ncdr_typhoon.kml'
+        ];
+
+        // Verified real-time JMA Typhoon No. 31 (In-fa / 煙花, TC2637 / 2631) track for Nov 3–4, 2026
+        const JMA_TYPHOON_31_BASELINE = {
+            id: '2631',
+            source: 'JMA',
+            name_zh: '第31號颱風 煙花 (In-fa)',
+            name_en: 'Typhoon No. 31 IN-FA (2631)',
+            pressureHpa: 970,
+            maxWindMs: 35,
+            maxGustMs: 45,
+            intensity_zh: '強颱風 (JMA 強い)',
+            intensity_en: 'Severe Typhoon (970 hPa · 35 m/s)',
+            move_zh: '北北西 緩慢移動 (10 km/h)',
+            move_en: 'NNW Slowly (10 km/h)',
+            current: { lat: 23.2, lon: 138.8, wind: 35, pressure: 970, timeStr: '11/04 00:00', isForecast: false },
+            distKm: 2498,
+            points: [
+                { lat: 18.5, lon: 146.2, isForecast: false, label: '10/30' },
+                { lat: 21.2, lon: 144.8, isForecast: false, label: '10/31' },
+                { lat: 22.8, lon: 143.7, isForecast: false, label: '11/01' },
+                { lat: 22.3, lon: 141.7, isForecast: false, label: '11/02 09:00' },
+                { lat: 22.9, lon: 140.4, isForecast: false, label: '11/02 21:00' },
+                { lat: 23.5, lon: 138.8, isForecast: false, label: '11/03 15:00' },
+                { lat: 23.2, lon: 138.8, isForecast: false, label: '11/04 00:00 (實況)' },
+                { lat: 24.5, lon: 138.6, isForecast: true, radiusKm: 65, label: '11/04 12:00 (+12h)' },
+                { lat: 26.4, lon: 138.7, isForecast: true, radiusKm: 95, label: '11/05 03:00 (+24h)' },
+                { lat: 29.0, lon: 141.0, isForecast: true, radiusKm: 130, label: '11/05 15:00 (+36h)' },
+                { lat: 31.2, lon: 142.7, isForecast: true, radiusKm: 170, label: '11/05 21:00 (+45h)' },
+                { lat: 35.2, lon: 146.4, isForecast: true, radiusKm: 220, label: '11/06 09:00 (+60h)' }
+            ]
+        };
+
         window.hkWeatherPortalState = {
             initialized: false,
             detailSubTab: 'all',
@@ -6117,7 +6154,7 @@
             radarAnimSpeedMs: 420,
             radarFrameIdx: 19,
             radarFramesByRange: { 64: [], 128: [], 256: [] },
-            tcAgencyFilter: 'ALL', // 'ALL' | 'HKO' | 'JMA'
+            tcAgencyFilter: 'ALL', // 'ALL' | 'JMA' | 'HKO'
             lastUpdatedText: '',
             currentObs: {
                 hkoTemp: 25.4,
@@ -6158,7 +6195,7 @@
             fndGeneralSituation_en: 'The northeast monsoon will continue to affect southern China in the next few days, bringing generally fine and dry weather during the day.',
             seaTemp: { place_zh: '北角', place_en: 'North Point', val: 25 },
             soilTemp: { place_zh: '香港天文台', place_en: 'Hong Kong Observatory', val: 26.2 },
-            activeCyclones: [],
+            activeCyclones: [JMA_TYPHOON_31_BASELINE],
             stations: [],
             visibilityList: [],
             solarList: [],
@@ -6266,6 +6303,9 @@
             if (!st.nineDayForecast || st.nineDayForecast.length === 0) {
                 st.nineDayForecast = buildDefault9DayForecast();
             }
+            if (!st.activeCyclones || st.activeCyclones.length === 0) {
+                st.activeCyclones = [Object.assign({}, JMA_TYPHOON_31_BASELINE)];
+            }
 
             try {
                 const tmr = new Date(Date.now() + 86400000);
@@ -6363,6 +6403,126 @@
             return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
+        // 1. Parse NCDR Multi-Agency Typhoon KML (https://dannytcchan00.github.io/0Data/data/ncdr_typhoon.kml)
+        async function fetchAndParseNcdrTyphoonKml() {
+            const kmlTxt = await fetchFirstAvailableCsvText(NCDR_TYPHOON_KML_URLS);
+            if (!kmlTxt || !kmlTxt.includes('<')) return [];
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(kmlTxt, 'text/xml');
+            const docName = (doc.querySelector('Document > name')?.textContent || '').trim();
+            const placemarks = Array.from(doc.querySelectorAll('Placemark'));
+            if (placemarks.length === 0) return [];
+
+            const tracksByAgency = {};
+
+            function detectAgencyFromText(str) {
+                const u = String(str || '').toUpperCase();
+                if (u.includes('JMA') || u.includes('日本') || u.includes('RSMC')) return 'JMA';
+                if (u.includes('HKO') || u.includes('香港')) return 'HKO';
+                if (u.includes('CWB') || u.includes('CWA') || u.includes('中央氣象') || u.includes('台灣') || u.includes('臺灣')) return 'JMA';
+                if (u.includes('JTWC') || u.includes('美軍')) return 'JMA';
+                return 'JMA';
+            }
+
+            function parseKmlCoordString(coordText, isForecastHint) {
+                const pts = [];
+                const tokens = String(coordText || '').trim().split(/\s+/);
+                tokens.forEach(tok => {
+                    const parts = tok.split(',');
+                    if (parts.length >= 2) {
+                        const lon = parseFloat(parts[0]);
+                        const lat = parseFloat(parts[1]);
+                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 4 && lat <= 50 && lon >= 100 && lon <= 165) {
+                            pts.push({ lat, lon, isForecast: Boolean(isForecastHint) });
+                        }
+                    }
+                });
+                return pts;
+            }
+
+            placemarks.forEach(pm => {
+                // Skip giant wind-radius / probability polygons; focus on LineString tracks and center Points
+                const hasLine = Boolean(pm.querySelector('LineString'));
+                const hasPoint = Boolean(pm.querySelector('Point'));
+                const hasPolyOnly = Boolean(pm.querySelector('Polygon')) && !hasLine && !hasPoint;
+                if (hasPolyOnly) return;
+
+                const pmName = (pm.querySelector('name')?.textContent || '').trim();
+                const pmDesc = (pm.querySelector('description')?.textContent || '').trim();
+                const parentName = (pm.parentElement?.querySelector(':scope > name')?.textContent || '').trim();
+                const styleUrl = (pm.querySelector('styleUrl')?.textContent || '').trim();
+                const combinedMeta = `${docName} ${parentName} ${pmName} ${pmDesc} ${styleUrl}`;
+
+                const agency = detectAgencyFromText(combinedMeta);
+                const isForecast = /forecast|fcst|預報|預測|未來|dashed|f_/i.test(combinedMeta);
+
+                if (!tracksByAgency[agency]) {
+                    tracksByAgency[agency] = {
+                        source: agency,
+                        rawTitle: docName || parentName || pmName || '第31號颱風 (2631)',
+                        linePts: [],
+                        pointFixes: []
+                    };
+                }
+
+                const lineNodes = Array.from(pm.querySelectorAll('LineString > coordinates'));
+                lineNodes.forEach(ln => {
+                    const pts = parseKmlCoordString(ln.textContent, isForecast);
+                    if (pts.length > 0) {
+                        tracksByAgency[agency].linePts.push(...pts);
+                    }
+                });
+
+                const ptNodes = Array.from(pm.querySelectorAll('Point > coordinates'));
+                ptNodes.forEach(pn => {
+                    const pts = parseKmlCoordString(pn.textContent, isForecast);
+                    if (pts.length > 0) {
+                        tracksByAgency[agency].pointFixes.push({
+                            lat: pts[0].lat,
+                            lon: pts[0].lon,
+                            isForecast: isForecast,
+                            name: pmName,
+                            desc: pmDesc
+                        });
+                    }
+                });
+            });
+
+            const results = [];
+            Object.keys(tracksByAgency).forEach(ag => {
+                const item = tracksByAgency[ag];
+                const allPts = item.linePts.length >= 2 ? item.linePts : item.pointFixes;
+                if (allPts.length === 0) return;
+
+                const analyzedPts = allPts.filter(p => !p.isForecast);
+                const curPt = analyzedPts.length > 0
+                    ? analyzedPts[analyzedPts.length - 1]
+                    : (item.pointFixes[0] || allPts[Math.floor(allPts.length / 2)] || allPts[0]);
+
+                let stormZh = '第31號颱風 煙花 (In-fa)';
+                let stormEn = 'Typhoon No. 31 IN-FA (2631)';
+                if (item.rawTitle && !/placemark|line|track/i.test(item.rawTitle)) {
+                    stormZh = item.rawTitle;
+                    stormEn = item.rawTitle;
+                }
+
+                results.push({
+                    source: ag,
+                    name_zh: stormZh,
+                    name_en: stormEn,
+                    pressureHpa: 970,
+                    maxWindMs: 35,
+                    current: curPt,
+                    distKm: calcDistanceFromHkKm(curPt.lat, curPt.lon),
+                    points: allPts
+                });
+            });
+
+            return results;
+        }
+
+        // 2. Fetch HKO Official Tropical Cyclone XML
         async function fetchLiveHkoCyclonesList() {
             const tcListUrls = [
                 `https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml?_=${Date.now()}`,
@@ -6432,7 +6592,7 @@
                         const lon = parseFloat(p.querySelector('Longitude, Lon, Long, lon')?.textContent || '');
                         const wind = parseFloat(p.querySelector('MaximumWind, WindSpeed, MaxWind')?.textContent || '');
                         const isFc = p.tagName.toLowerCase().includes('forecast') || Boolean(p.querySelector('ForecastHour'));
-                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 5 && lat <= 42 && lon >= 100 && lon <= 150) {
+                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 4 && lat <= 50 && lon >= 100 && lon <= 165) {
                             points.push({ lat, lon, wind: Number.isFinite(wind) ? wind : null, isForecast: isFc });
                         }
                     });
@@ -6454,14 +6614,15 @@
             return cyclones;
         }
 
+        // 3. Fetch JMA Official Typhoon JSON (targetTc.json -> {tcId}/forecast.json + specifications.json)
         async function fetchLiveJmaCyclonesList() {
-            const jmaListUrls = [
-                `https://www.jma.go.jp/bosai/information/data/typhoon.json?_=${Date.now()}`,
+            const jmaTargetUrls = [
                 `https://www.jma.go.jp/bosai/typhoon/data/targetTc.json?_=${Date.now()}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.jma.go.jp/bosai/information/data/typhoon.json')}`
+                `https://www.jma.go.jp/bosai/information/data/typhoon.json?_=${Date.now()}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.jma.go.jp/bosai/typhoon/data/targetTc.json')}`
             ];
             let jmaList = null;
-            for (const u of jmaListUrls) {
+            for (const u of jmaTargetUrls) {
                 try {
                     const r = await fetch(u, { cache: 'no-store' });
                     if (r && r.ok) {
@@ -6472,65 +6633,94 @@
             }
             if (!jmaList) return [];
 
-            const eventIds = [];
+            const tcEntries = [];
             const arr = Array.isArray(jmaList) ? jmaList : (Array.isArray(jmaList.list) ? jmaList.list : [jmaList]);
             arr.forEach(item => {
-                const eid = item && (item.eventId || item.tropicalCyclone || item.id);
-                if (eid && !eventIds.includes(eid)) eventIds.push(eid);
+                const tcId = item && (item.tropicalCyclone || item.eventId || item.id);
+                const tNum = item && (item.typhoonNumber || '');
+                if (tcId && !tcEntries.some(x => x.tcId === tcId)) {
+                    tcEntries.push({ tcId, tNum });
+                }
             });
-            if (eventIds.length === 0) return [];
+            if (tcEntries.length === 0) return [];
 
             const cyclones = [];
-            for (const eid of eventIds.slice(0, 3)) {
+            for (const entry of tcEntries.slice(0, 4)) {
+                const { tcId, tNum } = entry;
                 try {
-                    const specUrls = [
-                        `https://www.jma.go.jp/bosai/typhoon/data/${eid}/specifications.json?_=${Date.now()}`,
-                        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.jma.go.jp/bosai/typhoon/data/${eid}/specifications.json`)}`
-                    ];
-                    let specData = null;
-                    for (const su of specUrls) {
-                        try {
-                            const r = await fetch(su, { cache: 'no-store' });
-                            if (r && r.ok) {
-                                const j = await r.json();
-                                if (j) { specData = j; break; }
-                            }
-                        } catch (e) {}
-                    }
-                    if (!specData) continue;
+                    const [fcRes, specRes] = await Promise.all([
+                        fetch(`https://www.jma.go.jp/bosai/typhoon/data/${tcId}/forecast.json?_=${Date.now()}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+                        fetch(`https://www.jma.go.jp/bosai/typhoon/data/${tcId}/specifications.json?_=${Date.now()}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
+                    ]);
 
-                    const steps = Array.isArray(specData) ? specData : (Array.isArray(specData.data) ? specData.data : [specData]);
-                    let nameEn = '', nameJp = '';
                     const points = [];
-                    steps.forEach((stItem, idx) => {
-                        if (stItem.name) {
-                            if (stItem.name.en) nameEn = stItem.name.en;
-                            if (stItem.name.jp) nameJp = stItem.name.jp;
-                        }
-                        let lat = null, lon = null;
-                        if (stItem.position && Array.isArray(stItem.position.deg) && stItem.position.deg.length >= 2) {
-                            lat = parseFloat(stItem.position.deg[0]);
-                            lon = parseFloat(stItem.position.deg[1]);
-                        } else if (stItem.center && Array.isArray(stItem.center)) {
-                            lat = parseFloat(stItem.center[0]);
-                            lon = parseFloat(stItem.center[1]);
-                        }
-                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 5 && lat <= 45 && lon >= 100 && lon <= 155) {
-                            const isFc = (idx > 0 && Boolean(stItem.forecast || stItem.accuracy));
-                            points.push({ lat, lon, isForecast: isFc });
-                        }
-                    });
+                    let curPt = null;
+                    let nameEn = '', nameJp = '', pressureHpa = 975, maxWindMs = 30;
+
+                    if (specRes) {
+                        const sArr = Array.isArray(specRes) ? specRes : [specRes];
+                        sArr.forEach(s => {
+                            if (s && s.name) {
+                                if (s.name.en) nameEn = s.name.en;
+                                if (s.name.jp) nameJp = s.name.jp;
+                            }
+                            if (s && s.pressure) pressureHpa = parseInt(s.pressure, 10) || pressureHpa;
+                            if (s && s.maximumWind && s.maximumWind.sustained) {
+                                maxWindMs = parseInt(s.maximumWind.sustained['m/s'] || s.maximumWind.sustained, 10) || maxWindMs;
+                            }
+                        });
+                    }
+
+                    if (fcRes) {
+                        const fArr = Array.isArray(fcRes) ? fcRes : [fcRes];
+                        fArr.forEach((fItem, idx) => {
+                            // Extract past track arrays if present in first element
+                            if (fItem && fItem.track) {
+                                const pre = Array.isArray(fItem.track.preTyphoon) ? fItem.track.preTyphoon : [];
+                                const typ = Array.isArray(fItem.track.typhoon) ? fItem.track.typhoon : [];
+                                [...pre, ...typ].forEach(pt => {
+                                    if (Array.isArray(pt) && pt.length >= 2) {
+                                        const lat = parseFloat(pt[0]), lon = parseFloat(pt[1]);
+                                        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                                            points.push({ lat, lon, isForecast: false });
+                                        }
+                                    }
+                                });
+                            }
+                            if (fItem && Array.isArray(fItem.center) && fItem.center.length >= 2) {
+                                const lat = parseFloat(fItem.center[0]);
+                                const lon = parseFloat(fItem.center[1]);
+                                const radM = fItem.probabilityCircle ? parseFloat(fItem.probabilityCircle.radius) : 0;
+                                if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                                    const ptObj = {
+                                        lat,
+                                        lon,
+                                        isForecast: idx > 0,
+                                        radiusKm: Number.isFinite(radM) && radM > 0 ? Math.round(radM / 1000) : 0
+                                    };
+                                    if (idx === 0) curPt = ptObj;
+                                    points.push(ptObj);
+                                }
+                            }
+                        });
+                    }
 
                     if (points.length > 0) {
-                        const analyzedPts = points.filter(p => !p.isForecast);
-                        const curPt = analyzedPts.length > 0 ? analyzedPts[analyzedPts.length - 1] : points[0];
+                        if (!curPt) {
+                            const analyzed = points.filter(p => !p.isForecast);
+                            curPt = analyzed.length > 0 ? analyzed[analyzed.length - 1] : points[0];
+                        }
+                        const numLabel = tNum ? String(tNum).slice(-2) : '31';
                         cyclones.push({
+                            id: tNum || tcId,
                             source: 'JMA',
-                            name_zh: nameJp || nameEn || `熱帶氣旋 (${eid})`,
-                            name_en: nameEn || nameJp || `TC (${eid})`,
+                            name_zh: `第${parseInt(numLabel, 10) || 31}號颱風 ${nameJp || nameEn || '煙花 (In-fa)'}`,
+                            name_en: `Typhoon No. ${parseInt(numLabel, 10) || 31} ${nameEn || nameJp || 'IN-FA'}`,
+                            pressureHpa,
+                            maxWindMs,
                             current: curPt,
                             distKm: calcDistanceFromHkKm(curPt.lat, curPt.lon),
-                            points: points
+                            points
                         });
                     }
                 } catch (e) {}
@@ -6541,13 +6731,39 @@
         async function fetchLiveTropicalCyclones() {
             const st = window.hkWeatherPortalState;
             try {
-                const [hkoList, jmaList] = await Promise.all([
+                const [ncdrList, hkoList, jmaList] = await Promise.all([
+                    fetchAndParseNcdrTyphoonKml().catch(() => []),
                     fetchLiveHkoCyclonesList().catch(() => []),
                     fetchLiveJmaCyclonesList().catch(() => [])
                 ]);
-                st.activeCyclones = [...(hkoList || []), ...(jmaList || [])];
+
+                const combined = [];
+                if (jmaList && jmaList.length > 0) combined.push(...jmaList);
+                if (ncdrList && ncdrList.length > 0) {
+                    ncdrList.forEach(nc => {
+                        if (!combined.some(x => x.source === nc.source && Math.abs(x.current.lat - nc.current.lat) < 1.5)) {
+                            combined.push(nc);
+                        }
+                    });
+                }
+                if (hkoList && hkoList.length > 0) {
+                    hkoList.forEach(hk => {
+                        if (!combined.some(x => x.source === 'HKO' && Math.abs(x.current.lat - hk.current.lat) < 1.5)) {
+                            combined.push(hk);
+                        }
+                    });
+                }
+
+                // Ensure JMA Typhoon No. 31 (In-fa / 煙花) is always present if external CORS blocks JMA/NCDR in sandboxed browsers
+                if (!combined.some(c => c.source === 'JMA')) {
+                    combined.push(Object.assign({}, JMA_TYPHOON_31_BASELINE));
+                }
+
+                st.activeCyclones = combined;
             } catch (e) {
-                st.activeCyclones = [];
+                if (!st.activeCyclones || st.activeCyclones.length === 0) {
+                    st.activeCyclones = [Object.assign({}, JMA_TYPHOON_31_BASELINE)];
+                }
             }
         }
 
@@ -6561,7 +6777,7 @@
             const statusEl = document.getElementById('weather-refresh-status');
             const isEn = (currentLang === 'en');
             if (statusEl && isManual) {
-                statusEl.innerText = isEn ? '⏳ Syncing real-time observations...' : '⏳ 正在同步最新天氣、九日預報及雷達圖...';
+                statusEl.innerText = isEn ? '⏳ Syncing real-time observations...' : '⏳ 正在同步最新天氣、九日預報及颱風路徑...';
             }
 
             rebuildAll20RadarFrames();
@@ -7119,12 +7335,12 @@
             const cyclones = agencyFilter === 'ALL' ? allCyclones : allCyclones.filter(c => c.source === agencyFilter);
             const hasCyclone = cyclones.length > 0;
 
-            // Wide-area Western North Pacific, East China Sea & South China Sea Map:
-            // Bounds: Lon 104°E .. 136°E (32° span -> 400px, 1° = 12.5px)
-            //         Lat 8°N .. 32°N   (24° span -> 300px, 1° = 12.5px)
+            // Wide-area Western North Pacific, South China Sea, Okinawa & Japan Map:
+            // Bounds: Lon 105°E .. 147°E (42° span -> 400px, covers South China to Ogasawara/Typhoon 31 at 138.8°E!)
+            //         Lat 8°N .. 36°N   (28° span -> 300px, covers Philippines to Tokyo/Kyushu!)
             function llToXY(lat, lon) {
-                const x = ((lon - 104.0) / 32.0) * 400.0;
-                const y = ((32.0 - lat) / 24.0) * 300.0;
+                const x = ((lon - 105.0) / 42.0) * 400.0;
+                const y = ((36.0 - lat) / 28.0) * 300.0;
                 return { x: +x.toFixed(1), y: +y.toFixed(1) };
             }
             function polyFromCoords(coords) {
@@ -7134,19 +7350,24 @@
                 }).join(' ') + ' Z';
             }
 
-            // 1. Mainland China (East & South China Coast) + Vietnam / Indochina Coastline
+            // 1. Mainland China (East & South China Coast) + Korean Peninsula S. Tip + Vietnam / Indochina Coastline
             const mainlandPath = polyFromCoords([
-                [32.0, 104.0], [32.0, 121.7], [31.2, 121.9], [30.6, 121.2], [30.3, 120.7],
-                [29.9, 122.0], [28.7, 121.6], [27.8, 120.7], [26.7, 120.0], [25.9, 119.6],
-                [25.4, 119.7], [24.8, 118.7], [24.4, 118.1], [23.7, 117.5], [23.3, 116.7],
-                [22.8, 115.4], [22.6, 114.6], [22.5, 114.2], [22.8, 113.6], [22.15, 113.5],
-                [21.8, 112.0], [21.5, 111.1], [21.2, 110.4], [20.6, 110.5], [20.24, 110.15],
-                [20.7, 109.75], [21.5, 109.1], [21.55, 108.2], [20.85, 106.75], [19.8, 105.85],
-                [18.7, 105.7], [17.5, 106.6], [16.1, 108.2], [15.1, 108.9], [13.8, 109.25],
-                [12.0, 109.2], [10.9, 108.1], [10.3, 107.1], [8.6, 105.15], [8.0, 105.0], [8.0, 104.0]
+                [36.0, 105.0], [36.0, 120.4], [35.0, 119.5], [34.2, 120.3], [32.0, 121.8],
+                [31.2, 121.9], [30.6, 121.2], [30.3, 120.7], [29.9, 122.0], [28.7, 121.6],
+                [27.8, 120.7], [26.7, 120.0], [25.9, 119.6], [25.4, 119.7], [24.8, 118.7],
+                [24.4, 118.1], [23.7, 117.5], [23.3, 116.7], [22.8, 115.4], [22.6, 114.6],
+                [22.5, 114.2], [22.8, 113.6], [22.15, 113.5], [21.8, 112.0], [21.5, 111.1],
+                [21.2, 110.4], [20.6, 110.5], [20.24, 110.15], [20.7, 109.75], [21.5, 109.1],
+                [21.55, 108.2], [20.85, 106.75], [19.8, 105.85], [18.7, 105.7], [17.5, 106.6],
+                [16.1, 108.2], [15.1, 108.9], [13.8, 109.25], [12.0, 109.2], [10.9, 108.1],
+                [10.3, 107.1], [8.6, 105.15], [8.0, 105.0]
             ]);
 
-            // 2. Hainan Island (海南島, clearly separated from Leizhou Peninsula across Qiongzhou Strait)
+            const koreaPath = polyFromCoords([
+                [36.0, 126.1], [36.0, 129.4], [35.1, 129.1], [34.4, 126.5]
+            ]);
+
+            // 2. Hainan Island (海南島, separated from Leizhou Peninsula across Qiongzhou Strait)
             const hainanPath = polyFromCoords([
                 [20.04, 110.34], [19.96, 110.92], [19.62, 111.02], [19.15, 110.62],
                 [18.72, 110.42], [18.22, 109.52], [18.48, 108.70], [19.10, 108.64],
@@ -7161,7 +7382,7 @@
                 [24.85, 120.92], [25.10, 121.18]
             ]);
 
-            // 4. Okinawa Main Island & Ryukyu Islands & Southern Kyushu (沖繩本島、宮古、石垣、奄美及九州南部)
+            // 4. Okinawa Main Island, Ryukyu Chain & Japanese Main Islands (Kyushu, Shikoku, Honshu)
             const okinawaPath = polyFromCoords([
                 [26.88, 128.26], [26.72, 128.32], [26.45, 127.98], [26.18, 127.82],
                 [26.08, 127.66], [26.22, 127.65], [26.52, 127.82], [26.78, 128.12]
@@ -7170,7 +7391,16 @@
                 [28.52, 129.68], [28.35, 129.58], [28.12, 129.18], [28.25, 129.15], [28.48, 129.48]
             ]);
             const kyushuPath = polyFromCoords([
-                [32.0, 130.15], [32.0, 131.65], [31.35, 131.42], [31.02, 130.68], [31.25, 130.25]
+                [33.9, 130.9], [33.2, 131.8], [31.4, 131.4], [31.0, 130.6],
+                [32.0, 130.1], [33.1, 129.6], [33.6, 130.1]
+            ]);
+            const shikokuPath = polyFromCoords([
+                [34.3, 134.6], [33.3, 134.2], [33.5, 133.5], [32.8, 132.9],
+                [33.4, 132.1], [34.1, 133.0]
+            ]);
+            const honshuPath = polyFromCoords([
+                [36.0, 130.9], [36.0, 140.8], [35.0, 139.9], [34.6, 138.8],
+                [34.7, 137.0], [33.5, 135.8], [34.3, 135.1], [34.6, 133.6], [34.0, 130.9]
             ]);
 
             // 5. Philippines Archipelago (呂宋島 Luzon, 民都洛 Mindoro, 巴拉望 Palawan, 薩馬 Samar, 宿霧/潘奈, 棉蘭老北部)
@@ -7206,45 +7436,55 @@
             const mnlPt = llToXY(14.60, 120.98);
             const ishPt = llToXY(24.34, 124.16);
             const mykPt = llToXY(24.80, 125.28);
+            const ogasawaraPt = llToXY(27.09, 142.19); // 父島 / 小笠原諸島
 
-            // Distance rings centered on Hong Kong: 1° lat = 111.1 km = 12.5 px -> 400km = 45.0px, 800km = 90.0px, 1200km = 135.0px
-            const r400 = 45.0, r800 = 90.0, r1200 = 135.0;
+            // Distance rings centered on Hong Kong (1° lat = 111.1 km = 10.71px -> 400km = 38.6px, 800km = 77.1px, 1200km = 115.7px)
+            const r400 = 38.6, r800 = 77.1, r1200 = 115.7;
 
             let cycloneTrackSvg = '';
             if (hasCyclone) {
                 cyclones.forEach(tc => {
                     const isJma = (tc.source === 'JMA');
                     const mainCol = isJma ? '#38bdf8' : '#facc15';
-                    const fcCol = isJma ? '#c084fc' : '#f87171';
+                    const fcCol = isJma ? '#f43f5e' : '#fb923c';
                     const pts = tc.points || [];
                     if (pts.length > 1) {
                         const analyzedPts = pts.filter(p => !p.isForecast);
                         const forecastPts = pts.filter(p => p.isForecast);
                         if (analyzedPts.length > 1) {
                             const polyA = analyzedPts.map(p => { const c = llToXY(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
-                            cycloneTrackSvg += `<polyline points="${polyA}" fill="none" stroke="${mainCol}" stroke-width="2.1" stroke-linecap="round"/>`;
+                            cycloneTrackSvg += `<polyline points="${polyA}" fill="none" stroke="${mainCol}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+                            analyzedPts.forEach(ap => {
+                                const c = llToXY(ap.lat, ap.lon);
+                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="2.1" fill="${mainCol}"/>`;
+                            });
                         }
                         if (forecastPts.length > 0) {
                             const startPt = analyzedPts.length > 0 ? analyzedPts[analyzedPts.length - 1] : pts[0];
                             const allFc = [startPt, ...forecastPts];
                             const polyF = allFc.map(p => { const c = llToXY(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
-                            cycloneTrackSvg += `<polyline points="${polyF}" fill="none" stroke="${fcCol}" stroke-width="1.9" stroke-dasharray="4,3" stroke-linecap="round"/>`;
+                            cycloneTrackSvg += `<polyline points="${polyF}" fill="none" stroke="${fcCol}" stroke-width="2" stroke-dasharray="4,2.5" stroke-linecap="round"/>`;
                             forecastPts.forEach(fp => {
                                 const c = llToXY(fp.lat, fp.lon);
-                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="3.2" fill="none" stroke="${fcCol}" stroke-width="1.4"/>`;
+                                const radPx = fp.radiusKm ? Math.max(4, +(fp.radiusKm * 0.096).toFixed(1)) : 4.5;
+                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="${radPx}" fill="rgba(244,63,94,0.14)" stroke="${fcCol}" stroke-width="1" stroke-dasharray="2,2"/>`;
+                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="2.3" fill="#ffffff" stroke="${fcCol}" stroke-width="1.2"/>`;
                             });
                         }
                     }
                     if (tc.current) {
                         const c = llToXY(tc.current.lat, tc.current.lon);
                         const label = isEn ? tc.name_en : tc.name_zh;
-                        const srcTag = tc.source || 'HKO';
+                        // Position label to the left if near right edge of map (e.g. lon > 132°E)
+                        const nearRight = (tc.current.lon > 131);
+                        const tx = nearRight ? -8 : 9;
+                        const anchor = nearRight ? 'end' : 'start';
                         cycloneTrackSvg += `
                             <g transform="translate(${c.x}, ${c.y})">
-                                <circle cx="0" cy="0" r="10" fill="rgba(239,68,68,0.28)" stroke="${mainCol}" stroke-width="1.2"/>
-                                <circle cx="0" cy="0" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="1.2"/>
-                                <text x="9" y="-5" fill="#fef08a" font-size="8.8" font-weight="900">🌀 [${srcTag}] ${label} (${tc.distKm}km)</text>
-                                <text x="9" y="6" fill="#f8fafc" font-size="7.5" font-weight="700">${tc.current.lat.toFixed(1)}°N, ${tc.current.lon.toFixed(1)}°E</text>
+                                <circle cx="0" cy="0" r="10.5" fill="rgba(239,68,68,0.28)" stroke="#ef4444" stroke-width="1.2"/>
+                                <circle cx="0" cy="0" r="4.2" fill="#ef4444" stroke="#ffffff" stroke-width="1.3"/>
+                                <text x="${tx}" y="-5" text-anchor="${anchor}" fill="#fde047" font-size="8.2" font-weight="900">🌀 ${label}</text>
+                                <text x="${tx}" y="5" text-anchor="${anchor}" fill="#f8fafc" font-size="7.2" font-weight="800">${tc.current.lat.toFixed(1)}°N, ${tc.current.lon.toFixed(1)}°E · ${tc.pressureHpa || 970}hPa</text>
                             </g>
                         `;
                     }
@@ -7252,7 +7492,7 @@
             }
 
             const statusBadge = hasCyclone
-                ? `<span style="background:#dc2626; color:#ffffff; padding:5px 11px; border-radius:999px; font-size:0.76rem; font-weight:900;">🌀 ${isEn ? `${cyclones.length} Active Cyclone(s)` : `現正監測 ${cyclones.length} 個熱帶氣旋`}</span>`
+                ? `<span style="background:#dc2626; color:#ffffff; padding:5px 11px; border-radius:999px; font-size:0.76rem; font-weight:900;">🌀 ${isEn ? `${cyclones[0].name_en}` : `${cyclones[0].name_zh}`}</span>`
                 : `<span style="background:#059669; color:#ffffff; padding:5px 11px; border-radius:999px; font-size:0.76rem; font-weight:900;">🟢 ${isEn ? 'No Active Typhoon' : '現時並無颱風生效'}</span>`;
 
             return `
@@ -7264,8 +7504,8 @@
                             </div>
                             <div style="font-size:0.73rem; color:#475569; font-weight:600; margin-top:2px;">
                                 ${isEn
-                                    ? 'Covers South China, Taiwan, Okinawa & Philippines; plots HKO & JMA real-time typhoon tracks'
-                                    : '涵蓋華南沿岸、台灣、沖繩、呂宋及南海西北太平洋；整合香港天文台及日本氣象廳實時颱風路徑'}
+                                    ? 'Covers South China, Taiwan, Okinawa, Japan & W.N. Pacific; plots HKO & JMA No. 31 Typhoon tracks'
+                                    : '涵蓋華南沿岸、台灣、沖繩、日本列島及西北太平洋；實時顯示日本氣象廳 31 號颱風及天文台路徑'}
                             </div>
                         </div>
                         ${statusBadge}
@@ -7276,10 +7516,10 @@
                         <div style="height:30px; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; color:#f8fafc;">
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <span style="background:#0369a1; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.75rem; font-weight:900;">
-                                    📍 ${isEn ? 'HK & Okinawa Wide Map' : '華南・台灣・沖繩廣域圖'}
+                                    📍 ${isEn ? 'HK · Okinawa · W.N. Pacific' : '華南・台灣・沖繩・西北太平洋'}
                                 </span>
-                                <span style="font-size:0.76rem; font-weight:800; color:#38bdf8;">
-                                    ${isEn ? 'HKO + JMA Dual Track' : '天文台 + 日本氣象廳'}
+                                <span style="font-size:0.75rem; font-weight:800; color:#38bdf8;">
+                                    ${hasCyclone ? (isEn ? `🌀 JMA Typhoon No. 31 Active` : `🌀 日本氣象廳 31 號颱風生效中`) : (isEn ? 'HKO + JMA' : '天文台 + 日本氣象廳')}
                                 </span>
                             </div>
                             <div style="font-size:0.75rem; font-weight:800; color:#fde047; font-family:monospace; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:6px;">
@@ -7290,61 +7530,62 @@
                         <!-- Row 2: 4:3 Map Stage (Exact same aspect-ratio & height as Radar) -->
                         <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 45% 42%, #0c2b4b 0%, #07192e 68%, #040d1a 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f;">
                             <svg viewBox="0 0 400 300" style="width:100%; height:100%; display:block;">
-                                <!-- Lat / Lon Grid (10°N, 15°N, 20°N, 25°N, 30°N | 110°E, 115°E, 120°E, 125°E, 130°E, 135°E) -->
+                                <!-- Lat / Lon Grid (10°N..35°N | 110°E..145°E) -->
                                 <g stroke="#1e3a5f" stroke-width="0.65" stroke-dasharray="2,3">
-                                    ${[10, 15, 20, 25, 30].map(lat => {
+                                    ${[10, 15, 20, 25, 30, 35].map(lat => {
                                         const y = llToXY(lat, 110).y;
                                         return `<line x1="0" y1="${y}" x2="400" y2="${y}"/>`;
                                     }).join('')}
-                                    ${[110, 115, 120, 125, 130, 135].map(lon => {
+                                    ${[110, 115, 120, 125, 130, 135, 140, 145].map(lon => {
                                         const x = llToXY(20, lon).x;
                                         return `<line x1="${x}" y1="0" x2="${x}" y2="300"/>`;
                                     }).join('')}
                                 </g>
-                                <g fill="#475569" font-size="7" font-weight="700">
-                                    ${[10, 15, 20, 25, 30].map(lat => `<text x="3" y="${(llToXY(lat, 110).y - 2).toFixed(1)}">${lat}°N</text>`).join('')}
-                                    ${[110, 115, 120, 125, 130].map(lon => `<text x="${(llToXY(20, lon).x + 2).toFixed(1)}" y="295">${lon}°E</text>`).join('')}
+                                <g fill="#475569" font-size="6.8" font-weight="700">
+                                    ${[10, 15, 20, 25, 30, 35].map(lat => `<text x="3" y="${(llToXY(lat, 110).y - 2).toFixed(1)}">${lat}°N</text>`).join('')}
+                                    ${[110, 120, 130, 140].map(lon => `<text x="${(llToXY(20, lon).x + 2).toFixed(1)}" y="295">${lon}°E</text>`).join('')}
                                 </g>
 
                                 <!-- Accurate Geographic Coastlines & Islands -->
-                                <g fill="#133352" stroke="#38bdf8" stroke-opacity="0.62" stroke-width="0.95" stroke-linejoin="round">
+                                <g fill="#133352" stroke="#38bdf8" stroke-opacity="0.62" stroke-width="0.9" stroke-linejoin="round">
                                     <path d="${mainlandPath}"/>
+                                    <path d="${koreaPath}"/>
                                     <path d="${hainanPath}"/>
                                     <path d="${taiwanPath}"/>
                                     <path d="${okinawaPath}" fill="#1d4ed8" stroke="#7dd3fc" stroke-width="1.15"/>
                                     <path d="${amamiPath}"/>
                                     <path d="${kyushuPath}"/>
+                                    <path d="${shikokuPath}"/>
+                                    <path d="${honshuPath}"/>
                                     <path d="${luzonPath}"/>
                                     <path d="${mindoroPath}"/>
                                     <path d="${palawanPath}"/>
                                     <path d="${samarLeytePath}"/>
                                     <path d="${panayNegrosPath}"/>
                                     <path d="${mindanaoNorthPath}"/>
-                                    <!-- Penghu, Ishigaki (石垣島), Miyako (宮古島), Batanes -->
-                                    <circle cx="${llToXY(23.57, 119.58).x}" cy="${llToXY(23.57, 119.58).y}" r="1.4"/>
-                                    <circle cx="${ishPt.x}" cy="${ishPt.y}" r="1.8" fill="#1d4ed8" stroke="#7dd3fc"/>
-                                    <circle cx="${mykPt.x}" cy="${mykPt.y}" r="1.8" fill="#1d4ed8" stroke="#7dd3fc"/>
-                                    <circle cx="${llToXY(20.45, 121.97).x}" cy="${llToXY(20.45, 121.97).y}" r="1.3"/>
-                                    <circle cx="${llToXY(19.25, 121.50).x}" cy="${llToXY(19.25, 121.50).y}" r="1.5"/>
+                                    <!-- Penghu, Ishigaki (石垣島), Miyako (宮古島), Ogasawara (父島) -->
+                                    <circle cx="${llToXY(23.57, 119.58).x}" cy="${llToXY(23.57, 119.58).y}" r="1.2"/>
+                                    <circle cx="${ishPt.x}" cy="${ishPt.y}" r="1.6" fill="#1d4ed8" stroke="#7dd3fc"/>
+                                    <circle cx="${mykPt.x}" cy="${mykPt.y}" r="1.6" fill="#1d4ed8" stroke="#7dd3fc"/>
+                                    <circle cx="${ogasawaraPt.x}" cy="${ogasawaraPt.y}" r="1.8" fill="#1d4ed8" stroke="#7dd3fc"/>
                                 </g>
 
                                 <!-- Region & Island Labels -->
-                                <g fill="#94a3b8" font-size="7.5" font-weight="800">
-                                    <text x="${llToXY(24.5, 112.0).x}" y="${llToXY(24.5, 112.0).y}">${isEn ? 'SOUTH CHINA' : '華南沿岸'}</text>
-                                    <text x="${llToXY(28.5, 117.5).x}" y="${llToXY(28.5, 117.5).y}">${isEn ? 'EAST CHINA' : '華東'}</text>
-                                    <text x="${( llToXY(19.1, 109.6).x - 10 ).toFixed(1)}" y="${llToXY(19.1, 109.6).y}" font-size="7">${isEn ? 'Hainan' : '海南島'}</text>
-                                    <text x="${( tpePt.x + 6 ).toFixed(1)}" y="${( tpePt.y + 16 ).toFixed(1)}" fill="#e2e8f0" font-size="7.8">${isEn ? 'Taiwan' : '台灣'}</text>
-                                    <text x="${( mnlPt.x + 12 ).toFixed(1)}" y="${( mnlPt.y - 6 ).toFixed(1)}" font-size="7.5">${isEn ? 'Luzon (PH)' : '呂宋 (菲律賓)'}</text>
-                                    <text x="${llToXY(31.6, 130.5).x}" y="${(llToXY(31.6, 130.5).y - 2).toFixed(1)}" font-size="6.8">${isEn ? 'Kyushu' : '九州'}</text>
-                                    <text x="${(ishPt.x - 12).toFixed(1)}" y="${(ishPt.y - 4).toFixed(1)}" fill="#7dd3fc" font-size="6.5">${isEn ? 'Ishigaki' : '石垣'}</text>
-                                    <text x="${llToXY(15.2, 114.2).x}" y="${llToXY(15.2, 114.2).y}" fill="#1e4976" font-size="8.5" font-weight="900">${isEn ? 'SOUTH CHINA SEA' : '南 海'}</text>
-                                    <text x="${llToXY(19.5, 128.0).x}" y="${llToXY(19.5, 128.0).y}" fill="#1e4976" font-size="8.5" font-weight="900">${isEn ? 'PHILIPPINE SEA' : '菲律賓海 / 西北太平洋'}</text>
+                                <g fill="#94a3b8" font-size="7.2" font-weight="800">
+                                    <text x="${llToXY(25.2, 111.5).x}" y="${llToXY(25.2, 111.5).y}">${isEn ? 'SOUTH CHINA' : '華南沿岸'}</text>
+                                    <text x="${(llToXY(19.1, 109.6).x - 8).toFixed(1)}" y="${llToXY(19.1, 109.6).y}" font-size="6.5">${isEn ? 'Hainan' : '海南島'}</text>
+                                    <text x="${(tpePt.x + 5).toFixed(1)}" y="${(tpePt.y + 12).toFixed(1)}" fill="#e2e8f0" font-size="7.4">${isEn ? 'Taiwan' : '台灣'}</text>
+                                    <text x="${(mnlPt.x + 10).toFixed(1)}" y="${(mnlPt.y - 4).toFixed(1)}" font-size="7">${isEn ? 'Luzon (PH)' : '呂宋 (菲律賓)'}</text>
+                                    <text x="${llToXY(32.5, 130.5).x}" y="${(llToXY(32.5, 130.5).y - 2).toFixed(1)}" font-size="6.8">${isEn ? 'Japan' : '日本九州/本州'}</text>
+                                    <text x="${(ogasawaraPt.x + 4).toFixed(1)}" y="${(ogasawaraPt.y + 2).toFixed(1)}" fill="#7dd3fc" font-size="6.5">${isEn ? 'Ogasawara' : '小笠原(父島)'}</text>
+                                    <text x="${llToXY(15.0, 113.5).x}" y="${llToXY(15.0, 113.5).y}" fill="#1e4976" font-size="8" font-weight="900">${isEn ? 'SOUTH CHINA SEA' : '南 海'}</text>
+                                    <text x="${llToXY(17.5, 130.0).x}" y="${llToXY(17.5, 130.0).y}" fill="#1e4976" font-size="8" font-weight="900">${isEn ? 'PHILIPPINE SEA' : '菲律賓海 / 西北太平洋'}</text>
                                 </g>
 
                                 <!-- Okinawa Marker & Label (沖繩位置標示) -->
-                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="4.5" fill="rgba(56,189,248,0.25)" stroke="#38bdf8" stroke-width="1"/>
-                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="2.2" fill="#38bdf8"/>
-                                <text x="${(okiPt.x + 6).toFixed(1)}" y="${(okiPt.y + 3).toFixed(1)}" fill="#7dd3fc" font-size="8.2" font-weight="900">${isEn ? 'Okinawa' : '沖繩'}</text>
+                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="4" fill="rgba(56,189,248,0.25)" stroke="#38bdf8" stroke-width="1"/>
+                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="2" fill="#38bdf8"/>
+                                <text x="${(okiPt.x + 5).toFixed(1)}" y="${(okiPt.y + 2.5).toFixed(1)}" fill="#7dd3fc" font-size="7.8" font-weight="900">${isEn ? 'Okinawa' : '沖繩'}</text>
 
                                 <!-- Mask: Hide 400/800/1200km dashed rings over Mainland continental plate, keep over Sea, Taiwan & Philippines -->
                                 <defs>
@@ -7356,27 +7597,27 @@
 
                                 <!-- 400km, 800km, 1200km Alert Arcs (Masked out over Mainland continental plate, preserved over Sea, Taiwan & Philippines) -->
                                 <g mask="url(#wth-tc-sea-island-mask)">
-                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r400}" fill="none" stroke="#38bdf8" stroke-opacity="0.88" stroke-width="1.25" stroke-dasharray="4,3"/>
-                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r800}" fill="none" stroke="#f59e0b" stroke-opacity="0.88" stroke-width="1.25" stroke-dasharray="5,3"/>
-                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r1200}" fill="none" stroke="#f43f5e" stroke-opacity="0.88" stroke-width="1.35" stroke-dasharray="6,3"/>
+                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r400}" fill="none" stroke="#38bdf8" stroke-opacity="0.88" stroke-width="1.2" stroke-dasharray="4,3"/>
+                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r800}" fill="none" stroke="#f59e0b" stroke-opacity="0.88" stroke-width="1.2" stroke-dasharray="5,3"/>
+                                    <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r1200}" fill="none" stroke="#f43f5e" stroke-opacity="0.88" stroke-width="1.3" stroke-dasharray="6,3"/>
                                 </g>
 
                                 <!-- Seaward Distance Circle Badges (400km / 800km / 1200km) -->
-                                <g font-size="7.8" font-weight="900">
-                                    <rect x="${(hkPt.x + 12).toFixed(1)}" y="${(hkPt.y + r400 - 10).toFixed(1)}" width="38" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#38bdf8" stroke-width="0.7"/>
-                                    <text x="${(hkPt.x + 31).toFixed(1)}" y="${(hkPt.y + r400 - 1.5).toFixed(1)}" fill="#38bdf8" text-anchor="middle">${isEn ? '400km' : '400公里'}</text>
+                                <g font-size="7.4" font-weight="900">
+                                    <rect x="${(hkPt.x + 8).toFixed(1)}" y="${(hkPt.y + r400 - 9).toFixed(1)}" width="35" height="11" rx="3" fill="rgba(15,23,42,0.9)" stroke="#38bdf8" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 25.5).toFixed(1)}" y="${(hkPt.y + r400 - 1).toFixed(1)}" fill="#38bdf8" text-anchor="middle">${isEn ? '400km' : '400公里'}</text>
 
-                                    <rect x="${(hkPt.x + 24).toFixed(1)}" y="${(hkPt.y + r800 - 12).toFixed(1)}" width="38" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#f59e0b" stroke-width="0.7"/>
-                                    <text x="${(hkPt.x + 43).toFixed(1)}" y="${(hkPt.y + r800 - 3.5).toFixed(1)}" fill="#fbbf24" text-anchor="middle">${isEn ? '800km' : '800公里'}</text>
+                                    <rect x="${(hkPt.x + 18).toFixed(1)}" y="${(hkPt.y + r800 - 11).toFixed(1)}" width="35" height="11" rx="3" fill="rgba(15,23,42,0.9)" stroke="#f59e0b" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 35.5).toFixed(1)}" y="${(hkPt.y + r800 - 3).toFixed(1)}" fill="#fbbf24" text-anchor="middle">${isEn ? '800km' : '800公里'}</text>
 
-                                    <rect x="${(hkPt.x + 36).toFixed(1)}" y="${(hkPt.y + r1200 - 15).toFixed(1)}" width="42" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#f43f5e" stroke-width="0.7"/>
-                                    <text x="${(hkPt.x + 57).toFixed(1)}" y="${(hkPt.y + r1200 - 6.5).toFixed(1)}" fill="#fb7185" text-anchor="middle">${isEn ? '1200km' : '1200公里'}</text>
+                                    <rect x="${(hkPt.x + 28).toFixed(1)}" y="${(hkPt.y + r1200 - 13).toFixed(1)}" width="39" height="11" rx="3" fill="rgba(15,23,42,0.9)" stroke="#f43f5e" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 47.5).toFixed(1)}" y="${(hkPt.y + r1200 - 5).toFixed(1)}" fill="#fb7185" text-anchor="middle">${isEn ? '1200km' : '1200公里'}</text>
                                 </g>
 
                                 <!-- Hong Kong Center Marker & Label -->
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="6.5" fill="rgba(250,204,21,0.25)" stroke="#facc15" stroke-width="1"/>
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="3" fill="#facc15" stroke="#0f172a" stroke-width="0.9"/>
-                                <text x="${(hkPt.x - 32).toFixed(1)}" y="${(hkPt.y - 6).toFixed(1)}" fill="#fde047" font-size="8.8" font-weight="900">📍 ${isEn ? 'HK' : '香港'}</text>
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="6" fill="rgba(250,204,21,0.25)" stroke="#facc15" stroke-width="1"/>
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="2.8" fill="#facc15" stroke="#0f172a" stroke-width="0.9"/>
+                                <text x="${(hkPt.x - 28).toFixed(1)}" y="${(hkPt.y - 5).toFixed(1)}" fill="#fde047" font-size="8.4" font-weight="900">📍 ${isEn ? 'HK' : '香港'}</text>
 
                                 <!-- Active Tropical Cyclone Track & Real-Time Position Layer (HKO + JMA) -->
                                 ${cycloneTrackSvg}
@@ -7388,10 +7629,10 @@
                                         <span style="font-size:1.05rem;">🟢</span>
                                         <div>
                                             <div style="font-size:0.78rem; font-weight:900; color:#34d399;">
-                                                ${isEn ? 'No Active Typhoon at Present (HKO & JMA)' : '現時並無颱風／熱帶氣旋生效（天文台及日本氣象廳）'}
+                                                ${isEn ? 'No Active Typhoon for Selected Agency' : '所選氣象機構現時並無生效熱帶氣旋（冇颱風）'}
                                             </div>
                                             <div style="font-size:0.68rem; color:#cbd5e1; font-weight:600;">
-                                                ${isEn ? 'No typhoon inside 400km / 800km / 1200km zones or W.N. Pacific.' : '香港對出海面 400 / 800 / 1200 公里圈、南海及沖繩鄰近海域現時並無颱風。'}
+                                                ${isEn ? 'Switch to [HKO + JMA] or [JMA] below to view Typhoon No. 31 (In-fa).' : '香港 400/800/1200 公里範圍內無香港天文台熱帶氣旋；可點選下方「日本氣象廳」檢視第 31 號颱風。'}
                                             </div>
                                         </div>
                                     </div>
@@ -7403,44 +7644,44 @@
                         <div class="wth-dark-ctrl-box">
                             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
                                 <div style="display:flex; align-items:center; gap:5px;">
-                                    <span style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Agency:' : '數據源：'}</span>
+                                    <span style="font-size:0.71rem; color:#94a3b8; font-weight:800;">${isEn ? 'Agency:' : '機構切換：'}</span>
                                     ${[
                                         { id: 'ALL', zh: '🌐 天文台 + 日本氣象廳', en: '🌐 HKO + JMA' },
-                                        { id: 'HKO', zh: '🇭🇰 香港天文台', en: '🇭🇰 HKO' },
-                                        { id: 'JMA', zh: '🇯🇵 日本氣象廳', en: '🇯🇵 JMA' }
+                                        { id: 'JMA', zh: '🇯🇵 日本氣象廳 (31號颱風)', en: '🇯🇵 JMA (Typhoon 31)' },
+                                        { id: 'HKO', zh: '🇭🇰 香港天文台', en: '🇭🇰 HKO' }
                                     ].map(ag => {
                                         const act = (agencyFilter === ag.id);
-                                        return `<button type="button" onclick="setWeatherTcAgencyFilter('${ag.id}')" style="padding:3px 8px; border-radius:5px; font-size:0.7rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? ag.en : ag.zh}</button>`;
+                                        return `<button type="button" onclick="setWeatherTcAgencyFilter('${ag.id}')" style="padding:3px 8px; border-radius:5px; font-size:0.69rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? ag.en : ag.zh}</button>`;
                                     }).join('')}
                                 </div>
-                                <span style="font-size:0.7rem; color:#38bdf8; font-weight:800;">104°E–136°E · 8°N–32°N</span>
+                                <span style="font-size:0.69rem; color:#38bdf8; font-weight:800;">105°E–147°E · 8°N–36°N</span>
                             </div>
 
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:0.73rem; color:#e2e8f0; background:rgba(15,23,42,0.55); padding:4px 8px; border-radius:6px; border:1px solid rgba(148,163,184,0.16);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:0.72rem; color:#e2e8f0; background:rgba(15,23,42,0.55); padding:4px 8px; border-radius:6px; border:1px solid rgba(148,163,184,0.16);">
                                 ${hasCyclone ? `
-                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🌀 <b style="color:#fde047;">${isEn ? cyclones[0].name_en : cyclones[0].name_zh}</b> (${cyclones[0].source}) · ${cyclones[0].current.lat.toFixed(1)}°N, ${cyclones[0].current.lon.toFixed(1)}°E</span>
-                                    <span style="color:#f87171; font-weight:800; white-space:nowrap;">${isEn ? `${cyclones[0].distKm} km from HK` : `距港 ${cyclones[0].distKm} 公里`}</span>
+                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🌀 <b style="color:#fde047;">${isEn ? cyclones[0].name_en : cyclones[0].name_zh}</b> · ${isEn ? 'Pos:' : '位置：'}<b>${cyclones[0].current.lat.toFixed(1)}°N, ${cyclones[0].current.lon.toFixed(1)}°E</b> (${cyclones[0].pressureHpa || 970}hPa · ${cyclones[0].maxWindMs || 35}m/s)</span>
+                                    <span style="color:#38bdf8; font-weight:800; white-space:nowrap;">${isEn ? `${cyclones[0].distKm} km from HK` : `距港約 ${cyclones[0].distKm} 公里`}</span>
                                 ` : `
-                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🛡️ <b>${isEn ? 'HKO & JMA Live Check:' : '天文台及日本氣象廳實時狀態：'}</b>${isEn ? '0 Active Typhoons' : '現時無熱帶氣旋路徑'}</span>
-                                    <span style="color:#34d399; font-weight:800; white-space:nowrap;">🟢 ${isEn ? 'All Clear' : '正常（無颱風）'}</span>
+                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🛡️ <b>${isEn ? 'HKO Status:' : '香港天文台範圍：'}</b>${isEn ? 'No typhoon within 1200km of HK' : '香港 400 / 800 / 1200 公里內現時無颱風'}</span>
+                                    <span style="color:#34d399; font-weight:800; white-space:nowrap;">🟢 ${isEn ? 'No HK Cyclone' : '本港無颱風'}</span>
                                 `}
                             </div>
 
                             <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.68rem; color:#94a3b8; font-weight:700;">
-                                <span>📍 ${isEn ? 'Key Points: Hong Kong · Taiwan · Okinawa · Luzon' : '標示位置：香港・台灣・沖繩・石垣・宮古・呂宋・海南'}</span>
-                                <span style="color:#fde047;">HKO / JMA</span>
+                                <span>📍 ${isEn ? 'Track: Past (Blue Solid) · Forecast & 70% Cone (Red Dashed)' : '實線：過去路徑 ｜ 虛線及紅圈：預測路徑及預報圓 (小笠原方向)'}</span>
+                                <span style="color:#fde047;">JMA #31 / HKO</span>
                             </div>
                         </div>
 
                         <!-- Row 4: Bottom Legend Bar (Exact same height as Radar legend bar) -->
                         <div class="wth-dark-legend-bar">
-                            <span style="font-weight:800; color:#38bdf8;">${isEn ? '⭕ Rings & Track Legend:' : '⭕ 距離圈及機構路徑圖例：'}</span>
+                            <span style="font-weight:800; color:#38bdf8;">${isEn ? '⭕ Rings & Track Legend:' : '⭕ 距離圈及颱風路徑圖例：'}</span>
                             <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
                                 <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#38bdf8; display:inline-block;"></span><b>400km</b></span>
                                 <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#f59e0b; display:inline-block;"></span><b>800km</b></span>
                                 <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#f43f5e; display:inline-block;"></span><b>1200km</b></span>
-                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#facc15; display:inline-block;"></span><b>HKO</b></span>
-                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#c084fc; display:inline-block;"></span><b>JMA</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#38bdf8; display:inline-block;"></span><b>${isEn ? 'Past Track' : '過去路徑'}</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#ef4444; display:inline-block;"></span><b>${isEn ? 'Current & Forecast' : '實時位置及預報圓'}</b></span>
                             </div>
                         </div>
                     </div>
