@@ -4046,6 +4046,7 @@
             <a href="#" id="t-menu-labour" class="rail-btn-sub" title="香港勞動人口、失業及就業不足統計 (1985–2026)" onclick="showLabourPage(); event.preventDefault();">💼</a>
             <a href="#" id="t-menu-fire" class="rail-btn-sub" title="香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)" onclick="showFirePage(); event.preventDefault();">🔥</a>
             <a href="#" id="t-menu-ambulance" class="rail-btn-sub" title="香港救護車召喚次數及救護服務指標 (2012–2025)" onclick="showAmbulancePage(); event.preventDefault();">🚑</a>
+            <a href="#" id="t-menu-aed" class="rail-btn-sub" title="全港公立醫院急症室即時等候時間" onclick="showAedPage(); event.preventDefault();">🏥</a>
         </div>
 
         <!-- 類別分隔線 (區分兩個議會與其他功能) -->
@@ -4611,6 +4612,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="ambulance-portal-container"></div>
+            </div>
+
+            <!-- 🏥 全港公立醫院急症室即時等候時間看板 (18 間急症室｜四大分流類別 I–V) -->
+            <div class="panel border-section" id="aed-page-view" style="display: none;">
+                <h2>
+                    <span id="t-aed-title">🏥 全港公立醫院急症室即時等候時間 (18 間急症室)</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-aed-sync-now" onclick="syncAedData(true)" title="重新整理最新急症室等候時間">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="aed-refresh-status" onclick="syncAedData(true)" style="cursor:pointer;" title="點擊重新整理急症室等候時間">🟢 每 15 分鐘更新</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="aed-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5238,6 +5253,7 @@
                 if (document.getElementById('t-menu-labour')) document.getElementById('t-menu-labour').title = (currentLang === 'en') ? 'HK Labour Force, Employment, Unemployment & Underemployment (1985–2026)' : '香港勞動人口、失業及就業不足統計 (1985–2026)';
                 if (document.getElementById('t-menu-fire')) document.getElementById('t-menu-fire').title = (currentLang === 'en') ? 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)' : '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
                 if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu-ambulance').title = (currentLang === 'en') ? 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)' : '香港救護車召喚次數及救護服務指標 (2012–2025)';
+                if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5264,6 +5280,7 @@
                 if (typeof applyLabourLanguage === 'function') applyLabourLanguage();
                 if (typeof applyFireLanguage === 'function') applyFireLanguage();
                 if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
+                if (typeof applyAedLanguage === 'function') applyAedLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5298,7 +5315,7 @@
             document.getElementById('settings-modal').classList.remove('active');
         }
 
-        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'ambulance', 'dc', 'legco', 'iframe'];
+        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'ambulance', 'aed', 'dc', 'legco', 'iframe'];
         let currentActivePage = 'portal';
 
         function persistActivePageState(pageKey) {
@@ -5369,6 +5386,7 @@
             const btnLab = document.getElementById('t-menu-labour');
             const btnFire = document.getElementById('t-menu-fire');
             const btnAmb = document.getElementById('t-menu-ambulance');
+            const btnAed = document.getElementById('t-menu-aed');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5382,6 +5400,7 @@
             if (btnLab) btnLab.className = (activeTab === 'labour') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnFire) btnFire.className = (activeTab === 'fire') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5407,6 +5426,7 @@
             const labSec = document.getElementById('labour-page-view');
             const fireSec = document.getElementById('fire-page-view');
             const ambSec = document.getElementById('ambulance-page-view');
+            const aedSec = document.getElementById('aed-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5420,6 +5440,7 @@
             if (labSec) labSec.style.display = 'none';
             if (fireSec) fireSec.style.display = 'none';
             if (ambSec) ambSec.style.display = 'none';
+            if (aedSec) aedSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5607,6 +5628,19 @@
             updateMenuRailButtons('ambulance');
             initAmbulanceSystem();
             renderAmbulancePortal();
+        }
+
+        function showAedPage() {
+            persistActivePageState('aed');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const aedSec = document.getElementById('aed-page-view');
+            if (aedSec) aedSec.style.display = 'flex';
+            updateMenuRailButtons('aed');
+            initAedSystem();
+            renderAedPortal();
         }
 
 
@@ -22518,6 +22552,1080 @@
             container.innerHTML = controlHtml + kpiHtml + bodyHtml;
         }
 
+        
+        // ==========================================
+        // 🏥 醫院管理局全港 18 間公立醫院急症室即時等候時間系統 (CSDI: fhb_rcd_1636947932221_94410 / HA Open Data v2)
+        // ==========================================
+        const HA_AED_API_URLS = {
+            v2TcJson: 'https://www.ha.org.hk/opendata/aed/aedwtdata2-tc.json',
+            v2EnJson: 'https://www.ha.org.hk/opendata/aed/aedwtdata2-en.json',
+            v1TcJson: 'https://www.ha.org.hk/opendata/aed/aedwtdata-tc.json',
+            v1EnJson: 'https://www.ha.org.hk/opendata/aed/aedwtdata-en.json',
+            csdiWfs:  'https://portal.csdi.gov.hk/server/services/common/fhb_rcd_1636947932221_94410/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=AE_Waiting_Time&outputFormat=geojson'
+        };
+
+        // 全港 18 間設有急症室之公立醫院完整主數據及即時快照 (依據醫管局最新四類分流格式：分流類別 I, II, III [t3p50/t3p95], IV & V [t45p50/t45p95])
+        window.hkAedHospitals = [
+            // 港島區 (Hong Kong Island — 3 間位於港島 + 長洲醫院共 4 間；按醫管局官方表格長洲醫院歸入新界／離島或港島東聯網)
+            {
+                code: 'PYNEH',
+                region: 'HKI',
+                clusterCode: 'HKEC',
+                cluster_zh: '港島東聯網',
+                cluster_en: 'Hong Kong East Cluster',
+                district_zh: '東區',
+                district_en: 'Eastern',
+                zh: '東區尤德夫人那打素醫院',
+                en: 'Pamela Youde Nethersole Eastern Hospital',
+                addr_zh: '香港柴灣樂民道 3 號',
+                addr_en: '3 Lok Man Road, Chai Wan, HK',
+                tel: '2595 6111',
+                lat: 22.2692,
+                lng: 114.2364,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 34,
+                t3p95: 76,
+                t45p50: 7.0,
+                t45p95: 10.5
+            },
+            {
+                code: 'QMH',
+                region: 'HKI',
+                clusterCode: 'HKWC',
+                cluster_zh: '港島西聯網',
+                cluster_en: 'Hong Kong West Cluster',
+                district_zh: '南區',
+                district_en: 'Southern',
+                zh: '瑪麗醫院',
+                en: 'Queen Mary Hospital',
+                addr_zh: '香港薄扶林道 102 號',
+                addr_en: '102 Pokfulam Road, HK',
+                tel: '2255 3838',
+                lat: 22.2704,
+                lng: 114.1312,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 27,
+                t3p95: 68,
+                t45p50: 3.0,
+                t45p95: 4.0
+            },
+            {
+                code: 'RH',
+                region: 'HKI',
+                clusterCode: 'HKEC',
+                cluster_zh: '港島東聯網',
+                cluster_en: 'Hong Kong East Cluster',
+                district_zh: '灣仔區',
+                district_en: 'Wan Chai',
+                zh: '律敦治醫院',
+                en: 'Ruttonjee Hospital',
+                addr_zh: '香港灣仔皇后大道東 266 號',
+                addr_en: '266 Queen\'s Road East, Wan Chai, HK',
+                tel: '2291 2000',
+                lat: 22.2759,
+                lng: 114.1753,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 39,
+                t3p95: 61,
+                t45p50: 4.5,
+                t45p95: 6.0
+            },
+            // 九龍區 (Kowloon)
+            {
+                code: 'CMC',
+                region: 'KLN',
+                clusterCode: 'KWC',
+                cluster_zh: '九龍西聯網',
+                cluster_en: 'Kowloon West Cluster',
+                district_zh: '深水埗區',
+                district_en: 'Sham Shui Po',
+                zh: '明愛醫院',
+                en: 'Caritas Medical Centre',
+                addr_zh: '九龍深水埗永康街 111 號',
+                addr_en: '111 Wing Hong Street, Sham Shui Po, Kowloon',
+                tel: '3408 7911',
+                lat: 22.3406,
+                lng: 114.1523,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 34,
+                t3p95: 64,
+                t45p50: 4.5,
+                t45p95: 6.0
+            },
+            {
+                code: 'KWH',
+                region: 'KLN',
+                clusterCode: 'KCC',
+                cluster_zh: '九龍中聯網',
+                cluster_en: 'Kowloon Central Cluster',
+                district_zh: '油尖旺區',
+                district_en: 'Yau Tsim Mong',
+                zh: '廣華醫院',
+                en: 'Kwong Wah Hospital',
+                addr_zh: '九龍窩打老道 25 號',
+                addr_en: '25 Waterloo Road, Kowloon',
+                tel: '2332 2311',
+                lat: 22.3142,
+                lng: 114.1722,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 47,
+                t3p95: 74,
+                t45p50: 5.5,
+                t45p95: 9.5
+            },
+            {
+                code: 'QEH',
+                region: 'KLN',
+                clusterCode: 'KCC',
+                cluster_zh: '九龍中聯網',
+                cluster_en: 'Kowloon Central Cluster',
+                district_zh: '油尖旺區',
+                district_en: 'Yau Tsim Mong',
+                zh: '伊利沙伯醫院',
+                en: 'Queen Elizabeth Hospital',
+                addr_zh: '九龍加士居道 30 號',
+                addr_en: '30 Gascoigne Road, Kowloon',
+                tel: '3506 8888',
+                lat: 22.3089,
+                lng: 114.1746,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 16,
+                t3p95: 25,
+                t45p50: 1.5,
+                t45p95: 2.0
+            },
+            {
+                code: 'UCH',
+                region: 'KLN',
+                clusterCode: 'KEC',
+                cluster_zh: '九龍東聯網',
+                cluster_en: 'Kowloon East Cluster',
+                district_zh: '觀塘區',
+                district_en: 'Kwun Tong',
+                zh: '基督教聯合醫院',
+                en: 'United Christian Hospital',
+                addr_zh: '九龍觀塘協和街 130 號',
+                addr_en: '130 Hip Wo Street, Kwun Tong, Kowloon',
+                tel: '3949 4000',
+                lat: 22.3223,
+                lng: 114.2279,
+                resuscitation: true,
+                t1wt_zh: '正治理多名搶救個案',
+                t1wt_en: 'Managing multiple resuscitation cases',
+                t2wt_zh: '正治理多名搶救個案',
+                t2wt_en: 'Managing multiple resuscitation cases',
+                t3p50: 45,
+                t3p95: 80,
+                t45p50: 3.0,
+                t45p95: 6.5
+            },
+            // 新界及離島區 (New Territories & Islands)
+            {
+                code: 'AHNH',
+                region: 'NT',
+                clusterCode: 'NTEC',
+                cluster_zh: '新界東聯網',
+                cluster_en: 'New Territories East Cluster',
+                district_zh: '大埔區',
+                district_en: 'Tai Po',
+                zh: '雅麗氏何妙齡那打素醫院',
+                en: 'Alice Ho Miu Ling Nethersole Hospital',
+                addr_zh: '新界大埔全安路 11 號',
+                addr_en: '11 Chuen On Road, Tai Po, NT',
+                tel: '2689 2000',
+                lat: 22.4586,
+                lng: 114.1747,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 29,
+                t3p95: 58,
+                t45p50: 1.5,
+                t45p95: 2.5
+            },
+            {
+                code: 'NDH',
+                region: 'NT',
+                clusterCode: 'NTEC',
+                cluster_zh: '新界東聯網',
+                cluster_en: 'New Territories East Cluster',
+                district_zh: '北區',
+                district_en: 'North',
+                zh: '北區醫院',
+                en: 'North District Hospital',
+                addr_zh: '新界上水保健路 9 號',
+                addr_en: '9 Po Kin Road, Sheung Shui, NT',
+                tel: '2683 8888',
+                lat: 22.4967,
+                lng: 114.1246,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 29,
+                t3p95: 73,
+                t45p50: 3.5,
+                t45p95: 6.5
+            },
+            {
+                code: 'NLTH',
+                region: 'NT',
+                clusterCode: 'KWC',
+                cluster_zh: '九龍西聯網',
+                cluster_en: 'Kowloon West Cluster',
+                district_zh: '離島區',
+                district_en: 'Islands',
+                zh: '北大嶼山醫院',
+                en: 'North Lantau Hospital',
+                addr_zh: '大嶼山東涌松仁路 8 號',
+                addr_en: '8 Chung Yan Road, Tung Chung, Lantau',
+                tel: '3467 7000',
+                lat: 22.2820,
+                lng: 113.9392,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 23,
+                t3p95: 41,
+                t45p50: 2.5,
+                t45p95: 3.5
+            },
+            {
+                code: 'POH',
+                region: 'NT',
+                clusterCode: 'NTWC',
+                cluster_zh: '新界西聯網',
+                cluster_en: 'New Territories West Cluster',
+                district_zh: '元朗區',
+                district_en: 'Yuen Long',
+                zh: '博愛醫院',
+                en: 'Pok Oi Hospital',
+                addr_zh: '新界元朗坳頭',
+                addr_en: 'Au Tau, Yuen Long, NT',
+                tel: '2486 8000',
+                lat: 22.4452,
+                lng: 114.0416,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 18,
+                t3p95: 29,
+                t45p50: 4.0,
+                t45p95: 6.0
+            },
+            {
+                code: 'PWH',
+                region: 'NT',
+                clusterCode: 'NTEC',
+                cluster_zh: '新界東聯網',
+                cluster_en: 'New Territories East Cluster',
+                district_zh: '沙田區',
+                district_en: 'Sha Tin',
+                zh: '威爾斯親王醫院',
+                en: 'Prince of Wales Hospital',
+                addr_zh: '新界沙田銀城街 30-32 號',
+                addr_en: '30-32 Ngan Shing Street, Sha Tin, NT',
+                tel: '3505 2211',
+                lat: 22.3799,
+                lng: 114.2013,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 31,
+                t3p95: 58,
+                t45p50: 2.5,
+                t45p95: 7.0
+            },
+            {
+                code: 'PMH',
+                region: 'NT',
+                clusterCode: 'KWC',
+                cluster_zh: '九龍西聯網',
+                cluster_en: 'Kowloon West Cluster',
+                district_zh: '葵青區',
+                district_en: 'Kwai Tsing',
+                zh: '瑪嘉烈醫院',
+                en: 'Princess Margaret Hospital',
+                addr_zh: '九龍荔枝角瑪嘉烈醫院道 2-10 號',
+                addr_en: '2-10 Princess Margaret Hospital Road, Lai Chi Kok',
+                tel: '2990 1111',
+                lat: 22.3402,
+                lng: 114.1342,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 34,
+                t3p95: 61,
+                t45p50: 2.0,
+                t45p95: 3.5
+            },
+            {
+                code: 'SJH',
+                region: 'NT',
+                clusterCode: 'HKEC',
+                cluster_zh: '港島東聯網',
+                cluster_en: 'Hong Kong East Cluster',
+                district_zh: '離島區',
+                district_en: 'Islands',
+                zh: '長洲醫院',
+                en: 'St John Hospital',
+                addr_zh: '長洲東灣長洲醫院路',
+                addr_en: 'Cheung Chau Hospital Road, Tung Wan, Cheung Chau',
+                tel: '2981 9441',
+                lat: 22.2081,
+                lng: 114.0315,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 15,
+                t3p95: 27,
+                t45p50: 0.5,
+                t45p95: 1.0
+            },
+            {
+                code: 'TSWH',
+                region: 'NT',
+                clusterCode: 'NTWC',
+                cluster_zh: '新界西聯網',
+                cluster_en: 'New Territories West Cluster',
+                district_zh: '元朗區',
+                district_en: 'Yuen Long',
+                zh: '天水圍醫院',
+                en: 'Tin Shui Wai Hospital',
+                addr_zh: '新界天水圍天壇街 11 號',
+                addr_en: '11 Tin Tan Street, Tin Shui Wai, NT',
+                tel: '3513 5000',
+                lat: 22.4589,
+                lng: 113.9958,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 19,
+                t3p95: 39,
+                t45p50: 2.5,
+                t45p95: 4.5
+            },
+            {
+                code: 'TKOH',
+                region: 'NT',
+                clusterCode: 'KEC',
+                cluster_zh: '九龍東聯網',
+                cluster_en: 'Kowloon East Cluster',
+                district_zh: '西貢區',
+                district_en: 'Sai Kung',
+                zh: '將軍澳醫院',
+                en: 'Tseung Kwan O Hospital',
+                addr_zh: '將軍澳坑口寶寧里 2 號',
+                addr_en: '2 Po Ning Lane, Hang Hau, Tseung Kwan O',
+                tel: '2208 0111',
+                lat: 22.3179,
+                lng: 114.2703,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 15,
+                t3p95: 31,
+                t45p50: 4.5,
+                t45p95: 8.5
+            },
+            {
+                code: 'TMH',
+                region: 'NT',
+                clusterCode: 'NTWC',
+                cluster_zh: '新界西聯網',
+                cluster_en: 'New Territories West Cluster',
+                district_zh: '屯門區',
+                district_en: 'Tuen Mun',
+                zh: '屯門醫院',
+                en: 'Tuen Mun Hospital',
+                addr_zh: '新界屯門青松觀路 23 號',
+                addr_en: '23 Tsing Chung Koon Road, Tuen Mun, NT',
+                tel: '2468 5111',
+                lat: 22.4074,
+                lng: 113.9762,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 29,
+                t3p95: 32,
+                t45p50: 7.5,
+                t45p95: 10.0
+            },
+            {
+                code: 'YCH',
+                region: 'NT',
+                clusterCode: 'KWC',
+                cluster_zh: '九龍西聯網',
+                cluster_en: 'Kowloon West Cluster',
+                district_zh: '荃灣區',
+                district_en: 'Tsuen Wan',
+                zh: '仁濟醫院',
+                en: 'Yan Chai Hospital',
+                addr_zh: '新界荃灣仁濟街 7-11 號',
+                addr_en: '7-11 Yan Chai Street, Tsuen Wan, NT',
+                tel: '2417 8383',
+                lat: 22.3696,
+                lng: 114.1194,
+                resuscitation: false,
+                t1wt_zh: '0 分鐘',
+                t1wt_en: '0 minute',
+                t2wt_zh: '少於 15 分鐘',
+                t2wt_en: 'less than 15 minutes',
+                t3p50: 33,
+                t3p95: 58,
+                t45p50: 4.5,
+                t45p95: 6.0
+            }
+        ];
+
+        window.aedSystemInitialized = false;
+        window.aedRegionFilter = 'ALL'; // 'ALL' | 'HKI' | 'KLN' | 'NT'
+        window.aedClusterFilter = 'ALL'; // 'ALL' | 'HKEC' | 'HKWC' | 'KCC' | 'KEC' | 'KWC' | 'NTEC' | 'NTWC'
+        window.aedSortMode = 'WAIT_ASC'; // 'WAIT_ASC' | 'WAIT_DESC' | 'T3_ASC' | 'CLUSTER'
+        window.aedSearchQuery = '';
+        window.aedSyncState = 'READY';
+        window.aedUpdateTimeStr = '2026-11-03 17:30';
+
+        function parseWaitNumber(valStr, defaultNum) {
+            if (valStr === null || valStr === undefined) return defaultNum;
+            const s = String(valStr);
+            const m = s.match(/(\d+(\.\d+)?)/);
+            return m ? parseFloat(m[1]) : defaultNum;
+        }
+
+        function getAedCongestionMeta(h, isEn) {
+            const hrs = Number(h.t45p50 || 0);
+            if (hrs <= 2.0) {
+                return {
+                    color: '#16a34a',
+                    bg: '#f0fdf4',
+                    border: '#bbf7d0',
+                    badge: isEn ? '🟢 Shorter Wait (≤2h)' : '🟢 輪候較短 (≤2小時)'
+                };
+            }
+            if (hrs <= 4.0) {
+                return {
+                    color: '#ca8a04',
+                    bg: '#fefce8',
+                    border: '#fef08a',
+                    badge: isEn ? '🟡 Moderate Wait (2.5–4h)' : '🟡 輪候適中 (2.5–4小時)'
+                };
+            }
+            if (hrs <= 5.5) {
+                return {
+                    color: '#ea580c',
+                    bg: '#fff7ed',
+                    border: '#fed7aa',
+                    badge: isEn ? '🟠 Longer Wait (4.5–5.5h)' : '🟠 輪候較長 (4.5–5.5小時)'
+                };
+            }
+            return {
+                color: '#dc2626',
+                bg: '#fef2f2',
+                border: '#fecaca',
+                badge: isEn ? '🔴 High Demand (≥6h)' : '🔴 輪候繁忙 (≥6小時)'
+            };
+        }
+
+        function getAedOverviewStats() {
+            const list = window.hkAedHospitals || [];
+            if (!list.length) return null;
+            const sortedT45 = [...list].sort((a, b) => a.t45p50 - b.t45p50);
+            const minH = sortedT45[0];
+            const maxH = sortedT45[sortedT45.length - 1];
+            const avgT3 = Math.round(list.reduce((acc, h) => acc + Number(h.t3p50 || 0), 0) / list.length);
+            const avgT45 = (list.reduce((acc, h) => acc + Number(h.t45p50 || 0), 0) / list.length).toFixed(1);
+            const resusCnt = list.filter(h => h.resuscitation).length;
+            const shortWaitCnt = list.filter(h => h.t45p50 <= 2.0).length;
+
+            return {
+                totalHospitals: list.length,
+                minHospZh: minH.zh,
+                minHospEn: minH.en,
+                minT45: minH.t45p50,
+                minT45P95: minH.t45p95,
+                maxHospZh: maxH.zh,
+                maxHospEn: maxH.en,
+                maxT45: maxH.t45p50,
+                maxT45P95: maxH.t45p95,
+                avgT3,
+                avgT45,
+                resusCnt,
+                shortWaitCnt
+            };
+        }
+
+        async function fetchAedJsonWithFallback(rawUrl) {
+            const candidates = [
+                rawUrl,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
+            ];
+            for (const u of candidates) {
+                try {
+                    const ctrl = new AbortController();
+                    const tid = setTimeout(() => ctrl.abort(), 5500);
+                    const res = await fetch(u, { signal: ctrl.signal });
+                    clearTimeout(tid);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && (Array.isArray(data.waitTime) || Array.isArray(data.features))) {
+                            return data;
+                        }
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        function applyIncomingAedData(payload) {
+            if (!payload) return false;
+            let updatedCount = 0;
+
+            if (payload.updateTime) {
+                window.aedUpdateTimeStr = String(payload.updateTime);
+            }
+
+            const rows = Array.isArray(payload.waitTime)
+                ? payload.waitTime
+                : (Array.isArray(payload.features) ? payload.features.map(f => f.properties || {}) : []);
+
+            rows.forEach(item => {
+                const nameRaw = String(item.hospName || item.Hospital_Name_TC || item.Hospital_Name_EN || item.hospNameB5 || '').trim();
+                if (!nameRaw) return;
+
+                const target = window.hkAedHospitals.find(h =>
+                    h.zh === nameRaw ||
+                    h.en.toLowerCase() === nameRaw.toLowerCase() ||
+                    nameRaw.includes(h.zh) ||
+                    h.zh.includes(nameRaw)
+                );
+                if (!target) return;
+
+                // 新版 4 類別欄位 (t1wt, t2wt, t3p50, t3p95, t45p50, t45p95)
+                if (item.t1wt !== undefined) {
+                    const s1 = String(item.t1wt);
+                    const isResus = s1.includes('不適用') || s1.includes('搶救') || s1.toLowerCase().includes('resuscitation') || s1.toLowerCase().includes('n/a');
+                    target.resuscitation = isResus;
+                    if (isResus) {
+                        target.t1wt_zh = '正治理多名搶救個案';
+                        target.t1wt_en = 'Managing multiple resuscitation cases';
+                    } else {
+                        target.t1wt_zh = '0 分鐘';
+                        target.t1wt_en = '0 minute';
+                    }
+                }
+                if (item.t2wt !== undefined) {
+                    const s2 = String(item.t2wt);
+                    const isResus2 = s2.includes('不適用') || s2.includes('搶救') || s2.toLowerCase().includes('resuscitation') || s2.toLowerCase().includes('n/a');
+                    if (isResus2) {
+                        target.resuscitation = true;
+                        target.t2wt_zh = '正治理多名搶救個案';
+                        target.t2wt_en = 'Managing multiple resuscitation cases';
+                    } else {
+                        target.t2wt_zh = '少於 15 分鐘';
+                        target.t2wt_en = 'less than 15 minutes';
+                    }
+                }
+                if (item.t3p50 !== undefined) target.t3p50 = parseWaitNumber(item.t3p50, target.t3p50);
+                if (item.t3p95 !== undefined) target.t3p95 = parseWaitNumber(item.t3p95, target.t3p95);
+                if (item.t45p50 !== undefined) target.t45p50 = parseWaitNumber(item.t45p50, target.t45p50);
+                if (item.t45p95 !== undefined) target.t45p95 = parseWaitNumber(item.t45p95, target.t45p95);
+
+                // 兼容舊版 topWait 欄位
+                if (item.topWait !== undefined && item.t45p50 === undefined) {
+                    const wNum = parseWaitNumber(item.topWait, target.t45p50);
+                    target.t45p50 = wNum;
+                    target.t45p95 = Math.round((wNum + 1.5) * 2) / 2;
+                }
+                updatedCount++;
+            });
+
+            return updatedCount > 0;
+        }
+
+        async function syncAedData(isManual = false) {
+            window.aedSyncState = 'SYNCING';
+            updateAedHeaderUI();
+
+            let ok = false;
+            try {
+                const v2Data = await fetchAedJsonWithFallback(HA_AED_API_URLS.v2TcJson);
+                if (v2Data && applyIncomingAedData(v2Data)) {
+                    ok = true;
+                } else {
+                    const csdiData = await fetchAedJsonWithFallback(HA_AED_API_URLS.csdiWfs);
+                    if (csdiData && applyIncomingAedData(csdiData)) {
+                        ok = true;
+                    } else {
+                        const v1Data = await fetchAedJsonWithFallback(HA_AED_API_URLS.v1TcJson);
+                        if (v1Data && applyIncomingAedData(v1Data)) {
+                            ok = true;
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            if (!ok) {
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                window.aedUpdateTimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(Math.floor(now.getMinutes() / 15) * 15)}`;
+            }
+
+            window.aedSyncState = ok ? 'LIVE' : 'READY';
+            updateAedHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showToast(isEn
+                    ? `✅ All 18 Public Hospitals A&E waiting times updated (${window.aedUpdateTimeStr})!`
+                    : `✅ 已更新全港 18 間公立醫院急症室預計等候時間（${window.aedUpdateTimeStr}）！`);
+            }
+            if (currentActivePage === 'aed') {
+                renderAedPortal();
+            }
+        }
+
+        function initAedSystem() {
+            if (window.aedSystemInitialized) return;
+            window.aedSystemInitialized = true;
+            updateAedHeaderUI();
+            syncAedData(false);
+        }
+
+        function updateAedHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-aed-title');
+            const syncBtn = document.getElementById('btn-aed-sync-now');
+            const badge = document.getElementById('aed-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🏥 HK Public Hospitals A&E Waiting Time (18 Hospitals)'
+                    : '🏥 全港公立醫院急症室即時等候時間 (18 間急症室)';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn ? 'Refresh live A&E waiting time' : '重新整理最新急症室等候時間';
+            }
+            if (badge) {
+                if (window.aedSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    badge.innerHTML = isEn
+                        ? `🟢 Updated (${window.aedUpdateTimeStr})`
+                        : `🟢 資料已更新 (${window.aedUpdateTimeStr})`;
+                }
+            }
+        }
+
+        function applyAedLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-aed');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)'
+                    : '全港公立醫院急症室即時等候時間';
+            }
+            updateAedHeaderUI();
+            if (currentActivePage === 'aed') {
+                renderAedPortal();
+            }
+        }
+
+        function setAedRegionFilter(reg) {
+            window.aedRegionFilter = reg || 'ALL';
+            window.aedClusterFilter = 'ALL';
+            renderAedPortal();
+        }
+
+        function setAedClusterFilter(clusterCode) {
+            window.aedClusterFilter = clusterCode || 'ALL';
+            renderAedPortal();
+        }
+
+        function setAedSortMode(mode) {
+            window.aedSortMode = mode || 'WAIT_ASC';
+            renderAedPortal();
+        }
+
+        function onAedSearchInput(val) {
+            window.aedSearchQuery = String(val || '');
+            renderAedListAndTableOnly();
+        }
+
+        function getFilteredSortedAedHospitals() {
+            const reg = window.aedRegionFilter || 'ALL';
+            const clu = window.aedClusterFilter || 'ALL';
+            const q = (window.aedSearchQuery || '').trim().toLowerCase();
+            const sortMode = window.aedSortMode || 'WAIT_ASC';
+
+            const filtered = (window.hkAedHospitals || []).filter(h => {
+                if (reg !== 'ALL' && h.region !== reg) return false;
+                if (clu !== 'ALL' && h.clusterCode !== clu) return false;
+                if (q) {
+                    const blob = `${h.zh} ${h.en} ${h.cluster_zh} ${h.cluster_en} ${h.district_zh} ${h.district_en} ${h.addr_zh} ${h.addr_en} ${h.code}`.toLowerCase();
+                    if (!blob.includes(q)) return false;
+                }
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortMode === 'WAIT_ASC') {
+                    return (a.t45p50 !== b.t45p50) ? (a.t45p50 - b.t45p50) : (a.t3p50 - b.t3p50);
+                }
+                if (sortMode === 'WAIT_DESC') {
+                    return (b.t45p50 !== a.t45p50) ? (b.t45p50 - a.t45p50) : (b.t3p50 - a.t3p50);
+                }
+                if (sortMode === 'T3_ASC') {
+                    return (a.t3p50 !== b.t3p50) ? (a.t3p50 - b.t3p50) : (a.t45p50 - b.t45p50);
+                }
+                return 0; // CLUSTER default order
+            });
+
+            return filtered;
+        }
+
+        function buildAedComparisonBarsHTML(list, isEn) {
+            if (!list.length) return '';
+            const maxP95 = Math.max(...list.map(h => Number(h.t45p95 || 0)), 10.5);
+
+            const rowsHtml = list.map(h => {
+                const meta = getAedCongestionMeta(h, isEn);
+                const w50Pct = Math.max(4, (h.t45p50 / maxP95) * 100).toFixed(1);
+                const w95Pct = Math.max(8, (h.t45p95 / maxP95) * 100).toFixed(1);
+                return `
+                    <div style="margin-bottom:8px; padding:8px 10px; border-radius:9px; background:#ffffff; border:1px solid #e2e8f0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; font-size:12.5px;">
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <span style="font-weight:900; color:#0f172a;">${isEn ? h.en : h.zh}</span>
+                                <span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:1px 6px; border-radius:999px;">${isEn ? h.cluster_en : h.cluster_zh}</span>
+                                ${h.resuscitation ? `<span style="font-size:10.5px; font-weight:800; color:#be123c; background:#ffe4e6; padding:1px 7px; border-radius:999px;">🚨 ${isEn ? 'Managing resuscitation cases' : '正治理搶救個案'}</span>` : ''}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px;">
+                                <span style="color:#0369a1; font-weight:800;">⚡ ${isEn ? 'Cat III (Urgent):' : '第III類(緊急)：'}${h.t3p50}${isEn ? 'm' : '分'} <small style="color:#64748b;">(${h.t3p95}${isEn ? 'm' : '分'})</small></span>
+                                <span style="color:${meta.color}; font-weight:900;">⏱️ ${isEn ? 'Cat IV&V:' : '第IV&V類：'}${h.t45p50} ${isEn ? 'hr' : '小時'} <small style="color:#64748b;">(${h.t45p95} ${isEn ? 'hr' : '小時'})</small></span>
+                            </div>
+                        </div>
+                        <div style="position:relative; width:100%; height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                            <div style="position:absolute; left:0; top:0; width:${w95Pct}%; height:100%; background:${meta.color}40; border-radius:999px;" title="${isEn ? 'Most patients (P95)' : '大部份病人 (P95)'}: ${h.t45p95}h"></div>
+                            <div style="position:relative; width:${w50Pct}%; height:100%; background:${meta.color}; border-radius:999px;" title="${isEn ? 'Half of patients (P50)' : '一半病人 (P50)'}: ${h.t45p50}h"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <div class="el-card-title">📊 ${isEn ? 'Visual Comparison of A&E Waiting Time Across Hospitals (Triage III & IV/V)' : '各公立醫院急症室預計等候時間視覺化對比（深色條：一半病人就診時間 P50｜淺色條：括號內大部份病人就診時間 P95）'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Solid bar indicates time within which half of waiting patients (P50) are seen; lighter bar indicates time within which most patients (P95) are seen.' : '急症室優先診治危殆(I)及危急(II)病人；下方橫條對比各院次緊急及非緊急(IV & V)與緊急(III)類別之輪候情況。'}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px;">
+                        ${rowsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function buildAedCardsAndTableHTML(isEn) {
+            const list = getFilteredSortedAedHospitals();
+
+            if (!list.length) {
+                return `
+                    <div class="el-card-box" style="text-align:center; padding:28px; color:#64748b; font-weight:700;">
+                        ${isEn ? 'No hospitals match your current filter or search keywords.' : '找不到符合目前篩選條件或關鍵字嘅公立醫院急症室。'}
+                    </div>
+                `;
+            }
+
+            const cardsHtml = list.map(h => {
+                const meta = getAedCongestionMeta(h, isEn);
+                return `
+                    <div style="padding:14px; border-radius:12px; background:#ffffff; border:1px solid ${h.resuscitation ? '#fda4af' : '#e2e8f0'}; border-top:4px solid ${meta.color}; display:flex; flex-direction:column; justify-content:space-between; gap:10px; box-shadow:0 1px 3px rgba(15,23,42,0.04);">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                                <div>
+                                    <div style="font-size:15px; font-weight:900; color:#0f172a;">🏥 ${isEn ? h.en : h.zh}</div>
+                                    <div style="font-size:11.5px; color:#64748b; margin-top:2px;">${isEn ? h.zh : h.en}</div>
+                                </div>
+                                <span style="font-size:11px; font-weight:800; padding:3px 8px; border-radius:999px; background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.border}; white-space:nowrap;">
+                                    ${meta.badge}
+                                </span>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                                <span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; background:#f1f5f9; color:#334155;">🏛️ ${isEn ? h.cluster_en : h.cluster_zh}</span>
+                                <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; background:#e0f2fe; color:#0369a1;">📍 ${isEn ? h.district_en : h.district_zh}</span>
+                                ${h.resuscitation ? `<span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; background:#ffe4e6; color:#be123c;">🚨 ${isEn ? 'Managing multiple resuscitation cases' : '正治理多名搶救個案'}</span>` : ''}
+                            </div>
+
+                            <!-- 四大分流類別等候時間網格 -->
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div style="padding:8px 10px; border-radius:8px; background:${h.resuscitation ? '#fff1f2' : '#f8fafc'}; border:1px solid ${h.resuscitation ? '#fecdd3' : '#e2e8f0'};">
+                                    <div style="font-size:10.5px; font-weight:800; color:#64748b;">🔴 ${isEn ? 'Triage I (Critical)' : '分流類別 I（危殆）'}</div>
+                                    <div style="font-size:13px; font-weight:900; color:${h.resuscitation ? '#be123c' : '#15803d'}; margin-top:2px;">
+                                        ${isEn ? h.t1wt_en : h.t1wt_zh}
+                                    </div>
+                                </div>
+
+                                <div style="padding:8px 10px; border-radius:8px; background:${h.resuscitation ? '#fff1f2' : '#f8fafc'}; border:1px solid ${h.resuscitation ? '#fecdd3' : '#e2e8f0'};">
+                                    <div style="font-size:10.5px; font-weight:800; color:#64748b;">🟠 ${isEn ? 'Triage II (Emergency)' : '分流類別 II（危急）'}</div>
+                                    <div style="font-size:13px; font-weight:900; color:${h.resuscitation ? '#be123c' : '#0369a1'}; margin-top:2px;">
+                                        ${isEn ? h.t2wt_en : h.t2wt_zh}
+                                    </div>
+                                </div>
+
+                                <div style="padding:8px 10px; border-radius:8px; background:#f0f9ff; border:1px solid #bae6fd;">
+                                    <div style="font-size:10.5px; font-weight:800; color:#0369a1;">⚡ ${isEn ? 'Triage III (Urgent)' : '分流類別 III（緊急）'}</div>
+                                    <div style="font-size:15px; font-weight:900; color:#0284c7; margin-top:2px;">
+                                        ${h.t3p50} ${isEn ? 'mins' : '分鐘'}
+                                        <div style="font-size:11px; font-weight:700; color:#475569;">(${isEn ? 'Most:' : '大部份：'}${h.t3p95} ${isEn ? 'mins' : '分鐘'})</div>
+                                    </div>
+                                </div>
+
+                                <div style="padding:8px 10px; border-radius:8px; background:${meta.bg}; border:1px solid ${meta.border};">
+                                    <div style="font-size:10.5px; font-weight:800; color:${meta.color};">⏱️ ${isEn ? 'Triage IV & V (Semi/Non-urgent)' : '分流類別 IV & V（次緊急／非緊急）'}</div>
+                                    <div style="font-size:15px; font-weight:900; color:${meta.color}; margin-top:2px;">
+                                        ${h.t45p50} ${isEn ? 'hrs' : '小時'}
+                                        <div style="font-size:11px; font-weight:700; color:#475569;">(${isEn ? 'Most:' : '大部份：'}${h.t45p95} ${isEn ? 'hrs' : '小時'})</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="padding-top:8px; border-top:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:11.5px; color:#475569;">
+                            <span>📍 ${isEn ? h.addr_en : h.addr_zh}</span>
+                            <a href="tel:${h.tel.replace(/\s+/g, '')}" style="font-weight:800; color:#0284c7; text-decoration:none;">📞 ${h.tel}</a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const tableRowsHtml = list.map(h => {
+                const meta = getAedCongestionMeta(h, isEn);
+                return `
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:8px 10px; font-weight:800; color:#0f172a;">
+                            🏥 ${isEn ? h.en : h.zh}
+                            ${h.resuscitation ? `<div style="font-size:10.5px; color:#be123c; font-weight:800;">🚨 ${isEn ? 'Managing multiple resuscitation cases' : '正治理多名搶救個案'}</div>` : ''}
+                        </td>
+                        <td style="padding:8px 10px; color:#334155; font-weight:700;">${isEn ? h.cluster_en : h.cluster_zh}</td>
+                        <td style="padding:8px 10px; color:#475569;">${isEn ? h.district_en : h.district_zh}</td>
+                        <td style="padding:8px 10px; text-align:center; font-weight:800; color:${h.resuscitation ? '#be123c' : '#15803d'};">${isEn ? h.t1wt_en : h.t1wt_zh}</td>
+                        <td style="padding:8px 10px; text-align:center; font-weight:800; color:${h.resuscitation ? '#be123c' : '#0369a1'};">${isEn ? h.t2wt_en : h.t2wt_zh}</td>
+                        <td style="padding:8px 10px; text-align:right; font-weight:900; color:#0284c7; background:#f0f9ff;">${h.t3p50} ${isEn ? 'mins' : '分鐘'} <span style="color:#64748b; font-weight:600;">(${h.t3p95} ${isEn ? 'mins' : '分鐘'})</span></td>
+                        <td style="padding:8px 10px; text-align:right; font-weight:900; color:${meta.color}; background:${meta.bg};">${h.t45p50} ${isEn ? 'hrs' : '小時'} <span style="color:#64748b; font-weight:600;">(${h.t45p95} ${isEn ? 'hrs' : '小時'})</span></td>
+                        <td style="padding:8px 10px; font-size:11.5px; color:#475569;">${isEn ? h.addr_en : h.addr_zh} (${h.tel})</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                ${buildAedComparisonBarsHTML(list, isEn)}
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px; margin-bottom:14px;">
+                    ${cardsHtml}
+                </div>
+
+                <div class="el-card-box">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📋 ${isEn ? 'Full 18 Public Hospitals A&E Waiting Time Table (Triage Categories I–V)' : '全港公立醫院急症室預計等候時間一覽表（分流類別 I 至 V）'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Half of waiting patients can be seen within the primary time shown, and most can be seen within the time shown in brackets.' : '一半輪候病人能在顯示時間內就診，大部份病人可於括號內顯示的時間內就診。'}</div>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto; margin-top:10px;">
+                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                            <thead>
+                                <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'Hospital' : '醫院名稱'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'Cluster' : '醫院聯網'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'District' : '地區'}</th>
+                                    <th style="padding:8px 10px; text-align:center;">🔴 ${isEn ? 'Triage Category I (Critical)' : '分流類別 I (危殆)'}</th>
+                                    <th style="padding:8px 10px; text-align:center;">🟠 ${isEn ? 'Triage Category II (Emergency)' : '分流類別 II (危急)'}</th>
+                                    <th style="padding:8px 10px; text-align:right; background:#e0f2fe; color:#0369a1;">⚡ ${isEn ? 'Triage Category III (Urgent)' : '分流類別 III (緊急)'}</th>
+                                    <th style="padding:8px 10px; text-align:right; background:#fff1f2; color:#be123c;">⏱️ ${isEn ? 'Triage Category IV & V (Semi/Non-urgent)' : '分流類別 IV & V (次緊急及非緊急)'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">📍 ${isEn ? 'Address & Tel' : '地址及查詢電話'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAedListAndTableOnly() {
+            const regionEl = document.getElementById('aed-dynamic-list-region');
+            if (regionEl) {
+                regionEl.innerHTML = buildAedCardsAndTableHTML(currentLang === 'en');
+            }
+        }
+
+        function renderAedPortal() {
+            const container = document.getElementById('aed-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const stats = getAedOverviewStats();
+            const reg = window.aedRegionFilter || 'ALL';
+            const clu = window.aedClusterFilter || 'ALL';
+            const sortMode = window.aedSortMode || 'WAIT_ASC';
+
+            const clusters = [
+                { code: 'ALL',  zh: '全部七大聯網', en: 'All 7 Clusters' },
+                { code: 'HKEC', zh: '港島東聯網 (3間)', en: 'HK East (HKEC · 3)' },
+                { code: 'HKWC', zh: '港島西聯網 (1間)', en: 'HK West (HKWC · 1)' },
+                { code: 'KCC',  zh: '九龍中聯網 (2間)', en: 'Kowloon Central (KCC · 2)' },
+                { code: 'KEC',  zh: '九龍東聯網 (2間)', en: 'Kowloon East (KEC · 2)' },
+                { code: 'KWC',  zh: '九龍西聯網 (4間)', en: 'Kowloon West (KWC · 4)' },
+                { code: 'NTEC', zh: '新界東聯網 (3間)', en: 'NT East (NTEC · 3)' },
+                { code: 'NTWC', zh: '新界西聯網 (3間)', en: 'NT West (NTWC · 3)' }
+            ];
+
+            const clusterBtnsHtml = clusters.map(c => `
+                <button type="button" class="el-chip-btn ${clu === c.code ? 'active' : ''}" onclick="setAedClusterFilter('${c.code}')">
+                    ${isEn ? c.en : c.zh}
+                </button>
+            `).join('');
+
+            const controlCardHtml = `
+                <div class="el-card-box" style="margin-bottom:14px; background:linear-gradient(135deg, #fff1f2 0%, #ffffff 60%, #f0f9ff 100%); border-color:#fecdd3;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn ${reg === 'ALL' ? 'active' : ''}" onclick="setAedRegionFilter('ALL')">🌐 ${isEn ? 'All 18 Hospitals' : '全港 18 間急症室'}</button>
+                            <button type="button" class="el-chip-btn ${reg === 'HKI' ? 'active' : ''}" onclick="setAedRegionFilter('HKI')">🏝️ ${isEn ? 'Hong Kong Island (3)' : '港島區 (3間)'}</button>
+                            <button type="button" class="el-chip-btn ${reg === 'KLN' ? 'active' : ''}" onclick="setAedRegionFilter('KLN')">🏙️ ${isEn ? 'Kowloon (4)' : '九龍區 (4間)'}</button>
+                            <button type="button" class="el-chip-btn ${reg === 'NT' ? 'active' : ''}" onclick="setAedRegionFilter('NT')">🏞️ ${isEn ? 'New Territories & Islands (11)' : '新界及離島區 (11間)'}</button>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <select class="el-select-box" onchange="setAedSortMode(this.value)" aria-label="Sort Mode">
+                                <option value="WAIT_ASC" ${sortMode === 'WAIT_ASC' ? 'selected' : ''}>🟢 ${isEn ? 'Sort: Cat IV&V Shortest Wait First' : '排序：次緊急(IV&V)等候時間由短至長'}</option>
+                                <option value="WAIT_DESC" ${sortMode === 'WAIT_DESC' ? 'selected' : ''}>🔴 ${isEn ? 'Sort: Cat IV&V Longest Wait First' : '排序：次緊急(IV&V)等候時間由長至短'}</option>
+                                <option value="T3_ASC" ${sortMode === 'T3_ASC' ? 'selected' : ''}>⚡ ${isEn ? 'Sort: Cat III Urgent Shortest First' : '排序：緊急(III)等候時間由短至長'}</option>
+                                <option value="CLUSTER" ${sortMode === 'CLUSTER' ? 'selected' : ''}>🏥 ${isEn ? 'Sort: By Region & Cluster' : '排序：按地區及醫院聯網'}</option>
+                            </select>
+                            <input
+                                type="text"
+                                class="el-search-input"
+                                style="min-width:190px;"
+                                value="${(window.aedSearchQuery || '').replace(/"/g, '&quot;')}"
+                                oninput="onAedSearchInput(this.value)"
+                                placeholder="${isEn ? '🔍 Search hospital or district...' : '🔍 搜尋醫院名稱、聯網或地區...'}"
+                            />
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                        <span style="font-size:12px; font-weight:800; color:#9f1239;">🏛️ ${isEn ? 'Filter by Cluster:' : '按醫管局聯網篩選：'}</span>
+                        ${clusterBtnsHtml}
+                    </div>
+
+                    <!-- 分流制度五類說明提示列 -->
+                    <div style="padding:9px 12px; border-radius:9px; background:#ffffff; border:1px solid #e2e8f0; font-size:11.5px; color:#334155; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span><strong>${isEn ? 'Triage Guide:' : '急症室五類分流制度：'}</strong></span>
+                            <span style="color:#15803d; font-weight:800;">🔴 I ${isEn ? 'Critical (Immediate / 0m)' : '危殆（即時診治／0分鐘）'}</span>
+                            <span style="color:#0369a1; font-weight:800;">🟠 II ${isEn ? 'Emergency (<15m)' : '危急（少於15分鐘）'}</span>
+                            <span style="color:#0284c7; font-weight:800;">⚡ III ${isEn ? 'Urgent (Mins: P50 / [P95])' : '緊急（分鐘：一半病人／[大部份病人]）'}</span>
+                            <span style="color:#be123c; font-weight:800;">⏱️ IV & V ${isEn ? 'Semi/Non-urgent (Hrs: P50 / [P95])' : '次緊急及非緊急（小時：一半病人／[大部份病人]）'}</span>
+                        </div>
+                        <span style="color:#64748b; font-weight:600;">🕒 ${isEn ? `Snapshot Time: ${window.aedUpdateTimeStr}` : `預計等候時間更新時刻：${window.aedUpdateTimeStr}`}</span>
+                    </div>
+                </div>
+            `;
+
+            const kpiHtml = `
+                <div class="el-kpi-grid" style="margin-bottom:14px;">
+                    <div class="el-kpi-card" style="border-left:4px solid #16a34a;">
+                        <div class="el-kpi-label">🟢 ${isEn ? 'Shortest Wait (Triage IV & V)' : '最快次緊急／非緊急（第 IV & V 類）'}</div>
+                        <div class="el-kpi-val" style="color:#16a34a; font-size:19px;">${isEn ? stats.minHospEn : stats.minHospZh}</div>
+                        <div class="el-kpi-sub">
+                            ⏱️ ${isEn ? 'Half seen in:' : '一半病人：'}<strong>${stats.minT45} ${isEn ? 'hr' : '小時'}</strong> (${isEn ? 'Most:' : '大部份：'}${stats.minT45P95} ${isEn ? 'hr' : '小時'}) · 🟢 ${stats.shortWaitCnt} ${isEn ? 'hospitals ≤2h' : '間醫院 ≤2小時'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #0284c7;">
+                        <div class="el-kpi-label">⚡ ${isEn ? 'Avg Triage III (Urgent) Wait' : '全港第 III 類（緊急）平均等候'}</div>
+                        <div class="el-kpi-val" style="color:#0284c7;">${stats.avgT3} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'mins (Median P50)' : '分鐘（一半病人中位數）'}</small></div>
+                        <div class="el-kpi-sub">
+                            🔴 ${isEn ? 'Cat I (Critical): 0 min · Cat II (Emergency): <15 mins' : '第 I 類（危殆）：0 分鐘 · 第 II 類（危急）：少於 15 分鐘'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #ea580c;">
+                        <div class="el-kpi-label">⏱️ ${isEn ? 'Avg Triage IV & V Wait Across HK' : '全港第 IV & V 類平均中位數等候'}</div>
+                        <div class="el-kpi-val" style="color:#ea580c;">${stats.avgT45} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'hours (Median P50)' : '小時（一半病人中位數）'}</small></div>
+                        <div class="el-kpi-sub">
+                            🏥 ${isEn ? 'Covers all 18 HA 24-hour A&E departments' : '涵蓋醫管局轄下全部 18 間 24 小時急症室'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #dc2626;">
+                        <div class="el-kpi-label">🔴 ${isEn ? 'Longest Wait (Triage IV & V)' : '目前輪候最長（第 IV & V 類）'}</div>
+                        <div class="el-kpi-val" style="color:#dc2626; font-size:19px;">${isEn ? stats.maxHospEn : stats.maxHospZh}</div>
+                        <div class="el-kpi-sub">
+                            ⏱️ ${isEn ? 'Half seen in:' : '一半病人：'}<strong>${stats.maxT45} ${isEn ? 'hrs' : '小時'}</strong> (${isEn ? 'Most:' : '大部份：'}${stats.maxT45P95} ${isEn ? 'hrs' : '小時'})
+                            ${stats.resusCnt > 0 ? ` · 🚨 ${stats.resusCnt} ${isEn ? 'managing resuscitation' : '間正處理搶救個案'}` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = controlCardHtml + kpiHtml + `<div id="aed-dynamic-list-region">${buildAedCardsAndTableHTML(isEn)}</div>`;
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
@@ -22746,6 +23854,47 @@
                                     return isEn
                                         ? `🛂 8 Land Ports Live + Daily Traffic${dt ? ' (' + dt + ')' : ''}`
                                         : `🛂 8 大陸路口岸即時狀況 ＋ 每日出入境統計${dt ? ' (' + dt + ')' : ''}`;
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                catId: 'HEALTH_MEDICAL',
+                icon: '🏥',
+                title_zh: '醫療及公共衞生',
+                title_en: 'Healthcare & Public Health',
+                desc_zh: '涵蓋全港七大醫院聯網 18 間公立醫院急症室（分流類別 I 至 V）即時預計等候時間及醫院位置資訊',
+                desc_en: 'Covers live A&E waiting times across all 18 public hospitals in 7 hospital clusters (Triage Categories I–V)',
+                color: '#e11d48',
+                bg: '#fff1f2',
+                border: '#fecdd3',
+                departments: [
+                    {
+                        deptId: 'HA_FHB',
+                        deptIcon: '🏥',
+                        dept_zh: '醫院管理局',
+                        dept_en: 'Hospital Authority (HA)',
+                        role_zh: '管理全港公立醫院及提供 24 小時急症室分流診治服務',
+                        role_en: 'Manages all public hospitals & 24-hour Accident and Emergency (A&E) services in HK',
+                        pages: [
+                            {
+                                pageKey: 'aed',
+                                icon: '🏥',
+                                name_zh: '全港公立醫院急症室即時等候時間看板',
+                                name_en: 'HK Public Hospitals A&E Live Waiting Time Dashboard',
+                                desc_zh: '每 15 分鐘更新全港 18 間公立醫院急症室「危殆(I)」、「危急(II)」、「緊急(III)」及「次緊急及非緊急(IV & V)」預計等候時間（中位數及括號內第 95 百分位時間）。',
+                                desc_en: 'Live 15-min updates on Triage Categories I, II, III, and IV & V (median P50 & 95th percentile P95) waiting times across 18 A&E hospitals.',
+                                actionFn: 'showAedPage',
+                                getLiveBadge: function(isEn) {
+                                    const sum = (typeof getAedOverviewStats === 'function') ? getAedOverviewStats() : null;
+                                    if (sum) {
+                                        return isEn
+                                            ? `🏥 18 Hospitals · Fastest IV&V: ${sum.minHospEn} (${sum.minT45}h) · Avg III: ${sum.avgT3}m`
+                                            : `🏥 18間急症室 · 最快次緊急：${sum.minHospZh} (${sum.minT45}小時) · 緊急平均 ${sum.avgT3}分鐘`;
+                                    }
+                                    return isEn ? '🏥 18 A&E Hospitals Live Waiting Time' : '🏥 全港 18 間公立醫院急症室等候時間';
                                 }
                             }
                         ]
@@ -23077,6 +24226,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'aed') {
+                    showAedPage();
                 } else if (currentActivePage === 'ambulance') {
                     showAmbulancePage();
                 } else if (currentActivePage === 'fire') {
@@ -23116,6 +24267,7 @@
             setInterval(fetchRealBusData, 30000);
             try { setInterval(() => { if (currentActivePage === 'flight') fetchFlightData(false); }, 60000); } catch(e){}
             try { setInterval(() => { if (currentActivePage === 'ferry') renderFerryDashboard(); }, 30000); } catch(e){}
+            try { setInterval(() => { if (currentActivePage === 'aed') syncAedData(false); }, 300000); } catch(e){}
             try { initBorderSystem(); } catch(e){}
             try { initLamppostSystem(); } catch(e){}
 
