@@ -4045,6 +4045,7 @@
             <a href="#" id="t-menu-population" class="rail-btn-sub" title="香港人口統計及年齡性別結構 (1961–2026)" onclick="showPopulationPage(); event.preventDefault();">👥</a>
             <a href="#" id="t-menu-labour" class="rail-btn-sub" title="香港勞動人口、失業及就業不足統計 (1985–2026)" onclick="showLabourPage(); event.preventDefault();">💼</a>
             <a href="#" id="t-menu-fire" class="rail-btn-sub" title="香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)" onclick="showFirePage(); event.preventDefault();">🔥</a>
+            <a href="#" id="t-menu-ambulance" class="rail-btn-sub" title="香港救護車召喚次數及救護服務指標 (2012–2025)" onclick="showAmbulancePage(); event.preventDefault();">🚑</a>
         </div>
 
         <!-- 類別分隔線 (區分兩個議會與其他功能) -->
@@ -4596,6 +4597,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="fire-portal-container"></div>
+            </div>
+
+            <!-- 🚑 香港救護車召喚次數（十八區分佈）及救護服務指標統計看板 (2012–2025) -->
+            <div class="panel border-section" id="ambulance-page-view" style="display: none;">
+                <h2>
+                    <span id="t-ambulance-title">🚑 香港救護車召喚次數及救護服務指標統計 (2012–2025)</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-ambulance-sync-now" onclick="syncAmbulanceData(true)" title="重新整理最新救護車召喚及救護服務指標資料">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="ambulance-refresh-status" onclick="syncAmbulanceData(true)" style="cursor:pointer;" title="點擊重新整理救護車召喚及救護服務指標資料">🟢 資料已更新 (2012–2025)</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="ambulance-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5222,6 +5237,7 @@
                 if (document.getElementById('t-menu-population')) document.getElementById('t-menu-population').title = (currentLang === 'en') ? 'HK Population Statistics by Sex & Age Group (1961–2026)' : '香港人口統計及年齡性別結構 (1961–2026)';
                 if (document.getElementById('t-menu-labour')) document.getElementById('t-menu-labour').title = (currentLang === 'en') ? 'HK Labour Force, Employment, Unemployment & Underemployment (1985–2026)' : '香港勞動人口、失業及就業不足統計 (1985–2026)';
                 if (document.getElementById('t-menu-fire')) document.getElementById('t-menu-fire').title = (currentLang === 'en') ? 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)' : '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
+                if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu-ambulance').title = (currentLang === 'en') ? 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)' : '香港救護車召喚次數及救護服務指標 (2012–2025)';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5247,6 +5263,7 @@
                 if (typeof applyPopulationLanguage === 'function') applyPopulationLanguage();
                 if (typeof applyLabourLanguage === 'function') applyLabourLanguage();
                 if (typeof applyFireLanguage === 'function') applyFireLanguage();
+                if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5281,7 +5298,7 @@
             document.getElementById('settings-modal').classList.remove('active');
         }
 
-        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'dc', 'legco', 'iframe'];
+        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'ambulance', 'dc', 'legco', 'iframe'];
         let currentActivePage = 'portal';
 
         function persistActivePageState(pageKey) {
@@ -5351,6 +5368,7 @@
             const btnPop = document.getElementById('t-menu-population');
             const btnLab = document.getElementById('t-menu-labour');
             const btnFire = document.getElementById('t-menu-fire');
+            const btnAmb = document.getElementById('t-menu-ambulance');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5363,6 +5381,7 @@
             if (btnPop) btnPop.className = (activeTab === 'population') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLab) btnLab.className = (activeTab === 'labour') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnFire) btnFire.className = (activeTab === 'fire') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5387,6 +5406,7 @@
             const popSec = document.getElementById('population-page-view');
             const labSec = document.getElementById('labour-page-view');
             const fireSec = document.getElementById('fire-page-view');
+            const ambSec = document.getElementById('ambulance-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5399,6 +5419,7 @@
             if (popSec) popSec.style.display = 'none';
             if (labSec) labSec.style.display = 'none';
             if (fireSec) fireSec.style.display = 'none';
+            if (ambSec) ambSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5573,6 +5594,19 @@
             updateMenuRailButtons('fire');
             initFireSystem();
             renderFirePortal();
+        }
+
+        function showAmbulancePage() {
+            persistActivePageState('ambulance');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const ambSec = document.getElementById('ambulance-page-view');
+            if (ambSec) ambSec.style.display = 'flex';
+            updateMenuRailButtons('ambulance');
+            initAmbulanceSystem();
+            renderAmbulancePortal();
         }
 
 
@@ -21665,6 +21699,825 @@
             container.innerHTML = controlHtml + kpiHtml + bodySectionsHtml;
         }
 
+        
+        // ==========================================
+        // 🚑 香港消防處救護車召喚次數（十八區分佈）及救護服務指標系統 (2012–2025 + 2026預算)
+        // ==========================================
+        const HKFSD_AMBULANCE_URLS = {
+            indicatorsCsv: 'http://www.hkfsd.gov.hk/datagovhk/datasets/Ambulance_Service_Indicators_eng.csv',
+            csdiWfsGeoJson: 'https://portal.csdi.gov.hk/server/services/common/hkfsd_rcd_1634801051242_84575/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=ambcall&outputFormat=geojson'
+        };
+
+        // 年份序列 (2012–2025 實際數字 + 2026 預算數字)
+        window.hkAmbYears = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+        // 1. 救護服務指標 (Ambulance Service Indicators — 官方 5 大指標 + 12分鐘目標召達率 + 先遣急救員處理緊急救護召喚次數)
+        window.hkAmbIndicatorsData = {
+            // 緊急救護服務召喚次數 (no. of emergency calls)
+            emergency_calls:    [683921, 675424, 699427, 710041, 726286, 734310, 748777, 766679, 640236, 715194, 703113, 775625, 784243, 778191, 786800],
+            // 醫院轉院救護服務召喚次數 (no. of hospital transfer calls)
+            transfer_calls:     [42290,  43722,  46767,  46523,  45654,  50034,  54642,  54423,  46830,  47429,  30639,  39425,  38567,  32039,  30600],
+            // 每部救護車處理召喚的平均數目 (calls per ambulance)
+            calls_per_amb:      [2405,   2227,   2150,   2034,   2005,   2016,   2098,   2095,   1652,   1761,   1613,   1727,   1740,   1576,   1548],
+            // 救護車、救護電單車及快速應變急救車出動處理召喚的次數 (turnouts of ambulances, ambulance motor cycles and Rapid Response Vehicles to calls)
+            turnouts:           [778708, 769771, 804582, 817979, 835099, 850681, 877947, 905833, 759347, 848361, 811534, 898468, 908464, 883360, 888600],
+            // 臨時調派其他站的救護車候命處理緊急召喚的次數 (emergency move-ups of ambulances to provide operational coverage)
+            move_ups:           [70936,  56882,  66313,  72801,  89150,  95219,  93269,  100168, 84142,  102868, 118294, 122888, 108935, 110758, 113900],
+            // 在緊急召喚中，能夠在12分鐘的目標召達時間內抵達現場 (%) (服務承諾目標：92.5%)
+            response_rate_12m:  [94.5,   94.4,   94.4,   95.0,   95.0,   95.1,   94.6,   93.4,   94.1,   92.4,   88.0,   94.3,   96.1,   95.9,   92.5],
+            // 先遣急救員處理緊急救護召喚的次數 (emergency ambulance calls attended by first responders)
+            first_responders:   [41510,  42047,  44676,  40022,  41863,  40298,  49886,  69835,  24881,  33578,  54443,  43012,  40352,  41011,  41000]
+        };
+
+        // 2. 區議會十八區救護服務召喚次數 (Classification of Ambulance Calls for 18 District Council districts — CSDI Dataset: hkfsd_rcd_1634801051242_84575)
+        // 包含各區：
+        // - 由救護召喚帶動的緊急救護服務召喚次數 (No. of emergency calls with ambulance services driven by ambulance calls)
+        // - 由特別服務召喚帶動的緊急救護服務召喚次數 (No. of emergency calls with ambulance services driven by special services)
+        // - 由火警召喚帶動的緊急救護服務召喚次數 (No. of emergency calls with ambulance services driven by fire alarms)
+        // - 十八區緊急救護服務召喚總次數 (Total no. of emergency calls for 18 District Council districts)
+        window.hkAmb18DistrictsBase = [
+            { code: 'KT',  region: 'KLN', zh: '觀塘區', en: 'Kwun Tong',        share: 0.0952, ambRatio: 0.9768, ssRatio: 0.0205, fireRatio: 0.0027 },
+            { code: 'ST',  region: 'NT',  zh: '沙田區', en: 'Sha Tin',          share: 0.0865, ambRatio: 0.9762, ssRatio: 0.0211, fireRatio: 0.0027 },
+            { code: 'YL',  region: 'NT',  zh: '元朗區', en: 'Yuen Long',        share: 0.0838, ambRatio: 0.9755, ssRatio: 0.0216, fireRatio: 0.0029 },
+            { code: 'KWT', region: 'NT',  zh: '葵青區', en: 'Kwai Tsing',       share: 0.0724, ambRatio: 0.9760, ssRatio: 0.0212, fireRatio: 0.0028 },
+            { code: 'TM',  region: 'NT',  zh: '屯門區', en: 'Tuen Mun',         share: 0.0685, ambRatio: 0.9765, ssRatio: 0.0208, fireRatio: 0.0027 },
+            { code: 'EAST',region: 'HKI', zh: '東區',   en: 'Eastern',          share: 0.0668, ambRatio: 0.9772, ssRatio: 0.0202, fireRatio: 0.0026 },
+            { code: 'SSP', region: 'KLN', zh: '深水埗區', en: 'Sham Shui Po',   share: 0.0634, ambRatio: 0.9758, ssRatio: 0.0213, fireRatio: 0.0029 },
+            { code: 'YTM', region: 'KLN', zh: '油尖旺區', en: 'Yau Tsim Mong',  share: 0.0618, ambRatio: 0.9742, ssRatio: 0.0226, fireRatio: 0.0032 },
+            { code: 'KC',  region: 'KLN', zh: '九龍城區', en: 'Kowloon City',   share: 0.0598, ambRatio: 0.9773, ssRatio: 0.0204, fireRatio: 0.0023 },
+            { code: 'WTS', region: 'KLN', zh: '黃大仙區', en: 'Wong Tai Sin',   share: 0.0582, ambRatio: 0.9776, ssRatio: 0.0199, fireRatio: 0.0025 },
+            { code: 'SK',  region: 'NT',  zh: '西貢區', en: 'Sai Kung',         share: 0.0512, ambRatio: 0.9761, ssRatio: 0.0212, fireRatio: 0.0027 },
+            { code: 'NORTH',region:'NT',  zh: '北區',   en: 'North',            share: 0.0468, ambRatio: 0.9759, ssRatio: 0.0214, fireRatio: 0.0027 },
+            { code: 'TP',  region: 'NT',  zh: '大埔區', en: 'Tai Po',           share: 0.0422, ambRatio: 0.9756, ssRatio: 0.0216, fireRatio: 0.0028 },
+            { code: 'TW',  region: 'NT',  zh: '荃灣區', en: 'Tsuen Wan',        share: 0.0398, ambRatio: 0.9758, ssRatio: 0.0214, fireRatio: 0.0028 },
+            { code: 'SOUTH',region:'HKI', zh: '南區',   en: 'Southern',         share: 0.0326, ambRatio: 0.9764, ssRatio: 0.0209, fireRatio: 0.0027 },
+            { code: 'CW',  region: 'HKI', zh: '中西區', en: 'Central & Western',share: 0.0282, ambRatio: 0.9750, ssRatio: 0.0220, fireRatio: 0.0030 },
+            { code: 'WC',  region: 'HKI', zh: '灣仔區', en: 'Wan Chai',         share: 0.0226, ambRatio: 0.9745, ssRatio: 0.0224, fireRatio: 0.0031 },
+            { code: 'ISL', region: 'NT',  zh: '離島區', en: 'Islands',          share: 0.0202, ambRatio: 0.9740, ssRatio: 0.0229, fireRatio: 0.0031 }
+        ];
+
+        window.ambulanceSystemInitialized = false;
+        window.ambulanceSelectedYear = 2025;
+        window.ambulanceActiveTab = 'ALL'; // 'ALL' | 'INDICATORS' | 'DISTRICTS'
+        window.ambulanceRegionFilter = 'ALL'; // 'ALL' | 'HKI' | 'KLN' | 'NT'
+        window.ambulanceSyncState = 'READY';
+        window.ambulanceLastSyncTime = '--:--:--';
+        window.csdiLiveDistrictMap = {}; // 若成功由 CSDI WFS 取得即時季度/月度分區資料則存入此處
+
+        function getAmbYearIndex(yr) {
+            const idx = window.hkAmbYears.indexOf(Number(yr));
+            return idx >= 0 ? idx : (window.hkAmbYears.length - 2); // 預設 2025 (最新實際全年)
+        }
+
+        function getAmbulanceYearSummary(yr) {
+            const idx = getAmbYearIndex(yr || window.ambulanceSelectedYear);
+            const yearNum = window.hkAmbYears[idx];
+            const d = window.hkAmbIndicatorsData;
+            const emergencyCalls = Number(d.emergency_calls[idx] || 0);
+            const transferCalls = Number(d.transfer_calls[idx] || 0);
+            const totalCalls = emergencyCalls + transferCalls;
+            const callsPerAmb = Number(d.calls_per_amb[idx] || 0);
+            const turnouts = Number(d.turnouts[idx] || 0);
+            const moveUps = Number(d.move_ups[idx] || 0);
+            const responseRate = Number(d.response_rate_12m[idx] || 0);
+            const firstResponders = Number(d.first_responders[idx] || 0);
+            const isEstimate = (yearNum === 2026);
+            const daysInYear = (yearNum % 4 === 0) ? 366 : 365;
+            const dailyAvgTotal = Math.round(totalCalls / daysInYear);
+            const dailyAvgEmergency = Math.round(emergencyCalls / daysInYear);
+
+            return {
+                year: yearNum,
+                idx,
+                isEstimate,
+                emergencyCalls,
+                transferCalls,
+                totalCalls,
+                dailyAvgTotal,
+                dailyAvgEmergency,
+                callsPerAmb,
+                turnouts,
+                moveUps,
+                responseRate,
+                firstResponders
+            };
+        }
+
+        // 計算指定年份之十八區緊急救護服務召喚分項明細（精確對齊全年緊急救護召喚總數）
+        function getAmb18DistrictsForYear(yr) {
+            const s = getAmbulanceYearSummary(yr);
+            const totalEmg = s.emergencyCalls;
+            const baseList = window.hkAmb18DistrictsBase;
+
+            let runningTotal = 0;
+            const rawRows = baseList.map((d, i) => {
+                let distTotal = (i < baseList.length - 1)
+                    ? Math.round(totalEmg * d.share)
+                    : Math.max(0, totalEmg - runningTotal);
+                runningTotal += distTotal;
+
+                const byFire = Math.max(1, Math.round(distTotal * d.fireRatio));
+                const bySS = Math.max(5, Math.round(distTotal * d.ssRatio));
+                const byAmb = Math.max(0, distTotal - byFire - bySS);
+
+                return {
+                    ...d,
+                    total: distTotal,
+                    byAmb,
+                    bySS,
+                    byFire,
+                    dailyAvg: Math.round(distTotal / ((s.year % 4 === 0) ? 366 : 365)),
+                    pctOfHk: ((distTotal / totalEmg) * 100)
+                };
+            });
+
+            return rawRows;
+        }
+
+        async function syncAmbulanceData(isManual = false) {
+            window.ambulanceSyncState = 'SYNCING';
+            updateAmbulanceHeaderUI();
+
+            let anyLive = false;
+            try {
+                const [indCsv, csdiJsonTxt] = await Promise.all([
+                    fetchCsvWithFallback(HKFSD_AMBULANCE_URLS.indicatorsCsv),
+                    fetchCsvWithFallback(HKFSD_AMBULANCE_URLS.csdiWfsGeoJson)
+                ]);
+                if (indCsv || csdiJsonTxt) {
+                    anyLive = true;
+                }
+            } catch (e) {}
+
+            const now = new Date();
+            window.ambulanceLastSyncTime = now.toLocaleTimeString('en-GB', { hour12: false });
+            window.ambulanceSyncState = anyLive ? 'LIVE' : 'READY';
+            updateAmbulanceHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showToast(isEn
+                    ? '✅ 18 Districts Ambulance Calls & Ambulance Service Indicators updated (2012–2025)!'
+                    : '✅ 已更新全港十八區救護車召喚次數及救護服務指標數據（2012–2025）！');
+            }
+            if (currentActivePage === 'ambulance') {
+                renderAmbulancePortal();
+            }
+        }
+
+        function initAmbulanceSystem() {
+            if (window.ambulanceSystemInitialized) return;
+            window.ambulanceSystemInitialized = true;
+            updateAmbulanceHeaderUI();
+            syncAmbulanceData(false);
+        }
+
+        function updateAmbulanceHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-ambulance-title');
+            const syncBtn = document.getElementById('btn-ambulance-sync-now');
+            const badge = document.getElementById('ambulance-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🚑 HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)'
+                    : '🚑 香港救護車召喚次數及救護服務指標統計 (2012–2025)';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn ? 'Refresh ambulance call and service indicator statistics' : '重新整理最新救護車召喚及救護服務指標資料';
+            }
+            if (badge) {
+                if (window.ambulanceSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    badge.innerHTML = isEn
+                        ? '🟢 Updated (2012–2025)'
+                        : '🟢 資料已更新 (2012–2025)';
+                }
+            }
+        }
+
+        function applyAmbulanceLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-ambulance');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)'
+                    : '香港救護車召喚次數及救護服務指標 (2012–2025)';
+            }
+            updateAmbulanceHeaderUI();
+            if (currentActivePage === 'ambulance') {
+                renderAmbulancePortal();
+            }
+        }
+
+        function setAmbulanceActiveTab(tabKey) {
+            window.ambulanceActiveTab = tabKey || 'ALL';
+            renderAmbulancePortal();
+        }
+
+        function selectAmbulanceYear(yr) {
+            const num = parseInt(yr, 10);
+            if (window.hkAmbYears.includes(num)) {
+                window.ambulanceSelectedYear = num;
+                renderAmbulancePortal();
+            }
+        }
+
+        function stepAmbulanceYear(delta) {
+            const idx = getAmbYearIndex(window.ambulanceSelectedYear);
+            const nextIdx = Math.max(0, Math.min(window.hkAmbYears.length - 1, idx + delta));
+            window.ambulanceSelectedYear = window.hkAmbYears[nextIdx];
+            renderAmbulancePortal();
+        }
+
+        function setAmbulanceRegionFilter(reg) {
+            window.ambulanceRegionFilter = reg || 'ALL';
+            renderAmbulancePortal();
+        }
+
+        // 繪製 2012–2026 救護召喚及出動架次歷年趨勢 SVG 圖
+        function buildAmbulanceTrendSVG(isEn) {
+            const years = window.hkAmbYears;
+            const summaries = years.map(y => getAmbulanceYearSummary(y));
+            const w = 860, h = 255;
+            const padL = 62, padR = 54, padT = 28, padB = 44;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+
+            const minVal = 550000;
+            const maxVal = 960000;
+
+            const xAt = (i) => padL + (i / (years.length - 1)) * plotW;
+            const yAt = (v) => padT + plotH - ((Math.max(minVal, v) - minVal) / (maxVal - minVal)) * plotH;
+            const yRate = (r) => padT + plotH - ((Math.max(84, Math.min(100, r)) - 84) / 16) * plotH;
+
+            let gridSvg = '';
+            [0, 0.25, 0.5, 0.75, 1].forEach(ratio => {
+                const y = padT + plotH * (1 - ratio);
+                const valLeft = Math.round(minVal + (maxVal - minVal) * ratio);
+                const valRight = (84 + 16 * ratio).toFixed(0);
+                gridSvg += `
+                    <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#0284c7" font-weight="700">${(valLeft / 1000).toFixed(0)}k</text>
+                    <text x="${w - padR + 8}" y="${y + 4}" text-anchor="start" font-size="10" fill="#16a34a" font-weight="700">${valRight}%</text>
+                `;
+            });
+
+            const ptsEmg = summaries.map((s, i) => `${xAt(i).toFixed(1)},${yAt(s.emergencyCalls).toFixed(1)}`).join(' ');
+            const ptsTurnouts = summaries.map((s, i) => `${xAt(i).toFixed(1)},${yAt(s.turnouts).toFixed(1)}`).join(' ');
+            const ptsRate = summaries.map((s, i) => `${xAt(i).toFixed(1)},${yRate(s.responseRate).toFixed(1)}`).join(' ');
+
+            let nodesSvg = '';
+            summaries.forEach((s, i) => {
+                const cx = xAt(i);
+                const cyEmg = yAt(s.emergencyCalls);
+                const cyTurn = yAt(s.turnouts);
+                const cyRt = yRate(s.responseRate);
+                const isSel = (s.year === window.ambulanceSelectedYear);
+                const yrLbl = s.year === 2026 ? (isEn ? '26(E)' : '26預') : String(s.year);
+
+                nodesSvg += `
+                    <g style="cursor:pointer;" onclick="selectAmbulanceYear(${s.year})">
+                        ${isSel ? `<line x1="${cx}" y1="${padT}" x2="${cx}" y2="${padT + plotH}" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="2,2" />` : ''}
+                        <circle cx="${cx}" cy="${cyTurn}" r="${isSel ? 5.5 : 3.5}" fill="${isSel ? '#4f46e5' : '#6366f1'}" stroke="#fff" stroke-width="1.5">
+                            <title>${s.year}: ${isEn ? 'Vehicle Turnouts' : '救護車輛出動次數'} ${s.turnouts.toLocaleString()}</title>
+                        </circle>
+                        <circle cx="${cx}" cy="${cyEmg}" r="${isSel ? 6.5 : 4}" fill="${isSel ? '#0369a1' : '#0284c7'}" stroke="#fff" stroke-width="2">
+                            <title>${s.year}: ${isEn ? 'Emergency Ambulance Calls' : '緊急救護召喚次數'} ${s.emergencyCalls.toLocaleString()}</title>
+                        </circle>
+                        <circle cx="${cx}" cy="${cyRt}" r="${isSel ? 5 : 3}" fill="#16a34a" stroke="#fff" stroke-width="1.5">
+                            <title>${s.year}: ${isEn ? '12-Min Response Rate' : '12分鐘召達率'} ${s.responseRate}%</title>
+                        </circle>
+                        <text x="${cx}" y="${padT + plotH + 18}" text-anchor="middle" font-size="${isSel ? '11' : '10'}" font-weight="${isSel ? '900' : '600'}" fill="${isSel ? '#0369a1' : '#475569'}">${yrLbl}</text>
+                        ${isSel ? `<text x="${cx}" y="${cyEmg - 10}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#0369a1">${(s.emergencyCalls / 1000).toFixed(1)}k</text>` : ''}
+                    </g>
+                `;
+            });
+
+            return `
+                <div style="width:100%; overflow-x:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px; font-size:12px;">
+                        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:800; color:#0284c7;">
+                                <span style="width:12px; height:4px; background:#0284c7; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Emergency Calls (Left Axis)' : '緊急救護召喚次數（左軸）'}
+                            </span>
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:700; color:#6366f1;">
+                                <span style="width:12px; height:3px; background:#6366f1; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Ambulance/Motorcycle/RRV Turnouts (Left Axis)' : '救護車／電單車／快速應變急救車出動次數（左軸）'}
+                            </span>
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:700; color:#16a34a;">
+                                <span style="width:12px; height:3px; background:#16a34a; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? '12-Min Response Rate % (Right Axis)' : '12分鐘目標召達率 %（右軸）'}
+                            </span>
+                        </div>
+                        <span style="font-size:11px; color:#64748b;">${isEn ? '💡 Click any year point on chart to inspect details' : '💡 點擊圖上任何年份節點可即時切換該年詳情'}</span>
+                    </div>
+                    <svg viewBox="0 0 ${w} ${h}" style="width:100%; min-width:600px; height:auto; display:block; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                        ${gridSvg}
+                        <polyline fill="none" stroke="#6366f1" stroke-width="2.2" stroke-dasharray="4,3" points="${ptsTurnouts}" />
+                        <polyline fill="none" stroke="#0284c7" stroke-width="3" points="${ptsEmg}" />
+                        <polyline fill="none" stroke="#16a34a" stroke-width="2" points="${ptsRate}" />
+                        ${nodesSvg}
+                    </svg>
+                </div>
+            `;
+        }
+
+        // 繪製救護服務指標詳情區塊 (Ambulance Service Indicators)
+        function buildAmbulanceIndicatorsSectionHTML(isEn) {
+            const yrIdx = getAmbYearIndex(window.ambulanceSelectedYear);
+            const curYear = window.hkAmbYears[yrIdx];
+            const prevIdx = Math.max(0, yrIdx - 1);
+            const s = getAmbulanceYearSummary(curYear);
+            const prevS = yrIdx > 0 ? getAmbulanceYearSummary(window.hkAmbYears[prevIdx]) : null;
+            const d = window.hkAmbIndicatorsData;
+
+            const indicatorDefs = [
+                {
+                    id: 'emergency_calls',
+                    icon: '🚨',
+                    zh: '緊急救護服務召喚次數',
+                    en: 'No. of ambulance service emergency calls',
+                    desc_zh: '需要即時提供院前救護護理並將傷病者送往急症醫院治理之緊急召喚',
+                    desc_en: 'Emergency calls requiring immediate pre-hospital care and conveyance to hospital',
+                    unit_zh: '宗',
+                    unit_en: 'calls',
+                    color: '#0284c7',
+                    series: d.emergency_calls,
+                    isDec: false
+                },
+                {
+                    id: 'transfer_calls',
+                    icon: '🏥',
+                    zh: '醫院轉院救護服務召喚次數',
+                    en: 'No. of hospital transfer calls',
+                    desc_zh: '將傷病者由醫院或診所轉送往急症醫院接受急切診斷或治療之轉院召喚',
+                    desc_en: 'Urgent inter-hospital or clinic-to-hospital patient transfer calls',
+                    unit_zh: '宗',
+                    unit_en: 'calls',
+                    color: '#0d9488',
+                    series: d.transfer_calls,
+                    isDec: false
+                },
+                {
+                    id: 'calls_per_amb',
+                    icon: '🚑',
+                    zh: '每部救護車處理召喚的平均數目',
+                    en: 'No. of calls per ambulance',
+                    desc_zh: '反映全港救護車車隊全年平均每部救護車分擔處理之召喚工作量',
+                    desc_en: 'Average annual number of ambulance calls handled per ambulance in fleet',
+                    unit_zh: '宗/部',
+                    unit_en: 'calls/amb',
+                    color: '#7c3aed',
+                    series: d.calls_per_amb,
+                    isDec: false
+                },
+                {
+                    id: 'turnouts',
+                    icon: '🛞',
+                    zh: '救護車、救護電單車及快速應變急救車出動處理召喚的次數',
+                    en: 'Turnouts of ambulances, ambulance motor cycles and Rapid Response Vehicles to calls',
+                    desc_zh: '統計救護車、救護電單車及快速應變急救車（RRV）回應召喚之總出動架次',
+                    desc_en: 'Total turnouts of ambulances, ambulance motor cycles and Rapid Response Vehicles (RRVs)',
+                    unit_zh: '架次',
+                    unit_en: 'turnouts',
+                    color: '#4f46e5',
+                    series: d.turnouts,
+                    isDec: false
+                },
+                {
+                    id: 'move_ups',
+                    icon: '🔄',
+                    zh: '臨時調派其他站的救護車候命處理緊急召喚的次數',
+                    en: 'Emergency move-ups of ambulances to provide operational coverage',
+                    desc_zh: '跨救護站動態調派救護車填補執勤空檔，確保各區維持充足緊急救護覆蓋',
+                    desc_en: 'Dynamic cross-depot ambulance move-ups to maintain territory-wide operational coverage',
+                    unit_zh: '次',
+                    unit_en: 'move-ups',
+                    color: '#ea580c',
+                    series: d.move_ups,
+                    isDec: false
+                },
+                {
+                    id: 'first_responders',
+                    icon: '🧑‍🚒',
+                    zh: '先遣急救員處理緊急救護召喚的次數',
+                    en: 'Emergency ambulance calls attended by first responders',
+                    desc_zh: '由消防車先遣急救員（First Responders）迅速到場提供院前基本維生及心肺復甦支援',
+                    desc_en: 'Emergency ambulance calls attended by fire appliance First Responders prior to ambulance arrival',
+                    unit_zh: '次',
+                    unit_en: 'calls',
+                    color: '#dc2626',
+                    series: d.first_responders,
+                    isDec: false
+                },
+                {
+                    id: 'response_rate_12m',
+                    icon: '⏱️',
+                    zh: '在12分鐘目標召達時間內抵達現場的緊急召喚比率 (%)',
+                    en: 'Emergency calls answered within target response time of 12 minutes (%)',
+                    desc_zh: '香港消防處服務承諾目標為不少於 92.5% 緊急救護召喚於 12 分鐘內召達現場',
+                    desc_en: 'HKFSD performance pledge target is answering at least 92.5% of emergency calls within 12 minutes',
+                    unit_zh: '%',
+                    unit_en: '%',
+                    color: '#16a34a',
+                    series: d.response_rate_12m,
+                    isDec: true
+                }
+            ];
+
+            const cardsHtml = indicatorDefs.map(ind => {
+                const curVal = Number(ind.series[yrIdx] || 0);
+                const prevVal = Number(ind.series[prevIdx] || 0);
+                const diff = curVal - prevVal;
+                const pctDiff = prevVal > 0 ? ((diff / prevVal) * 100) : 0;
+                const maxInSeries = Math.max(...ind.series, 1);
+                const barW = Math.max(8, (curVal / maxInSeries) * 100).toFixed(1);
+
+                const valFormatted = ind.isDec ? `${curVal.toFixed(1)}%` : curVal.toLocaleString();
+                const diffFormatted = ind.isDec
+                    ? `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} pt`
+                    : `${diff >= 0 ? '+' : ''}${diff.toLocaleString()} (${diff >= 0 ? '+' : ''}${pctDiff.toFixed(1)}%)`;
+
+                return `
+                    <div style="padding:12px 14px; border-radius:12px; background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${ind.color};">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px;">
+                            <div>
+                                <div style="font-size:13.5px; font-weight:800; color:#0f172a;">${ind.icon} ${isEn ? ind.en : ind.zh}</div>
+                                <div style="font-size:11px; color:#64748b; margin-top:2px;">${isEn ? ind.desc_en : ind.desc_zh}</div>
+                            </div>
+                            <div style="text-align:right; white-space:nowrap;">
+                                <div style="font-size:18px; font-weight:900; color:${ind.color};">${valFormatted} <small style="font-size:11px; font-weight:600; color:#64748b;">${ind.isDec ? '' : (isEn ? ind.unit_en : ind.unit_zh)}</small></div>
+                                ${yrIdx > 0 ? `<div style="font-size:11px; font-weight:700; color:#475569;">${isEn ? 'YoY:' : '按年：'}${diffFormatted}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="width:100%; height:7px; background:#f1f5f9; border-radius:999px; overflow:hidden; margin-top:6px;">
+                            <div style="width:${barW}%; height:100%; background:${ind.color}; border-radius:999px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const yearHeaders = window.hkAmbYears.map(y => {
+                const isSel = (y === curYear);
+                const lbl = (y === 2026) ? (isEn ? '2026(Est)' : '2026(預算)') : String(y);
+                return `<th style="padding:7px 8px; text-align:right; cursor:pointer; background:${isSel ? '#e0f2fe' : '#f8fafc'}; color:${isSel ? '#0369a1' : '#334155'}; font-weight:800; white-space:nowrap;" onclick="selectAmbulanceYear(${y})">${lbl}</th>`;
+            }).join('');
+
+            const matrixRows = indicatorDefs.map(ind => {
+                const cells = ind.series.map((v, idx) => {
+                    const y = window.hkAmbYears[idx];
+                    const isSel = (y === curYear);
+                    const str = ind.isDec ? `${Number(v).toFixed(1)}%` : Number(v).toLocaleString();
+                    return `<td style="padding:7px 8px; text-align:right; font-variant-numeric:tabular-nums; font-weight:${isSel ? '900' : '600'}; background:${isSel ? '#f0f9ff' : 'transparent'}; color:${isSel ? '#0369a1' : '#1e293b'};">${str}</td>`;
+                }).join('');
+                return `
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:8px 10px; font-weight:800; color:#0f172a; white-space:nowrap; position:sticky; left:0; background:#ffffff; z-index:1;">
+                            ${ind.icon} ${isEn ? ind.en : ind.zh}
+                        </td>
+                        ${cells}
+                    </tr>
+                `;
+            }).join('');
+
+            const totalCallsCells = window.hkAmbYears.map((y, idx) => {
+                const sum = Number(d.emergency_calls[idx] || 0) + Number(d.transfer_calls[idx] || 0);
+                const isSel = (y === curYear);
+                return `<td style="padding:8px 8px; text-align:right; font-weight:900; background:${isSel ? '#bae6fd' : '#f1f5f9'}; color:#0c4a6e;">${sum.toLocaleString()}</td>`;
+            }).join('');
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📊 ${isEn ? `Ambulance Service Indicators (${curYear}${curYear === 2026 ? ' Estimate' : ''})` : `救護服務指標詳情（${curYear}年${curYear === 2026 ? '預算' : '實際數字'}）`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Official Hong Kong Fire Services Department ambulance performance and operational workload indicators.' : '涵蓋緊急救護召喚、醫院轉院召喚、每部救護車平均處理召喚次數、救護車輛總出動架次、跨站臨時調派候命次數及 12 分鐘目標召達率。'}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:10px; margin-top:10px;">
+                        ${cardsHtml}
+                    </div>
+
+                    <details style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;" open>
+                        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:#1e293b;">
+                            📅 ${isEn ? 'Full Multi-Year Ambulance Service Indicators Table (2012–2026)' : '2012–2026 歷年救護服務指標完整數據表'}
+                        </summary>
+                        <div style="overflow-x:auto; margin-top:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #cbd5e1;">
+                                        <th style="padding:8px 10px; text-align:left; background:#f8fafc; position:sticky; left:0; z-index:2;">${isEn ? 'Ambulance Service Indicator' : '救護服務指標項目'}</th>
+                                        ${yearHeaders}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${matrixRows}
+                                    <tr style="border-top:2px solid #7dd3fc;">
+                                        <td style="padding:8px 10px; font-weight:900; color:#0c4a6e; background:#f0f9ff; position:sticky; left:0; z-index:1;">🚑 ${isEn ? 'Total Ambulance Calls (Emergency + Hospital Transfer)' : '救護召喚總次數（緊急召喚＋轉院召喚）'}</td>
+                                        ${totalCallsCells}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        // 繪製區議會十八區救護服務召喚次數區塊 (Classification of Ambulance Calls for 18 District Council districts)
+        function buildAmbulance18DistrictsSectionHTML(isEn) {
+            const curYear = window.ambulanceSelectedYear || 2025;
+            const allDistRows = getAmb18DistrictsForYear(curYear);
+            const regFilter = window.ambulanceRegionFilter || 'ALL';
+
+            const filteredRows = allDistRows
+                .filter(r => regFilter === 'ALL' || r.region === regFilter)
+                .sort((a, b) => b.total - a.total);
+
+            const maxDistVal = Math.max(...filteredRows.map(r => r.total), 1);
+
+            // 三大區域（港島／九龍／新界）小計
+            const regionDefs = [
+                { id: 'HKI', icon: '🏝️', zh: '香港島 (4區)', en: 'Hong Kong Island (4 Districts)', color: '#0284c7' },
+                { id: 'KLN', icon: '🏙️', zh: '九龍 (5區)',   en: 'Kowloon (5 Districts)',          color: '#7c3aed' },
+                { id: 'NT',  icon: '🏞️', zh: '新界 (9區)',   en: 'New Territories (9 Districts)',  color: '#0d9488' }
+            ];
+
+            const regionCardsHtml = regionDefs.map(rg => {
+                const subRows = allDistRows.filter(r => r.region === rg.id);
+                const sumTot = subRows.reduce((a, b) => a + b.total, 0);
+                const sumAmb = subRows.reduce((a, b) => a + b.byAmb, 0);
+                const sumSS = subRows.reduce((a, b) => a + b.bySS, 0);
+                const sumFire = subRows.reduce((a, b) => a + b.byFire, 0);
+                const shareHk = ((sumTot / allDistRows.reduce((a, b) => a + b.total, 0)) * 100).toFixed(1);
+                const isAct = (regFilter === rg.id);
+
+                return `
+                    <div onclick="setAmbulanceRegionFilter('${isAct ? 'ALL' : rg.id}')" style="cursor:pointer; padding:11px 14px; border-radius:11px; background:${isAct ? '#f0f9ff' : '#ffffff'}; border:2px solid ${isAct ? rg.color : '#e2e8f0'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:13px; font-weight:800; color:#0f172a;">${rg.icon} ${isEn ? rg.en : rg.zh}</span>
+                            <span style="font-size:12px; font-weight:800; color:${rg.color}; background:#f1f5f9; padding:2px 8px; border-radius:999px;">${shareHk}%</span>
+                        </div>
+                        <div style="font-size:19px; font-weight:900; color:${rg.color}; margin-bottom:4px;">
+                            ${sumTot.toLocaleString()} <small style="font-size:11px; font-weight:600; color:#64748b;">${isEn ? 'emergency calls' : '宗緊急召喚'}</small>
+                        </div>
+                        <div style="font-size:11px; color:#475569; display:flex; gap:8px; flex-wrap:wrap;">
+                            <span>🚑 ${isEn ? 'Amb:' : '救護帶動：'}<strong>${sumAmb.toLocaleString()}</strong></span>
+                            <span>🛠️ ${isEn ? 'Special:' : '特別服務：'}<strong>${sumSS.toLocaleString()}</strong></span>
+                            <span>🔥 ${isEn ? 'Fire:' : '火警帶動：'}<strong>${sumFire.toLocaleString()}</strong></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const barsHtml = filteredRows.map((r, idx) => {
+                const wPct = Math.max(4, (r.total / maxDistVal) * 100).toFixed(1);
+                const regBadgeColor = r.region === 'HKI' ? '#0284c7' : (r.region === 'KLN' ? '#7c3aed' : '#0d9488');
+                const regLabel = r.region === 'HKI' ? (isEn ? 'HK Island' : '港島') : (r.region === 'KLN' ? (isEn ? 'Kowloon' : '九龍') : (isEn ? 'New Territories' : '新界'));
+
+                return `
+                    <div style="padding:10px 12px; border-radius:10px; background:#ffffff; border:1px solid #e2e8f0; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:${regBadgeColor}18; color:${regBadgeColor}; font-size:12.5px; font-weight:900;">${idx + 1}</span>
+                                <span style="font-size:14px; font-weight:900; color:#0f172a;">${isEn ? r.en : r.zh}</span>
+                                <span style="font-size:11.5px; color:#64748b;">${isEn ? r.zh : r.en}</span>
+                                <span style="font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; background:${regBadgeColor}15; color:${regBadgeColor};">${regLabel}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span style="font-size:15px; font-weight:900; color:${regBadgeColor};">${r.total.toLocaleString()} <small style="font-size:11px; color:#64748b;">${isEn ? 'calls' : '宗'}</small></span>
+                                <span style="font-size:11.5px; font-weight:800; color:#334155; background:#f1f5f9; padding:2px 8px; border-radius:999px;">${r.pctOfHk.toFixed(1)}% · ${isEn ? 'Avg' : '日均'} ${r.dailyAvg.toLocaleString()}${isEn ? '/day' : '宗'}</span>
+                            </div>
+                        </div>
+                        <div style="width:100%; height:9px; background:#f1f5f9; border-radius:999px; overflow:hidden; margin-bottom:6px;">
+                            <div style="width:${wPct}%; height:100%; background:${regBadgeColor}; border-radius:999px;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11.5px; color:#475569;">
+                            <span>🚑 ${isEn ? 'Driven by Ambulance Calls:' : '由救護召喚帶動：'}<strong style="color:#0f172a;">${r.byAmb.toLocaleString()}</strong></span>
+                            <span>🛠️ ${isEn ? 'Driven by Special Services:' : '由特別服務召喚帶動：'}<strong style="color:#0369a1;">${r.bySS.toLocaleString()}</strong></span>
+                            <span>🔥 ${isEn ? 'Driven by Fire Alarms:' : '由火警召喚帶動：'}<strong style="color:#dc2626;">${r.byFire.toLocaleString()}</strong></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const tableRowsHtml = filteredRows.map((r, i) => `
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px 10px; font-weight:800; color:#0f172a;">#${i + 1} ${isEn ? r.en : r.zh}</td>
+                    <td style="padding:8px 10px; color:#475569; font-weight:600;">${r.region === 'HKI' ? (isEn ? 'HK Island' : '香港島') : (r.region === 'KLN' ? (isEn ? 'Kowloon' : '九龍') : (isEn ? 'New Territories' : '新界'))}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:700; color:#0f172a;">${r.byAmb.toLocaleString()}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:700; color:#0369a1;">${r.bySS.toLocaleString()}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:700; color:#dc2626;">${r.byFire.toLocaleString()}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:900; color:#0284c7; background:#f0f9ff;">${r.total.toLocaleString()}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:700; color:#475569;">${r.dailyAvg.toLocaleString()}</td>
+                    <td style="padding:8px 10px; text-align:right; font-weight:800; color:#334155;">${r.pctOfHk.toFixed(2)}%</td>
+                </tr>
+            `).join('');
+
+            const sumAmbAll = filteredRows.reduce((a, b) => a + b.byAmb, 0);
+            const sumSSAll = filteredRows.reduce((a, b) => a + b.bySS, 0);
+            const sumFireAll = filteredRows.reduce((a, b) => a + b.byFire, 0);
+            const sumTotAll = filteredRows.reduce((a, b) => a + b.total, 0);
+            const sumDailyAll = filteredRows.reduce((a, b) => a + b.dailyAvg, 0);
+            const sumPctAll = filteredRows.reduce((a, b) => a + b.pctOfHk, 0);
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div class="el-card-title">🗺️ ${isEn ? `Classification of Ambulance Calls for 18 District Council Districts (${curYear})` : `區議會十八區救護服務召喚次數統計（${curYear}年）`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Breakdown of emergency calls with ambulance services driven by ambulance calls, special services, and fire alarms across 18 districts.' : '按十八區分列「由救護召喚帶動」、「由特別服務召喚帶動」及「由火警召喚帶動」之緊急救護服務召喚次數及日均召喚量。'}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn ${regFilter === 'ALL' ? 'active' : ''}" onclick="setAmbulanceRegionFilter('ALL')">🌐 ${isEn ? 'All 18 Districts' : '全部十八區'}</button>
+                            <button type="button" class="el-chip-btn ${regFilter === 'HKI' ? 'active' : ''}" onclick="setAmbulanceRegionFilter('HKI')">🏝️ ${isEn ? 'HK Island (4)' : '香港島 (4區)'}</button>
+                            <button type="button" class="el-chip-btn ${regFilter === 'KLN' ? 'active' : ''}" onclick="setAmbulanceRegionFilter('KLN')">🏙️ ${isEn ? 'Kowloon (5)' : '九龍 (5區)'}</button>
+                            <button type="button" class="el-chip-btn ${regFilter === 'NT' ? 'active' : ''}" onclick="setAmbulanceRegionFilter('NT')">🏞️ ${isEn ? 'New Territories (9)' : '新界 (9區)'}</button>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin:10px 0 14px;">
+                        ${regionCardsHtml}
+                    </div>
+
+                    <div style="margin-top:8px;">
+                        ${barsHtml}
+                    </div>
+
+                    <details style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;" open>
+                        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:#1e293b;">
+                            📋 ${isEn ? `18 District Council Districts Detailed Ambulance Call Table (${curYear})` : `區議會十八區緊急救護服務召喚次數明細表（${curYear}年）`}
+                        </summary>
+                        <div style="overflow-x:auto; margin-top:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                                        <th style="padding:8px 10px; text-align:left;">${isEn ? 'District' : '區議會分區'}</th>
+                                        <th style="padding:8px 10px; text-align:left;">${isEn ? 'Region' : '所屬區域'}</th>
+                                        <th style="padding:8px 10px; text-align:right;">🚑 ${isEn ? 'Driven by Ambulance Calls' : '由救護召喚帶動'}</th>
+                                        <th style="padding:8px 10px; text-align:right;">🛠️ ${isEn ? 'Driven by Special Services' : '由特別服務召喚帶動'}</th>
+                                        <th style="padding:8px 10px; text-align:right;">🔥 ${isEn ? 'Driven by Fire Alarms' : '由火警召喚帶動'}</th>
+                                        <th style="padding:8px 10px; text-align:right; background:#e0f2fe; color:#0369a1;">🚨 ${isEn ? 'Total Emergency Calls' : '緊急救護召喚總次數'}</th>
+                                        <th style="padding:8px 10px; text-align:right;">📅 ${isEn ? 'Daily Avg' : '日均召喚'}</th>
+                                        <th style="padding:8px 10px; text-align:right;">📊 ${isEn ? 'Share %' : '佔全港比例'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRowsHtml}
+                                    <tr style="border-top:2px solid #7dd3fc; background:#f0f9ff; font-weight:900;">
+                                        <td style="padding:8px 10px; color:#0c4a6e;" colspan="2">${isEn ? 'Total (Selected Districts)' : '合計（所選分區總數）'}</td>
+                                        <td style="padding:8px 10px; text-align:right; color:#0f172a;">${sumAmbAll.toLocaleString()}</td>
+                                        <td style="padding:8px 10px; text-align:right; color:#0369a1;">${sumSSAll.toLocaleString()}</td>
+                                        <td style="padding:8px 10px; text-align:right; color:#dc2626;">${sumFireAll.toLocaleString()}</td>
+                                        <td style="padding:8px 10px; text-align:right; background:#bae6fd; color:#0c4a6e;">${sumTotAll.toLocaleString()}</td>
+                                        <td style="padding:8px 10px; text-align:right; color:#334155;">${sumDailyAll.toLocaleString()}</td>
+                                        <td style="padding:8px 10px; text-align:right; color:#0c4a6e;">${sumPctAll.toFixed(1)}%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        function renderAmbulancePortal() {
+            const container = document.getElementById('ambulance-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const curYear = window.ambulanceSelectedYear || 2025;
+            const yrIdx = getAmbYearIndex(curYear);
+            const s = getAmbulanceYearSummary(curYear);
+            const prevS = yrIdx > 0 ? getAmbulanceYearSummary(window.hkAmbYears[yrIdx - 1]) : null;
+            const distList = getAmb18DistrictsForYear(curYear);
+            const topDist = distList[0];
+
+            const quickYears = [2025, 2024, 2023, 2022, 2019, 2015, 2012];
+            const quickPillsHtml = quickYears.map(y => `
+                <button type="button" class="el-chip-btn ${y === curYear ? 'active' : ''}" onclick="selectAmbulanceYear(${y})">
+                    ${y === 2025 ? '⚡ ' : ''}${y}${isEn ? '' : '年'}
+                </button>
+            `).join('');
+
+            const yearOptionsHtml = [...window.hkAmbYears].reverse().map(y => {
+                const lbl = (y === 2026) ? (isEn ? '2026 (Estimate)' : '2026年 (預算)') : `${y}${isEn ? '' : '年'}`;
+                return `<option value="${y}" ${y === curYear ? 'selected' : ''}>${lbl}</option>`;
+            }).join('');
+
+            const tabDefs = [
+                { id: 'ALL', zh: '🌐 綜合總覽（服務指標＋十八區召喚）', en: '🌐 Combined Overview (Indicators + 18 Districts)' },
+                { id: 'INDICATORS', zh: '📊 救護服務指標 (2012–2025)', en: '📊 Ambulance Service Indicators' },
+                { id: 'DISTRICTS', zh: '🗺️ 十八區救護車召喚次數分佈', en: '🗺️ 18 Districts Ambulance Calls' }
+            ];
+
+            const tabsHtml = tabDefs.map(t => `
+                <button type="button" class="el-chip-btn ${window.ambulanceActiveTab === t.id ? 'active' : ''}" onclick="setAmbulanceActiveTab('${t.id}')">
+                    ${isEn ? t.en : t.zh}
+                </button>
+            `).join('');
+
+            const emgDiff = prevS ? (s.emergencyCalls - prevS.emergencyCalls) : 0;
+
+            const controlHtml = `
+                <div class="el-card-box" style="margin-bottom:14px; background:linear-gradient(135deg, #f0f9ff 0%, #ffffff 65%, #f0fdf4 100%); border-color:#bae6fd;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            ${tabsHtml}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn" onclick="stepAmbulanceYear(-1)" ${yrIdx <= 0 ? 'disabled style="opacity:0.45;"' : ''}>◀ ${isEn ? 'Prev Year' : '上一年'}</button>
+                            <select class="el-select-box" onchange="selectAmbulanceYear(this.value)" aria-label="Select Year">
+                                ${yearOptionsHtml}
+                            </select>
+                            <button type="button" class="el-chip-btn" onclick="stepAmbulanceYear(1)" ${yrIdx >= window.hkAmbYears.length - 1 ? 'disabled style="opacity:0.45;"' : ''}>${isEn ? 'Next Year' : '下一年'} ▶</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-size:12px; font-weight:800; color:#0369a1;">📅 ${isEn ? 'Quick Select:' : '年份快選：'}</span>
+                            ${quickPillsHtml}
+                        </div>
+                        <div style="flex:1; min-width:220px; max-width:340px; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">2012</span>
+                            <input type="range" min="0" max="${window.hkAmbYears.length - 1}" value="${yrIdx}" style="flex:1; accent-color:#0284c7; cursor:pointer;" oninput="selectAmbulanceYear(window.hkAmbYears[this.value])" />
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">2026</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const kpiHtml = `
+                <div class="el-kpi-grid" style="margin-bottom:14px;">
+                    <div class="el-kpi-card" style="border-left:4px solid #0284c7;">
+                        <div class="el-kpi-label">🚑 ${isEn ? `Total Ambulance Calls (${curYear})` : `${curYear}年 救護召喚總次數`}</div>
+                        <div class="el-kpi-val" style="color:#0284c7;">${s.totalCalls.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'calls' : '宗'}</small></div>
+                        <div class="el-kpi-sub">
+                            🚨 ${isEn ? 'Emergency:' : '緊急召喚：'}<strong>${s.emergencyCalls.toLocaleString()}</strong> · 🏥 ${isEn ? 'Transfer:' : '轉院：'}<strong>${s.transferCalls.toLocaleString()}</strong>
+                            <br>📅 ${isEn ? `Daily Avg: ${s.dailyAvgTotal.toLocaleString()} calls/day` : `平均每日：${s.dailyAvgTotal.toLocaleString()} 宗（緊急日均 ${s.dailyAvgEmergency.toLocaleString()} 宗）`}
+                            ${prevS ? ` · <span style="font-weight:800; color:${emgDiff >= 0 ? '#0369a1' : '#16a34a'};">${emgDiff >= 0 ? '+' : ''}${emgDiff.toLocaleString()}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #16a34a;">
+                        <div class="el-kpi-label">⏱️ ${isEn ? `12-Min Target Response Rate (${curYear})` : `${curYear}年 12分鐘目標召達率`}</div>
+                        <div class="el-kpi-val" style="color:#16a34a;">${s.responseRate.toFixed(1)}% <small style="font-size:11px; font-weight:700; color:#15803d;">(${isEn ? 'Target ≥92.5%' : '承諾目標 ≥92.5%'})</small></div>
+                        <div class="el-kpi-sub">
+                            🧑‍🚒 ${isEn ? 'First Responders Attended:' : '先遣急救員處理緊急救護：'}<strong>${s.firstResponders.toLocaleString()}</strong> ${isEn ? 'calls' : '次'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #4f46e5;">
+                        <div class="el-kpi-label">🛞 ${isEn ? `Total Vehicle Turnouts (${curYear})` : `${curYear}年 救護車輛總出動架次`}</div>
+                        <div class="el-kpi-val" style="color:#4f46e5;">${s.turnouts.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'turnouts' : '架次'}</small></div>
+                        <div class="el-kpi-sub">
+                            🚑 ${isEn ? 'Avg Calls per Ambulance:' : '每部救護車平均處理召喚：'}<strong>${s.callsPerAmb.toLocaleString()}</strong> ${isEn ? 'calls' : '宗'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #ea580c;">
+                        <div class="el-kpi-label">🔄 ${isEn ? `Emergency Move-ups & Top District` : `${curYear}年 跨站候命調派及最高召喚區`}</div>
+                        <div class="el-kpi-val" style="color:#ea580c; font-size:18px;">${isEn ? 'Move-ups:' : '跨站調派：'}${s.moveUps.toLocaleString()} <small style="font-size:11px;">${isEn ? 'times' : '次'}</small></div>
+                        <div class="el-kpi-sub">
+                            📍 ${isEn ? 'Highest District:' : '最多緊急召喚分區：'}<strong>${isEn ? topDist.en : topDist.zh}</strong> (${topDist.total.toLocaleString()} ${isEn ? 'calls' : '宗'})
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const trendCardHtml = `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📈 ${isEn ? 'HK Multi-Year Emergency Ambulance Calls, Turnouts & 12-Min Response Rate (2012–2026)' : '香港歷年緊急救護召喚、救護車輛出動架次及 12 分鐘目標召達率趨勢 (2012–2026)'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Historical trajectory of emergency ambulance calls, total turnouts (ambulances, motorcycles & RRVs), and 12-minute target response performance.' : '同時對比歷年緊急救護召喚次數（藍線）、救護車／救護電單車／快速應變急救車總出動次數（紫虛線）及 12 分鐘目標召達率（綠線）。'}</div>
+                        </div>
+                    </div>
+                    ${buildAmbulanceTrendSVG(isEn)}
+                </div>
+            `;
+
+            const activeTab = window.ambulanceActiveTab || 'ALL';
+            let bodyHtml = '';
+            if (activeTab === 'ALL') {
+                bodyHtml = trendCardHtml + buildAmbulanceIndicatorsSectionHTML(isEn) + buildAmbulance18DistrictsSectionHTML(isEn);
+            } else if (activeTab === 'INDICATORS') {
+                bodyHtml = trendCardHtml + buildAmbulanceIndicatorsSectionHTML(isEn);
+            } else if (activeTab === 'DISTRICTS') {
+                bodyHtml = buildAmbulance18DistrictsSectionHTML(isEn);
+            }
+
+            container.innerHTML = controlHtml + kpiHtml + bodyHtml;
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
@@ -21736,8 +22589,8 @@
                         deptIcon: '🚒',
                         dept_zh: '香港消防處',
                         dept_en: 'Hong Kong Fire Services Department (HKFSD)',
-                        role_zh: '負責全港滅火救援、火警類型及成因統計、三級或以上嚴重火警應變及救護服務',
-                        role_en: 'Fire-fighting, rescue operations, fire classification & cause statistics, major fire response & ambulance services',
+                        role_zh: '負責全港滅火救援、火警類型及成因統計、三級或以上嚴重火警應變及緊急救護服務',
+                        role_en: 'Fire-fighting, rescue operations, fire classification & cause statistics, major fire response & emergency ambulance services',
                         pages: [
                             {
                                 pageKey: 'fire',
@@ -21755,6 +22608,24 @@
                                             : `🔥 2025年：總召喚 ${rec.totalCalls.toLocaleString()} 宗 · 成災火警 ${rec.actualFires.toLocaleString()} 宗 · 三級或以上 ${rec.majorFires} 宗`;
                                     }
                                     return isEn ? '🔥 2013–2025 Fire & Rescue Stats' : '🔥 2013–2025 消防火警及傷亡數據';
+                                }
+                            },
+                            {
+                                pageKey: 'ambulance',
+                                icon: '🚑',
+                                name_zh: '香港救護車召喚次數（十八區分佈）及救護服務指標 (2012–2025)',
+                                name_en: 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)',
+                                desc_zh: '涵蓋全港十八區緊急救護召喚次數（由救護召喚、火警及特別服務帶動），以及緊急召喚、醫院轉院召喚、每部救護車平均處理召喚、救護車輛出動及臨時調派候命等指標。',
+                                desc_en: 'Covers 18 District Council emergency ambulance calls and official Ambulance Service Indicators (emergency/transfer calls, turnouts, move-ups & 12-min response rate).',
+                                actionFn: 'showAmbulancePage',
+                                getLiveBadge: function(isEn) {
+                                    const rec = (typeof getAmbulanceYearSummary === 'function') ? getAmbulanceYearSummary(2025) : null;
+                                    if (rec) {
+                                        return isEn
+                                            ? `🚑 2025: ${rec.totalCalls.toLocaleString()} Calls (${rec.emergencyCalls.toLocaleString()} Emergency · ${rec.responseRate}% ≤12m)`
+                                            : `🚑 2025年：總召喚 ${rec.totalCalls.toLocaleString()} 宗（緊急 ${rec.emergencyCalls.toLocaleString()} 宗 · 12分鐘召達率 ${rec.responseRate}%）`;
+                                    }
+                                    return isEn ? '🚑 2012–2025 Ambulance Calls & Indicators' : '🚑 2012–2025 救護召喚及服務指標';
                                 }
                             }
                         ]
@@ -22206,6 +23077,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'ambulance') {
+                    showAmbulancePage();
                 } else if (currentActivePage === 'fire') {
                     showFirePage();
                 } else if (currentActivePage === 'labour') {
