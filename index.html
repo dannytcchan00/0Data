@@ -4122,11 +4122,36 @@
         }
         .wth-radar-tc-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
             align-items: stretch;
         }
+        @media (max-width: 820px) {
+            .wth-radar-tc-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .wth-radar-tc-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .wth-radar-tc-head {
+            min-height: 54px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-bottom: 1px solid #bae6fd;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
         .wth-radar-single-wrap {
+            flex: 1 1 auto;
             width: 100%;
             margin: 0 auto;
             background: #0f172a;
@@ -4137,6 +4162,33 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            box-sizing: border-box;
+        }
+        .wth-dark-ctrl-box {
+            height: 92px;
+            box-sizing: border-box;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 10px;
+            padding: 8px 11px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .wth-dark-legend-bar {
+            min-height: 28px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 7px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.71rem;
+            color: #cbd5e1;
         }
         .wth-station-grid {
             display: grid;
@@ -6065,6 +6117,7 @@
             radarAnimSpeedMs: 420,
             radarFrameIdx: 19,
             radarFramesByRange: { 64: [], 128: [], 256: [] },
+            tcAgencyFilter: 'ALL', // 'ALL' | 'HKO' | 'JMA'
             lastUpdatedText: '',
             currentObs: {
                 hkoTemp: 25.4,
@@ -6310,8 +6363,7 @@
             return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
-        async function fetchLiveTropicalCyclones() {
-            const st = window.hkWeatherPortalState;
+        async function fetchLiveHkoCyclonesList() {
             const tcListUrls = [
                 `https://www.weather.gov.hk/wxinfo/currwx/tc_list.xml?_=${Date.now()}`,
                 `https://www.hko.gov.hk/wxinfo/currwx/tc_list.xml?_=${Date.now()}`,
@@ -6330,7 +6382,7 @@
                     }
                 } catch (e) {}
             }
-            if (!listXmlText) return;
+            if (!listXmlText) return [];
 
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(listXmlText, 'text/xml');
@@ -6353,11 +6405,6 @@
                     const u = `https://www.weather.gov.hk/wxinfo/currwx/${fn}`;
                     if (!trackUrls.includes(u)) trackUrls.push(u);
                 });
-            }
-
-            if (trackUrls.length === 0) {
-                st.activeCyclones = [];
-                return;
             }
 
             const cyclones = [];
@@ -6384,12 +6431,9 @@
                         const lat = parseFloat(p.querySelector('Latitude, Lat, lat')?.textContent || '');
                         const lon = parseFloat(p.querySelector('Longitude, Lon, Long, lon')?.textContent || '');
                         const wind = parseFloat(p.querySelector('MaximumWind, WindSpeed, MaxWind')?.textContent || '');
-                        const catZh = (p.querySelector('IntensityC, CategoryC, ClassC')?.textContent || '').trim();
-                        const catEn = (p.querySelector('Intensity, Category, Class')?.textContent || '').trim();
-                        const timeStr = (p.querySelector('Time, ForecastTime, DateTime, ValidTime')?.textContent || '').trim();
                         const isFc = p.tagName.toLowerCase().includes('forecast') || Boolean(p.querySelector('ForecastHour'));
-                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 5 && lat <= 40 && lon >= 100 && lon <= 145) {
-                            points.push({ lat, lon, wind: Number.isFinite(wind) ? wind : null, catZh, catEn, timeStr, isForecast: isFc });
+                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 5 && lat <= 42 && lon >= 100 && lon <= 150) {
+                            points.push({ lat, lon, wind: Number.isFinite(wind) ? wind : null, isForecast: isFc });
                         }
                     });
 
@@ -6397,6 +6441,7 @@
                         const analyzedPts = points.filter(p => !p.isForecast);
                         const curPt = analyzedPts.length > 0 ? analyzedPts[analyzedPts.length - 1] : points[0];
                         cyclones.push({
+                            source: 'HKO',
                             name_zh: nameZh || nameEn || '熱帶氣旋',
                             name_en: nameEn || nameZh || 'Tropical Cyclone',
                             current: curPt,
@@ -6406,7 +6451,109 @@
                     }
                 } catch (e) {}
             }
-            st.activeCyclones = cyclones;
+            return cyclones;
+        }
+
+        async function fetchLiveJmaCyclonesList() {
+            const jmaListUrls = [
+                `https://www.jma.go.jp/bosai/information/data/typhoon.json?_=${Date.now()}`,
+                `https://www.jma.go.jp/bosai/typhoon/data/targetTc.json?_=${Date.now()}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.jma.go.jp/bosai/information/data/typhoon.json')}`
+            ];
+            let jmaList = null;
+            for (const u of jmaListUrls) {
+                try {
+                    const r = await fetch(u, { cache: 'no-store' });
+                    if (r && r.ok) {
+                        const j = await r.json();
+                        if (j) { jmaList = j; break; }
+                    }
+                } catch (e) {}
+            }
+            if (!jmaList) return [];
+
+            const eventIds = [];
+            const arr = Array.isArray(jmaList) ? jmaList : (Array.isArray(jmaList.list) ? jmaList.list : [jmaList]);
+            arr.forEach(item => {
+                const eid = item && (item.eventId || item.tropicalCyclone || item.id);
+                if (eid && !eventIds.includes(eid)) eventIds.push(eid);
+            });
+            if (eventIds.length === 0) return [];
+
+            const cyclones = [];
+            for (const eid of eventIds.slice(0, 3)) {
+                try {
+                    const specUrls = [
+                        `https://www.jma.go.jp/bosai/typhoon/data/${eid}/specifications.json?_=${Date.now()}`,
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.jma.go.jp/bosai/typhoon/data/${eid}/specifications.json`)}`
+                    ];
+                    let specData = null;
+                    for (const su of specUrls) {
+                        try {
+                            const r = await fetch(su, { cache: 'no-store' });
+                            if (r && r.ok) {
+                                const j = await r.json();
+                                if (j) { specData = j; break; }
+                            }
+                        } catch (e) {}
+                    }
+                    if (!specData) continue;
+
+                    const steps = Array.isArray(specData) ? specData : (Array.isArray(specData.data) ? specData.data : [specData]);
+                    let nameEn = '', nameJp = '';
+                    const points = [];
+                    steps.forEach((stItem, idx) => {
+                        if (stItem.name) {
+                            if (stItem.name.en) nameEn = stItem.name.en;
+                            if (stItem.name.jp) nameJp = stItem.name.jp;
+                        }
+                        let lat = null, lon = null;
+                        if (stItem.position && Array.isArray(stItem.position.deg) && stItem.position.deg.length >= 2) {
+                            lat = parseFloat(stItem.position.deg[0]);
+                            lon = parseFloat(stItem.position.deg[1]);
+                        } else if (stItem.center && Array.isArray(stItem.center)) {
+                            lat = parseFloat(stItem.center[0]);
+                            lon = parseFloat(stItem.center[1]);
+                        }
+                        if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= 5 && lat <= 45 && lon >= 100 && lon <= 155) {
+                            const isFc = (idx > 0 && Boolean(stItem.forecast || stItem.accuracy));
+                            points.push({ lat, lon, isForecast: isFc });
+                        }
+                    });
+
+                    if (points.length > 0) {
+                        const analyzedPts = points.filter(p => !p.isForecast);
+                        const curPt = analyzedPts.length > 0 ? analyzedPts[analyzedPts.length - 1] : points[0];
+                        cyclones.push({
+                            source: 'JMA',
+                            name_zh: nameJp || nameEn || `熱帶氣旋 (${eid})`,
+                            name_en: nameEn || nameJp || `TC (${eid})`,
+                            current: curPt,
+                            distKm: calcDistanceFromHkKm(curPt.lat, curPt.lon),
+                            points: points
+                        });
+                    }
+                } catch (e) {}
+            }
+            return cyclones;
+        }
+
+        async function fetchLiveTropicalCyclones() {
+            const st = window.hkWeatherPortalState;
+            try {
+                const [hkoList, jmaList] = await Promise.all([
+                    fetchLiveHkoCyclonesList().catch(() => []),
+                    fetchLiveJmaCyclonesList().catch(() => [])
+                ]);
+                st.activeCyclones = [...(hkoList || []), ...(jmaList || [])];
+            } catch (e) {
+                st.activeCyclones = [];
+            }
+        }
+
+        function setWeatherTcAgencyFilter(agency) {
+            window.hkWeatherPortalState.tcAgencyFilter = agency || 'ALL';
+            renderWeatherPortal();
         }
 
         async function syncWeatherPortalData(isManual = false) {
@@ -6846,8 +6993,8 @@
                 btn.style.background = st.radarAnimPlaying ? '#dc2626' : '#0284c7';
                 btn.style.borderColor = st.radarAnimPlaying ? '#dc2626' : '#0284c7';
                 btn.innerText = st.radarAnimPlaying
-                    ? (isEn ? '⏸️ Pause (20-Frame Loop)' : '⏸️ 暫停動畫 (20張連播中)')
-                    : (isEn ? '▶️ Play 20-Frame Animation' : '▶️ 播放最近 20 張雷達動畫');
+                    ? (isEn ? '⏸️ Pause (20-Frame)' : '⏸️ 暫停動畫 (20張連播)')
+                    : (isEn ? '▶️ Play 20-Frame' : '▶️ 播放 20 張動畫');
             }
         }
 
@@ -6967,49 +7114,137 @@
 
         function buildTropicalCycloneTrackCardHTML(isEn) {
             const st = window.hkWeatherPortalState;
-            const cyclones = st.activeCyclones || [];
+            const allCyclones = st.activeCyclones || [];
+            const agencyFilter = st.tcAgencyFilter || 'ALL';
+            const cyclones = agencyFilter === 'ALL' ? allCyclones : allCyclones.filter(c => c.source === agencyFilter);
             const hasCyclone = cyclones.length > 0;
 
-            function projectLatLon(lat, lon) {
-                const x = ((lon - 105.0) / 22.0) * 400.0;
-                const y = ((26.5 - lat) / 16.5) * 300.0;
+            // Wide-area Western North Pacific, East China Sea & South China Sea Map:
+            // Bounds: Lon 104°E .. 136°E (32° span -> 400px, 1° = 12.5px)
+            //         Lat 8°N .. 32°N   (24° span -> 300px, 1° = 12.5px)
+            function llToXY(lat, lon) {
+                const x = ((lon - 104.0) / 32.0) * 400.0;
+                const y = ((32.0 - lat) / 24.0) * 300.0;
                 return { x: +x.toFixed(1), y: +y.toFixed(1) };
             }
+            function polyFromCoords(coords) {
+                return coords.map((pt, i) => {
+                    const c = llToXY(pt[0], pt[1]);
+                    return `${i === 0 ? 'M' : 'L'} ${c.x},${c.y}`;
+                }).join(' ') + ' Z';
+            }
 
-            const hkPt = projectLatLon(22.30, 114.17);
-            const r400 = 65.5, r800 = 131.0, r1200 = 196.5;
+            // 1. Mainland China (East & South China Coast) + Vietnam / Indochina Coastline
+            const mainlandPath = polyFromCoords([
+                [32.0, 104.0], [32.0, 121.7], [31.2, 121.9], [30.6, 121.2], [30.3, 120.7],
+                [29.9, 122.0], [28.7, 121.6], [27.8, 120.7], [26.7, 120.0], [25.9, 119.6],
+                [25.4, 119.7], [24.8, 118.7], [24.4, 118.1], [23.7, 117.5], [23.3, 116.7],
+                [22.8, 115.4], [22.6, 114.6], [22.5, 114.2], [22.8, 113.6], [22.15, 113.5],
+                [21.8, 112.0], [21.5, 111.1], [21.2, 110.4], [20.6, 110.5], [20.24, 110.15],
+                [20.7, 109.75], [21.5, 109.1], [21.55, 108.2], [20.85, 106.75], [19.8, 105.85],
+                [18.7, 105.7], [17.5, 106.6], [16.1, 108.2], [15.1, 108.9], [13.8, 109.25],
+                [12.0, 109.2], [10.9, 108.1], [10.3, 107.1], [8.6, 105.15], [8.0, 105.0], [8.0, 104.0]
+            ]);
+
+            // 2. Hainan Island (海南島, clearly separated from Leizhou Peninsula across Qiongzhou Strait)
+            const hainanPath = polyFromCoords([
+                [20.04, 110.34], [19.96, 110.92], [19.62, 111.02], [19.15, 110.62],
+                [18.72, 110.42], [18.22, 109.52], [18.48, 108.70], [19.10, 108.64],
+                [19.78, 109.20], [19.98, 109.75]
+            ]);
+
+            // 3. Taiwan Island (台灣本島, clearly separated from Fujian 118.1°E across Taiwan Strait)
+            const taiwanPath = polyFromCoords([
+                [25.30, 121.55], [25.02, 122.00], [24.58, 121.86], [23.98, 121.62],
+                [23.10, 121.38], [22.75, 121.15], [21.90, 120.85], [22.02, 120.70],
+                [22.62, 120.26], [23.10, 120.12], [23.60, 120.14], [24.25, 120.48],
+                [24.85, 120.92], [25.10, 121.18]
+            ]);
+
+            // 4. Okinawa Main Island & Ryukyu Islands & Southern Kyushu (沖繩本島、宮古、石垣、奄美及九州南部)
+            const okinawaPath = polyFromCoords([
+                [26.88, 128.26], [26.72, 128.32], [26.45, 127.98], [26.18, 127.82],
+                [26.08, 127.66], [26.22, 127.65], [26.52, 127.82], [26.78, 128.12]
+            ]);
+            const amamiPath = polyFromCoords([
+                [28.52, 129.68], [28.35, 129.58], [28.12, 129.18], [28.25, 129.15], [28.48, 129.48]
+            ]);
+            const kyushuPath = polyFromCoords([
+                [32.0, 130.15], [32.0, 131.65], [31.35, 131.42], [31.02, 130.68], [31.25, 130.25]
+            ]);
+
+            // 5. Philippines Archipelago (呂宋島 Luzon, 民都洛 Mindoro, 巴拉望 Palawan, 薩馬 Samar, 宿霧/潘奈, 棉蘭老北部)
+            const luzonPath = polyFromCoords([
+                [18.55, 120.60], [18.50, 122.18], [17.40, 122.42], [16.05, 122.10],
+                [15.10, 121.62], [14.35, 122.35], [13.95, 123.85], [12.60, 124.15],
+                [12.95, 123.50], [13.75, 122.15], [13.72, 121.00], [14.25, 120.60],
+                [14.75, 120.30], [15.35, 119.92], [16.38, 119.88], [16.65, 120.32], [17.85, 120.42]
+            ]);
+            const mindoroPath = polyFromCoords([
+                [13.50, 120.35], [13.42, 121.25], [12.55, 121.50], [12.28, 121.05], [12.85, 120.42]
+            ]);
+            const palawanPath = polyFromCoords([
+                [11.20, 119.55], [10.85, 119.62], [9.65, 118.65], [8.65, 117.35],
+                [8.90, 117.20], [10.10, 118.45]
+            ]);
+            const samarLeytePath = polyFromCoords([
+                [12.62, 124.30], [12.55, 125.30], [11.15, 125.75], [10.15, 125.15],
+                [10.35, 124.65], [11.45, 124.40]
+            ]);
+            const panayNegrosPath = polyFromCoords([
+                [11.85, 121.90], [11.50, 123.15], [10.25, 123.45], [9.15, 123.15],
+                [9.45, 122.45], [10.75, 121.92]
+            ]);
+            const mindanaoNorthPath = polyFromCoords([
+                [9.80, 125.55], [9.20, 126.25], [8.00, 126.40], [8.00, 122.40],
+                [8.65, 123.35], [8.55, 124.65], [9.15, 125.45]
+            ]);
+
+            const hkPt = llToXY(22.30, 114.17);
+            const okiPt = llToXY(26.21, 127.68);
+            const tpePt = llToXY(25.03, 121.56);
+            const mnlPt = llToXY(14.60, 120.98);
+            const ishPt = llToXY(24.34, 124.16);
+            const mykPt = llToXY(24.80, 125.28);
+
+            // Distance rings centered on Hong Kong: 1° lat = 111.1 km = 12.5 px -> 400km = 45.0px, 800km = 90.0px, 1200km = 135.0px
+            const r400 = 45.0, r800 = 90.0, r1200 = 135.0;
 
             let cycloneTrackSvg = '';
             if (hasCyclone) {
                 cyclones.forEach(tc => {
+                    const isJma = (tc.source === 'JMA');
+                    const mainCol = isJma ? '#38bdf8' : '#facc15';
+                    const fcCol = isJma ? '#c084fc' : '#f87171';
                     const pts = tc.points || [];
                     if (pts.length > 1) {
                         const analyzedPts = pts.filter(p => !p.isForecast);
                         const forecastPts = pts.filter(p => p.isForecast);
                         if (analyzedPts.length > 1) {
-                            const polyA = analyzedPts.map(p => { const c = projectLatLon(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
-                            cycloneTrackSvg += `<polyline points="${polyA}" fill="none" stroke="#facc15" stroke-width="2.2" stroke-linecap="round"/>`;
+                            const polyA = analyzedPts.map(p => { const c = llToXY(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
+                            cycloneTrackSvg += `<polyline points="${polyA}" fill="none" stroke="${mainCol}" stroke-width="2.1" stroke-linecap="round"/>`;
                         }
                         if (forecastPts.length > 0) {
                             const startPt = analyzedPts.length > 0 ? analyzedPts[analyzedPts.length - 1] : pts[0];
                             const allFc = [startPt, ...forecastPts];
-                            const polyF = allFc.map(p => { const c = projectLatLon(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
-                            cycloneTrackSvg += `<polyline points="${polyF}" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3" stroke-linecap="round"/>`;
+                            const polyF = allFc.map(p => { const c = llToXY(p.lat, p.lon); return `${c.x},${c.y}`; }).join(' ');
+                            cycloneTrackSvg += `<polyline points="${polyF}" fill="none" stroke="${fcCol}" stroke-width="1.9" stroke-dasharray="4,3" stroke-linecap="round"/>`;
                             forecastPts.forEach(fp => {
-                                const c = projectLatLon(fp.lat, fp.lon);
-                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="3.5" fill="none" stroke="#f87171" stroke-width="1.5"/>`;
+                                const c = llToXY(fp.lat, fp.lon);
+                                cycloneTrackSvg += `<circle cx="${c.x}" cy="${c.y}" r="3.2" fill="none" stroke="${fcCol}" stroke-width="1.4"/>`;
                             });
                         }
                     }
                     if (tc.current) {
-                        const c = projectLatLon(tc.current.lat, tc.current.lon);
+                        const c = llToXY(tc.current.lat, tc.current.lon);
                         const label = isEn ? tc.name_en : tc.name_zh;
+                        const srcTag = tc.source || 'HKO';
                         cycloneTrackSvg += `
                             <g transform="translate(${c.x}, ${c.y})">
-                                <circle cx="0" cy="0" r="11" fill="rgba(239,68,68,0.28)" stroke="#ef4444" stroke-width="1.2"/>
-                                <circle cx="0" cy="0" r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.2"/>
-                                <text x="10" y="-6" fill="#fef08a" font-size="9.5" font-weight="900">🌀 ${label} (${tc.distKm}km)</text>
-                                <text x="10" y="6" fill="#f8fafc" font-size="8" font-weight="700">${tc.current.lat.toFixed(1)}°N, ${tc.current.lon.toFixed(1)}°E</text>
+                                <circle cx="0" cy="0" r="10" fill="rgba(239,68,68,0.28)" stroke="${mainCol}" stroke-width="1.2"/>
+                                <circle cx="0" cy="0" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="1.2"/>
+                                <text x="9" y="-5" fill="#fef08a" font-size="8.8" font-weight="900">🌀 [${srcTag}] ${label} (${tc.distKm}km)</text>
+                                <text x="9" y="6" fill="#f8fafc" font-size="7.5" font-weight="700">${tc.current.lat.toFixed(1)}°N, ${tc.current.lon.toFixed(1)}°E</text>
                             </g>
                         `;
                     }
@@ -7017,106 +7252,136 @@
             }
 
             const statusBadge = hasCyclone
-                ? `<span style="background:#dc2626; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.76rem; font-weight:900;">🌀 ${isEn ? `${cyclones.length} Active Cyclone(s)` : `現正監測 ${cyclones.length} 個熱帶氣旋`}</span>`
-                : `<span style="background:#059669; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.76rem; font-weight:900;">🟢 ${isEn ? 'No Active Tropical Cyclone' : '現時並無熱帶氣旋（冇颱風）'}</span>`;
+                ? `<span style="background:#dc2626; color:#ffffff; padding:5px 11px; border-radius:999px; font-size:0.76rem; font-weight:900;">🌀 ${isEn ? `${cyclones.length} Active Cyclone(s)` : `現正監測 ${cyclones.length} 個熱帶氣旋`}</span>`
+                : `<span style="background:#059669; color:#ffffff; padding:5px 11px; border-radius:999px; font-size:0.76rem; font-weight:900;">🟢 ${isEn ? 'No Active Typhoon' : '現時並無颱風生效'}</span>`;
 
             return `
-                <div class="el-card-box" style="background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-color:#bae6fd; padding:14px 16px; justify-content:space-between;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #bae6fd; padding-bottom:10px;">
+                <div class="el-card-box wth-radar-tc-card" style="background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-color:#bae6fd; padding:14px 16px;">
+                    <div class="wth-radar-tc-head">
                         <div>
-                            <div style="font-size:0.98rem; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:6px;">
-                                🌀 ${isEn ? 'Tropical Cyclone Track & 400 / 800 / 1200 km Alert Zones' : '熱帶氣旋路徑圖（華南沿岸及香港 400 / 800 / 1200 公里警戒圈）'}
+                            <div style="font-size:0.95rem; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:6px;">
+                                🌀 ${isEn ? 'Tropical Cyclone Track (HKO & JMA · 400 / 800 / 1200 km)' : '熱帶氣旋路徑圖（香港天文台及日本氣象廳 · 400/800/1200公里圈）'}
                             </div>
-                            <div style="font-size:0.75rem; color:#475569; font-weight:600; margin-top:2px;">
+                            <div style="font-size:0.73rem; color:#475569; font-weight:600; margin-top:2px;">
                                 ${isEn
-                                    ? 'Displays real-time typhoon position and track if active; shows 400km, 800km & 1200km seaward range rings from Hong Kong'
-                                    : '標示華南沿岸與香港位置，並由香港對出海面畫出 400公里、800公里及 1200公里監測圈；如有熱帶氣旋即顯示實時位置及路徑'}
+                                    ? 'Covers South China, Taiwan, Okinawa & Philippines; plots HKO & JMA real-time typhoon tracks'
+                                    : '涵蓋華南沿岸、台灣、沖繩、呂宋及南海西北太平洋；整合香港天文台及日本氣象廳實時颱風路徑'}
                             </div>
                         </div>
                         ${statusBadge}
                     </div>
 
                     <div class="wth-radar-single-wrap">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; color:#f8fafc;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="background:#0369a1; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.76rem; font-weight:900;">
-                                    📍 ${isEn ? 'Center: Hong Kong (22.3°N, 114.2°E)' : '基準中心：香港 (22.3°N, 114.2°E)'}
+                        <!-- Row 1: Top Dark Bar (30px height matching Radar) -->
+                        <div style="height:30px; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; color:#f8fafc;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="background:#0369a1; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.75rem; font-weight:900;">
+                                    📍 ${isEn ? 'HK & Okinawa Wide Map' : '華南・台灣・沖繩廣域圖'}
+                                </span>
+                                <span style="font-size:0.76rem; font-weight:800; color:#38bdf8;">
+                                    ${isEn ? 'HKO + JMA Dual Track' : '天文台 + 日本氣象廳'}
                                 </span>
                             </div>
-                            <div style="font-size:0.76rem; font-weight:800; color:#38bdf8;">
-                                ⭕ 400km · 800km · 1200km
+                            <div style="font-size:0.75rem; font-weight:800; color:#fde047; font-family:monospace; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:6px;">
+                                ⭕ 400 / 800 / 1200 km
                             </div>
                         </div>
 
-                        <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 45% 35%, #0c2b4b 0%, #07192e 68%, #040d1a 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f;">
+                        <!-- Row 2: 4:3 Map Stage (Exact same aspect-ratio & height as Radar) -->
+                        <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 45% 42%, #0c2b4b 0%, #07192e 68%, #040d1a 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f;">
                             <svg viewBox="0 0 400 300" style="width:100%; height:100%; display:block;">
-                                <g stroke="#1e3a5f" stroke-width="0.7" stroke-dasharray="2,3">
-                                    <line x1="0" y1="27" x2="400" y2="27"/>
-                                    <line x1="0" y1="118" x2="400" y2="118"/>
-                                    <line x1="0" y1="209" x2="400" y2="209"/>
-                                    <line x1="91" y1="0" x2="91" y2="300"/>
-                                    <line x1="182" y1="0" x2="182" y2="300"/>
-                                    <line x1="273" y1="0" x2="273" y2="300"/>
-                                    <line x1="364" y1="0" x2="364" y2="300"/>
+                                <!-- Lat / Lon Grid (10°N, 15°N, 20°N, 25°N, 30°N | 110°E, 115°E, 120°E, 125°E, 130°E, 135°E) -->
+                                <g stroke="#1e3a5f" stroke-width="0.65" stroke-dasharray="2,3">
+                                    ${[10, 15, 20, 25, 30].map(lat => {
+                                        const y = llToXY(lat, 110).y;
+                                        return `<line x1="0" y1="${y}" x2="400" y2="${y}"/>`;
+                                    }).join('')}
+                                    ${[110, 115, 120, 125, 130, 135].map(lon => {
+                                        const x = llToXY(20, lon).x;
+                                        return `<line x1="${x}" y1="0" x2="${x}" y2="300"/>`;
+                                    }).join('')}
                                 </g>
-                                <g fill="#475569" font-size="7.5" font-weight="700">
-                                    <text x="4" y="24">25°N</text>
-                                    <text x="4" y="115">20°N</text>
-                                    <text x="4" y="206">15°N</text>
-                                    <text x="94" y="294">110°E</text>
-                                    <text x="185" y="294">115°E</text>
-                                    <text x="276" y="294">120°E</text>
-                                    <text x="366" y="294">125°E</text>
+                                <g fill="#475569" font-size="7" font-weight="700">
+                                    ${[10, 15, 20, 25, 30].map(lat => `<text x="3" y="${(llToXY(lat, 110).y - 2).toFixed(1)}">${lat}°N</text>`).join('')}
+                                    ${[110, 115, 120, 125, 130].map(lon => `<text x="${(llToXY(20, lon).x + 2).toFixed(1)}" y="295">${lon}°E</text>`).join('')}
                                 </g>
 
-                                <g fill="#12314d" stroke="#2563eb" stroke-opacity="0.65" stroke-width="1.1">
-                                    <path d="M 0,0 L 310,0 L 292,28 L 260,55 L 222,71 L 195,76 L 175,78 L 166,76 L 154,84 L 122,95 L 106,105 L 98,118 L 89,115 L 88,101 L 72,96 L 48,103 L 24,126 L 34,158 L 42,195 L 22,235 L 0,240 Z"/>
-                                    <path d="M 74,126 L 101,123 L 106,138 L 92,151 L 73,144 Z"/>
-                                    <path d="M 278,24 L 296,22 L 302,48 L 290,78 L 278,66 L 274,42 Z"/>
-                                    <path d="M 276,142 L 308,140 L 316,178 L 332,208 L 318,236 L 292,216 L 275,184 Z"/>
-                                    <path d="M 305,246 L 338,248 L 345,278 L 312,282 Z"/>
+                                <!-- Accurate Geographic Coastlines & Islands -->
+                                <g fill="#133352" stroke="#38bdf8" stroke-opacity="0.62" stroke-width="0.95" stroke-linejoin="round">
+                                    <path d="${mainlandPath}"/>
+                                    <path d="${hainanPath}"/>
+                                    <path d="${taiwanPath}"/>
+                                    <path d="${okinawaPath}" fill="#1d4ed8" stroke="#7dd3fc" stroke-width="1.15"/>
+                                    <path d="${amamiPath}"/>
+                                    <path d="${kyushuPath}"/>
+                                    <path d="${luzonPath}"/>
+                                    <path d="${mindoroPath}"/>
+                                    <path d="${palawanPath}"/>
+                                    <path d="${samarLeytePath}"/>
+                                    <path d="${panayNegrosPath}"/>
+                                    <path d="${mindanaoNorthPath}"/>
+                                    <!-- Penghu, Ishigaki (石垣島), Miyako (宮古島), Batanes -->
+                                    <circle cx="${llToXY(23.57, 119.58).x}" cy="${llToXY(23.57, 119.58).y}" r="1.4"/>
+                                    <circle cx="${ishPt.x}" cy="${ishPt.y}" r="1.8" fill="#1d4ed8" stroke="#7dd3fc"/>
+                                    <circle cx="${mykPt.x}" cy="${mykPt.y}" r="1.8" fill="#1d4ed8" stroke="#7dd3fc"/>
+                                    <circle cx="${llToXY(20.45, 121.97).x}" cy="${llToXY(20.45, 121.97).y}" r="1.3"/>
+                                    <circle cx="${llToXY(19.25, 121.50).x}" cy="${llToXY(19.25, 121.50).y}" r="1.5"/>
                                 </g>
 
-                                <g fill="#64748b" font-size="8.5" font-weight="800">
-                                    <text x="135" y="42">${isEn ? 'SOUTH CHINA COAST' : '華南沿岸 (廣東・福建)'}</text>
-                                    <text x="72" y="139" font-size="7.5">${isEn ? 'Hainan' : '海南島'}</text>
-                                    <text x="275" y="54" font-size="7.5">${isEn ? 'Taiwan' : '台灣'}</text>
-                                    <text x="282" y="176" font-size="7.5">${isEn ? 'Luzon' : '呂宋'}</text>
-                                    <text x="155" y="218" fill="#1e4976" font-size="10" font-weight="900">${isEn ? 'SOUTH CHINA SEA' : '南 海 (South China Sea)'}</text>
+                                <!-- Region & Island Labels -->
+                                <g fill="#94a3b8" font-size="7.5" font-weight="800">
+                                    <text x="${llToXY(24.5, 112.0).x}" y="${llToXY(24.5, 112.0).y}">${isEn ? 'SOUTH CHINA' : '華南沿岸'}</text>
+                                    <text x="${llToXY(28.5, 117.5).x}" y="${llToXY(28.5, 117.5).y}">${isEn ? 'EAST CHINA' : '華東'}</text>
+                                    <text x="${( llToXY(19.1, 109.6).x - 10 ).toFixed(1)}" y="${llToXY(19.1, 109.6).y}" font-size="7">${isEn ? 'Hainan' : '海南島'}</text>
+                                    <text x="${( tpePt.x + 6 ).toFixed(1)}" y="${( tpePt.y + 16 ).toFixed(1)}" fill="#e2e8f0" font-size="7.8">${isEn ? 'Taiwan' : '台灣'}</text>
+                                    <text x="${( mnlPt.x + 12 ).toFixed(1)}" y="${( mnlPt.y - 6 ).toFixed(1)}" font-size="7.5">${isEn ? 'Luzon (PH)' : '呂宋 (菲律賓)'}</text>
+                                    <text x="${llToXY(31.6, 130.5).x}" y="${(llToXY(31.6, 130.5).y - 2).toFixed(1)}" font-size="6.8">${isEn ? 'Kyushu' : '九州'}</text>
+                                    <text x="${(ishPt.x - 12).toFixed(1)}" y="${(ishPt.y - 4).toFixed(1)}" fill="#7dd3fc" font-size="6.5">${isEn ? 'Ishigaki' : '石垣'}</text>
+                                    <text x="${llToXY(15.2, 114.2).x}" y="${llToXY(15.2, 114.2).y}" fill="#1e4976" font-size="8.5" font-weight="900">${isEn ? 'SOUTH CHINA SEA' : '南 海'}</text>
+                                    <text x="${llToXY(19.5, 128.0).x}" y="${llToXY(19.5, 128.0).y}" fill="#1e4976" font-size="8.5" font-weight="900">${isEn ? 'PHILIPPINE SEA' : '菲律賓海 / 西北太平洋'}</text>
                                 </g>
 
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r400}" fill="none" stroke="#38bdf8" stroke-opacity="0.78" stroke-width="1.2" stroke-dasharray="4,3"/>
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r800}" fill="none" stroke="#f59e0b" stroke-opacity="0.78" stroke-width="1.2" stroke-dasharray="5,3"/>
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r1200}" fill="none" stroke="#f43f5e" stroke-opacity="0.78" stroke-width="1.3" stroke-dasharray="6,3"/>
+                                <!-- Okinawa Marker & Label (沖繩位置標示) -->
+                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="4.5" fill="rgba(56,189,248,0.25)" stroke="#38bdf8" stroke-width="1"/>
+                                <circle cx="${okiPt.x}" cy="${okiPt.y}" r="2.2" fill="#38bdf8"/>
+                                <text x="${(okiPt.x + 6).toFixed(1)}" y="${(okiPt.y + 3).toFixed(1)}" fill="#7dd3fc" font-size="8.2" font-weight="900">${isEn ? 'Okinawa' : '沖繩'}</text>
 
-                                <g font-size="8.5" font-weight="900">
-                                    <rect x="${(hkPt.x + 18).toFixed(1)}" y="${(hkPt.y + r400 - 11).toFixed(1)}" width="42" height="13" rx="4" fill="rgba(15,23,42,0.88)" stroke="#38bdf8" stroke-width="0.8"/>
-                                    <text x="${(hkPt.x + 39).toFixed(1)}" y="${(hkPt.y + r400 - 2).toFixed(1)}" fill="#38bdf8" text-anchor="middle">${isEn ? '400km' : '400公里'}</text>
+                                <!-- 400km, 800km, 1200km Concentric Alert Circles Centered on Hong Kong Over the Sea -->
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r400}" fill="none" stroke="#38bdf8" stroke-opacity="0.82" stroke-width="1.15" stroke-dasharray="4,3"/>
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r800}" fill="none" stroke="#f59e0b" stroke-opacity="0.82" stroke-width="1.15" stroke-dasharray="5,3"/>
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="${r1200}" fill="none" stroke="#f43f5e" stroke-opacity="0.82" stroke-width="1.25" stroke-dasharray="6,3"/>
 
-                                    <rect x="${(hkPt.x + 32).toFixed(1)}" y="${(hkPt.y + r800 - 13).toFixed(1)}" width="42" height="13" rx="4" fill="rgba(15,23,42,0.88)" stroke="#f59e0b" stroke-width="0.8"/>
-                                    <text x="${(hkPt.x + 53).toFixed(1)}" y="${(hkPt.y + r800 - 4).toFixed(1)}" fill="#fbbf24" text-anchor="middle">${isEn ? '800km' : '800公里'}</text>
+                                <!-- Seaward Distance Circle Badges (400km / 800km / 1200km) -->
+                                <g font-size="7.8" font-weight="900">
+                                    <rect x="${(hkPt.x + 12).toFixed(1)}" y="${(hkPt.y + r400 - 10).toFixed(1)}" width="38" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#38bdf8" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 31).toFixed(1)}" y="${(hkPt.y + r400 - 1.5).toFixed(1)}" fill="#38bdf8" text-anchor="middle">${isEn ? '400km' : '400公里'}</text>
 
-                                    <rect x="${(hkPt.x + 48).toFixed(1)}" y="${(hkPt.y + r1200 - 18).toFixed(1)}" width="48" height="13" rx="4" fill="rgba(15,23,42,0.88)" stroke="#f43f5e" stroke-width="0.8"/>
-                                    <text x="${(hkPt.x + 72).toFixed(1)}" y="${(hkPt.y + r1200 - 9).toFixed(1)}" fill="#fb7185" text-anchor="middle">${isEn ? '1200km' : '1200公里'}</text>
+                                    <rect x="${(hkPt.x + 24).toFixed(1)}" y="${(hkPt.y + r800 - 12).toFixed(1)}" width="38" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#f59e0b" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 43).toFixed(1)}" y="${(hkPt.y + r800 - 3.5).toFixed(1)}" fill="#fbbf24" text-anchor="middle">${isEn ? '800km' : '800公里'}</text>
+
+                                    <rect x="${(hkPt.x + 36).toFixed(1)}" y="${(hkPt.y + r1200 - 15).toFixed(1)}" width="42" height="12" rx="3.5" fill="rgba(15,23,42,0.9)" stroke="#f43f5e" stroke-width="0.7"/>
+                                    <text x="${(hkPt.x + 57).toFixed(1)}" y="${(hkPt.y + r1200 - 6.5).toFixed(1)}" fill="#fb7185" text-anchor="middle">${isEn ? '1200km' : '1200公里'}</text>
                                 </g>
 
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="7.5" fill="rgba(250,204,21,0.22)" stroke="#facc15" stroke-width="1"/>
-                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="3.5" fill="#facc15" stroke="#0f172a" stroke-width="1"/>
-                                <text x="${(hkPt.x + 7).toFixed(1)}" y="${(hkPt.y + 3).toFixed(1)}" fill="#fde047" font-size="9.5" font-weight="900">📍 ${isEn ? 'Hong Kong' : '香港'}</text>
+                                <!-- Hong Kong Center Marker & Label -->
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="6.5" fill="rgba(250,204,21,0.25)" stroke="#facc15" stroke-width="1"/>
+                                <circle cx="${hkPt.x}" cy="${hkPt.y}" r="3" fill="#facc15" stroke="#0f172a" stroke-width="0.9"/>
+                                <text x="${(hkPt.x - 32).toFixed(1)}" y="${(hkPt.y - 6).toFixed(1)}" fill="#fde047" font-size="8.8" font-weight="900">📍 ${isEn ? 'HK' : '香港'}</text>
 
+                                <!-- Active Tropical Cyclone Track & Real-Time Position Layer (HKO + JMA) -->
                                 ${cycloneTrackSvg}
                             </svg>
 
                             ${!hasCyclone ? `
-                                <div style="position:absolute; bottom:10px; left:10px; right:10px; z-index:3; background:rgba(15,23,42,0.88); border:1px solid rgba(16,185,129,0.55); border-radius:9px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:#f8fafc;">
-                                    <div style="display:flex; align-items:center; gap:8px;">
-                                        <span style="font-size:1.15rem;">🟢</span>
+                                <div style="position:absolute; bottom:8px; left:8px; right:8px; z-index:3; background:rgba(15,23,42,0.88); border:1px solid rgba(16,185,129,0.55); border-radius:8px; padding:6px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:#f8fafc;">
+                                    <div style="display:flex; align-items:center; gap:7px;">
+                                        <span style="font-size:1.05rem;">🟢</span>
                                         <div>
-                                            <div style="font-size:0.82rem; font-weight:900; color:#34d399;">
-                                                ${isEn ? 'No Active Typhoon / Tropical Cyclone at Present' : '現時並無颱風／熱帶氣旋生效'}
+                                            <div style="font-size:0.78rem; font-weight:900; color:#34d399;">
+                                                ${isEn ? 'No Active Typhoon at Present (HKO & JMA)' : '現時並無颱風／熱帶氣旋生效（天文台及日本氣象廳）'}
                                             </div>
-                                            <div style="font-size:0.7rem; color:#cbd5e1; font-weight:600;">
-                                                ${isEn ? 'No tropical cyclone is currently within the 400km / 800km / 1200km monitoring zones.' : '香港對出海面 400公里、800公里及 1200公里監測範圍內現時並無熱帶氣旋。'}
+                                            <div style="font-size:0.68rem; color:#cbd5e1; font-weight:600;">
+                                                ${isEn ? 'No typhoon inside 400km / 800km / 1200km zones or W.N. Pacific.' : '香港對出海面 400 / 800 / 1200 公里圈、南海及沖繩鄰近海域現時並無颱風。'}
                                             </div>
                                         </div>
                                     </div>
@@ -7124,26 +7389,48 @@
                             ` : ''}
                         </div>
 
-                        <div style="margin-top:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(148,163,184,0.22); border-radius:10px; padding:9px 11px; color:#e2e8f0; font-size:0.76rem;">
-                            ${hasCyclone ? cyclones.map(tc => `
-                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-                                    <div><b style="color:#fde047;">🌀 ${isEn ? tc.name_en : tc.name_zh}</b> · ${isEn ? 'Real-Time Position:' : '即時位置：'} <b>${tc.current.lat.toFixed(1)}°N, ${tc.current.lon.toFixed(1)}°E</b></div>
-                                    <div><span style="background:#dc2626; color:#fff; padding:2px 8px; border-radius:999px; font-weight:800;">${isEn ? `${tc.distKm} km from HK` : `距離香港約 ${tc.distKm} 公里`}</span></div>
+                        <!-- Row 3: Fixed 92px Control & Agency Status Box (Exact same height as Radar control box) -->
+                        <div class="wth-dark-ctrl-box">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <span style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Agency:' : '數據源：'}</span>
+                                    ${[
+                                        { id: 'ALL', zh: '🌐 天文台 + 日本氣象廳', en: '🌐 HKO + JMA' },
+                                        { id: 'HKO', zh: '🇭🇰 香港天文台', en: '🇭🇰 HKO' },
+                                        { id: 'JMA', zh: '🇯🇵 日本氣象廳', en: '🇯🇵 JMA' }
+                                    ].map(ag => {
+                                        const act = (agencyFilter === ag.id);
+                                        return `<button type="button" onclick="setWeatherTcAgencyFilter('${ag.id}')" style="padding:3px 8px; border-radius:5px; font-size:0.7rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? ag.en : ag.zh}</button>`;
+                                    }).join('')}
                                 </div>
-                            `).join('') : `
-                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-                                    <span>🛡️ <b>${isEn ? 'Tropical Cyclone Status:' : '熱帶氣旋即時狀態：'}</b>${isEn ? 'Currently no typhoon in South China Sea / W.N. Pacific' : '現時華南沿岸及南海並沒有颱風或熱帶氣旋路徑'}</span>
-                                    <span style="color:#38bdf8; font-weight:800;">400 / 800 / 1200 km</span>
-                                </div>
-                            `}
+                                <span style="font-size:0.7rem; color:#38bdf8; font-weight:800;">104°E–136°E · 8°N–32°N</span>
+                            </div>
+
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:0.73rem; color:#e2e8f0; background:rgba(15,23,42,0.55); padding:4px 8px; border-radius:6px; border:1px solid rgba(148,163,184,0.16);">
+                                ${hasCyclone ? `
+                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🌀 <b style="color:#fde047;">${isEn ? cyclones[0].name_en : cyclones[0].name_zh}</b> (${cyclones[0].source}) · ${cyclones[0].current.lat.toFixed(1)}°N, ${cyclones[0].current.lon.toFixed(1)}°E</span>
+                                    <span style="color:#f87171; font-weight:800; white-space:nowrap;">${isEn ? `${cyclones[0].distKm} km from HK` : `距港 ${cyclones[0].distKm} 公里`}</span>
+                                ` : `
+                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🛡️ <b>${isEn ? 'HKO & JMA Live Check:' : '天文台及日本氣象廳實時狀態：'}</b>${isEn ? '0 Active Typhoons' : '現時無熱帶氣旋路徑'}</span>
+                                    <span style="color:#34d399; font-weight:800; white-space:nowrap;">🟢 ${isEn ? 'All Clear' : '正常（無颱風）'}</span>
+                                `}
+                            </div>
+
+                            <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.68rem; color:#94a3b8; font-weight:700;">
+                                <span>📍 ${isEn ? 'Key Points: Hong Kong · Taiwan · Okinawa · Luzon' : '標示位置：香港・台灣・沖繩・石垣・宮古・呂宋・海南'}</span>
+                                <span style="color:#fde047;">HKO / JMA</span>
+                            </div>
                         </div>
 
-                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(148,163,184,0.2); font-size:0.72rem; color:#cbd5e1;">
-                            <span style="font-weight:800; color:#38bdf8;">${isEn ? '⭕ Distance Rings from HK:' : '⭕ 香港對出海面距離圈圖例：'}</span>
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px; height:3px; background:#38bdf8; display:inline-block;"></span><b>400 ${isEn ? 'km' : '公里'}</b></span>
-                                <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px; height:3px; background:#f59e0b; display:inline-block;"></span><b>800 ${isEn ? 'km' : '公里'}</b></span>
-                                <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px; height:3px; background:#f43f5e; display:inline-block;"></span><b>1200 ${isEn ? 'km' : '公里'}</b></span>
+                        <!-- Row 4: Bottom Legend Bar (Exact same height as Radar legend bar) -->
+                        <div class="wth-dark-legend-bar">
+                            <span style="font-weight:800; color:#38bdf8;">${isEn ? '⭕ Rings & Track Legend:' : '⭕ 距離圈及機構路徑圖例：'}</span>
+                            <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#38bdf8; display:inline-block;"></span><b>400km</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#f59e0b; display:inline-block;"></span><b>800km</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:9px; height:2.5px; background:#f43f5e; display:inline-block;"></span><b>1200km</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#facc15; display:inline-block;"></span><b>HKO</b></span>
+                                <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:50%; background:#c084fc; display:inline-block;"></span><b>JMA</b></span>
                             </div>
                         </div>
                     </div>
@@ -7183,21 +7470,21 @@
             ];
 
             return `
-                <div class="el-card-box" style="background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-color:#bae6fd; padding:14px 16px; justify-content:space-between;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #bae6fd; padding-bottom:10px;">
+                <div class="el-card-box wth-radar-tc-card" style="background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-color:#bae6fd; padding:14px 16px;">
+                    <div class="wth-radar-tc-head">
                         <div>
-                            <div style="font-size:0.98rem; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:6px;">
+                            <div style="font-size:0.95rem; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:6px;">
                                 📡 ${isEn ? 'Hong Kong Weather Radar (Latest 20 Frames Animation)' : '香港天文台天氣雷達圖（最近 20 張圖動態連播）'}
                             </div>
-                            <div style="font-size:0.75rem; color:#475569; font-weight:600; margin-top:2px;">
+                            <div style="font-size:0.73rem; color:#475569; font-weight:600; margin-top:2px;">
                                 ${rangeDesc}
                             </div>
                         </div>
 
-                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
                             ${[64, 128, 256].map(km => {
                                 const active = (rangeKm === km);
-                                return `<button type="button" onclick="setWeatherRadarRange(${km})" style="padding:6px 12px; border-radius:999px; font-weight:800; font-size:0.78rem; cursor:pointer; border:1px solid ${active ? '#0284c7' : '#94a3b8'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#0f172a'}; box-shadow:${active ? '0 2px 8px rgba(2,132,199,0.28)' : 'none'}; transition:all 0.15s;">
+                                return `<button type="button" onclick="setWeatherRadarRange(${km})" style="padding:5px 11px; border-radius:999px; font-weight:800; font-size:0.76rem; cursor:pointer; border:1px solid ${active ? '#0284c7' : '#94a3b8'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#0f172a'}; box-shadow:${active ? '0 2px 8px rgba(2,132,199,0.28)' : 'none'}; transition:all 0.15s;">
                                     📡 ${km} ${isEn ? 'km' : '公里'}
                                 </button>`;
                             }).join('')}
@@ -7205,20 +7492,22 @@
                     </div>
 
                     <div class="wth-radar-single-wrap">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; color:#f8fafc;">
+                        <!-- Row 1: Top Dark Bar (30px height matching Cyclone card) -->
+                        <div style="height:30px; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; color:#f8fafc;">
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="background:#0284c7; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.76rem; font-weight:900;">
+                                <span style="background:#0284c7; color:#ffffff; padding:3px 9px; border-radius:6px; font-size:0.75rem; font-weight:900;">
                                     ${rangeKm} ${isEn ? 'km Radar' : '公里雷達'}
                                 </span>
-                                <span id="wth-radar-frame-counter" style="font-size:0.8rem; font-weight:800; color:#38bdf8; font-variant-numeric:tabular-nums;">
+                                <span id="wth-radar-frame-counter" style="font-size:0.78rem; font-weight:800; color:#38bdf8; font-variant-numeric:tabular-nums;">
                                     ${isEn ? `Frame ${st.radarFrameIdx + 1} / 20 ${st.radarFrameIdx === 19 ? '(Latest)' : ''}` : `第 ${st.radarFrameIdx + 1} / 20 張 ${st.radarFrameIdx === 19 ? '(最新)' : ''}`}
                                 </span>
                             </div>
-                            <div id="wth-radar-frame-time" style="font-size:0.78rem; font-weight:800; color:#fde047; font-family:monospace; background:rgba(255,255,255,0.08); padding:3px 9px; border-radius:6px;">
+                            <div id="wth-radar-frame-time" style="font-size:0.75rem; font-weight:800; color:#fde047; font-family:monospace; background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:6px;">
                                 🕒 ${curFrame ? curFrame.dateTimeLabel : '--:-- HKT'}
                             </div>
                         </div>
 
+                        <!-- Row 2: 4:3 Radar Stage (Exact same aspect-ratio & height as Cyclone map) -->
                         <div style="position:relative; width:100%; aspect-ratio: 4/3; background: radial-gradient(circle at 50% 50%, #0c243c 0%, #071526 70%, #030b14 100%); border-radius:10px; overflow:hidden; border:1px solid #1e3a5f;">
                             <img id="wth-radar-live-img" data-cur-url="${curFrame ? curFrame.url : ''}" src="${curFrame ? curFrame.url : ''}" alt="${rangeKm}km Weather Radar" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:2; opacity:0; transition:opacity 0.15s;" onload="this.style.opacity='0.94'" onerror="if(this.src !== '${curFrame ? curFrame.altUrl : ''}'){this.src='${curFrame ? curFrame.altUrl : ''}';}else{this.style.opacity='0';}">
 
@@ -7282,40 +7571,42 @@
                             </div>
                         </div>
 
-                        <div style="margin-top:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(148,163,184,0.22); border-radius:10px; padding:9px 11px;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                    <button type="button" onclick="stepWeatherRadarFrame(-1)" style="padding:4px 9px; border-radius:6px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.74rem;">⏮️ ${isEn ? 'Prev' : '上一張'}</button>
-                                    <button type="button" id="wth-radar-play-btn" onclick="toggleWeatherRadarAnim()" style="padding:4px 12px; border-radius:6px; border:1px solid ${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; background:${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; color:#ffffff; cursor:pointer; font-weight:800; font-size:0.76rem;">
-                                        ${st.radarAnimPlaying ? (isEn ? '⏸️ Pause (20-Frame Loop)' : '⏸️ 暫停動畫 (20張連播中)') : (isEn ? '▶️ Play 20-Frame Animation' : '▶️ 播放最近 20 張雷達動畫')}
+                        <!-- Row 3: Fixed 92px Control Box (Exact same height as Cyclone control box) -->
+                        <div class="wth-dark-ctrl-box">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <button type="button" onclick="stepWeatherRadarFrame(-1)" style="padding:3px 8px; border-radius:5px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.7rem;">⏮️ ${isEn ? 'Prev' : '上一張'}</button>
+                                    <button type="button" id="wth-radar-play-btn" onclick="toggleWeatherRadarAnim()" style="padding:3px 10px; border-radius:5px; border:1px solid ${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; background:${st.radarAnimPlaying ? '#dc2626' : '#0284c7'}; color:#ffffff; cursor:pointer; font-weight:800; font-size:0.72rem;">
+                                        ${st.radarAnimPlaying ? (isEn ? '⏸️ Pause (20-Frame)' : '⏸️ 暫停動畫 (20張連播)') : (isEn ? '▶️ Play 20-Frame' : '▶️ 播放 20 張動畫')}
                                     </button>
-                                    <button type="button" onclick="stepWeatherRadarFrame(1)" style="padding:4px 9px; border-radius:6px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.74rem;">⏭️ ${isEn ? 'Next' : '下一張'}</button>
+                                    <button type="button" onclick="stepWeatherRadarFrame(1)" style="padding:3px 8px; border-radius:5px; border:1px solid #475569; background:#1e293b; color:#f8fafc; cursor:pointer; font-weight:800; font-size:0.7rem;">⏭️ ${isEn ? 'Next' : '下一張'}</button>
                                 </div>
 
                                 <div style="display:flex; align-items:center; gap:4px;">
-                                    <span style="font-size:0.71rem; color:#94a3b8; font-weight:700;">${isEn ? 'Speed:' : '速度：'}</span>
+                                    <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">${isEn ? 'Speed:' : '速度：'}</span>
                                     ${[
                                         { ms: 700, zh: '慢', en: 'Slow' },
                                         { ms: 420, zh: '標準', en: 'Normal' },
                                         { ms: 220, zh: '快', en: 'Fast' }
                                     ].map(sp => {
                                         const act = (st.radarAnimSpeedMs === sp.ms);
-                                        return `<button type="button" onclick="setWeatherRadarSpeed(${sp.ms})" style="padding:3px 7px; border-radius:5px; font-size:0.7rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? sp.en : sp.zh}</button>`;
+                                        return `<button type="button" onclick="setWeatherRadarSpeed(${sp.ms})" style="padding:2px 6px; border-radius:4px; font-size:0.68rem; font-weight:800; cursor:pointer; border:1px solid ${act ? '#38bdf8' : '#475569'}; background:${act ? '#0284c7' : '#1e293b'}; color:#fff;">${isEn ? sp.en : sp.zh}</button>`;
                                     }).join('')}
                                 </div>
                             </div>
 
-                            <input type="range" id="wth-radar-slider" min="0" max="19" step="1" value="${st.radarFrameIdx}" oninput="setWeatherRadarFrameIdx(this.value)" style="width:100%; accent-color:#38bdf8; cursor:pointer; margin-bottom:6px;">
+                            <input type="range" id="wth-radar-slider" min="0" max="19" step="1" value="${st.radarFrameIdx}" oninput="setWeatherRadarFrameIdx(this.value)" style="width:100%; accent-color:#38bdf8; cursor:pointer; margin:0;">
 
                             <div style="display:grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap:2px;">
                                 ${frames.map((f, i) => {
                                     const isCur = (i === st.radarFrameIdx);
-                                    return `<button type="button" id="wth-radar-dot-${i}" onclick="setWeatherRadarFrameIdx(${i})" title="${f.dateTimeLabel}" style="border:none; border-radius:4px; padding:2px 0; font-size:0.62rem; font-weight:800; cursor:pointer; background:${isCur ? '#38bdf8' : (i < st.radarFrameIdx ? '#0284c7' : '#334155')}; color:${isCur ? '#0f172a' : '#e2e8f0'};">${i + 1}</button>`;
+                                    return `<button type="button" id="wth-radar-dot-${i}" onclick="setWeatherRadarFrameIdx(${i})" title="${f.dateTimeLabel}" style="border:none; border-radius:3px; padding:2px 0; font-size:0.6rem; font-weight:800; cursor:pointer; background:${isCur ? '#38bdf8' : (i < st.radarFrameIdx ? '#0284c7' : '#334155')}; color:${isCur ? '#0f172a' : '#e2e8f0'};">${i + 1}</button>`;
                                 }).join('')}
                             </div>
                         </div>
 
-                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(148,163,184,0.2); font-size:0.71rem; color:#cbd5e1;">
+                        <!-- Row 4: Bottom Legend Bar (Exact same height as Cyclone legend bar) -->
+                        <div class="wth-dark-legend-bar">
                             <span style="font-weight:800; color:#38bdf8;">${isEn ? '🌧️ Rainfall Rate (mm/hr):' : '🌧️ 降雨強度色標 (mm/hr)：'}</span>
                             <div style="display:flex; align-items:center; gap:3px; flex-wrap:wrap;">
                                 ${bins.map(b => `<span style="display:inline-flex; align-items:center; gap:2px; background:rgba(255,255,255,0.08); padding:1px 4px; border-radius:4px;"><span style="width:7px; height:7px; border-radius:2px; background:${b.c}; display:inline-block;"></span><b>${b.v}</b></span>`).join('')}
