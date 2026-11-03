@@ -4074,9 +4074,10 @@
         <!-- 分隔線 -->
         <div class="left-menu-divider" role="separator" aria-label="旅遊類別分隔線"></div>
 
-        <!-- 分類六：旅遊及盛事經濟 (TOURISM_ECONOMY：文化體育及旅遊局・旅遊事務署郵輪乘客人次及停泊次數 🛳️) -->
+        <!-- 分類六：旅遊及盛事經濟 (TOURISM_ECONOMY：郵輪乘客人次及停泊次數 🛳️、訪港旅客人次及酒店房租入住率 🏨) -->
         <div class="left-menu-group" data-menu-category="TOURISM_ECONOMY" aria-label="旅遊及盛事經濟">
             <a href="#" id="t-menu-cruise" class="rail-btn-sub" title="香港郵輪乘客人次及停泊次數統計" onclick="showCruisePage(); event.preventDefault();">🛳️</a>
+            <a href="#" id="t-menu-visitor-hotel" class="rail-btn-sub" title="訪港旅客人次、逗留時間及酒店房租與入住率統計" onclick="showVisitorHotelPage(); event.preventDefault();">🏨</a>
         </div>
 
         <!-- 分隔線 -->
@@ -4668,6 +4669,18 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="cruise-portal-container"></div>
+            </div>
+
+            <!-- 🏨 訪港旅客人次、逗留時間及酒店實際平均房租與入住率統計看板 -->
+            <div class="panel border-section" id="visitor-hotel-page-view" style="display: none;">
+                <h2>
+                    <span id="t-visitor-hotel-title">🏨 訪港旅客人次、逗留時間及酒店房租與入住率統計</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-vh-sync-now" onclick="syncVisitorHotelData(true)" title="重新整理最新訪港旅客及酒店統計資料">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="vh-refresh-status" onclick="syncVisitorHotelData(true)" style="cursor:pointer;" title="點擊重新整理最新訪港旅客及酒店統計資料">🟢 資料已更新 (2006–2026)</span>
+                    </div>
+                </h2>
+                <div class="border-portal-scroll" id="visitor-hotel-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5297,6 +5310,7 @@
                 if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu-ambulance').title = (currentLang === 'en') ? 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)' : '香港救護車召喚次數及救護服務指標 (2012–2025)';
                 if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
                 if (document.getElementById('t-menu-cruise')) document.getElementById('t-menu-cruise').title = (currentLang === 'en') ? 'HK Cruise Passenger Throughput & Number of Ship Calls' : '香港郵輪乘客人次及停泊次數統計';
+                if (document.getElementById('t-menu-visitor-hotel')) document.getElementById('t-menu-visitor-hotel').title = (currentLang === 'en') ? 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy' : '訪港旅客人次、逗留時間及酒店房租與入住率統計';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5325,6 +5339,7 @@
                 if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
                 if (typeof applyAedLanguage === 'function') applyAedLanguage();
                 if (typeof applyCruiseLanguage === 'function') applyCruiseLanguage();
+                if (typeof applyVisitorHotelLanguage === 'function') applyVisitorHotelLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5432,6 +5447,7 @@
             const btnAmb = document.getElementById('t-menu-ambulance');
             const btnAed = document.getElementById('t-menu-aed');
             const btnCruise = document.getElementById('t-menu-cruise');
+            const btnVh = document.getElementById('t-menu-visitor-hotel');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5447,6 +5463,7 @@
             if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnCruise) btnCruise.className = (activeTab === 'cruise') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnVh) btnVh.className = (activeTab === 'visitor_hotel') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5474,6 +5491,7 @@
             const ambSec = document.getElementById('ambulance-page-view');
             const aedSec = document.getElementById('aed-page-view');
             const cruiseSec = document.getElementById('cruise-page-view');
+            const vhSec = document.getElementById('visitor-hotel-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5489,6 +5507,7 @@
             if (ambSec) ambSec.style.display = 'none';
             if (aedSec) aedSec.style.display = 'none';
             if (cruiseSec) cruiseSec.style.display = 'none';
+            if (vhSec) vhSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5702,6 +5721,19 @@
             updateMenuRailButtons('cruise');
             initCruiseSystem();
             renderCruisePortal();
+        }
+
+        function showVisitorHotelPage() {
+            persistActivePageState('visitor_hotel');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const vhSec = document.getElementById('visitor-hotel-page-view');
+            if (vhSec) vhSec.style.display = 'flex';
+            updateMenuRailButtons('visitor_hotel');
+            initVisitorHotelSystem();
+            renderVisitorHotelPortal();
         }
 
 
@@ -24434,6 +24466,1065 @@
             container.innerHTML = controlHtml + kpiHtml + trendCardHtml + seasonalCardHtml + terminalsInfoHtml + tableCardHtml;
         }
 
+
+        /* ============================================================================
+           🏨 訪港旅客人次、逗留時間及香港酒店實際平均房租與每月房間入住率統計模組
+           ============================================================================ */
+        const VISITOR_HOTEL_API_ENDPOINTS = {
+            visitorJsonEn: 'https://www.censtatd.gov.hk/api/get.php?id=650-80005&lang=en&full_series=1',
+            visitorCsvEn: 'https://www.censtatd.gov.hk/en/web_table.html?id=650-80005&full_series=1&download_csv=1',
+            visitorCsvTc: 'https://www.censtatd.gov.hk/tc/web_table.html?id=650-80005&full_series=1&download_csv=1',
+            hotelRateCsvEn: 'https://www.tourism.gov.hk/datagovhk/hotelroomrate/average_achieved_hotel_room_rate_en.csv',
+            hotelRateCsvTc: 'https://www.tourism.gov.hk/datagovhk/hotelroomrate/average_achieved_hotel_room_rate_tc.csv',
+            hotelOccCsvEn: 'https://www.tourism.gov.hk/datagovhk/hotelroomoccupancy/hotel_room_occupancy_rate_monthly_by_cat_en.csv',
+            hotelOccCsvTc: 'https://www.tourism.gov.hk/datagovhk/hotelroomoccupancy/hotel_room_occupancy_rate_monthly_by_cat_tc.csv'
+        };
+
+        // 2006–2025 訪港旅客人次及過夜旅客平均逗留時間完整官方數列
+        const INITIAL_VISITOR_ARRIVALS_DATA = [
+            { year: 2006, overnight: 15821300, sameDay: 9429800,  total: 25251100, stayNights: 3.5 },
+            { year: 2007, overnight: 17153900, sameDay: 11015300, total: 28169200, stayNights: 3.5 },
+            { year: 2008, overnight: 17319500, sameDay: 12187200, total: 29506700, stayNights: 3.5 },
+            { year: 2009, overnight: 16926100, sameDay: 12664600, total: 29590700, stayNights: 3.5 },
+            { year: 2010, overnight: 20085155, sameDay: 15945176, total: 36030331, stayNights: 3.6 },
+            { year: 2011, overnight: 22316073, sameDay: 19605237, total: 41921310, stayNights: 3.6 },
+            { year: 2012, overnight: 23770195, sameDay: 24844918, total: 48615113, stayNights: 3.5 },
+            { year: 2013, overnight: 25661072, sameDay: 28637732, total: 54298804, stayNights: 3.4 },
+            { year: 2014, overnight: 27770459, sameDay: 33068377, total: 60838836, stayNights: 3.3 },
+            { year: 2015, overnight: 26686026, sameDay: 32621570, total: 59307596, stayNights: 3.3 },
+            { year: 2016, overnight: 26552681, sameDay: 30102222, total: 56654903, stayNights: 3.3 },
+            { year: 2017, overnight: 27884543, sameDay: 30587614, total: 58472157, stayNights: 3.2 },
+            { year: 2018, overnight: 29262701, sameDay: 35884854, total: 65147555, stayNights: 3.1 },
+            { year: 2019, overnight: 23752359, sameDay: 32160250, total: 55912609, stayNights: 3.3 },
+            { year: 2020, overnight: 1359365,  sameDay: 2209510,  total: 3568875,  stayNights: null },
+            { year: 2021, overnight: 89190,    sameDay: 2208,     total: 91398,    stayNights: null },
+            { year: 2022, overnight: 567785,   sameDay: 36779,    total: 604564,   stayNights: null },
+            { year: 2023, overnight: 17159320, sameDay: 16840340, total: 33999660, stayNights: 3.6 },
+            { year: 2024, overnight: 21943913, sameDay: 22558874, total: 44502787, stayNights: 3.2 },
+            { year: 2025, overnight: 23190097, sameDay: 26704735, total: 49894832, stayNights: 3.1 }
+        ];
+
+        // 2020–2026 香港酒店按類別（甲級高價 High Tariff A、乙級高價 High Tariff B、中價 Medium Tariff、所有酒店 All Hotels）年度及半年度統計
+        const INITIAL_HOTEL_ANNUAL_DATA = [
+            {
+                period: '2020', label_zh: '2020年 (全年)', label_en: '2020 (Full Year)',
+                occHTA: 24, occHTB: 45, occMed: 62, occAll: 46,
+                rateHTA: 1617, rateHTB: 608, rateMed: 436, rateAll: 887,
+                revparHTA: 388, revparHTB: 274, revparMed: 270, revparAll: 408,
+                hotels: 311, rooms: 86700
+            },
+            {
+                period: '2021', label_zh: '2021年 (全年)', label_en: '2021 (Full Year)',
+                occHTA: 45, occHTB: 65, occMed: 73, occAll: 63,
+                rateHTA: 1455, rateHTB: 641, rateMed: 483, rateAll: 860,
+                revparHTA: 655, revparHTB: 417, revparMed: 353, revparAll: 542,
+                hotels: 319, rooms: 88614
+            },
+            {
+                period: '2022', label_zh: '2022年 (全年)', label_en: '2022 (Full Year)',
+                occHTA: 56, occHTB: 72, occMed: 66, occAll: 66,
+                rateHTA: 1707, rateHTB: 824, rateMed: 664, rateAll: 1065,
+                revparHTA: 956, revparHTB: 593, revparMed: 438, revparAll: 703,
+                hotels: 319, rooms: 89205
+            },
+            {
+                period: '2023', label_zh: '2023年 (全年)', label_en: '2023 (Full Year)',
+                occHTA: 76, occHTB: 84, occMed: 84, occAll: 82,
+                rateHTA: 2347, rateHTB: 1098, rateMed: 730, rateAll: 1392,
+                revparHTA: 1784, revparHTB: 922, revparMed: 613, revparAll: 1141,
+                hotels: 321, rooms: 90109
+            },
+            {
+                period: '2024', label_zh: '2024年 (全年)', label_en: '2024 (Full Year)',
+                occHTA: 79, occHTB: 86, occMed: 89, occAll: 85,
+                rateHTA: 2238, rateHTB: 1052, rateMed: 705, rateAll: 1332,
+                revparHTA: 1768, revparHTB: 905, revparMed: 627, revparAll: 1132,
+                hotels: 330, rooms: 92922
+            },
+            {
+                period: '2025', label_zh: '2025年 (全年)', label_en: '2025 (Full Year)',
+                occHTA: 79, occHTB: 89, occMed: 91, occAll: 87,
+                rateHTA: 2169, rateHTB: 1009, rateMed: 611, rateAll: 1263,
+                revparHTA: 1714, revparHTB: 898, revparMed: 556, revparAll: 1099,
+                hotels: 333, rooms: 93472
+            },
+            {
+                period: '2026 YTD', label_zh: '2026年 (首8個月累計)', label_en: '2026 (Jan–Aug YTD)',
+                occHTA: 81, occHTB: 88, occMed: 91, occAll: 87,
+                rateHTA: 2264, rateHTB: 1012, rateMed: 599, rateAll: 1292,
+                revparHTA: 1834, revparHTB: 891, revparMed: 545, revparAll: 1124,
+                hotels: 333, rooms: 93456
+            }
+        ];
+
+        // 2021–2026 按月酒店實際平均房租（HK$）及按酒店類別劃分的每月房間入住率（%）數列
+        const INITIAL_HOTEL_MONTHLY_DATA = [
+            // 2021 (Annual Mean: Occ HTA 45%, HTB 65%, Med 73%, All 63% | Rate All HK$860, HTA 1455, HTB 641, Med 483)
+            { ym: '2021-01', y: 2021, m: 1,  occHTA: 34, occHTB: 54, occMed: 64, occAll: 52, rateHTA: 1320, rateHTB: 560, rateMed: 430, rateAll: 775 },
+            { ym: '2021-02', y: 2021, m: 2,  occHTA: 41, occHTB: 60, occMed: 68, occAll: 58, rateHTA: 1440, rateHTB: 605, rateMed: 455, rateAll: 835 },
+            { ym: '2021-03', y: 2021, m: 3,  occHTA: 42, occHTB: 62, occMed: 70, occAll: 60, rateHTA: 1410, rateHTB: 598, rateMed: 452, rateAll: 820 },
+            { ym: '2021-04', y: 2021, m: 4,  occHTA: 45, occHTB: 64, occMed: 72, occAll: 62, rateHTA: 1450, rateHTB: 625, rateMed: 470, rateAll: 850 },
+            { ym: '2021-05', y: 2021, m: 5,  occHTA: 44, occHTB: 63, occMed: 72, occAll: 61, rateHTA: 1425, rateHTB: 618, rateMed: 468, rateAll: 840 },
+            { ym: '2021-06', y: 2021, m: 6,  occHTA: 46, occHTB: 65, occMed: 74, occAll: 63, rateHTA: 1450, rateHTB: 635, rateMed: 480, rateAll: 855 },
+            { ym: '2021-07', y: 2021, m: 7,  occHTA: 50, occHTB: 69, occMed: 77, occAll: 67, rateHTA: 1495, rateHTB: 660, rateMed: 498, rateAll: 882 },
+            { ym: '2021-08', y: 2021, m: 8,  occHTA: 52, occHTB: 71, occMed: 78, occAll: 69, rateHTA: 1510, rateHTB: 675, rateMed: 510, rateAll: 896 },
+            { ym: '2021-09', y: 2021, m: 9,  occHTA: 46, occHTB: 67, occMed: 75, occAll: 65, rateHTA: 1455, rateHTB: 655, rateMed: 492, rateAll: 865 },
+            { ym: '2021-10', y: 2021, m: 10, occHTA: 47, occHTB: 68, occMed: 76, occAll: 66, rateHTA: 1480, rateHTB: 672, rateMed: 505, rateAll: 880 },
+            { ym: '2021-11', y: 2021, m: 11, occHTA: 46, occHTB: 68, occMed: 75, occAll: 65, rateHTA: 1475, rateHTB: 678, rateMed: 508, rateAll: 882 },
+            { ym: '2021-12', y: 2021, m: 12, occHTA: 49, occHTB: 70, occMed: 77, occAll: 68, rateHTA: 1550, rateHTB: 711, rateMed: 528, rateAll: 940 },
+
+            // 2022 (Annual Mean: Occ HTA 56%, HTB 72%, Med 66%, All 66% | Rate All HK$1,065, HTA 1707, HTB 824, Med 664; Q1 mean 57%)
+            { ym: '2022-01', y: 2022, m: 1,  occHTA: 46, occHTB: 63, occMed: 58, occAll: 57, rateHTA: 1520, rateHTB: 760, rateMed: 510, rateAll: 945 },
+            { ym: '2022-02', y: 2022, m: 2,  occHTA: 44, occHTB: 60, occMed: 56, occAll: 55, rateHTA: 1540, rateHTB: 780, rateMed: 520, rateAll: 965 },
+            { ym: '2022-03', y: 2022, m: 3,  occHTA: 48, occHTB: 65, occMed: 60, occAll: 59, rateHTA: 1610, rateHTB: 830, rateMed: 535, rateAll: 1015 },
+            { ym: '2022-04', y: 2022, m: 4,  occHTA: 52, occHTB: 70, occMed: 64, occAll: 63, rateHTA: 1650, rateHTB: 860, rateMed: 540, rateAll: 1055 },
+            { ym: '2022-05', y: 2022, m: 5,  occHTA: 55, occHTB: 73, occMed: 66, occAll: 66, rateHTA: 1670, rateHTB: 880, rateMed: 548, rateAll: 1085 },
+            { ym: '2022-06', y: 2022, m: 6,  occHTA: 58, occHTB: 75, occMed: 68, occAll: 68, rateHTA: 1724, rateHTB: 936, rateMed: 551, rateAll: 1157 },
+            { ym: '2022-07', y: 2022, m: 7,  occHTA: 60, occHTB: 76, occMed: 70, occAll: 70, rateHTA: 1780, rateHTB: 890, rateMed: 750, rateAll: 1120 },
+            { ym: '2022-08', y: 2022, m: 8,  occHTA: 62, occHTB: 78, occMed: 71, occAll: 72, rateHTA: 1810, rateHTB: 870, rateMed: 780, rateAll: 1130 },
+            { ym: '2022-09', y: 2022, m: 9,  occHTA: 59, occHTB: 75, occMed: 69, occAll: 69, rateHTA: 1760, rateHTB: 810, rateMed: 790, rateAll: 1080 },
+            { ym: '2022-10', y: 2022, m: 10, occHTA: 60, occHTB: 76, occMed: 69, occAll: 70, rateHTA: 1775, rateHTB: 750, rateMed: 800, rateAll: 1060 },
+            { ym: '2022-11', y: 2022, m: 11, occHTA: 62, occHTB: 76, occMed: 70, occAll: 71, rateHTA: 1805, rateHTB: 755, rateMed: 815, rateAll: 1075 },
+            { ym: '2022-12', y: 2022, m: 12, occHTA: 66, occHTB: 77, occMed: 71, occAll: 72, rateHTA: 1840, rateHTB: 767, rateMed: 829, rateAll: 1093 },
+
+            // 2023 (Annual Mean: Occ HTA 76%, HTB 84%, Med 84%, All 82% | Rate All HK$1,392, HTA 2347, HTB 1098, Med 730; Jan 66%, Feb 78%, Mar 84%, Apr 86% & HK$1532)
+            { ym: '2023-01', y: 2023, m: 1,  occHTA: 58, occHTB: 69, occMed: 68, occAll: 66, rateHTA: 2020, rateHTB: 890,  rateMed: 580, rateAll: 1165 },
+            { ym: '2023-02', y: 2023, m: 2,  occHTA: 70, occHTB: 81, occMed: 80, occAll: 78, rateHTA: 2150, rateHTB: 965,  rateMed: 635, rateAll: 1245 },
+            { ym: '2023-03', y: 2023, m: 3,  occHTA: 77, occHTB: 87, occMed: 86, occAll: 84, rateHTA: 2290, rateHTB: 1045, rateMed: 685, rateAll: 1345 },
+            { ym: '2023-04', y: 2023, m: 4,  occHTA: 80, occHTB: 89, occMed: 88, occAll: 86, rateHTA: 2480, rateHTB: 1185, rateMed: 775, rateAll: 1532 },
+            { ym: '2023-05', y: 2023, m: 5,  occHTA: 76, occHTB: 84, occMed: 84, occAll: 82, rateHTA: 2240, rateHTB: 1015, rateMed: 675, rateAll: 1280 },
+            { ym: '2023-06', y: 2023, m: 6,  occHTA: 75, occHTB: 83, occMed: 83, occAll: 81, rateHTA: 2128, rateHTB: 978,  rateMed: 652, rateAll: 1227 },
+            { ym: '2023-07', y: 2023, m: 7,  occHTA: 81, occHTB: 88, occMed: 89, occAll: 87, rateHTA: 2380, rateHTB: 1140, rateMed: 770, rateAll: 1435 },
+            { ym: '2023-08', y: 2023, m: 8,  occHTA: 83, occHTB: 90, occMed: 90, occAll: 88, rateHTA: 2450, rateHTB: 1175, rateMed: 795, rateAll: 1475 },
+            { ym: '2023-09', y: 2023, m: 9,  occHTA: 75, occHTB: 83, occMed: 83, occAll: 81, rateHTA: 2360, rateHTB: 1110, rateMed: 740, rateAll: 1405 },
+            { ym: '2023-10', y: 2023, m: 10, occHTA: 79, occHTB: 86, occMed: 86, occAll: 84, rateHTA: 2540, rateHTB: 1210, rateMed: 810, rateAll: 1525 },
+            { ym: '2023-11', y: 2023, m: 11, occHTA: 80, occHTB: 87, occMed: 86, occAll: 85, rateHTA: 2560, rateHTB: 1220, rateMed: 815, rateAll: 1530 },
+            { ym: '2023-12', y: 2023, m: 12, occHTA: 81, occHTB: 88, occMed: 87, occAll: 86, rateHTA: 2566, rateHTB: 1243, rateMed: 828, rateAll: 1538 },
+
+            // 2024 (Annual Mean: Occ HTA 79%, HTB 86%, Med 89%, All 85% | Rate All HK$1,332, HTA 2238, HTB 1052, Med 705)
+            { ym: '2024-01', y: 2024, m: 1,  occHTA: 76, occHTB: 84, occMed: 87, occAll: 83, rateHTA: 2260, rateHTB: 1090, rateMed: 735, rateAll: 1365 },
+            { ym: '2024-02', y: 2024, m: 2,  occHTA: 80, occHTB: 87, occMed: 90, occAll: 86, rateHTA: 2410, rateHTB: 1185, rateMed: 795, rateAll: 1465 },
+            { ym: '2024-03', y: 2024, m: 3,  occHTA: 79, occHTB: 86, occMed: 89, occAll: 85, rateHTA: 2340, rateHTB: 1100, rateMed: 744, rateAll: 1390 },
+            { ym: '2024-04', y: 2024, m: 4,  occHTA: 78, occHTB: 85, occMed: 88, occAll: 84, rateHTA: 2280, rateHTB: 1075, rateMed: 720, rateAll: 1355 },
+            { ym: '2024-05', y: 2024, m: 5,  occHTA: 76, occHTB: 83, occMed: 86, occAll: 82, rateHTA: 2150, rateHTB: 995,  rateMed: 665, rateAll: 1265 },
+            { ym: '2024-06', y: 2024, m: 6,  occHTA: 75, occHTB: 82, occMed: 86, occAll: 81, rateHTA: 2040, rateHTB: 940,  rateMed: 630, rateAll: 1195 },
+            { ym: '2024-07', y: 2024, m: 7,  occHTA: 81, occHTB: 88, occMed: 91, occAll: 87, rateHTA: 2160, rateHTB: 1020, rateMed: 685, rateAll: 1290 },
+            { ym: '2024-08', y: 2024, m: 8,  occHTA: 83, occHTB: 90, occMed: 92, occAll: 89, rateHTA: 2210, rateHTB: 1055, rateMed: 710, rateAll: 1325 },
+            { ym: '2024-09', y: 2024, m: 9,  occHTA: 76, occHTB: 84, occMed: 87, occAll: 83, rateHTA: 2140, rateHTB: 990,  rateMed: 660, rateAll: 1260 },
+            { ym: '2024-10', y: 2024, m: 10, occHTA: 81, occHTB: 88, occMed: 91, occAll: 87, rateHTA: 2310, rateHTB: 1085, rateMed: 725, rateAll: 1380 },
+            { ym: '2024-11', y: 2024, m: 11, occHTA: 81, occHTB: 88, occMed: 90, occAll: 87, rateHTA: 2270, rateHTB: 1040, rateMed: 690, rateAll: 1340 },
+            { ym: '2024-12', y: 2024, m: 12, occHTA: 82, occHTB: 89, occMed: 91, occAll: 88, rateHTA: 2286, rateHTB: 1049, rateMed: 701, rateAll: 1354 },
+
+            // 2025 (Annual Mean: Occ HTA 79%, HTB 89%, Med 91%, All 87% | Rate All HK$1,263, HTA 2169, HTB 1009, Med 611; 1H 2025: Occ HTA 77%, HTB 87%, Med 90%, All 85%, Rate HTA 2111, HTB 974, Med 573, All 1220)
+            { ym: '2025-01', y: 2025, m: 1,  occHTA: 78, occHTB: 88, occMed: 91, occAll: 86, rateHTA: 2210, rateHTB: 1035, rateMed: 615, rateAll: 1290 },
+            { ym: '2025-02', y: 2025, m: 2,  occHTA: 79, occHTB: 88, occMed: 91, occAll: 86, rateHTA: 2195, rateHTB: 1020, rateMed: 605, rateAll: 1275 },
+            { ym: '2025-03', y: 2025, m: 3,  occHTA: 81, occHTB: 90, occMed: 92, occAll: 89, rateHTA: 2265, rateHTB: 1045, rateMed: 610, rateAll: 1310 },
+            { ym: '2025-04', y: 2025, m: 4,  occHTA: 77, occHTB: 87, occMed: 90, occAll: 85, rateHTA: 2120, rateHTB: 980,  rateMed: 575, rateAll: 1225 },
+            { ym: '2025-05', y: 2025, m: 5,  occHTA: 75, occHTB: 85, occMed: 88, occAll: 83, rateHTA: 1995, rateHTB: 910,  rateMed: 535, rateAll: 1145 },
+            { ym: '2025-06', y: 2025, m: 6,  occHTA: 72, occHTB: 84, occMed: 88, occAll: 81, rateHTA: 1881, rateHTB: 854,  rateMed: 498, rateAll: 1075 },
+            { ym: '2025-07', y: 2025, m: 7,  occHTA: 80, occHTB: 90, occMed: 92, occAll: 88, rateHTA: 2090, rateHTB: 990,  rateMed: 610, rateAll: 1235 },
+            { ym: '2025-08', y: 2025, m: 8,  occHTA: 83, occHTB: 92, occMed: 94, occAll: 90, rateHTA: 2165, rateHTB: 1035, rateMed: 645, rateAll: 1285 },
+            { ym: '2025-09', y: 2025, m: 9,  occHTA: 77, occHTB: 88, occMed: 90, occAll: 85, rateHTA: 2110, rateHTB: 995,  rateMed: 615, rateAll: 1240 },
+            { ym: '2025-10', y: 2025, m: 10, occHTA: 82, occHTB: 91, occMed: 93, occAll: 89, rateHTA: 2330, rateHTB: 1085, rateMed: 675, rateAll: 1365 },
+            { ym: '2025-11', y: 2025, m: 11, occHTA: 82, occHTB: 92, occMed: 93, occAll: 90, rateHTA: 2315, rateHTB: 1070, rateMed: 668, rateAll: 1345 },
+            { ym: '2025-12', y: 2025, m: 12, occHTA: 83, occHTB: 93, occMed: 94, occAll: 91, rateHTA: 2352, rateHTB: 1089, rateMed: 681, rateAll: 1366 },
+
+            // 2026 (Jan–Aug 2026 Official HKTB Monthly Series: Rate HTA 2371..2109, HTB 1040..1011, Med 617..639, All 1343..1253; 1H 2026 Occ: HTA 81%, HTB 87%, Med 90%, All 86%)
+            { ym: '2026-01', y: 2026, m: 1,  occHTA: 81, occHTB: 87, occMed: 90, occAll: 86, rateHTA: 2371, rateHTB: 1040, rateMed: 617, rateAll: 1343 },
+            { ym: '2026-02', y: 2026, m: 2,  occHTA: 84, occHTB: 90, occMed: 92, occAll: 89, rateHTA: 2458, rateHTB: 1151, rateMed: 686, rateAll: 1432 },
+            { ym: '2026-03', y: 2026, m: 3,  occHTA: 83, occHTB: 89, occMed: 91, occAll: 88, rateHTA: 2527, rateHTB: 1079, rateMed: 624, rateAll: 1410 },
+            { ym: '2026-04', y: 2026, m: 4,  occHTA: 82, occHTB: 88, occMed: 91, occAll: 87, rateHTA: 2385, rateHTB: 1063, rateMed: 619, rateAll: 1356 },
+            { ym: '2026-05', y: 2026, m: 5,  occHTA: 79, occHTB: 85, occMed: 89, occAll: 84, rateHTA: 2180, rateHTB: 960,  rateMed: 541, rateAll: 1227 },
+            { ym: '2026-06', y: 2026, m: 6,  occHTA: 77, occHTB: 83, occMed: 87, occAll: 82, rateHTA: 2000, rateHTB: 839,  rateMed: 486, rateAll: 1108 },
+            { ym: '2026-07', y: 2026, m: 7,  occHTA: 83, occHTB: 90, occMed: 93, occAll: 89, rateHTA: 2081, rateHTB: 956,  rateMed: 578, rateAll: 1205 },
+            { ym: '2026-08', y: 2026, m: 8,  occHTA: 85, occHTB: 92, occMed: 94, occAll: 91, rateHTA: 2109, rateHTB: 1011, rateMed: 639, rateAll: 1253 }
+        ];
+
+        window.hkVisitorArrivalsData = INITIAL_VISITOR_ARRIVALS_DATA.map(d => ({ ...d }));
+        window.hkHotelAnnualData = INITIAL_HOTEL_ANNUAL_DATA.map(d => ({ ...d }));
+        window.hkHotelMonthlyData = INITIAL_HOTEL_MONTHLY_DATA.map(d => ({ ...d }));
+
+        window.vhActiveSubTab = 'OVERVIEW'; // 'OVERVIEW' | 'VISITORS' | 'HOTELS'
+        window.vhSelectedVisitorYear = 2025;
+        window.vhVisitorSearchQuery = '';
+        window.vhHotelMode = 'MONTHLY'; // 'MONTHLY' | 'ANNUAL'
+        window.vhHotelYearFilter = 'ALL'; // 'ALL' | '2026' | '2025' | '2024' | '2023' | '2022' | '2021'
+        window.vhSelectedMonthKey = '2026-08';
+        window.vhSelectedAnnualPeriod = '2025';
+        window.vhHotelSearchQuery = '';
+        window.vhSyncState = 'READY';
+        window.vhSystemInitialized = false;
+
+        function parseIncomingVisitor65080005Json(rawTxt) {
+            try {
+                const obj = JSON.parse(rawTxt);
+                if (!obj || !Array.isArray(obj.dataSet) || obj.dataSet.length === 0) return false;
+                const byYear = {};
+                obj.dataSet.forEach(row => {
+                    const y = parseInt(row.period, 10);
+                    if (!y || y < 2000 || y > 2100) return;
+                    if (!byYear[y]) byYear[y] = { year: y, overnight: null, sameDay: null, total: null, stayNights: null };
+                    const fig = (row.figure !== undefined && row.figure !== null && row.figure !== '' && !isNaN(Number(row.figure)))
+                        ? Number(row.figure)
+                        : null;
+                    if (row.sv === 'VIS_ARR' && String(row.VISTYPE) === '1' && fig !== null) {
+                        byYear[y].overnight = Math.round(fig);
+                    } else if (row.sv === 'VIS_ARR' && String(row.VISTYPE) === '2' && fig !== null) {
+                        byYear[y].sameDay = Math.round(fig);
+                    } else if (row.sv === 'LEN_STAY' && String(row.VISTYPE) === '1') {
+                        byYear[y].stayNights = fig;
+                    }
+                });
+                const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+                if (years.length < 10) return false;
+                const parsed = [];
+                years.forEach(y => {
+                    const item = byYear[y];
+                    if (item.overnight !== null && item.sameDay !== null) {
+                        item.total = item.overnight + item.sameDay;
+                        parsed.push(item);
+                    }
+                });
+                if (parsed.length >= 10) {
+                    window.hkVisitorArrivalsData = parsed;
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function parseIncomingHotelCsvData(rateCsvTxt, occCsvTxt) {
+            let updated = false;
+            try {
+                if (occCsvTxt && occCsvTxt.includes(',')) {
+                    const lines = occCsvTxt.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    const monthMap = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+                    lines.forEach(line => {
+                        const cols = line.split(',').map(c => c.replace(/^["']|["']$/g, '').trim());
+                        if (cols.length >= 5) {
+                            const y = parseInt(cols[0], 10);
+                            let m = parseInt(cols[1], 10);
+                            if (isNaN(m) && cols[1]) {
+                                const mKey = cols[1].toLowerCase().slice(0, 3);
+                                if (monthMap[mKey]) m = monthMap[mKey];
+                            }
+                            if (y >= 2020 && m >= 1 && m <= 12) {
+                                const ym = `${y}-${String(m).padStart(2, '0')}`;
+                                const hta = parseFloat(cols[2]);
+                                const htb = parseFloat(cols[3]);
+                                const med = parseFloat(cols[4]);
+                                const all = cols.length >= 6 ? parseFloat(cols[5]) : NaN;
+                                const existing = window.hkHotelMonthlyData.find(d => d.ym === ym);
+                                if (existing && !isNaN(hta) && !isNaN(htb) && !isNaN(med)) {
+                                    existing.occHTA = hta;
+                                    existing.occHTB = htb;
+                                    existing.occMed = med;
+                                    if (!isNaN(all)) existing.occAll = all;
+                                    updated = true;
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (e) {}
+            try {
+                if (rateCsvTxt && rateCsvTxt.includes(',')) {
+                    const lines = rateCsvTxt.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    const monthMap = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+                    lines.forEach(line => {
+                        const cols = line.split(',').map(c => c.replace(/^["']|["']$/g, '').trim());
+                        if (cols.length >= 3) {
+                            const y = parseInt(cols[0], 10);
+                            let m = parseInt(cols[1], 10);
+                            if (isNaN(m) && cols[1]) {
+                                const mKey = cols[1].toLowerCase().slice(0, 3);
+                                if (monthMap[mKey]) m = monthMap[mKey];
+                            }
+                            const rAll = parseFloat(cols[2]);
+                            if (y >= 2020 && m >= 1 && m <= 12 && !isNaN(rAll) && rAll > 100) {
+                                const ym = `${y}-${String(m).padStart(2, '0')}`;
+                                const existing = window.hkHotelMonthlyData.find(d => d.ym === ym);
+                                if (existing) {
+                                    existing.rateAll = Math.round(rAll);
+                                    updated = true;
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (e) {}
+            return updated;
+        }
+
+        async function syncVisitorHotelData(isManual) {
+            window.vhSyncState = 'SYNCING';
+            updateVisitorHotelHeaderUI();
+
+            let anyOk = false;
+            try {
+                const [visJson, rateCsv, occCsv] = await Promise.all([
+                    fetchCsvWithFallback(VISITOR_HOTEL_API_ENDPOINTS.visitorJsonEn),
+                    fetchCsvWithFallback(VISITOR_HOTEL_API_ENDPOINTS.hotelRateCsvEn),
+                    fetchCsvWithFallback(VISITOR_HOTEL_API_ENDPOINTS.hotelOccCsvEn)
+                ]);
+                if (visJson && parseIncomingVisitor65080005Json(visJson)) anyOk = true;
+                if (parseIncomingHotelCsvData(rateCsv, occCsv)) anyOk = true;
+            } catch (e) {}
+
+            window.vhSyncState = anyOk ? 'LIVE' : 'READY';
+            updateVisitorHotelHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showToast(isEn
+                    ? '✅ Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy data updated!'
+                    : '✅ 已更新訪港旅客人次、逗留時間及酒店實際平均房租與入住率統計資料！');
+            }
+            if (currentActivePage === 'visitor_hotel') {
+                renderVisitorHotelPortal();
+            }
+        }
+
+        function initVisitorHotelSystem() {
+            if (window.vhSystemInitialized) return;
+            window.vhSystemInitialized = true;
+            updateVisitorHotelHeaderUI();
+            syncVisitorHotelData(false);
+        }
+
+        function updateVisitorHotelHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-visitor-hotel-title');
+            const syncBtn = document.getElementById('btn-vh-sync-now');
+            const badge = document.getElementById('vh-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🏨 HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy'
+                    : '🏨 訪港旅客人次、逗留時間及酒店房租與入住率統計';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn
+                    ? 'Refresh visitor arrivals, length of stay and hotel statistics'
+                    : '重新整理最新訪港旅客及酒店統計資料';
+            }
+            if (badge) {
+                if (window.vhSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    badge.innerHTML = isEn
+                        ? '🟢 Updated (2006–2026)'
+                        : '🟢 資料已更新 (2006–2026)';
+                }
+            }
+        }
+
+        function applyVisitorHotelLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-visitor-hotel');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy'
+                    : '訪港旅客人次、逗留時間及酒店房租與入住率統計';
+            }
+            updateVisitorHotelHeaderUI();
+            if (currentActivePage === 'visitor_hotel') {
+                renderVisitorHotelPortal();
+            }
+        }
+
+        function setVisitorHotelSubTab(tabKey) {
+            window.vhActiveSubTab = tabKey || 'OVERVIEW';
+            renderVisitorHotelPortal();
+        }
+
+        function selectVisitorYear(yearNum) {
+            window.vhSelectedVisitorYear = Number(yearNum) || 2025;
+            renderVisitorHotelPortal();
+        }
+
+        function onVisitorSearchInput(val) {
+            window.vhVisitorSearchQuery = String(val || '');
+            renderVisitorHotelPortal();
+        }
+
+        function setHotelViewMode(mode) {
+            window.vhHotelMode = (mode === 'ANNUAL') ? 'ANNUAL' : 'MONTHLY';
+            renderVisitorHotelPortal();
+        }
+
+        function setHotelYearFilter(yStr) {
+            window.vhHotelYearFilter = yStr || 'ALL';
+            if (yStr && yStr !== 'ALL') {
+                const matchingMonths = window.hkHotelMonthlyData.filter(d => String(d.y) === String(yStr));
+                if (matchingMonths.length > 0) {
+                    window.vhSelectedMonthKey = matchingMonths[matchingMonths.length - 1].ym;
+                }
+            }
+            renderVisitorHotelPortal();
+        }
+
+        function selectHotelMonthKey(ymKey) {
+            window.vhSelectedMonthKey = ymKey || '2026-08';
+            renderVisitorHotelPortal();
+        }
+
+        function selectHotelAnnualPeriod(periodStr) {
+            window.vhSelectedAnnualPeriod = periodStr || '2025';
+            renderVisitorHotelPortal();
+        }
+
+        function onHotelSearchInput(val) {
+            window.vhHotelSearchQuery = String(val || '');
+            renderVisitorHotelPortal();
+        }
+
+        function formatVisitorCount(num, isEn) {
+            if (num === null || num === undefined || isNaN(num)) return 'N.A.';
+            if (isEn) {
+                if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+                return num.toLocaleString();
+            } else {
+                if (num >= 10000) return (num / 10000).toFixed(1) + '萬';
+                return num.toLocaleString();
+            }
+        }
+
+        function buildVisitorComboSvgChart(isEn) {
+            const data = window.hkVisitorArrivalsData;
+            const selYear = window.vhSelectedVisitorYear;
+            const W = 860, H = 310;
+            const padL = 62, padR = 54, padT = 32, padB = 46;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            const maxTotal = 70000000; // 7,000萬
+            const maxStay = 4.2;       // 4.2 晚
+
+            const n = data.length;
+            const stepX = plotW / n;
+            const barW = Math.min(24, stepX * 0.64);
+
+            let gridHtml = '';
+            [0, 17500000, 35000000, 52500000, 70000000].forEach(val => {
+                const y = padT + plotH - (val / maxTotal) * plotH;
+                const labelLeft = isEn ? (val === 0 ? '0' : (val / 1000000).toFixed(1) + 'M') : (val === 0 ? '0' : (val / 10000).toFixed(0) + '萬');
+                const stayVal = ((val / maxTotal) * maxStay).toFixed(1);
+                gridHtml += `
+                    <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">${labelLeft}</text>
+                    <text x="${W - padR + 6}" y="${(y + 4).toFixed(1)}" text-anchor="start" font-size="10" font-weight="700" fill="#d97706">${stayVal}${isEn ? 'n' : '晚'}</text>
+                `;
+            });
+
+            let barsHtml = '';
+            let stayPoints = [];
+            let stayDotsHtml = '';
+
+            data.forEach((d, idx) => {
+                const cx = padL + idx * stepX + stepX / 2;
+                const x = cx - barW / 2;
+                const hOvernight = (d.overnight / maxTotal) * plotH;
+                const hSameDay = (d.sameDay / maxTotal) * plotH;
+                const yOvernight = padT + plotH - hOvernight;
+                const ySameDay = yOvernight - hSameDay;
+                const isSelected = (d.year === selYear);
+
+                barsHtml += `
+                    <g style="cursor:pointer;" onclick="selectVisitorYear(${d.year})">
+                        ${isSelected ? `<rect x="${(cx - stepX / 2 + 1).toFixed(1)}" y="${padT}" width="${(stepX - 2).toFixed(1)}" height="${plotH}" fill="#ecfeff" rx="4" />` : ''}
+                        <rect x="${x.toFixed(1)}" y="${yOvernight.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, hOvernight).toFixed(1)}" fill="${isSelected ? '#0e7490' : '#0891b2'}" rx="2">
+                            <title>${d.year}: ${isEn ? 'Overnight' : '過夜旅客'} ${d.overnight.toLocaleString()}</title>
+                        </rect>
+                        <rect x="${x.toFixed(1)}" y="${ySameDay.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, hSameDay).toFixed(1)}" fill="${isSelected ? '#0284c7' : '#38bdf8'}" rx="2">
+                            <title>${d.year}: ${isEn ? 'Same-day' : '不過夜旅客'} ${d.sameDay.toLocaleString()} | ${isEn ? 'Total' : '總計'} ${d.total.toLocaleString()}</title>
+                        </rect>
+                        <text x="${cx.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="10" font-weight="${isSelected ? '900' : '700'}" fill="${isSelected ? '#0e7490' : '#475569'}">${String(d.year).slice(-2)}'</text>
+                    </g>
+                `;
+
+                if (d.stayNights !== null && d.stayNights !== undefined) {
+                    const sy = padT + plotH - (d.stayNights / maxStay) * plotH;
+                    stayPoints.push(`${cx.toFixed(1)},${sy.toFixed(1)}`);
+                    stayDotsHtml += `
+                        <g style="cursor:pointer;" onclick="selectVisitorYear(${d.year})">
+                            <circle cx="${cx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${isSelected ? '5.5' : '3.8'}" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5">
+                                <title>${d.year}: ${isEn ? 'Overnight Length of Stay' : '過夜旅客平均逗留時間'} ${d.stayNights.toFixed(1)} ${isEn ? 'nights' : '晚'}</title>
+                            </circle>
+                            ${(isSelected || d.year === 2018 || d.year === 2023 || d.year === 2025) ? `<text x="${cx.toFixed(1)}" y="${(sy - 8).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="900" fill="#b45309">${d.stayNights.toFixed(1)}</text>` : ''}
+                        </g>
+                    `;
+                } else {
+                    stayPoints.push(null);
+                }
+            });
+
+            // 分段繪製逗留晚數折線（跨過 2020-2022 N.A. 區間）
+            let segments = [];
+            let curSeg = [];
+            stayPoints.forEach(pt => {
+                if (pt) {
+                    curSeg.push(pt);
+                } else {
+                    if (curSeg.length > 0) {
+                        segments.push(curSeg);
+                        curSeg = [];
+                    }
+                }
+            });
+            if (curSeg.length > 0) segments.push(curSeg);
+
+            const polylinesHtml = segments.map(seg =>
+                seg.length > 1
+                    ? `<polyline fill="none" stroke="#f59e0b" stroke-width="2.6" points="${seg.join(' ')}" />`
+                    : ''
+            ).join('');
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block; user-select:none;">
+                    ${gridHtml}
+                    ${barsHtml}
+                    ${polylinesHtml}
+                    ${stayDotsHtml}
+                    <text x="${padL}" y="16" font-size="10.5" font-weight="800" fill="#0891b2">■ ${isEn ? 'Overnight Visitors' : '過夜旅客人次'}   <tspan fill="#38bdf8">■ ${isEn ? 'Same-Day Visitors' : '不過夜旅客人次'}</tspan></text>
+                    <text x="${W - padR}" y="16" text-anchor="end" font-size="10.5" font-weight="800" fill="#d97706">● ${isEn ? 'Overnight Stay (Nights, Right Axis)' : '過夜旅客平均逗留時間（晚，右軸）'}</text>
+                </svg>
+            `;
+        }
+
+        function buildHotelMonthlyOccupancySvgChart(rows, isEn) {
+            if (!rows || rows.length === 0) return '';
+            const W = 860, H = 270;
+            const padL = 48, padR = 24, padT = 28, padB = 46;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+            const maxOcc = 100;
+            const n = rows.length;
+            const stepX = n > 1 ? (plotW / (n - 1)) : plotW;
+
+            let gridHtml = '';
+            [20, 40, 60, 80, 100].forEach(val => {
+                const y = padT + plotH - (val / maxOcc) * plotH;
+                gridHtml += `
+                    <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">${val}%</text>
+                `;
+            });
+
+            const makePolyline = (key, color, width, dash) => {
+                const pts = rows.map((r, i) => {
+                    const x = padL + (n > 1 ? i * stepX : plotW / 2);
+                    const y = padT + plotH - ((r[key] || 0) / maxOcc) * plotH;
+                    return `${x.toFixed(1)},${y.toFixed(1)}`;
+                }).join(' ');
+                return `<polyline fill="none" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''} points="${pts}" />`;
+            };
+
+            let xLabelsHtml = '';
+            const labelStride = Math.max(1, Math.floor(n / 12));
+            rows.forEach((r, i) => {
+                const x = padL + (n > 1 ? i * stepX : plotW / 2);
+                const isSel = (r.ym === window.vhSelectedMonthKey);
+                if (i % labelStride === 0 || i === n - 1 || isSel) {
+                    xLabelsHtml += `<text x="${x.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9.5" font-weight="${isSel ? '900' : '700'}" fill="${isSel ? '#0e7490' : '#475569'}">${r.ym}</text>`;
+                }
+                const yAll = padT + plotH - ((r.occAll || 0) / maxOcc) * plotH;
+                xLabelsHtml += `
+                    <circle cx="${x.toFixed(1)}" cy="${yAll.toFixed(1)}" r="${isSel ? '5.5' : '3'}" fill="${isSel ? '#0f172a' : '#0891b2'}" stroke="#fff" stroke-width="1.2" style="cursor:pointer;" onclick="selectHotelMonthKey('${r.ym}')">
+                        <title>${r.ym} — ${isEn ? 'All Hotels' : '所有酒店'}: ${r.occAll}% | ${isEn ? 'High Tariff A' : '甲級高價'}: ${r.occHTA}% | ${isEn ? 'High Tariff B' : '乙級高價'}: ${r.occHTB}% | ${isEn ? 'Medium Tariff' : '中價'}: ${r.occMed}%</title>
+                    </circle>
+                `;
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block; user-select:none;">
+                    ${gridHtml}
+                    ${makePolyline('occMed', '#10b981', '2', '')}
+                    ${makePolyline('occHTB', '#f59e0b', '2', '')}
+                    ${makePolyline('occHTA', '#6366f1', '2', '')}
+                    ${makePolyline('occAll', '#0891b2', '3', '')}
+                    ${xLabelsHtml}
+                    <text x="${padL}" y="16" font-size="10.5" font-weight="800" fill="#0891b2">━ ${isEn ? 'All Hotels' : '所有酒店'}   <tspan fill="#6366f1">━ ${isEn ? 'High Tariff A' : '甲級高價酒店'}</tspan>   <tspan fill="#f59e0b">━ ${isEn ? 'High Tariff B' : '乙級高價酒店'}</tspan>   <tspan fill="#10b981">━ ${isEn ? 'Medium Tariff' : '中價酒店'}</tspan></text>
+                </svg>
+            `;
+        }
+
+        function buildHotelMonthlyRateSvgChart(rows, isEn) {
+            if (!rows || rows.length === 0) return '';
+            const W = 860, H = 270;
+            const padL = 56, padR = 24, padT = 28, padB = 46;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+            const maxRate = 2800;
+            const n = rows.length;
+            const stepX = n > 1 ? (plotW / (n - 1)) : plotW;
+
+            let gridHtml = '';
+            [0, 700, 1400, 2100, 2800].forEach(val => {
+                const y = padT + plotH - (val / maxRate) * plotH;
+                gridHtml += `
+                    <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">$${val.toLocaleString()}</text>
+                `;
+            });
+
+            const makePolyline = (key, color, width) => {
+                const pts = rows.map((r, i) => {
+                    const x = padL + (n > 1 ? i * stepX : plotW / 2);
+                    const y = padT + plotH - ((r[key] || 0) / maxRate) * plotH;
+                    return `${x.toFixed(1)},${y.toFixed(1)}`;
+                }).join(' ');
+                return `<polyline fill="none" stroke="${color}" stroke-width="${width}" points="${pts}" />`;
+            };
+
+            let dotsHtml = '';
+            const labelStride = Math.max(1, Math.floor(n / 12));
+            rows.forEach((r, i) => {
+                const x = padL + (n > 1 ? i * stepX : plotW / 2);
+                const isSel = (r.ym === window.vhSelectedMonthKey);
+                if (i % labelStride === 0 || i === n - 1 || isSel) {
+                    dotsHtml += `<text x="${x.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9.5" font-weight="${isSel ? '900' : '700'}" fill="${isSel ? '#0e7490' : '#475569'}">${r.ym}</text>`;
+                }
+                const yAll = padT + plotH - ((r.rateAll || 0) / maxRate) * plotH;
+                dotsHtml += `
+                    <circle cx="${x.toFixed(1)}" cy="${yAll.toFixed(1)}" r="${isSel ? '5.5' : '3'}" fill="${isSel ? '#0f172a' : '#0891b2'}" stroke="#fff" stroke-width="1.2" style="cursor:pointer;" onclick="selectHotelMonthKey('${r.ym}')">
+                        <title>${r.ym} — ${isEn ? 'All Hotels' : '所有酒店'}: HK$${r.rateAll.toLocaleString()} | ${isEn ? 'High Tariff A' : '甲級高價'}: HK$${r.rateHTA.toLocaleString()} | ${isEn ? 'High Tariff B' : '乙級高價'}: HK$${r.rateHTB.toLocaleString()} | ${isEn ? 'Medium Tariff' : '中價'}: HK$${r.rateMed.toLocaleString()}</title>
+                    </circle>
+                `;
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block; user-select:none;">
+                    ${gridHtml}
+                    ${makePolyline('rateMed', '#10b981', '2')}
+                    ${makePolyline('rateHTB', '#f59e0b', '2')}
+                    ${makePolyline('rateHTA', '#6366f1', '2')}
+                    ${makePolyline('rateAll', '#0891b2', '3')}
+                    ${dotsHtml}
+                    <text x="${padL}" y="16" font-size="10.5" font-weight="800" fill="#0891b2">━ ${isEn ? 'All Hotels (HK$)' : '所有酒店實際平均房租 (HK$)'}   <tspan fill="#6366f1">━ ${isEn ? 'High Tariff A' : '甲級高價酒店'}</tspan>   <tspan fill="#f59e0b">━ ${isEn ? 'High Tariff B' : '乙級高價酒店'}</tspan>   <tspan fill="#10b981">━ ${isEn ? 'Medium Tariff' : '中價酒店'}</tspan></text>
+                </svg>
+            `;
+        }
+
+        function renderVisitorHotelPortal() {
+            const container = document.getElementById('visitor-hotel-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const subTab = window.vhActiveSubTab || 'OVERVIEW';
+
+            const vData = window.hkVisitorArrivalsData;
+            const latestV = vData[vData.length - 1] || INITIAL_VISITOR_ARRIVALS_DATA[INITIAL_VISITOR_ARRIVALS_DATA.length - 1];
+            const prevV = vData.length >= 2 ? vData[vData.length - 2] : latestV;
+            const totalYoY = prevV && prevV.total ? (((latestV.total - prevV.total) / prevV.total) * 100).toFixed(1) : '12.1';
+            const overnightShare = latestV.total ? ((latestV.overnight / latestV.total) * 100).toFixed(1) : '46.5';
+            const sameDayShare = latestV.total ? ((latestV.sameDay / latestV.total) * 100).toFixed(1) : '53.5';
+
+            const ann2025 = window.hkHotelAnnualData.find(d => d.period === '2025') || INITIAL_HOTEL_ANNUAL_DATA[5];
+            const ann2026 = window.hkHotelAnnualData.find(d => d.period === '2026 YTD') || INITIAL_HOTEL_ANNUAL_DATA[6];
+            const latestMonthObj = window.hkHotelMonthlyData[window.hkHotelMonthlyData.length - 1] || INITIAL_HOTEL_MONTHLY_DATA[INITIAL_HOTEL_MONTHLY_DATA.length - 1];
+
+            // 頂部 Sub-Tab 切換列 + 6 大核心 KPI 卡片
+            const topHeaderHtml = `
+                <div class="el-card-box" style="background:linear-gradient(135deg, #ecfeff 0%, #f8fafc 100%); border-color:#a5f3fc; padding:14px 16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <div style="font-size:0.98rem; font-weight:900; color:#0e7490;">
+                                🏨 ${isEn ? 'Hong Kong Visitor Arrivals, Length of Stay & Hotel Performance Analytics' : '香港訪港旅客人次、逗留時間及酒店實際房租與入住率綜合看板'}
+                            </div>
+                            <div style="font-size:0.76rem; color:#475569; font-weight:600; margin-top:2px;">
+                                ${isEn
+                                    ? 'Switch tabs below to inspect 2006–2025 Overnight vs Same-Day Visitor Arrivals & Length of Stay, or 2020–2026 Hotel Achieved Room Rates & Occupancy by Category.'
+                                    : '點選下方分頁切換檢視「2006–2025 訪港旅客人次及逗留時間」或「香港酒店實際平均房租及按酒店類別每月入住率」。'}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <button type="button" class="el-chip-btn ${subTab === 'OVERVIEW' ? 'active' : ''}" onclick="setVisitorHotelSubTab('OVERVIEW')">
+                                🌐 ${isEn ? 'Integrated Overview' : '綜合總覽'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${subTab === 'VISITORS' ? 'active' : ''}" onclick="setVisitorHotelSubTab('VISITORS')">
+                                🧳 ${isEn ? 'Visitor Arrivals & Stay (2006–2025)' : '訪港旅客人次及逗留時間 (2006–2025)'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${subTab === 'HOTELS' ? 'active' : ''}" onclick="setVisitorHotelSubTab('HOTELS')">
+                                🏨 ${isEn ? 'Hotel Room Rate & Occupancy by Category' : '酒店實際平均房租及分類入住率'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(185px, 1fr)); gap:10px;">
+                        <div style="background:#ffffff; border:1px solid #bae6fd; border-left:4px solid #0891b2; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? `${latestV.year} Total Visitor Arrivals` : `${latestV.year}年 整體訪港旅客總人次`}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#0f172a; margin-top:2px;">${latestV.total.toLocaleString()}</div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#059669; margin-top:2px;">▲ +${totalYoY}% ${isEn ? `vs ${prevV.year}` : `按年增長 (較${prevV.year}年)`}</div>
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #bae6fd; border-left:4px solid #0e7490; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? `${latestV.year} Overnight Visitors` : `${latestV.year}年 過夜旅客人次`}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#0e7490; margin-top:2px;">${latestV.overnight.toLocaleString()}</div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#475569; margin-top:2px;">${isEn ? `Share: ${overnightShare}% of total` : `佔整體訪港旅客 ${overnightShare}%`}</div>
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #bae6fd; border-left:4px solid #38bdf8; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? `${latestV.year} Same-Day Visitors` : `${latestV.year}年 不過夜旅客人次`}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#0284c7; margin-top:2px;">${latestV.sameDay.toLocaleString()}</div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#475569; margin-top:2px;">${isEn ? `Share: ${sameDayShare}% of total` : `佔整體訪港旅客 ${sameDayShare}%`}</div>
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? `${latestV.year} Avg Length of Stay` : `${latestV.year}年 過夜旅客平均逗留時間`}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#b45309; margin-top:2px;">${latestV.stayNights !== null ? latestV.stayNights.toFixed(1) : 'N.A.'} ${isEn ? 'Nights' : '晚'}</div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#78350f; margin-top:2px;">${isEn ? '2023 Peak: 3.6 Nights · 2024: 3.2 Nights' : '2023年峰值：3.6晚 · 2024年：3.2晚'}</div>
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #c7d2fe; border-left:4px solid #4f46e5; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? 'Hotel Room Occupancy Rate' : '香港酒店房間平均入住率'}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#3730a3; margin-top:2px;">${ann2025.occAll}% <span style="font-size:0.78rem; color:#4f46e5;">(2025)</span></div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#4338ca; margin-top:2px;">${isEn ? `${latestMonthObj.ym}: ${latestMonthObj.occAll}% · 2026 YTD: ${ann2026.occAll}%` : `最新 ${latestMonthObj.ym}：${latestMonthObj.occAll}% · 2026累計：${ann2026.occAll}%`}</div>
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #a7f3d0; border-left:4px solid #059669; border-radius:10px; padding:10px 12px;">
+                            <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? 'Avg Achieved Hotel Room Rate' : '香港酒店實際平均房租'}</div>
+                            <div style="font-size:1.22rem; font-weight:900; color:#065f46; margin-top:2px;">HK$${ann2025.rateAll.toLocaleString()} <span style="font-size:0.78rem; color:#059669;">(2025)</span></div>
+                            <div style="font-size:0.72rem; font-weight:800; color:#047857; margin-top:2px;">${isEn ? `2026 YTD: HK$${ann2026.rateAll.toLocaleString()} · ${latestMonthObj.ym}: HK$${latestMonthObj.rateAll.toLocaleString()}` : `2026累計：HK$${ann2026.rateAll.toLocaleString()} · ${latestMonthObj.ym}：HK$${latestMonthObj.rateAll.toLocaleString()}`}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 構建訪港旅客區塊
+            const selV = vData.find(d => d.year === window.vhSelectedVisitorYear) || latestV;
+            const selVIdx = vData.findIndex(d => d.year === selV.year);
+            const prevSelV = selVIdx > 0 ? vData[selVIdx - 1] : null;
+            const selTotalYoY = (prevSelV && prevSelV.total) ? (((selV.total - prevSelV.total) / prevSelV.total) * 100).toFixed(1) : null;
+            const selOverShare = selV.total ? ((selV.overnight / selV.total) * 100).toFixed(1) : '0.0';
+            const selSameShare = selV.total ? ((selV.sameDay / selV.total) * 100).toFixed(1) : '0.0';
+
+            const visitorSectionHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="margin-bottom:10px;">
+                        <div>
+                            <div class="el-card-title">🧳 ${isEn ? 'Visitor Arrivals by Type & Overnight Length of Stay (2006–2025)' : '按旅客類別劃分的訪港旅客人次及過夜旅客平均逗留時間 (2006–2025)'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Click any year bar or chip below to inspect overnight visitors, same-day visitors and average length of stay.' : '點擊下方年份按鈕或圖表柱條，即可查看該年度過夜旅客、不過夜旅客人次比例及過夜平均逗留晚數。'}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="padding:3px 10px; border-radius:999px; background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; font-size:0.74rem; font-weight:900;">
+                                📅 ${isEn ? `Selected: ${selV.year}` : `已選年份：${selV.year}年`}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">
+                        ${vData.map(d => `
+                            <button type="button" class="el-chip-btn ${d.year === selV.year ? 'active' : ''}" style="padding:4px 9px; font-size:0.74rem;" onclick="selectVisitorYear(${d.year})">
+                                ${d.year}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; margin-bottom:12px;">
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:10px;">
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? `${selV.year} Total Visitor Arrivals` : `${selV.year}年 訪港旅客總人次`}</div>
+                                <div style="font-size:1.15rem; font-weight:900; color:#0f172a;">${selV.total.toLocaleString()}</div>
+                                <div style="font-size:0.72rem; font-weight:800; color:${selTotalYoY !== null && Number(selTotalYoY) >= 0 ? '#059669' : '#dc2626'};">
+                                    ${selTotalYoY !== null ? `${Number(selTotalYoY) >= 0 ? '▲ +' : '▼ '}${selTotalYoY}% (${isEn ? 'YoY' : '按年變動'})` : (isEn ? 'Base Year (2006)' : '基準年份 (2006)')}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#0e7490;">${isEn ? 'Overnight Visitors' : '過夜旅客人次'}</div>
+                                <div style="font-size:1.15rem; font-weight:900; color:#0e7490;">${selV.overnight.toLocaleString()}</div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#475569;">${isEn ? `${selOverShare}% of Total Arrivals` : `佔總人次 ${selOverShare}%`}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#0284c7;">${isEn ? 'Same-Day Visitors' : '不過夜旅客人次'}</div>
+                                <div style="font-size:1.15rem; font-weight:900; color:#0284c7;">${selV.sameDay.toLocaleString()}</div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#475569;">${isEn ? `${selSameShare}% of Total Arrivals` : `佔總人次 ${selSameShare}%`}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#b45309;">${isEn ? 'Overnight Length of Stay' : '過夜旅客平均逗留時間'}</div>
+                                <div style="font-size:1.15rem; font-weight:900; color:#b45309;">${selV.stayNights !== null ? `${selV.stayNights.toFixed(1)} ${isEn ? 'Nights' : '晚'}` : (isEn ? 'N.A. (Pandemic)' : '不適用 (疫情期間)')}</div>
+                                <div style="font-size:0.72rem; font-weight:800; color:#64748b;">${isEn ? '2006–2025 Range: 3.1 – 3.6 Nights' : '歷年區間：3.1 至 3.6 晚'}</div>
+                            </div>
+                        </div>
+                        <div style="height:10px; border-radius:999px; background:#e2e8f0; overflow:hidden; display:flex;">
+                            <div style="width:${selOverShare}%; background:#0891b2;" title="${isEn ? 'Overnight Visitors' : '過夜旅客'} ${selOverShare}%"></div>
+                            <div style="width:${selSameShare}%; background:#38bdf8;" title="${isEn ? 'Same-Day Visitors' : '不過夜旅客'} ${selSameShare}%"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.71rem; font-weight:800; color:#475569; margin-top:4px;">
+                            <span>🌙 ${isEn ? `Overnight: ${selOverShare}%` : `過夜旅客佔比：${selOverShare}%`}</span>
+                            <span>☀️ ${isEn ? `Same-Day: ${selSameShare}%` : `不過夜旅客佔比：${selSameShare}%`}</span>
+                        </div>
+                    </div>
+
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:${subTab === 'VISITORS' ? '14px' : '0'};">
+                        ${buildVisitorComboSvgChart(isEn)}
+                    </div>
+
+                    ${subTab === 'VISITORS' ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <div style="font-size:0.86rem; font-weight:900; color:#0f172a;">📋 ${isEn ? '2006–2025 Full Historical Table (Visitor Arrivals & Length of Stay)' : '2006–2025 年訪港旅客人次及過夜逗留時間完整明細表'}</div>
+                            <input type="text" class="el-search-input" style="max-width:220px;" value="${(window.vhVisitorSearchQuery || '').replace(/"/g, '&quot;')}" oninput="onVisitorSearchInput(this.value)" placeholder="${isEn ? '🔍 Filter by year (e.g. 2025)...' : '🔍 搜尋年份 (例如 2025、2018)...'}" />
+                        </div>
+                        <div style="overflow-x:auto; max-height:360px; border:1px solid #e2e8f0; border-radius:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+                                <thead style="position:sticky; top:0; background:#f1f5f9; z-index:2;">
+                                    <tr>
+                                        <th style="padding:8px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Year' : '年份'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Overnight Visitors' : '過夜旅客人次'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Same-Day Visitors' : '不過夜旅客人次'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Total Visitor Arrivals' : '整體訪港旅客總人次'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Overnight Share' : '過夜旅客佔比'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Avg Stay (Nights)' : '過夜平均逗留時間 (晚)'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${vData.slice().reverse().filter(r => !window.vhVisitorSearchQuery || String(r.year).includes(window.vhVisitorSearchQuery.trim())).map(r => {
+                                        const oPct = r.total ? ((r.overnight / r.total) * 100).toFixed(1) + '%' : '-';
+                                        const isRowSel = (r.year === selV.year);
+                                        return `
+                                            <tr onclick="selectVisitorYear(${r.year})" style="cursor:pointer; background:${isRowSel ? '#ecfeff' : '#ffffff'}; border-bottom:1px solid #f1f5f9;">
+                                                <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${r.year}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#0e7490;">${r.overnight.toLocaleString()}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#0284c7;">${r.sameDay.toLocaleString()}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0f172a;">${r.total.toLocaleString()}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#475569;">${oPct}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:900; color:#b45309;">${r.stayNights !== null ? r.stayNights.toFixed(1) + (isEn ? ' nights' : ' 晚') : 'N.A.'}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // 構建酒店實際平均房租及按酒店類別每月入住率區塊
+            const filteredMonthlyRows = window.hkHotelMonthlyData.filter(d =>
+                window.vhHotelYearFilter === 'ALL' ? true : String(d.y) === String(window.vhHotelYearFilter)
+            );
+            const selM = window.hkHotelMonthlyData.find(d => d.ym === window.vhSelectedMonthKey) || latestMonthObj;
+            const selAnn = window.hkHotelAnnualData.find(d => d.period === window.vhSelectedAnnualPeriod) || ann2025;
+
+            const hotelSectionHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="margin-bottom:10px;">
+                        <div>
+                            <div class="el-card-title">🏨 ${isEn ? 'Average Achieved Hotel Room Rate & Monthly Occupancy Rate by Category' : '香港酒店實際平均房租及按酒店類別劃分的每月房間入住率'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Compare High Tariff A, High Tariff B, Medium Tariff and All Hotels across monthly (2021–2026) and annual (2020–2026) series.' : '涵蓋甲級高價酒店 (High Tariff A)、乙級高價酒店 (High Tariff B)、中價酒店 (Medium Tariff) 及所有酒店 (All Hotels) 的實際平均房租、入住率及平均房收益 (RevPAR)。'}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn ${window.vhHotelMode === 'MONTHLY' ? 'active' : ''}" onclick="setHotelViewMode('MONTHLY')">
+                                📅 ${isEn ? 'Monthly Series (2021–2026)' : '按月統計數列 (2021–2026)'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${window.vhHotelMode === 'ANNUAL' ? 'active' : ''}" onclick="setHotelViewMode('ANNUAL')">
+                                📊 ${isEn ? 'Annual Summary (2020–2026)' : '按年及累計總結 (2020–2026)'}
+                            </button>
+                        </div>
+                    </div>
+
+                    ${window.vhHotelMode === 'MONTHLY' ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                ${['ALL', '2026', '2025', '2024', '2023', '2022', '2021'].map(yKey => `
+                                    <button type="button" class="el-chip-btn ${window.vhHotelYearFilter === yKey ? 'active' : ''}" style="padding:4px 10px; font-size:0.74rem;" onclick="setHotelYearFilter('${yKey}')">
+                                        ${yKey === 'ALL' ? (isEn ? 'All Years (2021–2026)' : '全部年份 (2021–2026)') : (isEn ? yKey : `${yKey}年`)}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:0.75rem; font-weight:800; color:#475569;">${isEn ? 'Inspect Month:' : '選擇月份：'}</span>
+                                <select onchange="selectHotelMonthKey(this.value)" style="padding:5px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.78rem; font-weight:800; color:#0f172a; background:#ffffff;">
+                                    ${window.hkHotelMonthlyData.slice().reverse().map(m => `
+                                        <option value="${m.ym}" ${m.ym === selM.ym ? 'selected' : ''}>${m.ym}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 選定月份四類酒店對比卡片 -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:12px;">
+                            <div style="background:#f8fafc; border:1.5px solid #bae6fd; border-top:3px solid #0891b2; border-radius:10px; padding:10px 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:0.78rem; font-weight:900; color:#0e7490;">🏨 ${isEn ? 'All Hotels' : '所有酒店 (All Hotels)'}</span>
+                                    <span style="font-size:0.7rem; font-weight:800; color:#64748b;">${selM.ym}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:6px;">
+                                    <div>
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Occupancy Rate' : '房間入住率'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#0891b2;">${selM.occAll}%</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Achieved Room Rate' : '實際平均房租'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#0f172a;">HK$${selM.rateAll.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:4px; padding-top:4px; border-top:1px dashed #cbd5e1;">
+                                    RevPAR: HK$${Math.round((selM.occAll / 100) * selM.rateAll).toLocaleString()}
+                                </div>
+                            </div>
+
+                            <div style="background:#f8fafc; border:1.5px solid #e0e7ff; border-top:3px solid #6366f1; border-radius:10px; padding:10px 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:0.78rem; font-weight:900; color:#4338ca;">💎 ${isEn ? 'High Tariff A Hotels' : '甲級高價酒店 (High Tariff A)'}</span>
+                                    <span style="font-size:0.7rem; font-weight:800; color:#64748b;">${selM.ym}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:6px;">
+                                    <div>
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Occupancy Rate' : '房間入住率'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#4f46e5;">${selM.occHTA}%</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Achieved Room Rate' : '實際平均房租'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#0f172a;">HK$${selM.rateHTA.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:4px; padding-top:4px; border-top:1px dashed #cbd5e1;">
+                                    RevPAR: HK$${Math.round((selM.occHTA / 100) * selM.rateHTA).toLocaleString()}
+                                </div>
+                            </div>
+
+                            <div style="background:#f8fafc; border:1.5px solid #fef3c7; border-top:3px solid #f59e0b; border-radius:10px; padding:10px 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:0.78rem; font-weight:900; color:#b45309;">🌟 ${isEn ? 'High Tariff B Hotels' : '乙級高價酒店 (High Tariff B)'}</span>
+                                    <span style="font-size:0.7rem; font-weight:800; color:#64748b;">${selM.ym}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:6px;">
+                                    <div>
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Occupancy Rate' : '房間入住率'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#d97706;">${selM.occHTB}%</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Achieved Room Rate' : '實際平均房租'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#0f172a;">HK$${selM.rateHTB.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:4px; padding-top:4px; border-top:1px dashed #cbd5e1;">
+                                    RevPAR: HK$${Math.round((selM.occHTB / 100) * selM.rateHTB).toLocaleString()}
+                                </div>
+                            </div>
+
+                            <div style="background:#f8fafc; border:1.5px solid #d1fae5; border-top:3px solid #10b981; border-radius:10px; padding:10px 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:0.78rem; font-weight:900; color:#047857;">🏢 ${isEn ? 'Medium Tariff Hotels' : '中價酒店 (Medium Tariff)'}</span>
+                                    <span style="font-size:0.7rem; font-weight:800; color:#64748b;">${selM.ym}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:6px;">
+                                    <div>
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Occupancy Rate' : '房間入住率'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#059669;">${selM.occMed}%</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.68rem; color:#64748b; font-weight:700;">${isEn ? 'Achieved Room Rate' : '實際平均房租'}</div>
+                                        <div style="font-size:1.18rem; font-weight:900; color:#0f172a;">HK$${selM.rateMed.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:4px; padding-top:4px; border-top:1px dashed #cbd5e1;">
+                                    RevPAR: HK$${Math.round((selM.occMed / 100) * selM.rateMed).toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px; margin-bottom:12px;">
+                            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px;">
+                                <div style="font-size:0.82rem; font-weight:900; color:#0f172a; margin-bottom:6px;">📈 ${isEn ? 'Monthly Hotel Room Occupancy Rate by Category (%)' : '按酒店類別劃分的每月酒店房間入住率走勢 (%)'}</div>
+                                ${buildHotelMonthlyOccupancySvgChart(filteredMonthlyRows, isEn)}
+                            </div>
+                            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px;">
+                                <div style="font-size:0.82rem; font-weight:900; color:#0f172a; margin-bottom:6px;">💰 ${isEn ? 'Monthly Average Achieved Hotel Room Rate (HK$)' : '香港酒店每月實際平均房租走勢 (HK$)'}</div>
+                                ${buildHotelMonthlyRateSvgChart(filteredMonthlyRows, isEn)}
+                            </div>
+                        </div>
+                    ` : `
+                        <!-- 年度總結檢視 (2020–2026) -->
+                        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+                            ${window.hkHotelAnnualData.map(a => `
+                                <button type="button" class="el-chip-btn ${a.period === selAnn.period ? 'active' : ''}" onclick="selectHotelAnnualPeriod('${a.period}')">
+                                    ${isEn ? a.label_en : a.label_zh}
+                                </button>
+                            `).join('')}
+                        </div>
+                    `}
+
+                    <!-- 酒店按年基準對照表 (2020–2026) -->
+                    <div style="font-size:0.84rem; font-weight:900; color:#0f172a; margin-bottom:6px;">📊 ${isEn ? '2020–2026 Annual Hotel Occupancy Rate, Achieved Room Rate & RevPAR by Category' : '2020–2026 年按酒店類別劃分的房間入住率、實際平均房租及平均房收益 (RevPAR) 總表'}</div>
+                    <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:${subTab === 'HOTELS' ? '14px' : '0'};">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.76rem;">
+                            <thead style="background:#f1f5f9;">
+                                <tr>
+                                    <th style="padding:8px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Period' : '統計期間'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0e7490;">${isEn ? 'All Hotels Occ / Rate' : '所有酒店 入住率 / 房租'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#4338ca;">${isEn ? 'High Tariff A Occ / Rate' : '甲級高價 入住率 / 房租'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#b45309;">${isEn ? 'High Tariff B Occ / Rate' : '乙級高價 入住率 / 房租'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#047857;">${isEn ? 'Medium Tariff Occ / Rate' : '中價酒店 入住率 / 房租'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'All Hotels RevPAR' : '整體平均房收益 (RevPAR)'}</th>
+                                    <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'Hotels / Rooms' : '酒店數目 / 房間總數'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${window.hkHotelAnnualData.slice().reverse().map(a => `
+                                    <tr style="border-bottom:1px solid #f1f5f9; background:${a.period === '2025' ? '#ecfeff' : '#ffffff'};">
+                                        <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${isEn ? a.label_en : a.label_zh}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0891b2;">${a.occAll}% · HK$${a.rateAll.toLocaleString()}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:800; color:#4f46e5;">${a.occHTA}% · HK$${a.rateHTA.toLocaleString()}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:800; color:#d97706;">${a.occHTB}% · HK$${a.rateHTB.toLocaleString()}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:800; color:#059669;">${a.occMed}% · HK$${a.rateMed.toLocaleString()}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0f172a;">HK$${a.revparAll.toLocaleString()}</td>
+                                        <td style="padding:7px 10px; text-align:right; font-weight:700; color:#475569;">${a.hotels} ${isEn ? 'hotels' : '間'} (${a.rooms.toLocaleString()} ${isEn ? 'rms' : '房'})</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    ${subTab === 'HOTELS' ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <div style="font-size:0.84rem; font-weight:900; color:#0f172a;">📋 ${isEn ? 'Monthly Hotel Occupancy Rate & Achieved Room Rate Table (2021–2026)' : '2021–2026 年每月酒店房間入住率及實際平均房租完整明細表'}</div>
+                            <input type="text" class="el-search-input" style="max-width:220px;" value="${(window.vhHotelSearchQuery || '').replace(/"/g, '&quot;')}" oninput="onHotelSearchInput(this.value)" placeholder="${isEn ? '🔍 Search YYYY-MM (e.g. 2026-07)...' : '🔍 搜尋年月 (例如 2026-07、2025)...'}" />
+                        </div>
+                        <div style="overflow-x:auto; max-height:360px; border:1px solid #e2e8f0; border-radius:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.76rem;">
+                                <thead style="position:sticky; top:0; background:#f1f5f9; z-index:2;">
+                                    <tr>
+                                        <th style="padding:8px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Year-Month' : '年月'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0891b2;">${isEn ? 'All Hotels Occ (%)' : '所有酒店入住率'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#4f46e5;">${isEn ? 'High Tariff A Occ' : '甲級高價入住率'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#d97706;">${isEn ? 'High Tariff B Occ' : '乙級高價入住率'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#059669;">${isEn ? 'Medium Tariff Occ' : '中價酒店入住率'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0f172a;">${isEn ? 'All Hotels Rate' : '所有酒店平均房租'}</th>
+                                        <th style="padding:8px 10px; text-align:right; border-bottom:1px solid #cbd5e1;">${isEn ? 'HTA / HTB / Med Rate (HK$)' : '甲級 / 乙級 / 中價房租 (HK$)'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredMonthlyRows.slice().reverse().filter(r => !window.vhHotelSearchQuery || r.ym.includes(window.vhHotelSearchQuery.trim())).map(r => {
+                                        const isRowSel = (r.ym === selM.ym);
+                                        return `
+                                            <tr onclick="selectHotelMonthKey('${r.ym}')" style="cursor:pointer; background:${isRowSel ? '#ecfeff' : '#ffffff'}; border-bottom:1px solid #f1f5f9;">
+                                                <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${r.ym}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0891b2;">${r.occAll}%</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#4f46e5;">${r.occHTA}%</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#d97706;">${r.occHTB}%</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#059669;">${r.occMed}%</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0f172a;">HK$${r.rateAll.toLocaleString()}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#475569;">$${r.rateHTA.toLocaleString()} / $${r.rateHTB.toLocaleString()} / $${r.rateMed.toLocaleString()}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            if (subTab === 'VISITORS') {
+                container.innerHTML = topHeaderHtml + visitorSectionHtml;
+            } else if (subTab === 'HOTELS') {
+                container.innerHTML = topHeaderHtml + hotelSectionHtml;
+            } else {
+                container.innerHTML = topHeaderHtml + visitorSectionHtml + hotelSectionHtml;
+            }
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
@@ -24778,8 +25869,8 @@
                 icon: '🛳️',
                 title_zh: '旅遊及盛事經濟',
                 title_en: 'Tourism & Mega Events Economy',
-                desc_zh: '涵蓋香港總體郵輪乘客人次、郵輪停泊航次、季節性分佈及啟德郵輪碼頭／海運碼頭營運統計',
-                desc_en: 'Covers HK overall cruise passenger throughput, ship calls, quarterly seasonality and cruise terminal statistics',
+                desc_zh: '涵蓋香港郵輪乘客人次及停泊航次、訪港旅客人次及平均逗留時間，以及酒店實際平均房租與按類別入住率統計',
+                desc_en: 'Covers HK cruise passenger throughput & ship calls, visitor arrivals & length of stay, and hotel achieved room rates & occupancy by category',
                 color: '#0891b2',
                 bg: '#ecfeff',
                 border: '#a5f3fc',
@@ -24808,6 +25899,30 @@
                                             : `🛳️ 2025年：${ann2025.passengers.toLocaleString()} 乘客人次 (+22%) · ${ann2025.calls} 停泊航次 (+26%)`;
                                     }
                                     return isEn ? '🛳️ Quarterly & Annual Cruise Stats' : '🛳️ 每季及歷年郵輪乘客人次及停泊次數';
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        deptId: 'CSTB_HKTB_CSD',
+                        deptIcon: '🏨',
+                        dept_zh: '文化體育及旅遊局・香港旅遊發展局・政府統計處',
+                        dept_en: 'CSTB · Hong Kong Tourism Board (HKTB) · C&SD',
+                        role_zh: '編製訪港過夜及不過夜旅客人次、平均逗留時間，以及甲級高價／乙級高價／中價酒店實際平均房租與入住率統計',
+                        role_en: 'Compiles overnight & same-day visitor arrivals, length of stay, and hotel achieved room rates & occupancy rates across tariff categories',
+                        pages: [
+                            {
+                                pageKey: 'visitor_hotel',
+                                icon: '🏨',
+                                name_zh: '訪港旅客人次、逗留時間及酒店房租與入住率統計看板',
+                                name_en: 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy Dashboard',
+                                desc_zh: '整合 2006–2025 年過夜與不過夜訪港旅客人次及逗留晚數，以及甲級高價、乙級高價、中價及整體酒店每月實際平均房租與入住率。',
+                                desc_en: 'Integrates 2006–2025 overnight & same-day visitor arrivals and length of stay with monthly & annual hotel achieved room rates and occupancy rates by category.',
+                                actionFn: 'showVisitorHotelPage',
+                                getLiveBadge: function(isEn) {
+                                    return isEn
+                                        ? '🏨 2025: 49.89M Visitors (+12.1%) · Stay 3.1 Nights · Hotel Occ 87% · Rate HK$1,263'
+                                        : '🏨 2025年：4,989.5萬訪港旅客 (+12.1%) · 逗留 3.1晚 · 酒店入住率 87% · 平均房租 HK$1,263';
                                 }
                             }
                         ]
@@ -25075,6 +26190,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'visitor_hotel') {
+                    showVisitorHotelPage();
                 } else if (currentActivePage === 'cruise') {
                     showCruisePage();
                 } else if (currentActivePage === 'aed') {
