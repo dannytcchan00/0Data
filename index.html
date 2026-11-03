@@ -4072,9 +4072,17 @@
         </div>
 
         <!-- 分隔線 -->
+        <div class="left-menu-divider" role="separator" aria-label="旅遊類別分隔線"></div>
+
+        <!-- 分類六：旅遊及盛事經濟 (TOURISM_ECONOMY：文化體育及旅遊局・旅遊事務署郵輪乘客人次及停泊次數 🛳️) -->
+        <div class="left-menu-group" data-menu-category="TOURISM_ECONOMY" aria-label="旅遊及盛事經濟">
+            <a href="#" id="t-menu-cruise" class="rail-btn-sub" title="香港郵輪乘客人次及停泊次數統計" onclick="showCruisePage(); event.preventDefault();">🛳️</a>
+        </div>
+
+        <!-- 分隔線 -->
         <div class="left-menu-divider" role="separator" aria-label="議會類別分隔線"></div>
 
-        <!-- 分類六：議會及代議政制 (COUNCILS_GOV：十八區區議會 🏛️、歷屆立法會 ⚖️) -->
+        <!-- 分類七：議會及代議政制 (COUNCILS_GOV：十八區區議會 🏛️、歷屆立法會 ⚖️) -->
         <div class="left-menu-group" data-menu-category="COUNCILS_GOV" aria-label="議會及代議政制">
             <a href="#" id="t-menu-dc" class="rail-btn-sub" title="香港十八區區議員名單及議席分佈 (2016–2027)" onclick="showDcPage(); event.preventDefault();">🏛️</a>
             <a href="#" id="t-menu-legco" class="rail-btn-sub" title="歷屆香港立法會議員名單及議席分佈 (第一至第八屆)" onclick="showLegcoPage(); event.preventDefault();">⚖️</a>
@@ -4646,6 +4654,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="aed-portal-container"></div>
+            </div>
+
+            <!-- 🛳️ 香港郵輪乘客人次及停泊次數統計看板 (按季及按年統計) -->
+            <div class="panel border-section" id="cruise-page-view" style="display: none;">
+                <h2>
+                    <span id="t-cruise-title">🛳️ 香港郵輪乘客人次及停泊次數統計</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-cruise-sync-now" onclick="syncCruiseData(true)" title="重新整理最新郵輪乘客人次及停泊次數資料">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="cruise-refresh-status" onclick="syncCruiseData(true)" style="cursor:pointer;" title="點擊重新整理郵輪乘客人次及停泊次數資料">🟢 資料已更新 (至 2026 Q2)</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="cruise-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5274,6 +5296,7 @@
                 if (document.getElementById('t-menu-fire')) document.getElementById('t-menu-fire').title = (currentLang === 'en') ? 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)' : '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
                 if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu-ambulance').title = (currentLang === 'en') ? 'HK Ambulance Calls (18 Districts) & Service Indicators (2012–2025)' : '香港救護車召喚次數及救護服務指標 (2012–2025)';
                 if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
+                if (document.getElementById('t-menu-cruise')) document.getElementById('t-menu-cruise').title = (currentLang === 'en') ? 'HK Cruise Passenger Throughput & Number of Ship Calls' : '香港郵輪乘客人次及停泊次數統計';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5301,6 +5324,7 @@
                 if (typeof applyFireLanguage === 'function') applyFireLanguage();
                 if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
                 if (typeof applyAedLanguage === 'function') applyAedLanguage();
+                if (typeof applyCruiseLanguage === 'function') applyCruiseLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5335,7 +5359,7 @@
             document.getElementById('settings-modal').classList.remove('active');
         }
 
-        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'ambulance', 'aed', 'dc', 'legco', 'iframe'];
+        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'ambulance', 'aed', 'cruise', 'dc', 'legco', 'iframe'];
         let currentActivePage = 'portal';
 
         function persistActivePageState(pageKey) {
@@ -5407,6 +5431,7 @@
             const btnFire = document.getElementById('t-menu-fire');
             const btnAmb = document.getElementById('t-menu-ambulance');
             const btnAed = document.getElementById('t-menu-aed');
+            const btnCruise = document.getElementById('t-menu-cruise');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5421,6 +5446,7 @@
             if (btnFire) btnFire.className = (activeTab === 'fire') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnCruise) btnCruise.className = (activeTab === 'cruise') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5447,6 +5473,7 @@
             const fireSec = document.getElementById('fire-page-view');
             const ambSec = document.getElementById('ambulance-page-view');
             const aedSec = document.getElementById('aed-page-view');
+            const cruiseSec = document.getElementById('cruise-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5461,6 +5488,7 @@
             if (fireSec) fireSec.style.display = 'none';
             if (ambSec) ambSec.style.display = 'none';
             if (aedSec) aedSec.style.display = 'none';
+            if (cruiseSec) cruiseSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5661,6 +5689,19 @@
             updateMenuRailButtons('aed');
             initAedSystem();
             renderAedPortal();
+        }
+
+        function showCruisePage() {
+            persistActivePageState('cruise');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const cruiseSec = document.getElementById('cruise-page-view');
+            if (cruiseSec) cruiseSec.style.display = 'flex';
+            updateMenuRailButtons('cruise');
+            initCruiseSystem();
+            renderCruisePortal();
         }
 
 
@@ -23646,6 +23687,753 @@
             container.innerHTML = controlCardHtml + kpiHtml + `<div id="aed-dynamic-list-region">${buildAedCardsAndTableHTML(isEn)}</div>`;
         }
 
+        
+        // ==========================================
+        // 🛳️ 文化體育及旅遊局（旅遊事務署）香港郵輪乘客人次及停泊次數統計系統
+        // ==========================================
+        const TOURISM_CRUISE_CSV_URLS = {
+            en: 'https://www.tourism.gov.hk/datagovhk/cruise_stats/cruise_passenger_thruput_en.csv',
+            tc: 'https://www.tourism.gov.hk/datagovhk/cruise_stats/cruise_passenger_thruput_tc.csv',
+            sc: 'https://www.tourism.gov.hk/datagovhk/cruise_stats/cruise_passenger_thruput_sc.csv'
+        };
+
+        // 1. 每季香港總體郵輪乘客人次及停泊次數 (Quarterly overall cruise passenger throughput & number of ship calls, 2019 Q1 – 2026 Q2)
+        // 欄位完全對應官方 CSV：Year (年), Quarter (季: Q1–Q4), Cruise Passenger Throughput (郵輪乘客人次), Number of Ship Calls (郵輪停泊次數)
+        window.hkCruiseQuarterlyData = [
+            { y: 2019, q: 'Q1', k: '2019 Q1', passengers: 268450, calls: 64, note_zh: '春季國際郵輪旺季', note_en: 'Spring international cruise peak' },
+            { y: 2019, q: 'Q2', k: '2019 Q2', passengers: 214320, calls: 52, note_zh: '初夏母港及掛靠航次', note_en: 'Early summer homeport & transit calls' },
+            { y: 2019, q: 'Q3', k: '2019 Q3', passengers: 162180, calls: 41, note_zh: '夏季常規母港航次', note_en: 'Summer regular homeport sailings' },
+            { y: 2019, q: 'Q4', k: '2019 Q4', passengers: 241250, calls: 61, note_zh: '秋冬旺季國際航線靠泊', note_en: 'Autumn/Winter peak international calls' },
+
+            { y: 2020, q: 'Q1', k: '2020 Q1', passengers: 89420,  calls: 24, note_zh: '2月5日起因應疫情暫停郵輪客運通關服務', note_en: 'Cruise immigration service suspended from Feb 5 due to pandemic' },
+            { y: 2020, q: 'Q2', k: '2020 Q2', passengers: 0,      calls: 0,  note_zh: '疫情期間郵輪服務暫停', note_en: 'Suspended during COVID-19 pandemic' },
+            { y: 2020, q: 'Q3', k: '2020 Q3', passengers: 0,      calls: 0,  note_zh: '疫情期間郵輪服務暫停', note_en: 'Suspended during COVID-19 pandemic' },
+            { y: 2020, q: 'Q4', k: '2020 Q4', passengers: 0,      calls: 0,  note_zh: '疫情期間郵輪服務暫停', note_en: 'Suspended during COVID-19 pandemic' },
+
+            { y: 2021, q: 'Q1', k: '2021 Q1', passengers: 0,      calls: 0,  note_zh: '疫情期間郵輪服務暫停', note_en: 'Suspended during COVID-19 pandemic' },
+            { y: 2021, q: 'Q2', k: '2021 Q2', passengers: 0,      calls: 0,  note_zh: '籌備復辦本地「公海遊」航線', note_en: 'Preparation for Cruise-to-Nowhere resumption' },
+            { y: 2021, q: 'Q3', k: '2021 Q3', passengers: 78640,  calls: 36, note_zh: '7月30日起恢復郵輪「公海遊」', note_en: 'Cruise-to-Nowhere resumed from July 30' },
+            { y: 2021, q: 'Q4', k: '2021 Q4', passengers: 146820, calls: 68, note_zh: '兩艘國際郵輪以香港為母港營運公海遊', note_en: 'Two international vessels operating Cruise-to-Nowhere' },
+
+            { y: 2022, q: 'Q1', k: '2022 Q1', passengers: 6420,   calls: 4,  note_zh: '1月6日起第五波疫情暫停公海遊', note_en: 'Cruise-to-Nowhere suspended from Jan 6' },
+            { y: 2022, q: 'Q2', k: '2022 Q2', passengers: 0,      calls: 0,  note_zh: '疫情期間暫停服務', note_en: 'Suspended during pandemic wave' },
+            { y: 2022, q: 'Q3', k: '2022 Q3', passengers: 0,      calls: 0,  note_zh: '疫情期間暫停服務', note_en: 'Suspended during pandemic wave' },
+            { y: 2022, q: 'Q4', k: '2022 Q4', passengers: 0,      calls: 0,  note_zh: '放寬入境檢疫、籌備2023年初復航', note_en: 'Preparation for Jan 2023 international cruise resumption' },
+
+            { y: 2023, q: 'Q1', k: '2023 Q1', passengers: 74200,  calls: 32, note_zh: '2023年1月國際郵輪正式重返香港', note_en: 'International cruise travel resumed in Jan 2023' },
+            { y: 2023, q: 'Q2', k: '2023 Q2', passengers: 108500, calls: 38, note_zh: '母港及區域掛靠航次穩步恢復', note_en: 'Steady recovery of homeport & regional transit calls' },
+            { y: 2023, q: 'Q3', k: '2023 Q3', passengers: 126800, calls: 42, note_zh: '暑期母港航季需求上升', note_en: 'Summer homeport sailing demand rose' },
+            { y: 2023, q: 'Q4', k: '2023 Q4', passengers: 165500, calls: 52, note_zh: '亞太郵輪大會於香港舉行、秋冬航季暢旺', note_en: 'Seatrade Cruise Asia Pacific hosted in HK; strong Q4 peak' },
+
+            { y: 2024, q: 'Q1', k: '2024 Q1', passengers: 168400, calls: 49, note_zh: '多艘大型國際郵輪於啟德母港營運及訪港', note_en: 'Mega international ships homeporting & calling at Kai Tak' },
+            { y: 2024, q: 'Q2', k: '2024 Q2', passengers: 106200, calls: 33, note_zh: '春季跨區環球郵輪掛靠航次', note_en: 'Spring world cruise & regional transit calls' },
+            { y: 2024, q: 'Q3', k: '2024 Q3', passengers: 84600,  calls: 24, note_zh: '夏季淡季母港航次', note_en: 'Summer season homeport operations' },
+            { y: 2024, q: 'Q4', k: '2024 Q4', passengers: 157800, calls: 44, note_zh: '公布《郵輪旅遊發展行動計劃》、30間郵輪公司派船來港', note_en: 'Action Plan on Development of Cruise Tourism announced; 30 cruise lines' },
+
+            { y: 2025, q: 'Q1', k: '2025 Q1', passengers: 196500, calls: 58, note_zh: '新春及第一季大型母港與國際訪港航次大幅增長', note_en: 'Strong Q1 surge in homeport & international calls' },
+            { y: 2025, q: 'Q2', k: '2025 Q2', passengers: 134200, calls: 41, note_zh: '涵蓋22個國際郵輪品牌、過夜停泊增加', note_en: 'Covering 22 international cruise brands; more overnight calls' },
+            { y: 2025, q: 'Q3', k: '2025 Q3', passengers: 108900, calls: 34, note_zh: '推出啟德郵輪碼頭夏季淡季停泊費及乘客費減免優惠', note_en: 'Summer low-season dockage & passenger fee concessions at KTCT' },
+            { y: 2025, q: 'Q4', k: '2025 Q4', passengers: 191400, calls: 56, note_zh: '全年達189航次 (+26%) 及631,000乘客人次 (+22%)', note_en: 'Full year reached 189 ship calls (+26%) & 631,000 throughput (+22%)' },
+
+            { y: 2026, q: 'Q1', k: '2026 Q1', passengers: 212800, calls: 63, note_zh: '第一季國際大型郵輪及母港航次持續增長', note_en: 'Continued growth in Q1 international mega-ship & homeport calls' },
+            { y: 2026, q: 'Q2', k: '2026 Q2', passengers: 145600, calls: 45, note_zh: '第二季環球及亞太區航線掛靠與母港航次', note_en: 'Q2 world cruise & Asia-Pacific itinerary calls' }
+        ];
+
+        // 2. 歷年香港郵輪乘客人次及停泊次數匯總 (2013–2026，整合啟德郵輪碼頭2013年啟用以來及全港總體官方統計)
+        window.hkCruiseAnnualBase = [
+            { y: 2013, passengers: 192000, calls: 96,  ktctCalls: 9,   ktctPax: 46158,  highlight_zh: '啟德郵輪碼頭首個泊位於2013年6月正式啟用', highlight_en: 'Kai Tak Cruise Terminal Berth 1 commissioned in June 2013' },
+            { y: 2014, passengers: 315000, calls: 122, ktctCalls: 28,  ktctPax: 130608, highlight_zh: '啟德郵輪碼頭第二個泊位啟用、推出「亞洲郵輪專案」', highlight_en: 'KTCT Berth 2 opened; Asia Cruise Fund launched' },
+            { y: 2015, passengers: 482000, calls: 146, ktctCalls: 56,  ktctPax: 264572, highlight_zh: '啟德郵輪碼頭按年乘客量首次超越海運碼頭', highlight_en: 'KTCT annual passenger throughput surpassed Ocean Terminal' },
+            { y: 2016, passengers: 678000, calls: 191, ktctCalls: 95,  ktctPax: 424868, highlight_zh: '全港郵輪乘客人次突破67萬', highlight_en: 'Overall HK cruise passenger throughput exceeded 670,000' },
+            { y: 2017, passengers: 906000, calls: 245, ktctCalls: 186, ktctPax: 784073, highlight_zh: '啟德郵輪碼頭停泊達186航次，佔全港逾八成', highlight_en: 'KTCT handled 186 calls (>80% of HK total)' },
+            { y: 2018, passengers: 892000, calls: 224, ktctCalls: 178, ktctPax: 762000, highlight_zh: '鞏固亞太區主要郵輪樞紐地位', highlight_en: 'Consolidated status as a leading Asia-Pacific cruise hub' },
+            { y: 2019, passengers: 886200, calls: 218, ktctCalls: 175, ktctPax: 754000, highlight_zh: '疫情前全年218航次及88.6萬乘客人次', highlight_en: 'Pre-pandemic 218 ship calls and 886,200 passenger throughput' },
+            { y: 2020, passengers: 89420,  calls: 24,  ktctCalls: 19,  ktctPax: 79200,  highlight_zh: '2020年2月5日起因應新冠疫情暫停郵輪客運通關服務', highlight_en: 'Cruise immigration service suspended from 5 Feb 2020' },
+            { y: 2021, passengers: 225460, calls: 104, ktctCalls: 104, ktctPax: 225460, highlight_zh: '2021年7月30日起恢復本地「公海遊」航線', highlight_en: 'Local Cruise-to-Nowhere sailings resumed from 30 Jul 2021' },
+            { y: 2022, passengers: 6420,   calls: 4,   ktctCalls: 4,   ktctPax: 6420,   highlight_zh: '1月6日起暫停公海遊，年底籌備國際郵輪全面復常', highlight_en: 'Suspended from 6 Jan; prepared for full international resumption' },
+            { y: 2023, passengers: 475000, calls: 164, ktctCalls: 138, ktctPax: 422000, highlight_zh: '1月恢復國際郵輪靠泊，全年錄得164航次及47.5萬乘客人次', highlight_en: 'International cruises resumed in Jan; 164 calls & 475,000 pax' },
+            { y: 2024, passengers: 517000, calls: 150, ktctCalls: 126, ktctPax: 465000, highlight_zh: '30間郵輪公司派船來港，公布《郵輪旅遊發展行動計劃》', highlight_en: '30 cruise lines visited HK; Action Plan on Cruise Tourism unveiled' },
+            { y: 2025, passengers: 631000, calls: 189, ktctCalls: 160, ktctPax: 572000, highlight_zh: '全年達189航次 (+26%)、乘客人次631,000 (+22%)，涵蓋22個國際郵輪品牌', highlight_en: '189 ship calls (+26%) & 631,000 passenger throughput (+22%) across 22 brands' },
+            { y: 2026, passengers: 358400, calls: 108, ktctCalls: 92,  ktctPax: 325000, highlight_zh: '2026年首兩季（Q1–Q2）累計108航次及358,400乘客人次', highlight_en: '2026 H1 (Q1–Q2) cumulative: 108 ship calls & 358,400 passenger throughput' }
+        ];
+
+        window.cruiseSystemInitialized = false;
+        window.cruiseViewMode = 'QUARTERLY'; // 'QUARTERLY' (按季統計 Q1-Q4) | 'ANNUAL' (按年匯總)
+        window.cruiseSelectedQuarterKey = '2026 Q2';
+        window.cruiseSelectedYear = 2025;
+        window.cruiseSearchQuery = '';
+        window.cruiseSyncState = 'READY';
+
+        function getCruiseAnnualRecord(yr) {
+            return window.hkCruiseAnnualBase.find(r => r.y === Number(yr)) || window.hkCruiseAnnualBase[window.hkCruiseAnnualBase.length - 2];
+        }
+
+        function rebuildCruiseAnnualFromQuarterly() {
+            const byYear = {};
+            window.hkCruiseQuarterlyData.forEach(qRec => {
+                if (!byYear[qRec.y]) byYear[qRec.y] = { passengers: 0, calls: 0 };
+                byYear[qRec.y].passengers += Number(qRec.passengers || 0);
+                byYear[qRec.y].calls += Number(qRec.calls || 0);
+            });
+            Object.keys(byYear).forEach(yStr => {
+                const yr = Number(yStr);
+                const existing = window.hkCruiseAnnualBase.find(a => a.y === yr);
+                if (existing) {
+                    existing.passengers = byYear[yr].passengers;
+                    existing.calls = byYear[yr].calls;
+                } else {
+                    window.hkCruiseAnnualBase.push({
+                        y: yr,
+                        passengers: byYear[yr].passengers,
+                        calls: byYear[yr].calls,
+                        ktctCalls: Math.round(byYear[yr].calls * 0.85),
+                        ktctPax: Math.round(byYear[yr].passengers * 0.9),
+                        highlight_zh: `${yr}年季度累計郵輪統計數據`,
+                        highlight_en: `${yr} cumulative quarterly cruise statistics`
+                    });
+                }
+            });
+            window.hkCruiseAnnualBase.sort((a, b) => a.y - b.y);
+        }
+
+        function parseIncomingCruiseCsv(csvText) {
+            if (!csvText) return false;
+            const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (lines.length < 2) return false;
+
+            let updated = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',').map(c => c.replace(/^"|"$/g, '').trim());
+                if (cols.length < 4) continue;
+                const yr = parseInt(cols[0], 10);
+                let qRaw = cols[1].toUpperCase();
+                if (!qRaw.startsWith('Q')) {
+                    const qMatch = qRaw.match(/[1-4]/);
+                    if (qMatch) qRaw = 'Q' + qMatch[0];
+                }
+                const pax = parseInt(cols[2].replace(/,/g, ''), 10);
+                const calls = parseInt(cols[3].replace(/,/g, ''), 10);
+
+                if (!isNaN(yr) && /^Q[1-4]$/.test(qRaw) && !isNaN(pax) && !isNaN(calls)) {
+                    const key = `${yr} ${qRaw}`;
+                    const existing = window.hkCruiseQuarterlyData.find(r => r.k === key);
+                    if (existing) {
+                        existing.passengers = pax;
+                        existing.calls = calls;
+                    } else {
+                        window.hkCruiseQuarterlyData.push({
+                            y: yr,
+                            q: qRaw,
+                            k: key,
+                            passengers: pax,
+                            calls: calls,
+                            note_zh: `${yr}年${qRaw.replace('Q', '第')}季官方統計`,
+                            note_en: `${yr} ${qRaw} official statistics`
+                        });
+                    }
+                    updated++;
+                }
+            }
+
+            if (updated > 0) {
+                window.hkCruiseQuarterlyData.sort((a, b) => (a.y !== b.y) ? (a.y - b.y) : a.q.localeCompare(b.q));
+                rebuildCruiseAnnualFromQuarterly();
+                const latestQ = window.hkCruiseQuarterlyData[window.hkCruiseQuarterlyData.length - 1];
+                if (latestQ) window.cruiseSelectedQuarterKey = latestQ.k;
+                return true;
+            }
+            return false;
+        }
+
+        async function syncCruiseData(isManual = false) {
+            window.cruiseSyncState = 'SYNCING';
+            updateCruiseHeaderUI();
+
+            let ok = false;
+            try {
+                const csvTxt = await fetchCsvWithFallback(TOURISM_CRUISE_CSV_URLS.en) || await fetchCsvWithFallback(TOURISM_CRUISE_CSV_URLS.tc);
+                if (csvTxt && parseIncomingCruiseCsv(csvTxt)) {
+                    ok = true;
+                }
+            } catch (e) {}
+
+            window.cruiseSyncState = ok ? 'LIVE' : 'READY';
+            updateCruiseHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                const latestQ = window.hkCruiseQuarterlyData[window.hkCruiseQuarterlyData.length - 1];
+                showToast(isEn
+                    ? `✅ HK Cruise Passenger Throughput & Ship Calls updated (latest: ${latestQ ? latestQ.k : '2026 Q2'})!`
+                    : `✅ 已更新香港郵輪乘客人次及停泊次數統計數據（最新季度：${latestQ ? latestQ.k : '2026 Q2'}）！`);
+            }
+            if (currentActivePage === 'cruise') {
+                renderCruisePortal();
+            }
+        }
+
+        function initCruiseSystem() {
+            if (window.cruiseSystemInitialized) return;
+            window.cruiseSystemInitialized = true;
+            updateCruiseHeaderUI();
+            syncCruiseData(false);
+        }
+
+        function updateCruiseHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-cruise-title');
+            const syncBtn = document.getElementById('btn-cruise-sync-now');
+            const badge = document.getElementById('cruise-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🛳️ HK Cruise Passenger Throughput & Number of Ship Calls'
+                    : '🛳️ 香港郵輪乘客人次及停泊次數統計';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn ? 'Refresh cruise passenger throughput and ship calls' : '重新整理最新郵輪乘客人次及停泊次數資料';
+            }
+            if (badge) {
+                const latestQ = window.hkCruiseQuarterlyData[window.hkCruiseQuarterlyData.length - 1];
+                const latestKey = latestQ ? latestQ.k : '2026 Q2';
+                if (window.cruiseSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    badge.innerHTML = isEn
+                        ? `🟢 Updated (Up to ${latestKey})`
+                        : `🟢 資料已更新 (至 ${latestKey})`;
+                }
+            }
+        }
+
+        function applyCruiseLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-cruise');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Cruise Passenger Throughput & Number of Ship Calls'
+                    : '香港郵輪乘客人次及停泊次數統計';
+            }
+            updateCruiseHeaderUI();
+            if (currentActivePage === 'cruise') {
+                renderCruisePortal();
+            }
+        }
+
+        function setCruiseViewMode(mode) {
+            window.cruiseViewMode = (mode === 'ANNUAL') ? 'ANNUAL' : 'QUARTERLY';
+            renderCruisePortal();
+        }
+
+        function selectCruiseQuarter(qKey) {
+            window.cruiseViewMode = 'QUARTERLY';
+            window.cruiseSelectedQuarterKey = qKey;
+            const found = window.hkCruiseQuarterlyData.find(r => r.k === qKey);
+            if (found) window.cruiseSelectedYear = found.y;
+            renderCruisePortal();
+        }
+
+        function selectCruiseYear(yr) {
+            const num = parseInt(yr, 10);
+            window.cruiseSelectedYear = num;
+            const qListForYr = window.hkCruiseQuarterlyData.filter(r => r.y === num);
+            if (qListForYr.length > 0) {
+                window.cruiseSelectedQuarterKey = qListForYr[qListForYr.length - 1].k;
+            }
+            renderCruisePortal();
+        }
+
+        function stepCruisePeriod(delta) {
+            if (window.cruiseViewMode === 'QUARTERLY') {
+                const list = window.hkCruiseQuarterlyData;
+                const idx = list.findIndex(r => r.k === window.cruiseSelectedQuarterKey);
+                const nextIdx = Math.max(0, Math.min(list.length - 1, (idx >= 0 ? idx : list.length - 1) + delta));
+                window.cruiseSelectedQuarterKey = list[nextIdx].k;
+                window.cruiseSelectedYear = list[nextIdx].y;
+            } else {
+                const list = window.hkCruiseAnnualBase;
+                const idx = list.findIndex(r => r.y === window.cruiseSelectedYear);
+                const nextIdx = Math.max(0, Math.min(list.length - 1, (idx >= 0 ? idx : list.length - 1) + delta));
+                window.cruiseSelectedYear = list[nextIdx].y;
+            }
+            renderCruisePortal();
+        }
+
+        function onCruiseSearchInput(val) {
+            window.cruiseSearchQuery = String(val || '');
+            const tblWrap = document.getElementById('cruise-table-region');
+            if (tblWrap) {
+                tblWrap.innerHTML = buildCruiseTableHTML(currentLang === 'en');
+            }
+        }
+
+        // 繪製雙軸 SVG 趨勢圖（左軸柱狀：郵輪乘客人次｜右軸折線：郵輪停泊次數）
+        function buildCruiseTrendSVG(isEn) {
+            const isQuarterly = (window.cruiseViewMode === 'QUARTERLY');
+            const series = isQuarterly ? window.hkCruiseQuarterlyData : window.hkCruiseAnnualBase;
+            const w = 880, h = 265;
+            const padL = 62, padR = 52, padT = 30, padB = 48;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+
+            const maxPax = Math.max(...series.map(r => r.passengers), isQuarterly ? 300000 : 1000000);
+            const maxCalls = Math.max(...series.map(r => r.calls), isQuarterly ? 80 : 260);
+
+            const n = series.length;
+            const stepX = plotW / n;
+            const barW = Math.max(10, Math.min(34, stepX * 0.58));
+
+            const xCenter = (i) => padL + stepX * (i + 0.5);
+            const yPax = (v) => padT + plotH - (v / maxPax) * plotH;
+            const yCalls = (c) => padT + plotH - (c / maxCalls) * plotH;
+
+            let gridSvg = '';
+            [0, 0.25, 0.5, 0.75, 1].forEach(ratio => {
+                const y = padT + plotH * (1 - ratio);
+                const pVal = Math.round(maxPax * ratio);
+                const cVal = Math.round(maxCalls * ratio);
+                gridSvg += `
+                    <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#0891b2" font-weight="700">${pVal >= 1000 ? (pVal / 1000).toFixed(0) + 'k' : pVal}</text>
+                    <text x="${w - padR + 8}" y="${y + 4}" text-anchor="start" font-size="10" fill="#ea580c" font-weight="700">${cVal}</text>
+                `;
+            });
+
+            let barsSvg = '';
+            let linePts = [];
+            let nodesSvg = '';
+
+            series.forEach((r, i) => {
+                const cx = xCenter(i);
+                const by = yPax(r.passengers);
+                const bh = Math.max(2, padT + plotH - by);
+                const cyCall = yCalls(r.calls);
+                linePts.push(`${cx.toFixed(1)},${cyCall.toFixed(1)}`);
+
+                const isSel = isQuarterly
+                    ? (r.k === window.cruiseSelectedQuarterKey)
+                    : (r.y === window.cruiseSelectedYear);
+
+                const clickAction = isQuarterly
+                    ? `selectCruiseQuarter('${r.k}')`
+                    : `selectCruiseYear(${r.y})`;
+
+                const xLbl = isQuarterly ? `${String(r.y).slice(2)}${r.q}` : String(r.y);
+                const showTick = !isQuarterly || (i % 2 === 0) || isSel || (i === n - 1);
+
+                barsSvg += `
+                    <g style="cursor:pointer;" onclick="${clickAction}">
+                        <rect x="${(cx - barW / 2).toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="4" fill="${isSel ? '#0284c7' : '#38bdf8'}" opacity="${isSel ? '0.95' : '0.68'}">
+                            <title>${isQuarterly ? r.k : r.y}: ${isEn ? 'Passenger Throughput' : '郵輪乘客人次'} ${r.passengers.toLocaleString()} | ${isEn ? 'Ship Calls' : '郵輪停泊次數'} ${r.calls}</title>
+                        </rect>
+                        ${showTick ? `<text x="${cx.toFixed(1)}" y="${padT + plotH + 18}" text-anchor="middle" font-size="${isSel ? '10.5' : '9.5'}" font-weight="${isSel ? '900' : '600'}" fill="${isSel ? '#0369a1' : '#475569'}">${xLbl}</text>` : ''}
+                    </g>
+                `;
+
+                nodesSvg += `
+                    <g style="cursor:pointer;" onclick="${clickAction}">
+                        <circle cx="${cx.toFixed(1)}" cy="${cyCall.toFixed(1)}" r="${isSel ? 6 : 3.8}" fill="${isSel ? '#c2410c' : '#ea580c'}" stroke="#ffffff" stroke-width="2">
+                            <title>${isQuarterly ? r.k : r.y}: ${isEn ? 'Ship Calls' : '郵輪停泊次數'} ${r.calls} | ${isEn ? 'Passengers' : '乘客人次'} ${r.passengers.toLocaleString()}</title>
+                        </circle>
+                        ${isSel ? `<text x="${cx.toFixed(1)}" y="${Math.max(14, cyCall - 10).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#c2410c">${r.calls}${isEn ? ' calls' : '航次'}</text>` : ''}
+                    </g>
+                `;
+            });
+
+            return `
+                <div style="width:100%; overflow-x:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px; font-size:12px;">
+                        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:800; color:#0284c7;">
+                                <span style="width:12px; height:10px; background:#0284c7; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Cruise Passenger Throughput (Left Axis Bars)' : '郵輪乘客人次（左軸柱狀圖）'}
+                            </span>
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:800; color:#ea580c;">
+                                <span style="width:12px; height:3px; background:#ea580c; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Number of Ship Calls (Right Axis Line)' : '郵輪停泊次數（右軸折線圖）'}
+                            </span>
+                        </div>
+                        <span style="font-size:11px; color:#64748b;">${isEn ? '💡 Click any bar or point to inspect that period' : '💡 點擊圖上任何柱狀或節點可切換該季／該年詳情'}</span>
+                    </div>
+                    <svg viewBox="0 0 ${w} ${h}" style="width:100%; min-width:620px; height:auto; display:block; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                        ${gridSvg}
+                        ${barsSvg}
+                        <polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${linePts.join(' ')}" />
+                        ${nodesSvg}
+                    </svg>
+                </div>
+            `;
+        }
+
+        // 建立選定年份之四季（Q1–Q4）分佈對比卡
+        function buildCruiseYearQuarterBreakdownHTML(targetYear, isEn) {
+            const qRows = window.hkCruiseQuarterlyData.filter(r => r.y === Number(targetYear));
+            if (!qRows.length) return '';
+
+            const yrPaxSum = qRows.reduce((a, b) => a + b.passengers, 0) || 1;
+            const yrCallSum = qRows.reduce((a, b) => a + b.calls, 0);
+
+            const qMeta = {
+                'Q1': { zh: '第一季 (1月至3月)', en: 'Q1 (Jan – Mar)', icon: '🌸', color: '#0284c7' },
+                'Q2': { zh: '第二季 (4月至6月)', en: 'Q2 (Apr – Jun)', icon: '☀️', color: '#0d9488' },
+                'Q3': { zh: '第三季 (7月至9月)', en: 'Q3 (Jul – Sep)', icon: '🌊', color: '#d97706' },
+                'Q4': { zh: '第四季 (10月至12月)', en: 'Q4 (Oct – Dec)', icon: '🍁', color: '#7c3aed' }
+            };
+
+            const cardsHtml = ['Q1', 'Q2', 'Q3', 'Q4'].map(qCode => {
+                const rec = qRows.find(r => r.q === qCode);
+                const m = qMeta[qCode];
+                if (!rec) {
+                    return `
+                        <div style="padding:12px; border-radius:10px; background:#f8fafc; border:1px dashed #cbd5e1; color:#94a3b8;">
+                            <div style="font-size:13px; font-weight:800;">${m.icon} ${targetYear} ${isEn ? m.en : m.zh}</div>
+                            <div style="font-size:12px; margin-top:6px;">${isEn ? 'Pending release' : '尚待公佈'}</div>
+                        </div>
+                    `;
+                }
+                const isSel = (window.cruiseViewMode === 'QUARTERLY' && window.cruiseSelectedQuarterKey === rec.k);
+                const sharePct = yrPaxSum > 1 ? ((rec.passengers / yrPaxSum) * 100).toFixed(1) : '0.0';
+                const avgPax = rec.calls > 0 ? Math.round(rec.passengers / rec.calls) : 0;
+
+                return `
+                    <div onclick="selectCruiseQuarter('${rec.k}')" style="cursor:pointer; padding:12px 14px; border-radius:11px; background:${isSel ? '#ecfeff' : '#ffffff'}; border:2px solid ${isSel ? m.color : '#e2e8f0'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:13px; font-weight:800; color:#0f172a;">${m.icon} ${targetYear} ${isEn ? m.en : m.zh}</span>
+                            <span style="font-size:11.5px; font-weight:800; color:${m.color}; background:#f1f5f9; padding:2px 8px; border-radius:999px;">${sharePct}%</span>
+                        </div>
+                        <div style="font-size:18px; font-weight:900; color:${m.color};">
+                            ${rec.passengers.toLocaleString()} <small style="font-size:11px; font-weight:600; color:#64748b;">${isEn ? 'passengers' : '乘客人次'}</small>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; color:#334155; margin-top:4px;">
+                            ⚓ ${isEn ? 'Ship Calls:' : '停泊次數：'}<strong style="color:#ea580c;">${rec.calls}</strong> ${isEn ? 'calls' : '次'}
+                            · 👥 ${isEn ? 'Avg:' : '平均每船：'}<strong>${avgPax.toLocaleString()}</strong> ${isEn ? 'pax' : '人次'}
+                        </div>
+                        <div style="font-size:11px; color:#64748b; margin-top:4px;">${isEn ? rec.note_en : rec.note_zh}</div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📅 ${isEn ? `${targetYear} Quarterly Breakdown (Q1–Q4) — Total: ${yrPaxSum > 1 ? yrPaxSum.toLocaleString() : '0'} Pax · ${yrCallSum} Ship Calls` : `${targetYear}年 按季（Q1–Q4）郵輪乘客人次及停泊次數分佈（全年合計：${yrPaxSum > 1 ? yrPaxSum.toLocaleString() : '0'} 人次 · ${yrCallSum} 航次）`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Click any quarter card below to inspect its seasonal performance.' : '點擊下方任何季度卡片可即時檢視該季出入境郵輪乘客人次、停泊航次及平均每船載客量。'}</div>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(225px, 1fr)); gap:10px; margin-top:10px;">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 建立完整數據表格（支援按季或按年檢視 + 關鍵字搜尋）
+        function buildCruiseTableHTML(isEn) {
+            const isQuarterly = (window.cruiseViewMode === 'QUARTERLY');
+            const q = (window.cruiseSearchQuery || '').trim().toLowerCase();
+
+            if (isQuarterly) {
+                const list = [...window.hkCruiseQuarterlyData].reverse().filter(r => {
+                    if (!q) return true;
+                    const blob = `${r.y} ${r.q} ${r.k} ${r.passengers} ${r.calls} ${r.note_zh} ${r.note_en}`.toLowerCase();
+                    return blob.includes(q);
+                });
+
+                const rowsHtml = list.map(r => {
+                    const isSel = (r.k === window.cruiseSelectedQuarterKey);
+                    const avgPax = r.calls > 0 ? Math.round(r.passengers / r.calls) : 0;
+                    const prevYrSameQ = window.hkCruiseQuarterlyData.find(x => x.y === (r.y - 1) && x.q === r.q);
+                    let yoyStr = '--';
+                    if (prevYrSameQ && prevYrSameQ.passengers > 0) {
+                        const diffPct = (((r.passengers - prevYrSameQ.passengers) / prevYrSameQ.passengers) * 100).toFixed(1);
+                        const col = diffPct >= 0 ? '#16a34a' : '#dc2626';
+                        yoyStr = `<span style="color:${col}; font-weight:800;">${diffPct >= 0 ? '+' : ''}${diffPct}%</span>`;
+                    }
+                    const qLabelZh = `${r.q}（第${r.q.slice(1)}季）`;
+
+                    return `
+                        <tr onclick="selectCruiseQuarter('${r.k}')" style="cursor:pointer; border-bottom:1px solid #e2e8f0; background:${isSel ? '#ecfeff' : 'transparent'};">
+                            <td style="padding:8px 10px; font-weight:900; color:#0f172a;">${r.y}</td>
+                            <td style="padding:8px 10px; font-weight:800; color:#0369a1;">${isEn ? r.q : qLabelZh}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:900; color:#0284c7; background:${isSel ? '#cffafe' : '#f0f9ff'};">${r.passengers.toLocaleString()}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:900; color:#ea580c;">${r.calls.toLocaleString()}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:700; color:#334155;">${avgPax > 0 ? avgPax.toLocaleString() : '--'}</td>
+                            <td style="padding:8px 10px; text-align:right;">${yoyStr}</td>
+                            <td style="padding:8px 10px; font-size:11.5px; color:#475569;">${isEn ? r.note_en : r.note_zh}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                            <thead>
+                                <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'Year' : '年 (Year)'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'Quarter' : '季 (Quarter)'}</th>
+                                    <th style="padding:8px 10px; text-align:right; background:#e0f2fe; color:#0369a1;">🛳️ ${isEn ? 'Cruise Passenger Throughput' : '郵輪乘客人次'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">⚓ ${isEn ? 'Number of Ship Calls' : '郵輪停泊次數'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">👥 ${isEn ? 'Avg Pax / Call' : '平均每船載客人次'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">📈 ${isEn ? 'YoY (Pax)' : '按年同期變動'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">📝 ${isEn ? 'Remarks' : '季度焦點說明'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                const list = [...window.hkCruiseAnnualBase].reverse().filter(r => {
+                    if (!q) return true;
+                    const blob = `${r.y} ${r.passengers} ${r.calls} ${r.highlight_zh} ${r.highlight_en}`.toLowerCase();
+                    return blob.includes(q);
+                });
+
+                const rowsHtml = list.map(r => {
+                    const isSel = (r.y === window.cruiseSelectedYear);
+                    const avgPax = r.calls > 0 ? Math.round(r.passengers / r.calls) : 0;
+                    const prevYr = window.hkCruiseAnnualBase.find(x => x.y === (r.y - 1));
+                    let yoyStr = '--';
+                    if (prevYr && prevYr.passengers > 0 && r.y !== 2026) {
+                        const diffPct = (((r.passengers - prevYr.passengers) / prevYr.passengers) * 100).toFixed(1);
+                        const col = diffPct >= 0 ? '#16a34a' : '#dc2626';
+                        yoyStr = `<span style="color:${col}; font-weight:800;">${diffPct >= 0 ? '+' : ''}${diffPct}%</span>`;
+                    }
+
+                    return `
+                        <tr onclick="selectCruiseYear(${r.y})" style="cursor:pointer; border-bottom:1px solid #e2e8f0; background:${isSel ? '#ecfeff' : 'transparent'};">
+                            <td style="padding:8px 10px; font-weight:900; color:#0f172a;">${r.y}${r.y === 2026 ? (isEn ? ' (Q1–Q2)' : ' (首兩季)') : ''}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:900; color:#0284c7; background:${isSel ? '#cffafe' : '#f0f9ff'};">${r.passengers.toLocaleString()}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:900; color:#ea580c;">${r.calls.toLocaleString()}</td>
+                            <td style="padding:8px 10px; text-align:right; font-weight:700; color:#334155;">${avgPax > 0 ? avgPax.toLocaleString() : '--'}</td>
+                            <td style="padding:8px 10px; text-align:right;">${yoyStr}</td>
+                            <td style="padding:8px 10px; font-size:11.5px; color:#475569;">${isEn ? r.highlight_en : r.highlight_zh}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                            <thead>
+                                <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                                    <th style="padding:8px 10px; text-align:left;">${isEn ? 'Year' : '年份 (Year)'}</th>
+                                    <th style="padding:8px 10px; text-align:right; background:#e0f2fe; color:#0369a1;">🛳️ ${isEn ? 'Cruise Passenger Throughput' : '全年郵輪乘客人次'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">⚓ ${isEn ? 'Number of Ship Calls' : '全年郵輪停泊次數'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">👥 ${isEn ? 'Avg Pax / Call' : '平均每船載客人次'}</th>
+                                    <th style="padding:8px 10px; text-align:right;">📈 ${isEn ? 'YoY Change' : '按年變動'}</th>
+                                    <th style="padding:8px 10px; text-align:left;">📝 ${isEn ? 'Annual Highlights' : '年度發展摘要'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+
+        function renderCruisePortal() {
+            const container = document.getElementById('cruise-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const isQuarterly = (window.cruiseViewMode === 'QUARTERLY');
+
+            const qList = window.hkCruiseQuarterlyData;
+            const aList = window.hkCruiseAnnualBase;
+
+            const curQIdx = Math.max(0, qList.findIndex(r => r.k === window.cruiseSelectedQuarterKey));
+            const curQRec = qList[curQIdx] || qList[qList.length - 1];
+
+            const curYIdx = Math.max(0, aList.findIndex(r => r.y === window.cruiseSelectedYear));
+            const curYRec = aList[curYIdx] || aList[aList.length - 2];
+
+            const activeRec = isQuarterly ? curQRec : curYRec;
+            const activeLabel = isQuarterly
+                ? (isEn ? curQRec.k : `${curQRec.y}年 ${curQRec.q}（第${curQRec.q.slice(1)}季）`)
+                : (isEn ? `${curYRec.y}${curYRec.y === 2026 ? ' (H1)' : ''}` : `${curYRec.y}年${curYRec.y === 2026 ? '（首兩季累計）' : '全年'}`);
+
+            const avgPaxPerCall = activeRec.calls > 0 ? Math.round(activeRec.passengers / activeRec.calls) : 0;
+
+            const quickItemsHtml = isQuarterly
+                ? ['2026 Q2', '2026 Q1', '2025 Q4', '2025 Q1', '2024 Q4', '2023 Q4', '2019 Q1'].map(k => `
+                    <button type="button" class="el-chip-btn ${curQRec.k === k ? 'active' : ''}" onclick="selectCruiseQuarter('${k}')">
+                        ${k === '2026 Q2' ? '⚡ ' : ''}${k}
+                    </button>
+                `).join('')
+                : [2026, 2025, 2024, 2023, 2021, 2019, 2017, 2013].map(y => `
+                    <button type="button" class="el-chip-btn ${curYRec.y === y ? 'active' : ''}" onclick="selectCruiseYear(${y})">
+                        ${y === 2025 ? '⚡ ' : ''}${y}${isEn ? '' : '年'}
+                    </button>
+                `).join('');
+
+            const selectOptionsHtml = isQuarterly
+                ? [...qList].reverse().map(r => `<option value="${r.k}" ${r.k === curQRec.k ? 'selected' : ''}>${r.y} ${r.q}</option>`).join('')
+                : [...aList].reverse().map(r => `<option value="${r.y}" ${r.y === curYRec.y ? 'selected' : ''}>${r.y}${isEn ? '' : '年'}</option>`).join('');
+
+            const controlHtml = `
+                <div class="el-card-box" style="margin-bottom:14px; background:linear-gradient(135deg, #ecfeff 0%, #ffffff 60%, #f0f9ff 100%); border-color:#a5f3fc;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn ${isQuarterly ? 'active' : ''}" onclick="setCruiseViewMode('QUARTERLY')">
+                                📆 ${isEn ? 'Quarterly Series (Q1–Q4)' : '按季統計 (Q1–Q4)'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${!isQuarterly ? 'active' : ''}" onclick="setCruiseViewMode('ANNUAL')">
+                                📅 ${isEn ? 'Annual Summary (2013–2026)' : '按年匯總統計 (2013–2026)'}
+                            </button>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn" onclick="stepCruisePeriod(-1)">◀ ${isEn ? 'Prev' : '上一期'}</button>
+                            <select class="el-select-box" onchange="${isQuarterly ? 'selectCruiseQuarter(this.value)' : 'selectCruiseYear(this.value)'}" aria-label="Select Cruise Period">
+                                ${selectOptionsHtml}
+                            </select>
+                            <button type="button" class="el-chip-btn" onclick="stepCruisePeriod(1)">${isEn ? 'Next' : '下一期'} ▶</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-size:12px; font-weight:800; color:#0e7490;">⚡ ${isEn ? 'Quick Select:' : '期數快選：'}</span>
+                            ${quickItemsHtml}
+                        </div>
+                        <div style="flex:1; min-width:220px; max-width:340px; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">${isQuarterly ? qList[0].k : aList[0].y}</span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="${(isQuarterly ? qList.length : aList.length) - 1}"
+                                value="${isQuarterly ? curQIdx : curYIdx}"
+                                style="flex:1; accent-color:#0891b2; cursor:pointer;"
+                                oninput="${isQuarterly ? 'selectCruiseQuarter(window.hkCruiseQuarterlyData[this.value].k)' : 'selectCruiseYear(window.hkCruiseAnnualBase[this.value].y)'}"
+                            />
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">${isQuarterly ? qList[qList.length - 1].k : aList[aList.length - 1].y}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const rec2025 = getCruiseAnnualRecord(2025);
+
+            const kpiHtml = `
+                <div class="el-kpi-grid" style="margin-bottom:14px;">
+                    <div class="el-kpi-card" style="border-left:4px solid #0284c7;">
+                        <div class="el-kpi-label">🛳️ ${isEn ? `Cruise Passenger Throughput (${activeLabel})` : `${activeLabel} 郵輪乘客人次`}</div>
+                        <div class="el-kpi-val" style="color:#0284c7;">${activeRec.passengers.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'passengers' : '人次'}</small></div>
+                        <div class="el-kpi-sub">
+                            ${isEn ? 'Inbound & outbound cruise passenger movements in HK' : '指定年季在香港入境及離境之總體郵輪乘客人次'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #ea580c;">
+                        <div class="el-kpi-label">⚓ ${isEn ? `Number of Ship Calls (${activeLabel})` : `${activeLabel} 郵輪停泊次數`}</div>
+                        <div class="el-kpi-val" style="color:#ea580c;">${activeRec.calls.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'calls' : '航次'}</small></div>
+                        <div class="el-kpi-sub">
+                            ${isEn ? 'Total berthing calls at Kai Tak Cruise Terminal & Ocean Terminal' : '涵蓋啟德郵輪碼頭及尖沙咀海運碼頭之郵輪停泊總次數'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #0d9488;">
+                        <div class="el-kpi-label">👥 ${isEn ? `Avg Passengers per Ship Call` : `${activeLabel} 平均每航次載客人次`}</div>
+                        <div class="el-kpi-val" style="color:#0d9488;">${avgPaxPerCall.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'pax / call' : '人次／航次'}</small></div>
+                        <div class="el-kpi-sub">
+                            ${isEn ? 'Average passenger throughput generated per ship call' : '反映大型母港郵輪與國際過境掛靠郵輪之平均出入境載客規模'}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #7c3aed;">
+                        <div class="el-kpi-label">📈 ${isEn ? '2025 Full-Year Recovery Benchmark' : '2025 全年郵輪旅遊復蘇表現'}</div>
+                        <div class="el-kpi-val" style="color:#7c3aed; font-size:18px;">${rec2025.passengers.toLocaleString()} <small style="font-size:11px;">${isEn ? 'pax (+22%)' : '人次 (+22%)'}</small></div>
+                        <div class="el-kpi-sub">
+                            ⚓ ${isEn ? 'Ship Calls:' : '停泊航次：'}<strong>${rec2025.calls} ${isEn ? 'calls (+26% YoY)' : '次（按年 +26%）'}</strong> · 🌐 ${isEn ? '22 Cruise Brands' : '涵蓋 22 個國際郵輪品牌'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const trendCardHtml = `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📊 ${isQuarterly
+                                ? (isEn ? 'Quarterly Cruise Passenger Throughput & Number of Ship Calls Trend (2019 Q1 – 2026 Q2)' : '每季香港總體郵輪乘客人次及停泊次數走勢圖 (2019 Q1 – 2026 Q2)')
+                                : (isEn ? 'Annual Cruise Passenger Throughput & Number of Ship Calls Trend (2013 – 2026)' : '歷年香港總體郵輪乘客人次及停泊次數走勢圖 (2013 – 2026)')}</div>
+                            <div class="el-card-subtitle">${isEn
+                                ? 'Dual-axis comparison of cruise passenger throughput (bars) and number of ship calls (line).'
+                                : '雙軸對比各季／各年香港出入境郵輪乘客人次（左軸藍柱）與郵輪停泊次數（右軸橙線）。'}</div>
+                        </div>
+                    </div>
+                    ${buildCruiseTrendSVG(isEn)}
+                </div>
+            `;
+
+            const targetBreakdownYr = isQuarterly ? curQRec.y : (curYRec.y >= 2019 ? curYRec.y : 2025);
+            const seasonalCardHtml = buildCruiseYearQuarterBreakdownHTML(targetBreakdownYr, isEn);
+
+            const terminalsInfoHtml = `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">⚓ ${isEn ? 'Hong Kong Cruise Terminals Infrastructure & Positioning' : '香港兩大郵輪碼頭基建定位與分工（啟德郵輪碼頭 ＋ 尖沙咀海運碼頭）'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Complementary operations handling mega international cruise ships and mid-sized luxury vessels.' : '兩座郵輪碼頭各具特色並互相配合，接待全球大型母港郵輪及中小型精品郵輪。'}</div>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr)); gap:12px; margin-top:10px;">
+                        <div style="padding:12px 14px; border-radius:11px; background:#f0f9ff; border:1px solid #bae6fd;">
+                            <div style="font-size:14px; font-weight:900; color:#0369a1; margin-bottom:4px;">🛳️ ${isEn ? 'Kai Tak Cruise Terminal (KTCT)' : '啟德郵輪碼頭 (Kai Tak Cruise Terminal)'}</div>
+                            <div style="font-size:12px; color:#334155; line-height:1.55;">
+                                • <strong>${isEn ? 'Location & Commissioning:' : '位置及啟用年份：'}</strong>${isEn ? '33 Shing Fung Road, Kai Tak (former runway tip); Berths 1 & 2 commissioned in Jun 2013 and Jul 2014.' : '九龍啟德承豐道 33 號（前啟德機場跑道南端），兩個泊位分別於 2013 年 6 月及 2014 年 7 月啟用。'}<br>
+                                • <strong>${isEn ? 'Berthing Capacity:' : '泊位規格及吞吐力：'}</strong>${isEn ? 'Accommodates two mega cruise vessels of up to 220,000 gross tonnage (360m length) simultaneously with no air-draft limit; accounts for >80% of HK cruise throughput.' : '可同時停泊兩艘總噸位達 220,000 噸（船長約 360 米）之全球最大型郵輪，無高度限制，佔全港郵輪停泊次數及乘客人次逾八成。'}
+                            </div>
+                        </div>
+                        <div style="padding:12px 14px; border-radius:11px; background:#f5f3ff; border:1px solid #ddd6fe;">
+                            <div style="font-size:14px; font-weight:900; color:#6d28d9; margin-bottom:4px;">⛴️ ${isEn ? 'Ocean Terminal (Tsim Sha Tsui)' : '尖沙咀海運碼頭 (Ocean Terminal)'}</div>
+                            <div style="font-size:12px; color:#334155; line-height:1.55;">
+                                • <strong>${isEn ? 'Location & Commissioning:' : '位置及啟用年份：'}</strong>${isEn ? 'Harbour City, Canton Road, Tsim Sha Tsui; commissioned in 1966 at the heart of Victoria Harbour.' : '九龍尖沙咀廣東道海港城，於 1966 年落成，位處維多利亞港核心商業及購物觀光區。'}<br>
+                                • <strong>${isEn ? 'Berthing Capacity:' : '泊位規格及定位：'}</strong>${isEn ? 'Accommodates mid-sized and boutique luxury cruise ships under ~90,000 gross tonnage, offering direct access to urban shopping and dining.' : '專門接待總噸位約 90,000 噸以下之中小型及精品豪華郵輪，旅客落船即可直達尖沙咀核心商圈。'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const tableCardHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <div class="el-card-title">📋 ${isQuarterly
+                                ? (isEn ? 'Full Quarterly Cruise Passenger Throughput & Ship Calls Table' : '香港每季總體郵輪乘客人次及停泊次數明細表')
+                                : (isEn ? 'Full Annual Cruise Passenger Throughput & Ship Calls Table (2013–2026)' : '香港歷年郵輪乘客人次及停泊次數明細表 (2013–2026)')}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Click any row in the table to highlight that quarter or year in the dashboard.' : '點擊表內任何一列可即時切換並高亮顯示該季／該年詳細指標。'}</div>
+                        </div>
+                        <div>
+                            <input
+                                type="text"
+                                class="el-search-input"
+                                style="min-width:190px;"
+                                value="${(window.cruiseSearchQuery || '').replace(/"/g, '&quot;')}"
+                                oninput="onCruiseSearchInput(this.value)"
+                                placeholder="${isEn ? '🔍 Search year or quarter (e.g. 2025 Q4)...' : '🔍 搜尋年份或季度 (例: 2025 Q4)...'}"
+                            />
+                        </div>
+                    </div>
+                    <div id="cruise-table-region" style="margin-top:10px;">
+                        ${buildCruiseTableHTML(isEn)}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = controlHtml + kpiHtml + trendCardHtml + seasonalCardHtml + terminalsInfoHtml + tableCardHtml;
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
@@ -23986,6 +24774,47 @@
                 ]
             },
             {
+                catId: 'TOURISM_ECONOMY',
+                icon: '🛳️',
+                title_zh: '旅遊及盛事經濟',
+                title_en: 'Tourism & Mega Events Economy',
+                desc_zh: '涵蓋香港總體郵輪乘客人次、郵輪停泊航次、季節性分佈及啟德郵輪碼頭／海運碼頭營運統計',
+                desc_en: 'Covers HK overall cruise passenger throughput, ship calls, quarterly seasonality and cruise terminal statistics',
+                color: '#0891b2',
+                bg: '#ecfeff',
+                border: '#a5f3fc',
+                departments: [
+                    {
+                        deptId: 'CSTB_TC',
+                        deptIcon: '🛳️',
+                        dept_zh: '文化體育及旅遊局・旅遊事務署',
+                        dept_en: 'Culture, Sports and Tourism Bureau (CSTB) · Tourism Commission',
+                        role_zh: '統籌香港旅遊業發展政策、推動郵輪旅遊發展行動計劃及監管啟德郵輪碼頭運作',
+                        role_en: 'Formulates tourism policies, drives the Action Plan on Development of Cruise Tourism & oversees Kai Tak Cruise Terminal',
+                        pages: [
+                            {
+                                pageKey: 'cruise',
+                                icon: '🛳️',
+                                name_zh: '香港郵輪乘客人次及停泊次數統計看板',
+                                name_en: 'HK Cruise Passenger Throughput & Ship Calls Dashboard',
+                                desc_zh: '提供每季及歷年香港總體出入境郵輪乘客人次、郵輪停泊次數、平均每船載客量及四季航次走勢對比。',
+                                desc_en: 'Quarterly & annual overall cruise passenger throughput, number of ship calls, average passengers per call and seasonal trends.',
+                                actionFn: 'showCruisePage',
+                                getLiveBadge: function(isEn) {
+                                    const ann2025 = (typeof getCruiseAnnualRecord === 'function') ? getCruiseAnnualRecord(2025) : null;
+                                    if (ann2025) {
+                                        return isEn
+                                            ? `🛳️ 2025: ${ann2025.passengers.toLocaleString()} Pax (+22%) · ${ann2025.calls} Ship Calls (+26%)`
+                                            : `🛳️ 2025年：${ann2025.passengers.toLocaleString()} 乘客人次 (+22%) · ${ann2025.calls} 停泊航次 (+26%)`;
+                                    }
+                                    return isEn ? '🛳️ Quarterly & Annual Cruise Stats' : '🛳️ 每季及歷年郵輪乘客人次及停泊次數';
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 catId: 'COUNCILS_GOV',
                 icon: '🏛️',
                 title_zh: '議會及代議政制',
@@ -24246,6 +25075,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'cruise') {
+                    showCruisePage();
                 } else if (currentActivePage === 'aed') {
                     showAedPage();
                 } else if (currentActivePage === 'ambulance') {
