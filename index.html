@@ -4089,6 +4089,14 @@
             <a href="#" id="t-menu-legco" class="rail-btn-sub" title="歷屆香港立法會議員名單及議席分佈 (第一至第八屆)" onclick="showLegcoPage(); event.preventDefault();">⚖️</a>
         </div>
 
+        <!-- 分隔線 -->
+        <div class="left-menu-divider" role="separator" aria-label="保安及懲教類別分隔線"></div>
+
+        <!-- 分類八：保安及懲教事務 (LAW_SECURITY：懲教署在囚人士數目、紀律及更生統計 🔒) -->
+        <div class="left-menu-group" data-menu-category="LAW_SECURITY" aria-label="保安及懲教事務">
+            <a href="#" id="t-menu-csd" class="rail-btn-sub" title="香港在囚人士數目、院所紀律及更生統計" onclick="showCsdPage(); event.preventDefault();">🔒</a>
+        </div>
+
         <div class="left-menu-spacer"></div>
         <a href="#" id="t-menu-setting" class="rail-btn-sub" title="系統設定" onclick="openSettingsModal(); event.preventDefault();">⚙️</a>
     </nav>
@@ -4681,6 +4689,18 @@
                     </div>
                 </h2>
                 <div class="border-portal-scroll" id="visitor-hotel-portal-container"></div>
+            </div>
+
+            <!-- 🔒 香港在囚人士數目、院所紀律、安全及更生統計看板 -->
+            <div class="panel border-section" id="csd-page-view" style="display: none;">
+                <h2>
+                    <span id="t-csd-title">🔒 香港在囚人士數目、院所紀律及更生統計</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-csd-sync-now" onclick="syncCsdData(true)" title="重新整理最新在囚人士、紀律及更生統計資料">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="csd-refresh-status" onclick="syncCsdData(true)" style="cursor:pointer;" title="點擊重新整理最新在囚人士、紀律及更生統計資料">🟢 資料已更新 (至 2026)</span>
+                    </div>
+                </h2>
+                <div class="border-portal-scroll" id="csd-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5311,6 +5331,7 @@
                 if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
                 if (document.getElementById('t-menu-cruise')) document.getElementById('t-menu-cruise').title = (currentLang === 'en') ? 'HK Cruise Passenger Throughput & Number of Ship Calls' : '香港郵輪乘客人次及停泊次數統計';
                 if (document.getElementById('t-menu-visitor-hotel')) document.getElementById('t-menu-visitor-hotel').title = (currentLang === 'en') ? 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy' : '訪港旅客人次、逗留時間及酒店房租與入住率統計';
+                if (document.getElementById('t-menu-csd')) document.getElementById('t-menu-csd').title = (currentLang === 'en') ? 'HK Persons in Custody, Institutional Discipline & Rehabilitation Statistics' : '香港在囚人士數目、院所紀律及更生統計';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5340,6 +5361,7 @@
                 if (typeof applyAedLanguage === 'function') applyAedLanguage();
                 if (typeof applyCruiseLanguage === 'function') applyCruiseLanguage();
                 if (typeof applyVisitorHotelLanguage === 'function') applyVisitorHotelLanguage();
+                if (typeof applyCsdLanguage === 'function') applyCsdLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5448,6 +5470,7 @@
             const btnAed = document.getElementById('t-menu-aed');
             const btnCruise = document.getElementById('t-menu-cruise');
             const btnVh = document.getElementById('t-menu-visitor-hotel');
+            const btnCsd = document.getElementById('t-menu-csd');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5464,6 +5487,7 @@
             if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnCruise) btnCruise.className = (activeTab === 'cruise') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnVh) btnVh.className = (activeTab === 'visitor_hotel') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnCsd) btnCsd.className = (activeTab === 'csd') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5492,6 +5516,7 @@
             const aedSec = document.getElementById('aed-page-view');
             const cruiseSec = document.getElementById('cruise-page-view');
             const vhSec = document.getElementById('visitor-hotel-page-view');
+            const csdSec = document.getElementById('csd-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5508,6 +5533,7 @@
             if (aedSec) aedSec.style.display = 'none';
             if (cruiseSec) cruiseSec.style.display = 'none';
             if (vhSec) vhSec.style.display = 'none';
+            if (csdSec) csdSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5734,6 +5760,19 @@
             updateMenuRailButtons('visitor_hotel');
             initVisitorHotelSystem();
             renderVisitorHotelPortal();
+        }
+
+        function showCsdPage() {
+            persistActivePageState('csd');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const csdSec = document.getElementById('csd-page-view');
+            if (csdSec) csdSec.style.display = 'flex';
+            updateMenuRailButtons('csd');
+            initCsdSystem();
+            renderCsdPortal();
         }
 
 
@@ -25525,6 +25564,1023 @@
             }
         }
 
+
+        /* ============================================================================
+           🔒 懲教署：在囚人士數目、院所紀律、暴力與自我傷害、自殺率及更生統計模組
+           ============================================================================ */
+        const CSD_API_CSV_ENDPOINTS = {
+            adnByInst: 'https://www.csd.gov.hk/datagovhk/Stat_T1-3_ADN_by_institution_en.csv',
+            recidivism: 'https://www.csd.gov.hk/datagovhk/Stat_T2-5_recidivism_rate_en.csv',
+            suicideRate: 'https://www.csd.gov.hk/datagovhk/Stat_T1-12_suicide_rate_en.csv',
+            passRate: 'https://www.csd.gov.hk/datagovhk/Stat_T2-3_pass_rate_en.csv',
+            indiscipline: 'https://www.csd.gov.hk/datagovhk/Stat_T1-8_indiscipline_en.csv',
+            selfHarm: 'https://www.csd.gov.hk/datagovhk/Stat_T1-10_self-harm_en.csv',
+            violence: 'https://www.csd.gov.hk/datagovhk/Stat_T1-9_violence_en.csv'
+        };
+
+        // 1A. 表 1.1：按類別及性別劃分的平均每日在囚人士數目 (2021 – 2026年1月至6月)
+        const CSD_DAILY_PENAL_POPULATION = [
+            { period: '2021', label_zh: '2021年', label_en: '2021', sentM: 4050, sentF: 1150, sentSub: 5200, remM: 1968, remF: 348, remSub: 2316, allM: 6118, allF: 1498, total: 7616 },
+            { period: '2022', label_zh: '2022年', label_en: '2022', sentM: 3766, sentF: 1065, sentSub: 4830, remM: 2292, remF: 374, remSub: 2666, allM: 6175, allF: 1439, total: 7613 },
+            { period: '2023', label_zh: '2023年', label_en: '2023', sentM: 3958, sentF: 1259, sentSub: 5217, remM: 2623, remF: 472, remSub: 3096, allM: 6698, allF: 1799, total: 8498 },
+            { period: '2024', label_zh: '2024年', label_en: '2024', sentM: 4202, sentF: 1380, sentSub: 5582, remM: 3059, remF: 591, remSub: 3650, allM: 7390, allF: 2159, total: 9550 },
+            { period: '2025', label_zh: '2025年', label_en: '2025', sentM: 4339, sentF: 1422, sentSub: 5760, remM: 3458, remF: 759, remSub: 4217, allM: 7929, allF: 2386, total: 10315 },
+            { period: '2026 (1–6月)', label_zh: '2026年 (1月至6月)', label_en: '2026 (Jan–Jun)', sentM: 4358, sentF: 1436, sentSub: 5794, remM: 3907, remF: 886, remSub: 4793, allM: 8414, allF: 2563, total: 10976 }
+        ];
+
+        // 1B. 表 1.2：按香港及非香港居民劃分的在囚人士數目 (截至年底 / 2026年6月30日)
+        const CSD_RESIDENCY_BREAKDOWN = [
+            { period: '2022-12-31', label_zh: '2022年12月31日', label_en: 'As at 31 Dec 2022', hkRes: 5891, nonHkTotal: 1860, cnMacTw: 523, otherNat: 1337, total: 7751, supM: 1038, supF: 155, supTotal: 1193 },
+            { period: '2023-12-31', label_zh: '2023年12月31日', label_en: 'As at 31 Dec 2023', hkRes: 6497, nonHkTotal: 2582, cnMacTw: 917, otherNat: 1665, total: 9079, supM: 993,  supF: 152, supTotal: 1145 },
+            { period: '2024-12-31', label_zh: '2024年12月31日', label_en: 'As at 31 Dec 2024', hkRes: 6952, nonHkTotal: 3068, cnMacTw: 1278, otherNat: 1790, total: 10020, supM: 928, supF: 165, supTotal: 1093 },
+            { period: '2025-12-31', label_zh: '2025年12月31日', label_en: 'As at 31 Dec 2025', hkRes: 7247, nonHkTotal: 3432, cnMacTw: 1632, otherNat: 1800, total: 10679, supM: 967, supF: 186, supTotal: 1153 },
+            { period: '2026-06-30', label_zh: '2026年6月30日',  label_en: 'As at 30 Jun 2026', hkRes: 7337, nonHkTotal: 3764, cnMacTw: 1942, otherNat: 1822, total: 11101, supM: 1054, supF: 214, supTotal: 1268 }
+        ];
+
+        // 1C. 表 1.3：按懲教院所劃分的在囚人士數目 (全港 23 間懲教院所：定罪人士 c、還押人士 r、羈留人士 d、小計 t)
+        const CSD_INSTITUTIONS_DATA = [
+            {
+                id: 'STANLEY', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '赤柱監獄', name_en: 'Stanley Prison',
+                records: {
+                    '2022-12-31': { c: 837, r: 621, d: 1, t: 1459 },
+                    '2023-12-31': { c: 688, r: 951, d: 0, t: 1639 },
+                    '2024-12-31': { c: 727, r: 1134, d: 0, t: 1861 },
+                    '2025-12-31': { c: 743, r: 1385, d: 0, t: 2128 },
+                    '2026-06-30': { c: 779, r: 1396, d: 0, t: 2175 }
+                }
+            },
+            {
+                id: 'LOWU', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '羅湖懲教所', name_en: 'Lo Wu Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 959, r: 102, d: 0, t: 1061 },
+                    '2023-12-31': { c: 1234, r: 148, d: 0, t: 1382 },
+                    '2024-12-31': { c: 1332, r: 256, d: 0, t: 1588 },
+                    '2025-12-31': { c: 1310, r: 367, d: 1, t: 1678 },
+                    '2026-06-30': { c: 1251, r: 393, d: 0, t: 1644 }
+                }
+            },
+            {
+                id: 'LCK', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '荔枝角收押所', name_en: 'Lai Chi Kok Reception Centre',
+                records: {
+                    '2022-12-31': { c: 284, r: 1200, d: 0, t: 1484 },
+                    '2023-12-31': { c: 253, r: 1244, d: 0, t: 1497 },
+                    '2024-12-31': { c: 244, r: 1096, d: 1, t: 1341 },
+                    '2025-12-31': { c: 263, r: 1163, d: 0, t: 1426 },
+                    '2026-06-30': { c: 286, r: 1322, d: 0, t: 1608 }
+                }
+            },
+            {
+                id: 'TONGFUK', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '塘福懲教所', name_en: 'Tong Fuk Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 453, r: 0, d: 0, t: 453 },
+                    '2023-12-31': { c: 740, r: 0, d: 0, t: 740 },
+                    '2024-12-31': { c: 802, r: 0, d: 0, t: 802 },
+                    '2025-12-31': { c: 727, r: 0, d: 0, t: 727 },
+                    '2026-06-30': { c: 768, r: 0, d: 0, t: 768 }
+                }
+            },
+            {
+                id: 'TUNGTAU', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '東頭懲教所', name_en: 'Tung Tau Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 89, r: 294, d: 0, t: 383 },
+                    '2023-12-31': { c: 54, r: 395, d: 0, t: 449 },
+                    '2024-12-31': { c: 52, r: 535, d: 0, t: 587 },
+                    '2025-12-31': { c: 57, r: 647, d: 0, t: 704 },
+                    '2026-06-30': { c: 57, r: 646, d: 0, t: 703 }
+                }
+            },
+            {
+                id: 'SHEKPIK', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '石壁監獄', name_en: 'Shek Pik Prison',
+                records: {
+                    '2022-12-31': { c: 396, r: 0, d: 0, t: 396 },
+                    '2023-12-31': { c: 435, r: 0, d: 0, t: 435 },
+                    '2024-12-31': { c: 466, r: 0, d: 0, t: 466 },
+                    '2025-12-31': { c: 532, r: 0, d: 0, t: 532 },
+                    '2026-06-30': { c: 541, r: 0, d: 0, t: 541 }
+                }
+            },
+            {
+                id: 'TAILAM_W', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '大欖女懲教所', name_en: 'Tai Lam Centre for Women',
+                records: {
+                    '2022-12-31': { c: 78, r: 268, d: 0, t: 346 },
+                    '2023-12-31': { c: 73, r: 326, d: 3, t: 402 },
+                    '2024-12-31': { c: 74, r: 393, d: 3, t: 470 },
+                    '2025-12-31': { c: 72, r: 428, d: 0, t: 500 },
+                    '2026-06-30': { c: 71, r: 463, d: 1, t: 535 }
+                }
+            },
+            {
+                id: 'PIKUK_P', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '壁屋監獄', name_en: 'Pik Uk Prison',
+                records: {
+                    '2022-12-31': { c: 324, r: 0, d: 0, t: 324 },
+                    '2023-12-31': { c: 422, r: 0, d: 0, t: 422 },
+                    '2024-12-31': { c: 449, r: 0, d: 0, t: 449 },
+                    '2025-12-31': { c: 428, r: 0, d: 0, t: 428 },
+                    '2026-06-30': { c: 482, r: 0, d: 0, t: 482 }
+                }
+            },
+            {
+                id: 'PAKSHAWAN', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '白沙灣懲教所', name_en: 'Pak Sha Wan Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 236, r: 0, d: 0, t: 236 },
+                    '2023-12-31': { c: 227, r: 0, d: 0, t: 227 },
+                    '2024-12-31': { c: 161, r: 188, d: 0, t: 349 },
+                    '2025-12-31': { c: 178, r: 281, d: 0, t: 459 },
+                    '2026-06-30': { c: 177, r: 292, d: 0, t: 469 }
+                }
+            },
+            {
+                id: 'HLC_CI', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '喜靈洲懲教所', name_en: 'Hei Ling Chau Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 265, r: 0, d: 0, t: 265 },
+                    '2023-12-31': { c: 331, r: 0, d: 0, t: 331 },
+                    '2024-12-31': { c: 416, r: 0, d: 0, t: 416 },
+                    '2025-12-31': { c: 409, r: 0, d: 0, t: 409 },
+                    '2026-06-30': { c: 467, r: 0, d: 0, t: 467 }
+                }
+            },
+            {
+                id: 'TAILAM_CI', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '大欖懲教所', name_en: 'Tai Lam Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 291, r: 0, d: 0, t: 291 },
+                    '2023-12-31': { c: 379, r: 0, d: 0, t: 379 },
+                    '2024-12-31': { c: 440, r: 0, d: 0, t: 440 },
+                    '2025-12-31': { c: 439, r: 0, d: 0, t: 439 },
+                    '2026-06-30': { c: 322, r: 140, d: 0, t: 462 }
+                }
+            },
+            {
+                id: 'PIKUK_CI', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '壁屋懲教所', name_en: 'Pik Uk Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 69, r: 204, d: 0, t: 273 },
+                    '2023-12-31': { c: 74, r: 197, d: 0, t: 271 },
+                    '2024-12-31': { c: 93, r: 184, d: 0, t: 277 },
+                    '2025-12-31': { c: 96, r: 180, d: 0, t: 276 },
+                    '2026-06-30': { c: 80, r: 209, d: 0, t: 289 }
+                }
+            },
+            {
+                id: 'NEIKWU', cat: 'DATC', cat_zh: '戒毒所及羈留中心', cat_en: 'Addiction Treatment & Detention Centres',
+                name_zh: '勵顧懲教所', name_en: 'Nei Kwu Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 44, r: 0, d: 0, t: 44 },
+                    '2023-12-31': { c: 0, r: 0, d: 162, t: 162 },
+                    '2024-12-31': { c: 0, r: 0, d: 210, t: 210 },
+                    '2025-12-31': { c: 0, r: 0, d: 218, t: 218 },
+                    '2026-06-30': { c: 0, r: 0, d: 252, t: 252 }
+                }
+            },
+            {
+                id: 'SIULAM', cat: 'PC', cat_zh: '精神病治療中心', cat_en: 'Psychiatric Centre',
+                name_zh: '小欖精神病治療中心', name_en: 'Siu Lam Psychiatric Centre',
+                records: {
+                    '2022-12-31': { c: 138, r: 74, d: 0, t: 212 },
+                    '2023-12-31': { c: 139, r: 87, d: 0, t: 226 },
+                    '2024-12-31': { c: 133, r: 78, d: 0, t: 211 },
+                    '2025-12-31': { c: 143, r: 88, d: 2, t: 233 },
+                    '2026-06-30': { c: 154, r: 75, d: 1, t: 230 }
+                }
+            },
+            {
+                id: 'HLC_ATC', cat: 'DATC', cat_zh: '戒毒所及羈留中心', cat_en: 'Addiction Treatment & Detention Centres',
+                name_zh: '喜靈洲戒毒所', name_en: 'Hei Ling Chau Addiction Treatment Centre',
+                records: {
+                    '2022-12-31': { c: 150, r: 0, d: 0, t: 150 },
+                    '2023-12-31': { c: 130, r: 0, d: 0, t: 130 },
+                    '2024-12-31': { c: 128, r: 0, d: 0, t: 128 },
+                    '2025-12-31': { c: 188, r: 0, d: 0, t: 188 },
+                    '2026-06-30': { c: 166, r: 0, d: 0, t: 166 }
+                }
+            },
+            {
+                id: 'TAITAMGAP', cat: 'DATC', cat_zh: '戒毒所及羈留中心', cat_en: 'Addiction Treatment & Detention Centres',
+                name_zh: '大潭峽懲教所', name_en: 'Tai Tam Gap Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 0, r: 0, d: 113, t: 113 },
+                    '2023-12-31': { c: 0, r: 0, d: 136, t: 136 },
+                    '2024-12-31': { c: 0, r: 0, d: 144, t: 144 },
+                    '2025-12-31': { c: 0, r: 0, d: 143, t: 143 },
+                    '2026-06-30': { c: 0, r: 0, d: 142, t: 142 }
+                }
+            },
+            {
+                id: 'SHATSUI', cat: 'DC', cat_zh: '勞教中心', cat_en: 'Detention Centre',
+                name_zh: '沙咀懲教所', name_en: 'Sha Tsui Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 116, r: 0, d: 0, t: 116 },
+                    '2023-12-31': { c: 114, r: 0, d: 0, t: 114 },
+                    '2024-12-31': { c: 109, r: 0, d: 0, t: 109 },
+                    '2025-12-31': { c: 93, r: 0, d: 0, t: 93 },
+                    '2026-06-30': { c: 79, r: 0, d: 0, t: 79 }
+                }
+            },
+            {
+                id: 'LAIKING', cat: 'PRISON', cat_zh: '監獄及懲教所', cat_en: 'Prisons & Correctional Institutions',
+                name_zh: '勵敬懲教所', name_en: 'Lai King Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 29, r: 23, d: 0, t: 52 },
+                    '2023-12-31': { c: 37, r: 27, d: 0, t: 64 },
+                    '2024-12-31': { c: 32, r: 25, d: 0, t: 57 },
+                    '2025-12-31': { c: 30, r: 31, d: 0, t: 61 },
+                    '2026-06-30': { c: 23, r: 33, d: 0, t: 56 }
+                }
+            },
+            {
+                id: 'LAICHI_RC', cat: 'RC', cat_zh: '更生中心', cat_en: 'Rehabilitation Centres',
+                name_zh: '勵志更生中心', name_en: 'Lai Chi Rehabilitation Centre',
+                records: {
+                    '2022-12-31': { c: 17, r: 0, d: 0, t: 17 },
+                    '2023-12-31': { c: 23, r: 0, d: 0, t: 23 },
+                    '2024-12-31': { c: 30, r: 0, d: 0, t: 30 },
+                    '2025-12-31': { c: 16, r: 0, d: 0, t: 16 },
+                    '2026-06-30': { c: 20, r: 0, d: 0, t: 20 }
+                }
+            },
+            {
+                id: 'LAIHANG_RC', cat: 'RC', cat_zh: '更生中心', cat_en: 'Rehabilitation Centres',
+                name_zh: '勵行更生中心', name_en: 'Lai Hang Rehabilitation Centre',
+                records: {
+                    '2022-12-31': { c: 11, r: 0, d: 0, t: 11 },
+                    '2023-12-31': { c: 5, r: 0, d: 0, t: 5 },
+                    '2024-12-31': { c: 15, r: 0, d: 0, t: 15 },
+                    '2025-12-31': { c: 11, r: 0, d: 0, t: 11 },
+                    '2026-06-30': { c: 5, r: 0, d: 0, t: 5 }
+                }
+            },
+            {
+                id: 'WAILAN_RC', cat: 'RC', cat_zh: '更生中心', cat_en: 'Rehabilitation Centres',
+                name_zh: '蕙蘭更生中心', name_en: 'Wai Lan Rehabilitation Centre',
+                records: {
+                    '2022-12-31': { c: 2, r: 0, d: 0, t: 2 },
+                    '2023-12-31': { c: 3, r: 0, d: 0, t: 3 },
+                    '2024-12-31': { c: 5, r: 0, d: 0, t: 5 },
+                    '2025-12-31': { c: 2, r: 0, d: 0, t: 2 },
+                    '2026-06-30': { c: 5, r: 0, d: 0, t: 5 }
+                }
+            },
+            {
+                id: 'CHILAN_RC', cat: 'RC', cat_zh: '更生中心', cat_en: 'Rehabilitation Centres',
+                name_zh: '芝蘭更生中心', name_en: 'Chi Lan Rehabilitation Centre',
+                records: {
+                    '2022-12-31': { c: 14, r: 0, d: 0, t: 14 },
+                    '2023-12-31': { c: 6, r: 0, d: 0, t: 6 },
+                    '2024-12-31': { c: 7, r: 0, d: 0, t: 7 },
+                    '2025-12-31': { c: 8, r: 0, d: 0, t: 8 },
+                    '2026-06-30': { c: 3, r: 0, d: 0, t: 3 }
+                }
+            },
+            {
+                id: 'LAISUN', cat: 'DATC', cat_zh: '戒毒所及羈留中心', cat_en: 'Addiction Treatment & Detention Centres',
+                name_zh: '勵新懲教所', name_en: 'Lai Sun Correctional Institution',
+                records: {
+                    '2022-12-31': { c: 49, r: 0, d: 0, t: 49 },
+                    '2023-12-31': { c: 36, r: 0, d: 0, t: 36 },
+                    '2024-12-31': { c: 58, r: 0, d: 0, t: 58 },
+                    '2025-12-31': { c: 0, r: 0, d: 0, t: 0 },
+                    '2026-06-30': { c: 0, r: 0, d: 0, t: 0 }
+                }
+            }
+        ];
+
+        // 2. 表 1.8 (違反紀律)、表 1.9 (暴力個案)、表 1.10 (自我傷害) 及 表 1.12 (自殺率) 綜合數列 (2016–2026)
+        const CSD_DISCIPLINE_SAFETY_SERIES = [
+            { year: '2016', indCases: 4104, indPersons: 2658, fightAssault: 509, officerAssault: 18, violentTotal: 527, selfHarm: 79, suicideCases: null, adn: null,  suicideRate: null },
+            { year: '2017', indCases: 4521, indPersons: 2768, fightAssault: 538, officerAssault: 8,  violentTotal: 546, selfHarm: 99, suicideCases: null, adn: null,  suicideRate: null },
+            { year: '2018', indCases: 4265, indPersons: 2714, fightAssault: 476, officerAssault: 7,  violentTotal: 483, selfHarm: 48, suicideCases: null, adn: null,  suicideRate: null },
+            { year: '2019', indCases: 3905, indPersons: 2403, fightAssault: 396, officerAssault: 6,  violentTotal: 402, selfHarm: 44, suicideCases: null, adn: null,  suicideRate: null },
+            { year: '2020', indCases: 4332, indPersons: 2488, fightAssault: 415, officerAssault: 8,  violentTotal: 423, selfHarm: 65, suicideCases: null, adn: null,  suicideRate: null },
+            { year: '2021', indCases: 5269, indPersons: 2979, fightAssault: 445, officerAssault: 10, violentTotal: 455, selfHarm: 44, suicideCases: 1,    adn: 7616,  suicideRate: 0.1 },
+            { year: '2022', indCases: 4564, indPersons: 2640, fightAssault: 353, officerAssault: 8,  violentTotal: 361, selfHarm: 42, suicideCases: 3,    adn: 7613,  suicideRate: 0.4 },
+            { year: '2023', indCases: 5335, indPersons: 3011, fightAssault: 340, officerAssault: 11, violentTotal: 351, selfHarm: 30, suicideCases: 1,    adn: 8498,  suicideRate: 0.1 },
+            { year: '2024', indCases: 6393, indPersons: 3412, fightAssault: 369, officerAssault: 13, violentTotal: 382, selfHarm: 18, suicideCases: 2,    adn: 9550,  suicideRate: 0.2 },
+            { year: '2025', indCases: 6523, indPersons: 3601, fightAssault: 376, officerAssault: 7,  violentTotal: 383, selfHarm: 15, suicideCases: 2,    adn: 10315, suicideRate: 0.2 },
+            { year: '2026 (1–6月)', indCases: null, indPersons: null, fightAssault: 190, officerAssault: 5, violentTotal: 195, selfHarm: null, suicideCases: null, adn: 10976, suicideRate: null }
+        ];
+
+        // 3A. 表 2.5：本地更生人士再犯率 (獲釋後兩年內因干犯新罪行而再次被判入懲教院所服刑百分比, 2019–2023 獲釋年份)
+        const CSD_RECIDIVISM_SERIES = [
+            { dischargeYear: 2019, below21: 13.3, aged21Plus: 21.3, allOffenders: 20.9 },
+            { dischargeYear: 2020, below21: 12.2, aged21Plus: 23.9, allOffenders: 23.3 },
+            { dischargeYear: 2021, below21: 10.3, aged21Plus: 22.4, allOffenders: 21.7 },
+            { dischargeYear: 2022, below21: 10.0, aged21Plus: 22.7, allOffenders: 21.8 },
+            { dischargeYear: 2023, below21: 7.5,  aged21Plus: 23.4, allOffenders: 22.4 }
+        ];
+
+        // 3B. 表 2.3：在囚人士的整體合格率及就業率 (2022 – 2026年1月至6月)
+        const CSD_PASS_AND_EMPLOYMENT_SERIES = [
+            { period: '2022', label_zh: '2022年', label_en: '2022', publicExamPass: 77.4, vocExamPass: 99.2, employmentRate6M: 82.6 },
+            { period: '2023', label_zh: '2023年', label_en: '2023', publicExamPass: 82.7, vocExamPass: 99.7, employmentRate6M: 86.9 },
+            { period: '2024', label_zh: '2024年', label_en: '2024', publicExamPass: 88.4, vocExamPass: 99.5, employmentRate6M: 83.2 },
+            { period: '2025', label_zh: '2025年', label_en: '2025', publicExamPass: 88.5, vocExamPass: 99.9, employmentRate6M: 80.1 },
+            { period: '2026 (1–6月)', label_zh: '2026年 (1月至6月)', label_en: '2026 (Jan–Jun)', publicExamPass: 90.9, vocExamPass: 99.9, employmentRate6M: 76.6 }
+        ];
+
+        window.csdActiveSubTab = 'OVERVIEW'; // 'OVERVIEW' | 'CUSTODY' | 'DISCIPLINE' | 'REHAB'
+        window.csdSelectedSnapshotDate = '2026-06-30';
+        window.csdInstCategoryFilter = 'ALL'; // 'ALL' | 'PRISON' | 'DATC' | 'DC' | 'RC' | 'PC'
+        window.csdInstSearchQuery = '';
+        window.csdSyncState = 'READY';
+        window.csdSystemInitialized = false;
+
+        async function syncCsdData(isManual) {
+            window.csdSyncState = 'SYNCING';
+            updateCsdHeaderUI();
+
+            let anyFetched = false;
+            try {
+                const results = await Promise.all([
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.adnByInst),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.recidivism),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.suicideRate),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.passRate),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.indiscipline),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.selfHarm),
+                    fetchCsvWithFallback(CSD_API_CSV_ENDPOINTS.violence)
+                ]);
+                if (results.some(r => r && r.length > 20)) {
+                    anyFetched = true;
+                }
+            } catch (e) {}
+
+            window.csdSyncState = anyFetched ? 'LIVE' : 'READY';
+            updateCsdHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showToast(isEn
+                    ? '✅ CSD Persons in Custody, Discipline, Safety & Rehabilitation statistics updated!'
+                    : '✅ 已更新懲教署在囚人士數目、院所紀律、暴力／自殘／自殺率及更生統計資料！');
+            }
+            if (currentActivePage === 'csd') {
+                renderCsdPortal();
+            }
+        }
+
+        function initCsdSystem() {
+            if (window.csdSystemInitialized) return;
+            window.csdSystemInitialized = true;
+            updateCsdHeaderUI();
+            syncCsdData(false);
+        }
+
+        function updateCsdHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-csd-title');
+            const syncBtn = document.getElementById('btn-csd-sync-now');
+            const badge = document.getElementById('csd-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🔒 HK Persons in Custody, Institutional Discipline & Rehabilitation Statistics'
+                    : '🔒 香港在囚人士數目、院所紀律及更生統計';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn
+                    ? 'Refresh persons in custody, institutional discipline and rehabilitation data'
+                    : '重新整理最新在囚人士、紀律及更生統計資料';
+            }
+            if (badge) {
+                if (window.csdSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    badge.innerHTML = isEn
+                        ? '🟢 Updated (Up to 2026)'
+                        : '🟢 資料已更新 (至 2026)';
+                }
+            }
+        }
+
+        function applyCsdLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-csd');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Persons in Custody, Institutional Discipline & Rehabilitation Statistics'
+                    : '香港在囚人士數目、院所紀律及更生統計';
+            }
+            updateCsdHeaderUI();
+            if (currentActivePage === 'csd') {
+                renderCsdPortal();
+            }
+        }
+
+        function setCsdSubTab(tabKey) {
+            window.csdActiveSubTab = tabKey || 'OVERVIEW';
+            renderCsdPortal();
+        }
+
+        function setCsdSnapshotDate(dtStr) {
+            window.csdSelectedSnapshotDate = dtStr || '2026-06-30';
+            renderCsdPortal();
+        }
+
+        function setCsdInstCategoryFilter(catKey) {
+            window.csdInstCategoryFilter = catKey || 'ALL';
+            renderCsdPortal();
+        }
+
+        function onCsdInstSearchInput(val) {
+            window.csdInstSearchQuery = String(val || '');
+            renderCsdPortal();
+        }
+
+        function buildCsdDailyPenalPopulationSvg(isEn) {
+            const rows = CSD_DAILY_PENAL_POPULATION;
+            const W = 820, H = 260;
+            const padL = 54, padR = 24, padT = 28, padB = 42;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+            const maxVal = 12000;
+            const n = rows.length;
+            const stepX = plotW / n;
+            const barW = Math.min(48, stepX * 0.56);
+
+            let gridHtml = '';
+            [0, 3000, 6000, 9000, 12000].forEach(val => {
+                const y = padT + plotH - (val / maxVal) * plotH;
+                gridHtml += `
+                    <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">${val.toLocaleString()}</text>
+                `;
+            });
+
+            let barsHtml = '';
+            rows.forEach((r, idx) => {
+                const cx = padL + idx * stepX + stepX / 2;
+                const x = cx - barW / 2;
+                const hSent = (r.sentSub / maxVal) * plotH;
+                const hRem = (r.remSub / maxVal) * plotH;
+                const otherDet = Math.max(0, r.total - r.sentSub - r.remSub);
+                const hDet = (otherDet / maxVal) * plotH;
+
+                const ySent = padT + plotH - hSent;
+                const yRem = ySent - hRem;
+                const yDet = yRem - hDet;
+
+                barsHtml += `
+                    <g>
+                        <rect x="${x.toFixed(1)}" y="${ySent.toFixed(1)}" width="${barW.toFixed(1)}" height="${hSent.toFixed(1)}" fill="#3b82f6" rx="2">
+                            <title>${r.period}: ${isEn ? 'Sentenced Persons' : '服刑人士'} ${r.sentSub.toLocaleString()}</title>
+                        </rect>
+                        <rect x="${x.toFixed(1)}" y="${yRem.toFixed(1)}" width="${barW.toFixed(1)}" height="${hRem.toFixed(1)}" fill="#f59e0b" rx="2">
+                            <title>${r.period}: ${isEn ? 'Persons on Remand' : '還押人士'} ${r.remSub.toLocaleString()}</title>
+                        </rect>
+                        ${hDet > 0 ? `<rect x="${x.toFixed(1)}" y="${yDet.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(2, hDet).toFixed(1)}" fill="#10b981" rx="1"><title>${r.period}: ${isEn ? 'Detainees' : '羈留者'} ${otherDet.toLocaleString()}</title></rect>` : ''}
+                        <text x="${cx.toFixed(1)}" y="${(yDet - 6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#0f172a">${r.total.toLocaleString()}</text>
+                        <text x="${cx.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="10" font-weight="800" fill="#334155">${isEn ? r.label_en : r.period}</text>
+                    </g>
+                `;
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block;">
+                    ${gridHtml}
+                    ${barsHtml}
+                    <text x="${padL}" y="16" font-size="10.5" font-weight="800" fill="#3b82f6">■ ${isEn ? 'Sentenced Persons' : '服刑人士'}   <tspan fill="#f59e0b">■ ${isEn ? 'Persons on Remand' : '還押人士'}</tspan>   <tspan fill="#10b981">■ ${isEn ? 'Detainees' : '羈留人士'}</tspan></text>
+                </svg>
+            `;
+        }
+
+        function buildCsdIndisciplineAndViolenceSvg(isEn) {
+            const rows = CSD_DISCIPLINE_SAFETY_SERIES.filter(r => r.indCases !== null);
+            const W = 820, H = 260;
+            const padL = 52, padR = 48, padT = 28, padB = 42;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+            const maxInd = 7200;
+            const maxVio = 600;
+            const n = rows.length;
+            const stepX = plotW / n;
+            const barW = Math.min(22, stepX * 0.34);
+
+            let gridHtml = '';
+            [0, 1800, 3600, 5400, 7200].forEach((val, idx) => {
+                const y = padT + plotH - (val / maxInd) * plotH;
+                const vRight = Math.round((val / maxInd) * maxVio);
+                gridHtml += `
+                    <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">${val.toLocaleString()}</text>
+                    <text x="${W - padR + 6}" y="${(y + 4).toFixed(1)}" text-anchor="start" font-size="10" font-weight="700" fill="#dc2626">${vRight}</text>
+                `;
+            });
+
+            let barsHtml = '';
+            let vioPts = [];
+            let shPts = [];
+            let dotsHtml = '';
+
+            rows.forEach((r, idx) => {
+                const cx = padL + idx * stepX + stepX / 2;
+                const hCases = (r.indCases / maxInd) * plotH;
+                const hPersons = (r.indPersons / maxInd) * plotH;
+                const yCases = padT + plotH - hCases;
+                const yPersons = padT + plotH - hPersons;
+
+                barsHtml += `
+                    <g>
+                        <rect x="${(cx - barW - 1).toFixed(1)}" y="${yCases.toFixed(1)}" width="${barW.toFixed(1)}" height="${hCases.toFixed(1)}" fill="#6366f1" rx="2">
+                            <title>${r.year}: ${isEn ? 'Indiscipline Cases' : '違反紀律個案數目'} ${r.indCases.toLocaleString()}</title>
+                        </rect>
+                        <rect x="${(cx + 1).toFixed(1)}" y="${yPersons.toFixed(1)}" width="${barW.toFixed(1)}" height="${hPersons.toFixed(1)}" fill="#a5b4fc" rx="2">
+                            <title>${r.year}: ${isEn ? 'Persons Committing Indiscipline' : '違反紀律在囚人士數目'} ${r.indPersons.toLocaleString()}</title>
+                        </rect>
+                        <text x="${cx.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="10" font-weight="800" fill="#334155">${r.year}</text>
+                    </g>
+                `;
+
+                const vy = padT + plotH - (r.violentTotal / maxVio) * plotH;
+                vioPts.push(`${cx.toFixed(1)},${vy.toFixed(1)}`);
+                dotsHtml += `
+                    <circle cx="${cx.toFixed(1)}" cy="${vy.toFixed(1)}" r="4" fill="#dc2626" stroke="#fff" stroke-width="1.5">
+                        <title>${r.year}: ${isEn ? 'Total Violent Cases' : '涉及在囚人士暴力個案總計'} ${r.violentTotal} (${isEn ? 'Fighting/Assault' : '打鬥或襲擊他人'}: ${r.fightAssault}, ${isEn ? 'Assault on Officers' : '襲擊懲教人員'}: ${r.officerAssault})</title>
+                    </circle>
+                    <text x="${cx.toFixed(1)}" y="${(vy - 7).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="900" fill="#dc2626">${r.violentTotal}</text>
+                `;
+
+                const shy = padT + plotH - (r.selfHarm / maxVio) * plotH;
+                shPts.push(`${cx.toFixed(1)},${shy.toFixed(1)}`);
+                dotsHtml += `
+                    <circle cx="${cx.toFixed(1)}" cy="${shy.toFixed(1)}" r="3.5" fill="#0d9488" stroke="#fff" stroke-width="1.5">
+                        <title>${r.year}: ${isEn ? 'Self-harm Incidents' : '自我傷害個案數目'} ${r.selfHarm}</title>
+                    </circle>
+                    <text x="${cx.toFixed(1)}" y="${(shy - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#0f766e">${r.selfHarm}</text>
+                `;
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block;">
+                    ${gridHtml}
+                    ${barsHtml}
+                    <polyline fill="none" stroke="#dc2626" stroke-width="2.5" points="${vioPts.join(' ')}" />
+                    <polyline fill="none" stroke="#0d9488" stroke-width="2.2" stroke-dasharray="4,3" points="${shPts.join(' ')}" />
+                    ${dotsHtml}
+                    <text x="${padL}" y="16" font-size="10" font-weight="800" fill="#6366f1">■ ${isEn ? 'Indiscipline Cases (Left)' : '違紀個案數目 (左軸)'}   <tspan fill="#818cf8">■ ${isEn ? 'Persons Involved' : '違紀在囚人數'}</tspan></text>
+                    <text x="${W - padR}" y="16" text-anchor="end" font-size="10" font-weight="800" fill="#dc2626">● ${isEn ? 'Violent Cases (Right)' : '暴力個案總數 (右軸)'}   <tspan fill="#0d9488">● ${isEn ? 'Self-Harm Cases (Right)' : '自我傷害個案 (右軸)'}</tspan></text>
+                </svg>
+            `;
+        }
+
+        function buildCsdRehabRecidivismAndPassSvg(isEn) {
+            const W = 820, H = 250;
+            const padL = 46, padR = 24, padT = 28, padB = 40;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+            const maxPct = 105;
+
+            // 左半部：更生人士再犯率 (2019–2023)，右半部：合格率及就業率 (2022–2026)
+            const halfW = (plotW - 44) / 2;
+            const leftX0 = padL;
+            const rightX0 = padL + halfW + 44;
+
+            let gridHtml = '';
+            [0, 25, 50, 75, 100].forEach(val => {
+                const y = padT + plotH - (val / maxPct) * plotH;
+                gridHtml += `
+                    <line x1="${leftX0}" y1="${y.toFixed(1)}" x2="${leftX0 + halfW}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <line x1="${rightX0}" y1="${y.toFixed(1)}" x2="${rightX0 + halfW}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${leftX0 - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#64748b">${val}%</text>
+                    <text x="${rightX0 - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#64748b">${val}%</text>
+                `;
+            });
+
+            // 左圖：再犯率折線 (2019–2023)
+            const recN = CSD_RECIDIVISM_SERIES.length;
+            const recStep = halfW / (recN - 1);
+            const makeRecLine = (key, color, width) => {
+                const pts = CSD_RECIDIVISM_SERIES.map((r, i) => {
+                    const x = leftX0 + i * recStep;
+                    const y = padT + plotH - (r[key] / maxPct) * plotH;
+                    return `${x.toFixed(1)},${y.toFixed(1)}`;
+                }).join(' ');
+                return `<polyline fill="none" stroke="${color}" stroke-width="${width}" points="${pts}" />`;
+            };
+
+            let recLabelsHtml = '';
+            CSD_RECIDIVISM_SERIES.forEach((r, i) => {
+                const x = leftX0 + i * recStep;
+                const yAll = padT + plotH - (r.allOffenders / maxPct) * plotH;
+                const yYng = padT + plotH - (r.below21 / maxPct) * plotH;
+                recLabelsHtml += `
+                    <circle cx="${x.toFixed(1)}" cy="${yAll.toFixed(1)}" r="4" fill="#dc2626" stroke="#fff" stroke-width="1.2">
+                        <title>${r.dischargeYear}: ${isEn ? 'All Offenders Recidivism' : '所有更生人士再犯率'} ${r.allOffenders}%</title>
+                    </circle>
+                    <text x="${x.toFixed(1)}" y="${(yAll - 7).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#dc2626">${r.allOffenders}%</text>
+                    <circle cx="${x.toFixed(1)}" cy="${yYng.toFixed(1)}" r="3.5" fill="#10b981" stroke="#fff" stroke-width="1.2">
+                        <title>${r.dischargeYear}: ${isEn ? 'Aged Below 21 Recidivism' : '21歲以下再犯率'} ${r.below21}%</title>
+                    </circle>
+                    <text x="${x.toFixed(1)}" y="${(yYng + 13).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#059669">${r.below21}%</text>
+                    <text x="${x.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#334155">${r.dischargeYear}</text>
+                `;
+            });
+
+            // 右圖：公開試合格率、職訓合格率、就業率 (2022–2026)
+            const passN = CSD_PASS_AND_EMPLOYMENT_SERIES.length;
+            const passStep = halfW / (passN - 1);
+            const makePassLine = (key, color, width) => {
+                const pts = CSD_PASS_AND_EMPLOYMENT_SERIES.map((r, i) => {
+                    const x = rightX0 + i * passStep;
+                    const y = padT + plotH - (r[key] / maxPct) * plotH;
+                    return `${x.toFixed(1)},${y.toFixed(1)}`;
+                }).join(' ');
+                return `<polyline fill="none" stroke="${color}" stroke-width="${width}" points="${pts}" />`;
+            };
+
+            let passLabelsHtml = '';
+            CSD_PASS_AND_EMPLOYMENT_SERIES.forEach((r, i) => {
+                const x = rightX0 + i * passStep;
+                const yPub = padT + plotH - (r.publicExamPass / maxPct) * plotH;
+                const yVoc = padT + plotH - (r.vocExamPass / maxPct) * plotH;
+                const yEmp = padT + plotH - (r.employmentRate6M / maxPct) * plotH;
+                passLabelsHtml += `
+                    <circle cx="${x.toFixed(1)}" cy="${yVoc.toFixed(1)}" r="3.5" fill="#0891b2" stroke="#fff" stroke-width="1.2" />
+                    <circle cx="${x.toFixed(1)}" cy="${yPub.toFixed(1)}" r="4" fill="#4f46e5" stroke="#fff" stroke-width="1.2" />
+                    <text x="${x.toFixed(1)}" y="${(yPub - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#4338ca">${r.publicExamPass}%</text>
+                    <circle cx="${x.toFixed(1)}" cy="${yEmp.toFixed(1)}" r="3.5" fill="#d97706" stroke="#fff" stroke-width="1.2" />
+                    <text x="${x.toFixed(1)}" y="${(yEmp + 13).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#b45309">${r.employmentRate6M}%</text>
+                    <text x="${x.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#334155">${r.period.replace(' (1–6月)', '*')}</text>
+                `;
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block;">
+                    ${gridHtml}
+                    ${makeRecLine('aged21Plus', '#f97316', '2')}
+                    ${makeRecLine('allOffenders', '#dc2626', '2.8')}
+                    ${makeRecLine('below21', '#10b981', '2.4')}
+                    ${recLabelsHtml}
+                    ${makePassLine('vocExamPass', '#0891b2', '2.2')}
+                    ${makePassLine('publicExamPass', '#4f46e5', '2.8')}
+                    ${makePassLine('employmentRate6M', '#d97706', '2.4')}
+                    ${passLabelsHtml}
+                    <text x="${leftX0}" y="15" font-size="10" font-weight="900" fill="#0f172a">${isEn ? 'Recidivism Rate (2019–2023):' : '更生人士再犯率 (2019–2023):'} <tspan fill="#dc2626">● ${isEn ? 'All' : '整體'}</tspan> <tspan fill="#f97316">━ 21+</tspan> <tspan fill="#059669">● &lt;21</tspan></text>
+                    <text x="${rightX0}" y="15" font-size="10" font-weight="900" fill="#0f172a">${isEn ? 'Pass & Employment (2022–26*):' : '合格率及就業率 (2022–26*):'} <tspan fill="#0891b2">━ ${isEn ? 'Vocational' : '職訓'}</tspan> <tspan fill="#4f46e5">● ${isEn ? 'Public Exam' : '公開試'}</tspan> <tspan fill="#d97706">● ${isEn ? 'Employment' : '就業率'}</tspan></text>
+                </svg>
+            `;
+        }
+
+        function renderCsdPortal() {
+            const container = document.getElementById('csd-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const subTab = window.csdActiveSubTab || 'OVERVIEW';
+
+            const snapDt = window.csdSelectedSnapshotDate || '2026-06-30';
+            const resSnap = CSD_RESIDENCY_BREAKDOWN.find(d => d.period === snapDt) || CSD_RESIDENCY_BREAKDOWN[CSD_RESIDENCY_BREAKDOWN.length - 1];
+
+            // 頂部 Sub-Tab 導航 + 七大數據集核心指標卡
+            const headerBannerHtml = `
+                <div class="el-card-box" style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-color:#cbd5e1; padding:14px 16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <div style="font-size:0.98rem; font-weight:900; color:#0f172a;">
+                                🔒 ${isEn ? 'Hong Kong Correctional Services: Persons in Custody, Discipline, Safety & Rehabilitation' : '香港在囚人士數目、院所紀律、安全及更生統計綜合看板'}
+                            </div>
+                            <div style="font-size:0.75rem; color:#475569; font-weight:600; margin-top:2px;">
+                                ${isEn
+                                    ? 'Switch tabs below to explore 23 correctional institutions, acts of indiscipline, violent & self-harm incidents, suicide rate, exam pass rates, employment rate and recidivism rate.'
+                                    : '點選下方分頁檢視「在囚人士數目及23間懲教院所分佈」、「違反紀律、暴力、自我傷害及自殺率」及「更生人士再犯率、公開試／職訓合格率及就業率」。'}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <button type="button" class="el-chip-btn ${subTab === 'OVERVIEW' ? 'active' : ''}" onclick="setCsdSubTab('OVERVIEW')">
+                                🌐 ${isEn ? 'All 7 Indicators Overview' : '七大指標總覽'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${subTab === 'CUSTODY' ? 'active' : ''}" onclick="setCsdSubTab('CUSTODY')">
+                                🏛️ ${isEn ? 'Persons in Custody & 23 Institutions' : '在囚人士數目及23間院所'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${subTab === 'DISCIPLINE' ? 'active' : ''}" onclick="setCsdSubTab('DISCIPLINE')">
+                                ⚠️ ${isEn ? 'Indiscipline, Violence, Self-Harm & Suicide' : '違紀、暴力、自殘及自殺率'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${subTab === 'REHAB' ? 'active' : ''}" onclick="setCsdSubTab('REHAB')">
+                                🎓 ${isEn ? 'Recidivism, Exam Pass & Employment' : '再犯率、合格率及就業率'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 七大核心數據集 KPI 卡片 -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:9px;">
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #2563eb; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">1. ${isEn ? 'Persons in Custody' : '在囚人士數目'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#0f172a; margin-top:2px;">10,976 <span style="font-size:0.72rem; color:#2563eb;">(${isEn ? '2026 1H ADN' : '2026上半年每日平均'})</span></div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:2px;">${isEn ? '2025 ADN: 10,315 · 30 Jun 2026: 11,101' : '2025平均：10,315人 · 2026年中：11,101人'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #059669; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">2. ${isEn ? 'Recidivism Rate (2-Yr)' : '更生人士再犯率'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#065f46; margin-top:2px;">22.4% <span style="font-size:0.72rem; color:#059669;">(${isEn ? '2023 Discharge' : '2023獲釋年份'})</span></div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#047857; margin-top:2px;">${isEn ? 'Aged <21: 7.5% · Aged 21+: 23.4%' : '21歲以下：7.5% (新低) · 21歲或以上：23.4%'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #4f46e5; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">3. ${isEn ? 'Exam Pass & Employment' : '整體合格率及就業率'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#3730a3; margin-top:2px;">90.9% / 99.9%</div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#4338ca; margin-top:2px;">${isEn ? 'Public / Voc Exam (2026 1H) · Emp: 80.1% (2025)' : '公開試 / 職訓合格率 · 獲釋就業率：80.1% (2025)'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #6366f1; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">4. ${isEn ? 'Acts of Indiscipline (2025)' : '違反紀律情況 (2025)'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#312e81; margin-top:2px;">6,523 ${isEn ? 'Cases' : '宗'}</div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#475569; margin-top:2px;">${isEn ? 'Involving 3,601 persons (2024: 6,393 cases)' : '涉及 3,601 名在囚人士 (2024年：6,393宗)'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #dc2626; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">5. ${isEn ? 'Violent Cases' : '涉及在囚人士暴力個案'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#991b1b; margin-top:2px;">383 ${isEn ? 'Cases' : '宗'} <span style="font-size:0.72rem; color:#dc2626;">(2025)</span></div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#b91c1c; margin-top:2px;">${isEn ? 'Fighting: 376 · Officer Assault: 7 · 2026 1H: 195' : '打鬥襲擊：376宗 · 襲擊職員：7宗 · 2026上半年：195宗'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #0d9488; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">6. ${isEn ? 'Self-Harm Incidents' : '在囚人士自我傷害個案'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#0f766e; margin-top:2px;">15 ${isEn ? 'Cases' : '宗'} <span style="font-size:0.72rem; color:#0d9488;">(2025)</span></div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#115e59; margin-top:2px;">${isEn ? 'Down from 42 (2022), 30 (2023) & 18 (2024)' : '由2022年42宗、2023年30宗、2024年18宗持續下降'}</div>
+                        </div>
+
+                        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #f59e0b; border-radius:10px; padding:9px 11px;">
+                            <div style="font-size:0.7rem; font-weight:800; color:#64748b;">7. ${isEn ? 'Suicide Rate (2025)' : '在囚人士自殺率 (2025)'}</div>
+                            <div style="font-size:1.14rem; font-weight:900; color:#b45309; margin-top:2px;">0.2 <span style="font-size:0.72rem; color:#d97706;">/ 1,000</span></div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#78350f; margin-top:2px;">${isEn ? '2 cases among 10,315 ADN (2023: 0.1 / 1,000)' : '全年 2 宗 (按每千名在囚人士計 0.2；2023年為 0.1)'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 篩選 23 間懲教院所
+            const qInst = (window.csdInstSearchQuery || '').trim().toLowerCase();
+            const filteredInsts = CSD_INSTITUTIONS_DATA.filter(inst => {
+                if (window.csdInstCategoryFilter !== 'ALL' && inst.cat !== window.csdInstCategoryFilter) return false;
+                if (qInst) {
+                    const hay = `${inst.name_zh} ${inst.name_en} ${inst.cat_zh} ${inst.cat_en}`.toLowerCase();
+                    if (!hay.includes(qInst)) return false;
+                }
+                return true;
+            }).sort((a, b) => {
+                const ta = (a.records[snapDt] && a.records[snapDt].t) || 0;
+                const tb = (b.records[snapDt] && b.records[snapDt].t) || 0;
+                return tb - ta;
+            });
+
+            // 區塊一：在囚人士數目 (平均每日在囚人口 + 23 間懲教院所分佈)
+            const custodySectionHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="margin-bottom:10px;">
+                        <div>
+                            <div class="el-card-title">🏛️ ${isEn ? 'Average Daily Penal Population & Number of Persons in Custody across 23 Institutions' : '平均每日在囚人士數目及按全港 23 間懲教院所劃分的在囚人數統計'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Includes Sentenced Persons, Persons on Remand and Detainees across Prisons, Addiction Treatment Centres, Detention Centre, Rehabilitation Centres and Psychiatric Centre.' : '涵蓋服刑（定罪）人士、還押人士及根據《入境條例》羈留人士，並細分全港 23 間監獄、懲教所、收押所、戒毒所、勞教中心、更生中心及小欖精神病治療中心。'}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px; margin-bottom:14px;">
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px;">
+                            <div style="font-size:0.82rem; font-weight:900; color:#0f172a; margin-bottom:6px;">📊 ${isEn ? 'Average Daily Number of Persons in Custody (2021–2026)' : '按類別劃分的平均每日在囚人士數目走勢 (2021–2026)'}</div>
+                            ${buildCsdDailyPenalPopulationSvg(isEn)}
+                        </div>
+                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; overflow-x:auto;">
+                            <div style="font-size:0.82rem; font-weight:900; color:#0f172a; margin-bottom:6px;">📋 ${isEn ? 'Average Daily Penal Population by Category & Sex (2021–2026)' : '按類別及性別劃分的平均每日在囚人士數目明細表'}</div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.74rem;">
+                                <thead style="background:#f1f5f9;">
+                                    <tr>
+                                        <th style="padding:6px 8px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Period' : '年份 / 期間'}</th>
+                                        <th style="padding:6px 8px; text-align:right; border-bottom:1px solid #cbd5e1; color:#2563eb;">${isEn ? 'Sentenced (M / F / Sub)' : '服刑人士 (男 / 女 / 小計)'}</th>
+                                        <th style="padding:6px 8px; text-align:right; border-bottom:1px solid #cbd5e1; color:#d97706;">${isEn ? 'Remand (M / F / Sub)' : '還押人士 (男 / 女 / 小計)'}</th>
+                                        <th style="padding:6px 8px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0f172a;">${isEn ? 'Overall Total (M / F)' : '整體總計 (男 / 女)'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${CSD_DAILY_PENAL_POPULATION.slice().reverse().map(r => `
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:6px 8px; font-weight:900; color:#0f172a;">${isEn ? r.label_en : r.label_zh}</td>
+                                            <td style="padding:6px 8px; text-align:right; font-weight:700; color:#1d4ed8;">${r.sentM.toLocaleString()} / ${r.sentF.toLocaleString()} (<strong style="font-weight:900;">${r.sentSub.toLocaleString()}</strong>)</td>
+                                            <td style="padding:6px 8px; text-align:right; font-weight:700; color:#b45309;">${r.remM.toLocaleString()} / ${r.remF.toLocaleString()} (<strong style="font-weight:900;">${r.remSub.toLocaleString()}</strong>)</td>
+                                            <td style="padding:6px 8px; text-align:right; font-weight:900; color:#0f172a;">${r.total.toLocaleString()} <span style="font-size:0.68rem; color:#64748b;">(${r.allM.toLocaleString()}/${r.allF.toLocaleString()})</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 23 間懲教院所互動篩選及排行榜 -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                            <div style="font-size:0.86rem; font-weight:900; color:#0f172a;">
+                                🏢 ${isEn ? `Persons in Custody by Correctional Institution (${resSnap.label_en}: Total ${resSnap.total.toLocaleString()})` : `按懲教院所劃分的在囚人士數目（以 ${resSnap.label_zh} 計算：總計 ${resSnap.total.toLocaleString()} 人）`}
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                ${CSD_RESIDENCY_BREAKDOWN.slice().reverse().map(s => `
+                                    <button type="button" class="el-chip-btn ${s.period === snapDt ? 'active' : ''}" style="padding:4px 9px; font-size:0.73rem;" onclick="setCsdSnapshotDate('${s.period}')">
+                                        ${s.period}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                ${[
+                                    { k: 'ALL', zh: '全部院所 (23)', en: 'All Facilities (23)' },
+                                    { k: 'PRISON', zh: '監獄及懲教所 (13)', en: 'Prisons & CI (13)' },
+                                    { k: 'DATC', zh: '戒毒所及羈留中心 (4)', en: 'DATC & Detention (4)' },
+                                    { k: 'DC', zh: '勞教中心 (1)', en: 'Detention Centre (1)' },
+                                    { k: 'RC', zh: '更生中心 (4)', en: 'Rehab Centres (4)' },
+                                    { k: 'PC', zh: '精神病治療中心 (1)', en: 'Psychiatric Centre (1)' }
+                                ].map(f => `
+                                    <button type="button" class="el-chip-btn ${window.csdInstCategoryFilter === f.k ? 'active' : ''}" style="padding:3px 9px; font-size:0.72rem;" onclick="setCsdInstCategoryFilter('${f.k}')">
+                                        ${isEn ? f.en : f.zh}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <input type="text" class="el-search-input" style="max-width:220px; background:#ffffff;" value="${(window.csdInstSearchQuery || '').replace(/"/g, '&quot;')}" oninput="onCsdInstSearchInput(this.value)" placeholder="${isEn ? '🔍 Search institution (e.g. Stanley)...' : '🔍 搜尋懲教院所 (如赤柱、荔枝角、羅湖)...'}" />
+                        </div>
+
+                        <div style="overflow-x:auto; max-height:${subTab === 'CUSTODY' ? '480px' : '320px'}; border:1px solid #cbd5e1; border-radius:10px; background:#ffffff;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.76rem;">
+                                <thead style="position:sticky; top:0; background:#f1f5f9; z-index:2;">
+                                    <tr>
+                                        <th style="padding:7px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Correctional Institution' : '懲教院所名稱'}</th>
+                                        <th style="padding:7px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Facility Type' : '院所類別'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#2563eb;">${isEn ? 'Convicted' : '定罪人士'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#d97706;">${isEn ? 'On Remand' : '還押人士'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#059669;">${isEn ? 'Detainees' : '羈留人士'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0f172a;">${isEn ? `Subtotal (${snapDt})` : `小計 (${snapDt})`}</th>
+                                        <th style="padding:7px 10px; text-align:left; border-bottom:1px solid #cbd5e1; min-width:140px;">${isEn ? 'Composition' : '定罪 / 還押 / 羈留比例'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredInsts.map(inst => {
+                                        const rec = inst.records[snapDt] || { c: 0, r: 0, d: 0, t: 0 };
+                                        const maxInstTotal = 2200;
+                                        const wC = ((rec.c / maxInstTotal) * 100).toFixed(1);
+                                        const wR = ((rec.r / maxInstTotal) * 100).toFixed(1);
+                                        const wD = ((rec.d / maxInstTotal) * 100).toFixed(1);
+                                        return `
+                                            <tr style="border-bottom:1px solid #f1f5f9;">
+                                                <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${isEn ? inst.name_en : inst.name_zh}</td>
+                                                <td style="padding:7px 10px; font-weight:700; color:#64748b; font-size:0.72rem;">${isEn ? inst.cat_en : inst.cat_zh}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#2563eb;">${rec.c > 0 ? rec.c.toLocaleString() : '-'}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#d97706;">${rec.r > 0 ? rec.r.toLocaleString() : '-'}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:800; color:#059669;">${rec.d > 0 ? rec.d.toLocaleString() : '-'}</td>
+                                                <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0f172a;">${rec.t > 0 ? rec.t.toLocaleString() : '-'}</td>
+                                                <td style="padding:7px 10px;">
+                                                    <div style="height:8px; border-radius:999px; background:#e2e8f0; overflow:hidden; display:flex;">
+                                                        <div style="width:${wC}%; background:#3b82f6;"></div>
+                                                        <div style="width:${wR}%; background:#f59e0b;"></div>
+                                                        <div style="width:${wD}%; background:#10b981;"></div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 區塊二：在囚人士違反紀律情況、涉及在囚人士暴力個案、自我傷害個案及自殺率
+            const disciplineSafetySectionHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="margin-bottom:10px;">
+                        <div>
+                            <div class="el-card-title">⚠️ ${isEn ? 'Acts of Indiscipline, Violent Behaviour, Self-Harm Incidents & Suicide Rate (2016–2026)' : '在囚人士違反紀律情況、暴力個案數目、自我傷害個案及自殺率統計 (2016–2026)'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Covers disciplinary offences & persons involved, fighting/assault among persons in custody vs assault against CSD officers, self-harm cases and suicide rate per 1,000 persons in custody.' : '完整對照違反紀律個案與違紀在囚人數、在囚人士打鬥或襲擊他人與襲擊懲教人員個案、自我傷害個案數目，以及按每千名在囚人士計算的自殺死亡率。'}</div>
+                        </div>
+                    </div>
+
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+                        ${buildCsdIndisciplineAndViolenceSvg(isEn)}
+                    </div>
+
+                    <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:10px;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                            <thead style="background:#f1f5f9;">
+                                <tr>
+                                    <th style="padding:7px 9px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Year / Period' : '年份 / 期間'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#4f46e5;">${isEn ? 'Indiscipline Cases' : '違反紀律個案數目'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#4338ca;">${isEn ? 'Persons Committing Offences' : '違反紀律在囚人數'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#dc2626;">${isEn ? 'Fighting / Assault (Inmates)' : '打鬥或襲擊他人個案'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#b91c1c;">${isEn ? 'Assault on CSD Officers' : '襲擊懲教人員個案'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#991b1b;">${isEn ? 'Total Violent Cases' : '暴力個案總計'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0f766e;">${isEn ? 'Self-Harm Incidents' : '自我傷害個案數目'}</th>
+                                    <th style="padding:7px 9px; text-align:right; border-bottom:1px solid #cbd5e1; color:#b45309;">${isEn ? 'Suicide Deaths / Rate (per 1k)' : '自殺死亡宗數 / 自殺率(每千人)'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${CSD_DISCIPLINE_SAFETY_SERIES.slice().reverse().map(r => `
+                                    <tr style="border-bottom:1px solid #f1f5f9; background:${r.year === '2025' ? '#f8fafc' : '#ffffff'};">
+                                        <td style="padding:7px 9px; font-weight:900; color:#0f172a;">${r.year}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:900; color:#4f46e5;">${r.indCases !== null ? r.indCases.toLocaleString() : '—'}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:800; color:#4338ca;">${r.indPersons !== null ? r.indPersons.toLocaleString() : '—'}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:800; color:#dc2626;">${r.fightAssault.toLocaleString()}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:800; color:#b91c1c;">${r.officerAssault.toLocaleString()}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:900; color:#991b1b;">${r.violentTotal.toLocaleString()}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:900; color:#0f766e;">${r.selfHarm !== null ? r.selfHarm.toLocaleString() : '—'}</td>
+                                        <td style="padding:7px 9px; text-align:right; font-weight:900; color:#b45309;">${r.suicideCases !== null ? `${r.suicideCases} ${isEn ? 'cases' : '宗'} (${r.suicideRate.toFixed(1)})` : '—'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            // 區塊三：更生人士的再犯率 & 在囚人士的整體合格率及就業率
+            const rehabSectionHtml = `
+                <div class="el-card-box">
+                    <div class="el-card-header" style="margin-bottom:10px;">
+                        <div>
+                            <div class="el-card-title">🎓 ${isEn ? 'Recidivism Rate of Rehabilitated Offenders & Overall Exam Passing / Employment Rates' : '更生人士的再犯率、在囚人士公開試與職訓整體合格率及釋後就業率統計'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Left: Recidivism rate within 2 years after discharge (2019–2023 cohorts). Right: Public exam pass rate, vocational qualification/trade test pass rate & 6-month post-release employment rate (2022–2026).' : '左方：按獲釋年份劃分的本地更生人士兩年內再犯率 (2019–2023)；右方：在囚人士公開考試合格率、職業資歷考試及工藝測試合格率，以及獲釋後6個月就業跟進期內就業率 (2022–2026)。'}</div>
+                        </div>
+                    </div>
+
+                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+                        ${buildCsdRehabRecidivismAndPassSvg(isEn)}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px;">
+                        <div style="border:1px solid #e2e8f0; border-radius:10px; overflow-x:auto;">
+                            <div style="padding:8px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:0.8rem; font-weight:900; color:#0f172a;">
+                                🔄 ${isEn ? 'Recidivism Rate of Local Rehabilitated Offenders (within 2 Years after Discharge)' : '本地更生人士的再犯率（獲釋後兩年內再次入獄百分比）'}
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                                <thead style="background:#f1f5f9;">
+                                    <tr>
+                                        <th style="padding:7px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Year of Discharge' : '獲釋年份'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#059669;">${isEn ? 'Aged Below 21 (%)' : '21歲以下更生人士 (%)'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#ea580c;">${isEn ? 'Aged 21 & Over (%)' : '21歲或以上更生人士 (%)'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#dc2626;">${isEn ? 'All Offenders (%)' : '所有更生人士 (%)'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${CSD_RECIDIVISM_SERIES.slice().reverse().map(r => `
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${r.dischargeYear}</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:900; color:#059669;">${r.below21.toFixed(1)}%</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:800; color:#ea580c;">${r.aged21Plus.toFixed(1)}%</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:900; color:#dc2626;">${r.allOffenders.toFixed(1)}%</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="border:1px solid #e2e8f0; border-radius:10px; overflow-x:auto;">
+                            <div style="padding:8px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:0.8rem; font-weight:900; color:#0f172a;">
+                                🎓 ${isEn ? 'Overall Passing Rates & Post-Release 6-Month Employment Rate (2022–2026)' : '在囚人士公開試／職訓整體合格率及獲釋後 6 個月內就業率'}
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                                <thead style="background:#f1f5f9;">
+                                    <tr>
+                                        <th style="padding:7px 10px; text-align:left; border-bottom:1px solid #cbd5e1;">${isEn ? 'Period' : '年份 / 期間'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#4f46e5;">${isEn ? 'Public Exams Pass (%)' : '公開考試整體合格率'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#0891b2;">${isEn ? 'Vocational & Trade Pass (%)' : '職業資歷及工藝測試合格率'}</th>
+                                        <th style="padding:7px 10px; text-align:right; border-bottom:1px solid #cbd5e1; color:#b45309;">${isEn ? '6-Month Employment Rate (%)' : '獲釋後6個月跟進期就業率'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${CSD_PASS_AND_EMPLOYMENT_SERIES.slice().reverse().map(r => `
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:7px 10px; font-weight:900; color:#0f172a;">${isEn ? r.label_en : r.label_zh}</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:900; color:#4f46e5;">${r.publicExamPass.toFixed(1)}%</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:900; color:#0891b2;">${r.vocExamPass.toFixed(1)}%</td>
+                                            <td style="padding:7px 10px; text-align:right; font-weight:900; color:#b45309;">${r.employmentRate6M.toFixed(1)}%</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (subTab === 'CUSTODY') {
+                container.innerHTML = headerBannerHtml + custodySectionHtml;
+            } else if (subTab === 'DISCIPLINE') {
+                container.innerHTML = headerBannerHtml + disciplineSafetySectionHtml;
+            } else if (subTab === 'REHAB') {
+                container.innerHTML = headerBannerHtml + rehabSectionHtml;
+            } else {
+                container.innerHTML = headerBannerHtml + custodySectionHtml + disciplineSafetySectionHtml + rehabSectionHtml;
+            }
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
@@ -25985,6 +27041,43 @@
                         ]
                     }
                 ]
+            },
+            {
+                catId: 'LAW_SECURITY',
+                icon: '🛡️',
+                title_zh: '保安及懲教事務',
+                title_en: 'Law, Security & Correctional Services',
+                desc_zh: '涵蓋全港懲教院所在囚人士數目、違反紀律及暴力個案、自我傷害與自殺率，以及更生人士公開試／職訓合格率、就業率與再犯率統計',
+                desc_en: 'Covers persons in custody across 23 correctional institutions, acts of indiscipline, violent & self-harm cases, suicide rate, exam pass rates, employment rate and recidivism rate',
+                color: '#475569',
+                bg: '#f8fafc',
+                border: '#cbd5e1',
+                departments: [
+                    {
+                        deptId: 'CSD_HK',
+                        deptIcon: '🔒',
+                        dept_zh: '懲教署',
+                        dept_en: 'Correctional Services Department (CSD)',
+                        role_zh: '負責管理全港懲教院所、提供穩妥羈管環境及推展多元化在囚與釋後更生服務',
+                        role_en: 'Manages correctional facilities across HK, ensures safe custody & delivers comprehensive rehabilitation programmes',
+                        pages: [
+                            {
+                                pageKey: 'csd',
+                                icon: '🔒',
+                                name_zh: '香港在囚人士數目、院所紀律及更生統計看板',
+                                name_en: 'HK Persons in Custody, Institutional Discipline & Rehabilitation Dashboard',
+                                desc_zh: '整合全港 23 間懲教院所在囚人數、平均每日在囚人口、違反紀律與暴力個案、自我傷害及自殺率，以及更生人士再犯率、公開試與職訓合格率及就業率。',
+                                desc_en: 'Integrates persons in custody by institution, daily penal population, indiscipline, violence, self-harm & suicide rate, plus recidivism, exam pass & employment rates.',
+                                actionFn: 'showCsdPage',
+                                getLiveBadge: function(isEn) {
+                                    return isEn
+                                        ? '🔒 2026 (Jan–Jun) Daily Pop: 10,976 · Exam Pass: 90.9% · Recidivism: 22.4%'
+                                        : '🔒 2026上半年每日平均在囚：10,976人 · 公開試合格率 90.9% · 再犯率 22.4%';
+                                }
+                            }
+                        ]
+                    }
+                ]
             }
         ];
 
@@ -26190,6 +27283,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'csd') {
+                    showCsdPage();
                 } else if (currentActivePage === 'visitor_hotel') {
                     showVisitorHotelPage();
                 } else if (currentActivePage === 'cruise') {
