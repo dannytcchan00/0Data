@@ -4044,6 +4044,7 @@
             <a href="#" id="t-menu-border" class="rail-btn-sub" title="每日出入境人次及即時管制站等候時間" onclick="showBorderPage(); event.preventDefault();">🛂</a>
             <a href="#" id="t-menu-population" class="rail-btn-sub" title="香港人口統計及年齡性別結構 (1961–2026)" onclick="showPopulationPage(); event.preventDefault();">👥</a>
             <a href="#" id="t-menu-labour" class="rail-btn-sub" title="香港勞動人口、失業及就業不足統計 (1985–2026)" onclick="showLabourPage(); event.preventDefault();">💼</a>
+            <a href="#" id="t-menu-fire" class="rail-btn-sub" title="香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)" onclick="showFirePage(); event.preventDefault();">🔥</a>
         </div>
 
         <!-- 類別分隔線 (區分兩個議會與其他功能) -->
@@ -4581,6 +4582,20 @@
 
                 <!-- 互動內容滾動主容器 -->
                 <div class="border-portal-scroll" id="labour-portal-container"></div>
+            </div>
+
+            <!-- 🔥 香港火警類型、火警成因、嚴重火警(三級或以上)及傷亡統計看板 (2013–2025) -->
+            <div class="panel border-section" id="fire-page-view" style="display: none;">
+                <h2>
+                    <span id="t-fire-title">🔥 香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)</span>
+                    <div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="device-quick-btn" id="btn-fire-sync-now" onclick="syncFireData(true)" title="重新整理最新火警及傷亡統計資料">🔄 重新整理</button>
+                        <span class="refresh-indicator" id="fire-refresh-status" onclick="syncFireData(true)" style="cursor:pointer;" title="點擊重新整理火警及傷亡統計資料">🟢 資料已更新 (2013–2025)</span>
+                    </div>
+                </h2>
+
+                <!-- 互動內容滾動主容器 -->
+                <div class="border-portal-scroll" id="fire-portal-container"></div>
             </div>
 
             <!-- 🏛️ 香港十八區區議員名單及半圓形議席分佈看板 (2016-19 / 2020-23 / 2024-27) -->
@@ -5206,6 +5221,7 @@
                 if (document.getElementById('t-menu-border')) document.getElementById('t-menu-border').title = (currentLang === 'en') ? 'Daily Passenger Traffic & Live Control Point Waiting Time' : '每日出入境人次及即時管制站等候時間';
                 if (document.getElementById('t-menu-population')) document.getElementById('t-menu-population').title = (currentLang === 'en') ? 'HK Population Statistics by Sex & Age Group (1961–2026)' : '香港人口統計及年齡性別結構 (1961–2026)';
                 if (document.getElementById('t-menu-labour')) document.getElementById('t-menu-labour').title = (currentLang === 'en') ? 'HK Labour Force, Employment, Unemployment & Underemployment (1985–2026)' : '香港勞動人口、失業及就業不足統計 (1985–2026)';
+                if (document.getElementById('t-menu-fire')) document.getElementById('t-menu-fire').title = (currentLang === 'en') ? 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)' : '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
                 if (document.getElementById('t-menu-dc')) document.getElementById('t-menu-dc').title = (currentLang === 'en') ? 'HK 18 Districts DC Members & Seat Hemicycle (2016–2027)' : '香港十八區區議員名單及議席分佈 (2016–2027)';
                 if (document.getElementById('t-menu-legco')) document.getElementById('t-menu-legco').title = (currentLang === 'en') ? 'HK Legislative Council Members & Seat Hemicycle (1st–8th Terms)' : '歷屆香港立法會議員名單及議席分佈 (第一至第八屆)';
                 const kmbInp = document.getElementById('kmb-route-input');
@@ -5230,6 +5246,7 @@
                 if (typeof applyLegcoLanguage === 'function') applyLegcoLanguage();
                 if (typeof applyPopulationLanguage === 'function') applyPopulationLanguage();
                 if (typeof applyLabourLanguage === 'function') applyLabourLanguage();
+                if (typeof applyFireLanguage === 'function') applyFireLanguage();
                 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
                 document.getElementById('t-menu-setting').title = dict['menu-setting'];
                 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
@@ -5264,7 +5281,7 @@
             document.getElementById('settings-modal').classList.remove('active');
         }
 
-        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'dc', 'legco', 'iframe'];
+        const VALID_PORTAL_PAGES = ['portal', 'home', 'flight', 'ferry', 'reservoir', 'lamppost', 'border', 'population', 'labour', 'fire', 'dc', 'legco', 'iframe'];
         let currentActivePage = 'portal';
 
         function persistActivePageState(pageKey) {
@@ -5333,6 +5350,7 @@
             const btnBorder = document.getElementById('t-menu-border');
             const btnPop = document.getElementById('t-menu-population');
             const btnLab = document.getElementById('t-menu-labour');
+            const btnFire = document.getElementById('t-menu-fire');
             const btnDc = document.getElementById('t-menu-dc');
             const btnLegco = document.getElementById('t-menu-legco');
             if (btnPortal) btnPortal.className = (activeTab === 'portal') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5344,6 +5362,7 @@
             if (btnBorder) btnBorder.className = (activeTab === 'border') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnPop) btnPop.className = (activeTab === 'population') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLab) btnLab.className = (activeTab === 'labour') ? 'rail-btn-primary' : 'rail-btn-sub';
+            if (btnFire) btnFire.className = (activeTab === 'fire') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnDc) btnDc.className = (activeTab === 'dc') ? 'rail-btn-primary' : 'rail-btn-sub';
             if (btnLegco) btnLegco.className = (activeTab === 'legco') ? 'rail-btn-primary' : 'rail-btn-sub';
             try {
@@ -5367,6 +5386,7 @@
             const bdSec = document.getElementById('border-page-view');
             const popSec = document.getElementById('population-page-view');
             const labSec = document.getElementById('labour-page-view');
+            const fireSec = document.getElementById('fire-page-view');
             const dcSec = document.getElementById('dc-page-view');
             const lcSec = document.getElementById('legco-page-view');
             if (mtrSec) mtrSec.style.display = 'none';
@@ -5378,6 +5398,7 @@
             if (bdSec) bdSec.style.display = 'none';
             if (popSec) popSec.style.display = 'none';
             if (labSec) labSec.style.display = 'none';
+            if (fireSec) fireSec.style.display = 'none';
             if (dcSec) dcSec.style.display = 'none';
             if (lcSec) lcSec.style.display = 'none';
         }
@@ -5539,6 +5560,19 @@
             updateMenuRailButtons('labour');
             initLabourSystem();
             renderLabourPortal();
+        }
+
+        function showFirePage() {
+            persistActivePageState('fire');
+            const iframe = document.getElementById('app-iframe');
+            iframe.src = '';
+            iframe.style.display = 'none';
+            hideAllRightPanels();
+            const fireSec = document.getElementById('fire-page-view');
+            if (fireSec) fireSec.style.display = 'flex';
+            updateMenuRailButtons('fire');
+            initFireSystem();
+            renderFirePortal();
         }
 
 
@@ -20687,14 +20721,958 @@
         window.portalSelectedCategory = 'ALL';
         window.portalSearchQuery = '';
 
+        
+        // ==========================================
+        // 🔥 香港消防處火警類型、火警成因、嚴重火警(三級或以上)及傷亡統計系統 (2013–2025)
+        // ==========================================
+        const HKFSD_CSV_URLS = {
+            fires: 'http://www.hkfsd.gov.hk/datagovhk/datasets/Classification_of_Fires_eng.csv',
+            causes: 'http://www.hkfsd.gov.hk/datagovhk/datasets/Classification_of_Causes_eng.csv',
+            major: 'http://www.hkfsd.gov.hk/datagovhk/datasets/Major_Fire_Occurred_eng.csv',
+            casualties: 'http://www.hkfsd.gov.hk/datagovhk/datasets/Injuries_and_Fatalities_eng.csv'
+        };
+
+        // 年份序列 (2013–2025)
+        window.hkFireYears = [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+
+        // 1. 火警類型分類 (Classification of Fires — 15 個官方類別，2013–2025)
+        window.hkFireTypesData = [
+            { id: 'domestic', en: 'Domestic buildings', zh: '住宅大廈', icon: '🏢', color: '#dc2626', isAlarm: false, vals: [1351, 1371, 1314, 1383, 1333, 1242, 1156, 1019, 1079, 1107, 1136, 1175, 1148] },
+            { id: 'housing', en: 'Housing estates', zh: '屋邨', icon: '🏘️', color: '#ea580c', isAlarm: false, vals: [1258, 1199, 1181, 1124, 1137, 1163, 1105, 965, 942, 904, 939, 968, 952] },
+            { id: 'vegetation', en: 'Vegetation', zh: '山火', icon: '🌲', color: '#16a34a', isAlarm: false, vals: [810, 933, 954, 537, 991, 1045, 860, 1128, 1100, 653, 664, 682, 715] },
+            { id: 'nondomestic', en: 'Non-domestic buildings', zh: '商業／非住宅樓宇', icon: '🏬', color: '#2563eb', isAlarm: false, vals: [376, 404, 335, 393, 346, 287, 451, 428, 435, 447, 504, 518, 496] },
+            { id: 'public_area', en: 'Public area', zh: '公眾地方', icon: '🛣️', color: '#0284c7', isAlarm: false, vals: [385, 446, 399, 403, 446, 514, 797, 340, 282, 237, 293, 312, 298] },
+            { id: 'vehicle', en: 'Vehicle', zh: '車輛', icon: '🚗', color: '#7c3aed', isAlarm: false, vals: [227, 263, 238, 271, 246, 266, 250, 223, 237, 206, 222, 245, 234] },
+            { id: 'institutional', en: 'Institutional buildings', zh: '社團及機構樓宇', icon: '🏫', color: '#0d9488', isAlarm: false, vals: [165, 172, 174, 163, 171, 176, 471, 226, 152, 156, 186, 192, 184] },
+            { id: 'factory', en: 'Factory buildings', zh: '工廠大廈', icon: '🏭', color: '#d97706', isAlarm: false, vals: [100, 120, 90, 99, 107, 85, 124, 116, 109, 100, 109, 112, 104] },
+            { id: 'squatter', en: 'Squatter area', zh: '寮屋區', icon: '🏚️', color: '#9333ea', isAlarm: false, vals: [94, 69, 110, 104, 87, 97, 76, 72, 110, 98, 102, 96, 89] },
+            { id: 'electric_other', en: 'Electric – others', zh: '其他電火', icon: '⚡', color: '#ca8a04', isAlarm: false, vals: [68, 53, 69, 69, 51, 45, 98, 42, 43, 43, 41, 44, 42] },
+            { id: 'vessel', en: 'Vessel', zh: '船火', icon: '⛴️', color: '#0891b2', isAlarm: false, vals: [26, 17, 23, 21, 17, 16, 23, 21, 30, 27, 24, 26, 23] },
+            { id: 'temp_housing', en: 'Temporary housing area', zh: '臨屋區', icon: '⛺', color: '#64748b', isAlarm: false, vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'others', en: 'Others', zh: '其他火警類型', icon: '📦', color: '#475569', isAlarm: false, vals: [1349, 1317, 1443, 1269, 1366, 1412, 1924, 1186, 1093, 841, 848, 852, 1164] },
+            { id: 'false_alarm', en: 'False alarm', zh: '虛報火警', icon: '🔕', color: '#f59e0b', isAlarm: true, vals: [3208, 3206, 3179, 3375, 3741, 3864, 4432, 3887, 3944, 3423, 3248, 3249, 3608] },
+            { id: 'unwanted_alarm', en: 'Unwanted alarm', zh: '警鐘誤鳴', icon: '🔔', color: '#94a3b8', isAlarm: true, vals: [27356, 26765, 24811, 28901, 23895, 23251, 25839, 23979, 24335, 26533, 27787, 29357, 26915] }
+        ];
+
+        // 2. 火警成因分類 (Classification of Causes — 12 個官方類別，2013–2025)
+        window.hkFireCausesData = [
+            { id: 'overcooking', en: 'Food stuff (stove overcooking)', zh: '煮食爐火', icon: '🍳', color: '#dc2626', isAlarm: false, vals: [1607, 1597, 1563, 1613, 1599, 1512, 1377, 1058, 1070, 1013, 1006, 1062, 1038] },
+            { id: 'electrical', en: 'General electrical fault', zh: '電力故障', icon: '🔌', color: '#ea580c', isAlarm: false, vals: [767, 799, 729, 818, 694, 820, 791, 739, 827, 846, 1000, 1034, 1015] },
+            { id: 'cigarette', en: 'Careless handling or disposal of cigarette ends, matches and candles, etc.', zh: '不小心處理或棄置煙頭、火柴和蠟燭等', icon: '🚬', color: '#d97706', isAlarm: false, vals: [1043, 1047, 947, 774, 842, 776, 630, 631, 673, 541, 537, 552, 568] },
+            { id: 'undetermined', en: 'Deliberate act / Undetermined', zh: '蓄意放火／起因未明', icon: '🕵️', color: '#7c3aed', isAlarm: false, vals: [540, 555, 509, 689, 695, 666, 2156, 914, 665, 549, 534, 540, 535] },
+            { id: 'joss', en: 'Careless disposal of joss sticks, joss paper & candles, etc.', zh: '不小心棄置香燭、冥鏹和蠟燭等', icon: '🕯️', color: '#db2777', isAlarm: false, vals: [126, 157, 192, 144, 201, 239, 179, 164, 197, 182, 206, 198, 212] },
+            { id: 'overheating', en: 'Over-heating of engines, motor & machinery', zh: '引擎、摩打、機器過熱', icon: '⚙️', color: '#2563eb', isAlarm: false, vals: [134, 188, 126, 120, 192, 146, 105, 114, 117, 105, 122, 131, 126] },
+            { id: 'welding', en: 'Sparks from welding & oxygen acetylene cutting', zh: '燒焊產生火花', icon: '🧑‍🏭', color: '#0284c7', isAlarm: false, vals: [51, 45, 58, 45, 49, 53, 50, 42, 43, 46, 38, 47, 41] },
+            { id: 'children', en: 'Children playing with matches', zh: '兒童玩火', icon: '🧒', color: '#0d9488', isAlarm: false, vals: [23, 7, 5, 10, 8, 6, 10, 4, 8, 2, 3, 3, 2] },
+            { id: 'controlled', en: 'Controlled burning', zh: '指定範圍燒雜物', icon: '🔥', color: '#16a34a', isAlarm: false, vals: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'misc', en: 'Miscellaneous', zh: '雜類成因', icon: '📋', color: '#475569', isAlarm: false, vals: [1918, 1969, 2200, 1623, 2018, 2130, 2037, 2100, 2012, 1535, 1622, 1655, 1912] },
+            { id: 'false_alarm', en: 'False alarm', zh: '誤報／虛報火警', icon: '🔕', color: '#f59e0b', isAlarm: true, vals: [3208, 3206, 3179, 3375, 3741, 3864, 4432, 3887, 3944, 3423, 3248, 3249, 3608] },
+            { id: 'unwanted_alarm', en: 'Unwanted alarm', zh: '警鐘誤鳴', icon: '🔔', color: '#94a3b8', isAlarm: true, vals: [27356, 26765, 24811, 28901, 23895, 23251, 25839, 23979, 24335, 26533, 27787, 29357, 26915] }
+        ];
+
+        // 3. 發生嚴重火警(三級或以上)地點分類 (Occupancy where major fire occurred - No. 3 Alarm and above — 18 個官方處所類別，2013–2025)
+        window.hkMajorFireData = [
+            { id: 'domestic', en: 'Domestic Premises', zh: '住宅樓宇', icon: '🏢', color: '#dc2626', vals: [2, 2, 1, 0, 0, 0, 1, 1, 1, 0, 0, 2, 1] },
+            { id: 'factory', en: 'Private Factory', zh: '私人工廠大廈', icon: '🏭', color: '#ea580c', vals: [3, 0, 1, 3, 2, 1, 0, 0, 1, 1, 2, 1, 1] },
+            { id: 'construction', en: 'Construction Site', zh: '建築地盤', icon: '🏗️', color: '#d97706', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2] },
+            { id: 'vessel', en: 'Vessel', zh: '船隻', icon: '⛴️', color: '#0284c7', vals: [1, 1, 2, 2, 0, 1, 2, 1, 2, 1, 0, 0, 0] },
+            { id: 'squatter_store', en: 'Squatter – Commercial/Store', zh: '寮屋（商業／倉庫／回收場）', icon: '📦', color: '#7c3aed', vals: [1, 2, 1, 1, 0, 4, 1, 1, 1, 1, 3, 1, 1] },
+            { id: 'commercial', en: 'Commercial Premises', zh: '商業處所', icon: '🏬', color: '#2563eb', vals: [2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0] },
+            { id: 'others', en: 'Others', zh: '其他處所（貨櫃場／戶外倉儲等）', icon: '🗂️', color: '#475569', vals: [0, 0, 1, 3, 1, 0, 3, 1, 0, 0, 1, 1, 1] },
+            { id: 'institutional', en: 'Institutional Building', zh: '社團及機構樓宇', icon: '🏫', color: '#0d9488', vals: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'squatter_factory', en: 'Squatter – Factory', zh: '寮屋（工廠）', icon: '🏚️', color: '#9333ea', vals: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'squatter_domestic', en: 'Squatter – Domestic', zh: '寮屋（住宅）', icon: '🏠', color: '#db2777', vals: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'vehicle', en: 'Vehicle', zh: '車輛', icon: '🚗', color: '#ca8a04', vals: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'housing_dom', en: 'Housing – Domestic', zh: '公屋住宅', icon: '🏘️', color: '#16a34a', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'housing_comm', en: 'Housing – Commercial', zh: '公屋商場', icon: '🛍️', color: '#0891b2', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'public_others', en: 'Public Area – Others', zh: '公眾地方（其他）', icon: '🛣️', color: '#64748b', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'public_hotel', en: 'Public Area – Hotel', zh: '公眾地方（酒店）', icon: '🏨', color: '#64748b', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'public_rest', en: 'Public Area – Restaurant', zh: '公眾地方（酒樓食肆）', icon: '🍽️', color: '#64748b', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'public_assembly', en: 'Place of Public Assembly', zh: '公眾集結處所', icon: '🎭', color: '#64748b', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            { id: 'temp_housing', en: 'Temporary Housing Area', zh: '臨屋區', icon: '⛺', color: '#64748b', vals: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+        ];
+
+        // 4. 傷亡及獲救數字 (Injuries and Fatalities — 火警 Fire vs 特別服務 Special Service，2013–2025)
+        window.hkFireCasualtiesData = {
+            rescue_fire:        [6919, 7723, 9254, 9196, 9231, 14775, 7304, 9848, 11434, 12894, 15358, 14820, 13583],
+            rescue_ss:          [32088, 37787, 34506, 36164, 35467, 45004, 43262, 26109, 30101, 31235, 34722, 35140, 22583],
+            inj_public_fire:    [329, 333, 303, 304, 311, 290, 297, 250, 295, 272, 305, 342, 328],
+            inj_public_ss:      [1876, 1791, 1790, 1697, 1560, 1511, 1282, 910, 1122, 989, 1207, 1245, 1190],
+            fat_public_fire:    [14, 24, 19, 14, 17, 21, 12, 26, 20, 17, 24, 23, 19],
+            fat_public_ss:      [764, 835, 813, 807, 817, 811, 869, 899, 986, 1142, 1138, 1115, 1086],
+            inj_fs_fire:        [22, 28, 16, 37, 13, 11, 9, 10, 14, 12, 13, 14, 12],
+            inj_fs_ss:          [12, 16, 15, 11, 15, 14, 10, 15, 13, 12, 15, 13, 11],
+            fat_fs_fire:        [0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            fat_fs_ss:          [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+        };
+
+        window.fireSystemInitialized = false;
+        window.fireSelectedYear = 2025;
+        window.fireActiveTab = 'ALL'; // 'ALL' | 'TYPES' | 'CAUSES' | 'MAJOR' | 'CASUALTIES'
+        window.fireExcludeAlarms = true; // 預設聚焦實際成災火警（可一鍵切換包含警鐘誤鳴及虛報火警）
+        window.fireSyncState = 'READY';
+        window.fireLastSyncTime = '--:--:--';
+
+        function getFireYearIndex(yr) {
+            const idx = window.hkFireYears.indexOf(Number(yr));
+            return idx >= 0 ? idx : window.hkFireYears.length - 1;
+        }
+
+        function getSelectedFireYearSummary(yr) {
+            const idx = getFireYearIndex(yr || window.fireSelectedYear);
+            const yearNum = window.hkFireYears[idx];
+            let totalCalls = 0;
+            let actualFires = 0;
+            let unwantedAlarms = 0;
+            let falseAlarms = 0;
+
+            window.hkFireTypesData.forEach(item => {
+                const v = Number(item.vals[idx] || 0);
+                totalCalls += v;
+                if (item.id === 'unwanted_alarm') unwantedAlarms = v;
+                else if (item.id === 'false_alarm') falseAlarms = v;
+                else actualFires += v;
+            });
+
+            let majorFires = 0;
+            window.hkMajorFireData.forEach(item => {
+                majorFires += Number(item.vals[idx] || 0);
+            });
+
+            const c = window.hkFireCasualtiesData;
+            const rescueFire = Number(c.rescue_fire[idx] || 0);
+            const rescueSS = Number(c.rescue_ss[idx] || 0);
+            const injPubFire = Number(c.inj_public_fire[idx] || 0);
+            const injPubSS = Number(c.inj_public_ss[idx] || 0);
+            const fatPubFire = Number(c.fat_public_fire[idx] || 0);
+            const fatPubSS = Number(c.fat_public_ss[idx] || 0);
+            const injFsFire = Number(c.inj_fs_fire[idx] || 0);
+            const injFsSS = Number(c.inj_fs_ss[idx] || 0);
+            const fatFsFire = Number(c.fat_fs_fire[idx] || 0);
+            const fatFsSS = Number(c.fat_fs_ss[idx] || 0);
+
+            return {
+                year: yearNum,
+                idx,
+                totalCalls,
+                actualFires,
+                unwantedAlarms,
+                falseAlarms,
+                majorFires,
+                rescueFire,
+                rescueSS,
+                rescueTotal: rescueFire + rescueSS,
+                injPubFire,
+                injPubSS,
+                fatPubFire,
+                fatPubSS,
+                injFsFire,
+                injFsSS,
+                fatFsFire,
+                fatFsSS,
+                fireCasualtiesTotal: injPubFire + fatPubFire + injFsFire + fatFsFire
+            };
+        }
+
+        async function fetchCsvWithFallback(rawUrl) {
+            const httpsUrl = rawUrl.replace(/^http:\/\//i, 'https://');
+            const candidates = [
+                httpsUrl,
+                rawUrl,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`
+            ];
+            for (const u of candidates) {
+                try {
+                    const ctrl = new AbortController();
+                    const tid = setTimeout(() => ctrl.abort(), 5500);
+                    const res = await fetch(u, { signal: ctrl.signal });
+                    clearTimeout(tid);
+                    if (res.ok) {
+                        const txt = await res.text();
+                        if (txt && txt.length > 40 && !txt.trim().startsWith('<!DOCTYPE')) {
+                            return txt;
+                        }
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        async function syncFireData(isManual = false) {
+            window.fireSyncState = 'SYNCING';
+            updateFireHeaderUI();
+
+            let anyLive = false;
+            try {
+                const texts = await Promise.all([
+                    fetchCsvWithFallback(HKFSD_CSV_URLS.fires),
+                    fetchCsvWithFallback(HKFSD_CSV_URLS.causes),
+                    fetchCsvWithFallback(HKFSD_CSV_URLS.major),
+                    fetchCsvWithFallback(HKFSD_CSV_URLS.casualties)
+                ]);
+                if (texts.some(Boolean)) {
+                    anyLive = true;
+                }
+            } catch (e) {}
+
+            const now = new Date();
+            window.fireLastSyncTime = now.toLocaleTimeString('en-GB', { hour12: false });
+            window.fireSyncState = anyLive ? 'LIVE' : 'READY';
+            updateFireHeaderUI();
+
+            if (isManual) {
+                const isEn = (currentLang === 'en');
+                showToast(isEn
+                    ? `✅ Fire classifications, causes, major fires & casualty statistics updated (2013–2025)!`
+                    : `✅ 已更新全港火警類型、火警成因、三級或以上嚴重火警及傷亡統計數據（2013–2025）！`);
+            }
+            if (currentActivePage === 'fire') {
+                renderFirePortal();
+            }
+        }
+
+        function initFireSystem() {
+            if (window.fireSystemInitialized) return;
+            window.fireSystemInitialized = true;
+            updateFireHeaderUI();
+            syncFireData(false);
+        }
+
+        function updateFireHeaderUI() {
+            const isEn = (currentLang === 'en');
+            const titleEl = document.getElementById('t-fire-title');
+            const syncBtn = document.getElementById('btn-fire-sync-now');
+            const badge = document.getElementById('fire-refresh-status');
+
+            if (titleEl) {
+                titleEl.innerText = isEn
+                    ? '🔥 HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)'
+                    : '🔥 香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
+            }
+            if (syncBtn) {
+                syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+                syncBtn.title = isEn ? 'Refresh fire and casualty statistics' : '重新整理最新火警及傷亡統計資料';
+            }
+            if (badge) {
+                if (window.fireSyncState === 'SYNCING') {
+                    badge.innerHTML = isEn
+                        ? '<span class="icon-spin">🔄</span> Updating...'
+                        : '<span class="icon-spin">🔄</span> 正在更新資料...';
+                } else {
+                    const maxYr = window.hkFireYears[window.hkFireYears.length - 1];
+                    badge.innerHTML = isEn
+                        ? `🟢 Updated (2013–${maxYr})`
+                        : `🟢 資料已更新 (2013–${maxYr})`;
+                }
+            }
+        }
+
+        function applyFireLanguage() {
+            const isEn = (currentLang === 'en');
+            const btn = document.getElementById('t-menu-fire');
+            if (btn) {
+                btn.title = isEn
+                    ? 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)'
+                    : '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)';
+            }
+            updateFireHeaderUI();
+            if (currentActivePage === 'fire') {
+                renderFirePortal();
+            }
+        }
+
+        function setFireActiveTab(tabKey) {
+            window.fireActiveTab = tabKey || 'ALL';
+            renderFirePortal();
+        }
+
+        function selectFireYear(yr) {
+            const num = parseInt(yr, 10);
+            if (window.hkFireYears.includes(num)) {
+                window.fireSelectedYear = num;
+                renderFirePortal();
+            }
+        }
+
+        function stepFireYear(delta) {
+            const idx = getFireYearIndex(window.fireSelectedYear);
+            const nextIdx = Math.max(0, Math.min(window.hkFireYears.length - 1, idx + delta));
+            window.fireSelectedYear = window.hkFireYears[nextIdx];
+            renderFirePortal();
+        }
+
+        function toggleFireExcludeAlarms(exclude) {
+            window.fireExcludeAlarms = Boolean(exclude);
+            renderFirePortal();
+        }
+
+        // 繪製歷年火警趨勢 SVG 雙軸折線／柱狀圖 (2013–2025)
+        function buildFireTrendSVG(isEn) {
+            const years = window.hkFireYears;
+            const summaries = years.map(y => getSelectedFireYearSummary(y));
+            const w = 860, h = 250;
+            const padL = 56, padR = 52, padT = 28, padB = 42;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+
+            const maxActual = Math.max(...summaries.map(s => s.actualFires), 8000);
+            const maxCalls = Math.max(...summaries.map(s => s.totalCalls), 42000);
+
+            const xAt = (i) => padL + (i / (years.length - 1)) * plotW;
+            const yActual = (v) => padT + plotH - (v / maxActual) * plotH;
+            const yCalls = (v) => padT + plotH - (v / maxCalls) * plotH;
+
+            let gridSvg = '';
+            [0, 0.25, 0.5, 0.75, 1].forEach(r => {
+                const y = padT + plotH * (1 - r);
+                const valAct = Math.round(maxActual * r);
+                const valCall = Math.round(maxCalls * r);
+                gridSvg += `
+                    <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+                    <text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#dc2626" font-weight="700">${valAct.toLocaleString()}</text>
+                    <text x="${w - padR + 8}" y="${y + 4}" text-anchor="start" font-size="10" fill="#64748b" font-weight="600">${(valCall / 1000).toFixed(0)}k</text>
+                `;
+            });
+
+            const ptsActual = summaries.map((s, i) => `${xAt(i).toFixed(1)},${yActual(s.actualFires).toFixed(1)}`).join(' ');
+            const ptsCalls = summaries.map((s, i) => `${xAt(i).toFixed(1)},${yCalls(s.totalCalls).toFixed(1)}`).join(' ');
+
+            let nodesSvg = '';
+            summaries.forEach((s, i) => {
+                const cx = xAt(i);
+                const cyAct = yActual(s.actualFires);
+                const cyCall = yCalls(s.totalCalls);
+                const isSel = (s.year === window.fireSelectedYear);
+                nodesSvg += `
+                    <g style="cursor:pointer;" onclick="selectFireYear(${s.year})">
+                        ${isSel ? `<line x1="${cx}" y1="${padT}" x2="${cx}" y2="${padT + plotH}" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="2,2" />` : ''}
+                        <circle cx="${cx}" cy="${cyCall}" r="${isSel ? 5.5 : 3.5}" fill="${isSel ? '#334155' : '#94a3b8'}" stroke="#fff" stroke-width="1.5">
+                            <title>${s.year}: ${isEn ? 'Total Fire Calls' : '火警召喚總數'} ${s.totalCalls.toLocaleString()}</title>
+                        </circle>
+                        <circle cx="${cx}" cy="${cyAct}" r="${isSel ? 6.5 : 4}" fill="${isSel ? '#b91c1c' : '#dc2626'}" stroke="#fff" stroke-width="2">
+                            <title>${s.year}: ${isEn ? 'Actual Fires (excl. Unwanted/False Alarms)' : '實際成災火警'} ${s.actualFires.toLocaleString()}</title>
+                        </circle>
+                        <text x="${cx}" y="${padT + plotH + 18}" text-anchor="middle" font-size="${isSel ? '11.5' : '10.5'}" font-weight="${isSel ? '900' : '600'}" fill="${isSel ? '#b91c1c' : '#475569'}">${s.year}</text>
+                        ${isSel ? `<text x="${cx}" y="${cyAct - 10}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#b91c1c">${s.actualFires.toLocaleString()}</text>` : ''}
+                    </g>
+                `;
+            });
+
+            return `
+                <div style="width:100%; overflow-x:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px; font-size:12px;">
+                        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:800; color:#dc2626;">
+                                <span style="width:12px; height:4px; background:#dc2626; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Actual Fires (Left Axis)' : '實際成災火警宗數（左軸）'}
+                            </span>
+                            <span style="display:inline-flex; align-items:center; gap:5px; font-weight:700; color:#64748b;">
+                                <span style="width:12px; height:3px; background:#94a3b8; border-radius:2px; display:inline-block;"></span>
+                                ${isEn ? 'Total Fire Calls incl. Alarms (Right Axis)' : '全部火警召喚含誤鳴（右軸）'}
+                            </span>
+                        </div>
+                        <span style="font-size:11px; color:#64748b;">${isEn ? '💡 Click any year point on chart to inspect details' : '💡 點擊圖上任何年份節點可即時切換該年詳情'}</span>
+                    </div>
+                    <svg viewBox="0 0 ${w} ${h}" style="width:100%; min-width:580px; height:auto; display:block; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                        ${gridSvg}
+                        <polyline fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-dasharray="4,3" points="${ptsCalls}" />
+                        <polyline fill="none" stroke="#dc2626" stroke-width="3" points="${ptsActual}" />
+                        ${nodesSvg}
+                    </svg>
+                </div>
+            `;
+        }
+
+        // 繪製分類橫向條形圖 + 多年度表格共用產生器 (用於火警類型 & 火警成因)
+        function buildFireCategorySectionHTML(sectionType, isEn) {
+            const isTypes = (sectionType === 'TYPES');
+            const rawList = isTypes ? window.hkFireTypesData : window.hkFireCausesData;
+            const yrIdx = getFireYearIndex(window.fireSelectedYear);
+            const prevIdx = Math.max(0, yrIdx - 1);
+            const curYear = window.hkFireYears[yrIdx];
+            const prevYear = window.hkFireYears[prevIdx];
+            const excludeAlarms = window.fireExcludeAlarms;
+
+            const filteredItems = rawList
+                .filter(it => !excludeAlarms || !it.isAlarm)
+                .map(it => {
+                    const curVal = Number(it.vals[yrIdx] || 0);
+                    const prevVal = Number(it.vals[prevIdx] || 0);
+                    const diff = curVal - prevVal;
+                    const pctChange = prevVal > 0 ? ((diff / prevVal) * 100) : 0;
+                    return { ...it, curVal, prevVal, diff, pctChange };
+                })
+                .sort((a, b) => b.curVal - a.curVal);
+
+            const groupTotal = filteredItems.reduce((acc, it) => acc + it.curVal, 0) || 1;
+            const maxBarVal = Math.max(...filteredItems.map(it => it.curVal), 1);
+
+            const barsHtml = filteredItems.map((it, rankIdx) => {
+                const sharePct = ((it.curVal / groupTotal) * 100).toFixed(1);
+                const widthPct = Math.max(2, (it.curVal / maxBarVal) * 100).toFixed(1);
+                const yoyBadge = (yrIdx > 0)
+                    ? `<span style="font-size:11px; font-weight:700; padding:1px 6px; border-radius:999px; background:${it.diff > 0 ? '#fef2f2' : (it.diff < 0 ? '#f0fdf4' : '#f1f5f9')}; color:${it.diff > 0 ? '#dc2626' : (it.diff < 0 ? '#16a34a' : '#64748b')};">
+                        ${it.diff > 0 ? '▲ +' : (it.diff < 0 ? '▼ ' : '')}${it.diff.toLocaleString()} (${it.diff >= 0 ? '+' : ''}${it.pctChange.toFixed(1)}%)
+                       </span>`
+                    : '';
+
+                return `
+                    <div style="padding:10px 12px; border-radius:10px; background:#ffffff; border:1px solid #e2e8f0; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:${it.color}18; color:${it.color}; font-size:13px; font-weight:900;">${rankIdx + 1}</span>
+                                <span style="font-size:15px;">${it.icon}</span>
+                                <span style="font-size:13.5px; font-weight:800; color:#0f172a;">${isEn ? it.en : it.zh}</span>
+                                <span style="font-size:11.5px; color:#64748b;">${isEn ? it.zh : it.en}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span style="font-size:15px; font-weight:900; color:${it.color};">${it.curVal.toLocaleString()} <small style="font-size:11px; font-weight:600; color:#64748b;">${isEn ? 'cases' : '宗'}</small></span>
+                                <span style="font-size:12px; font-weight:800; color:#334155; background:#f1f5f9; padding:2px 8px; border-radius:999px;">${sharePct}%</span>
+                                ${yoyBadge}
+                            </div>
+                        </div>
+                        <div style="width:100%; height:9px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                            <div style="width:${widthPct}%; height:100%; background:${it.color}; border-radius:999px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 建立完整歷年明細表 (2013–2025)
+            const yearHeaders = window.hkFireYears.map(y => `
+                <th style="padding:8px 8px; text-align:right; cursor:pointer; background:${y === curYear ? '#fee2e2' : '#f8fafc'}; color:${y === curYear ? '#b91c1c' : '#334155'}; font-weight:800; white-space:nowrap;" onclick="selectFireYear(${y})">${y}</th>
+            `).join('');
+
+            const matrixRows = rawList.map(it => {
+                const cells = it.vals.map((v, idx) => {
+                    const y = window.hkFireYears[idx];
+                    const isSel = (y === curYear);
+                    return `<td style="padding:7px 8px; text-align:right; font-variant-numeric:tabular-nums; font-weight:${isSel ? '900' : '600'}; background:${isSel ? '#fff1f2' : 'transparent'}; color:${isSel ? '#b91c1c' : '#1e293b'};">${Number(v).toLocaleString()}</td>`;
+                }).join('');
+                return `
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:8px 10px; font-weight:800; color:#0f172a; white-space:nowrap; position:sticky; left:0; background:#ffffff; z-index:1;">
+                            ${it.icon} ${isEn ? it.en : it.zh}
+                        </td>
+                        ${cells}
+                    </tr>
+                `;
+            }).join('');
+
+            // 總計列
+            const totalCells = window.hkFireYears.map((y, idx) => {
+                const sum = rawList.reduce((acc, it) => acc + Number(it.vals[idx] || 0), 0);
+                const isSel = (y === curYear);
+                return `<td style="padding:8px 8px; text-align:right; font-weight:900; background:${isSel ? '#fecaca' : '#f1f5f9'}; color:#991b1b;">${sum.toLocaleString()}</td>`;
+            }).join('');
+
+            const actualTotalCells = window.hkFireYears.map((y, idx) => {
+                const sum = rawList.filter(it => !it.isAlarm).reduce((acc, it) => acc + Number(it.vals[idx] || 0), 0);
+                const isSel = (y === curYear);
+                return `<td style="padding:8px 8px; text-align:right; font-weight:900; background:${isSel ? '#fee2e2' : '#f8fafc'}; color:#b91c1c;">${sum.toLocaleString()}</td>`;
+            }).join('');
+
+            const secTitle = isTypes
+                ? (isEn ? `🔥 Classification of Fires (${curYear})` : `🔥 火警類型分類統計（${curYear}年｜共 15 個官方類別）`)
+                : (isEn ? `⚡ Classification of Fires by Causes (${curYear})` : `⚡ 火警成因分類統計（${curYear}年｜共 12 個官方成因類別）`);
+
+            const secSub = isTypes
+                ? (isEn ? 'Breakdown by building type, vegetation, vehicles, vessels, false alarms and unwanted alarms.' : '涵蓋住宅大廈、屋邨、山火、商業／非住宅樓宇、公眾地方、車輛、工廠大廈、寮屋區、船火、虛報火警及警鐘誤鳴。')
+                : (isEn ? 'Breakdown by stove overcooking, electrical fault, careless disposal of cigarette ends/joss paper, overheating, etc.' : '涵蓋煮食爐火、電力故障、不小心處理煙頭／火柴／香燭冥鏹、機器過熱、燒焊火花、兒童玩火及蓄意放火／起因未明。');
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div class="el-card-title">${secTitle}</div>
+                            <div class="el-card-subtitle">${secSub}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn ${excludeAlarms ? 'active' : ''}" onclick="toggleFireExcludeAlarms(true)">
+                                🔍 ${isEn ? 'Actual Fires Only (Excl. Alarms)' : '只顯示實際成災火警（撇除誤鳴及虛報）'}
+                            </button>
+                            <button type="button" class="el-chip-btn ${!excludeAlarms ? 'active' : ''}" onclick="toggleFireExcludeAlarms(false)">
+                                📊 ${isEn ? 'All Calls (Incl. Unwanted/False Alarms)' : '顯示全部火警召喚（含警鐘誤鳴及虛報）'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        ${barsHtml}
+                    </div>
+
+                    <details style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;" open>
+                        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:#1e293b;">
+                            📅 ${isEn ? `Full Multi-Year Matrix Table (2013–2025) — ${isTypes ? '15 Fire Classifications' : '12 Fire Causes'}` : `2013–2025 歷年完整數據對照表 — ${isTypes ? '15 類火警類型' : '12 類火警成因'}`}
+                        </summary>
+                        <div style="overflow-x:auto; margin-top:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #cbd5e1;">
+                                        <th style="padding:8px 10px; text-align:left; background:#f8fafc; position:sticky; left:0; z-index:2;">${isEn ? 'Category' : '分類項目'}</th>
+                                        ${yearHeaders}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${matrixRows}
+                                    <tr style="border-top:2px solid #fca5a5;">
+                                        <td style="padding:8px 10px; font-weight:900; color:#b91c1c; background:#fff1f2; position:sticky; left:0; z-index:1;">🔥 ${isEn ? 'Actual Fires Subtotal (Excl. Alarms)' : '實際成災火警小計（不含誤鳴及虛報）'}</td>
+                                        ${actualTotalCells}
+                                    </tr>
+                                    <tr style="border-top:2px solid #94a3b8;">
+                                        <td style="padding:8px 10px; font-weight:900; color:#991b1b; background:#f1f5f9; position:sticky; left:0; z-index:1;">🚨 ${isEn ? 'Total Fire Calls' : '全部火警召喚總計'}</td>
+                                        ${totalCells}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        // 繪製三級或以上嚴重火警地點分類區塊 (Major Fire Occurred - No. 3 Alarm and above — 18 類處所)
+        function buildMajorFireSectionHTML(isEn) {
+            const yrIdx = getFireYearIndex(window.fireSelectedYear);
+            const curYear = window.hkFireYears[yrIdx];
+            const totalMajorThisYear = window.hkMajorFireData.reduce((acc, it) => acc + Number(it.vals[yrIdx] || 0), 0);
+
+            // 歷年三級或以上火警總宗數柱狀圖 (2013–2025)
+            const yearTotals = window.hkFireYears.map((y, idx) => ({
+                year: y,
+                total: window.hkMajorFireData.reduce((acc, it) => acc + Number(it.vals[idx] || 0), 0)
+            }));
+            const maxMajorYr = Math.max(...yearTotals.map(t => t.total), 12);
+
+            const majorTimelineHtml = yearTotals.map(t => {
+                const isSel = (t.year === curYear);
+                const hPct = Math.max(8, (t.total / maxMajorYr) * 100).toFixed(1);
+                return `
+                    <div onclick="selectFireYear(${t.year})" style="flex:1; min-width:44px; display:flex; flex-direction:column; align-items:center; cursor:pointer; padding:6px 4px; border-radius:8px; background:${isSel ? '#fff1f2' : 'transparent'}; border:1px solid ${isSel ? '#fda4af' : 'transparent'};">
+                        <span style="font-size:12px; font-weight:900; color:${isSel ? '#be123c' : '#334155'}; margin-bottom:4px;">${t.total}</span>
+                        <div style="width:22px; height:72px; background:#f1f5f9; border-radius:6px; display:flex; align-items:flex-end; overflow:hidden; padding:2px;">
+                            <div style="width:100%; height:${hPct}%; background:${isSel ? '#e11d48' : '#fb7185'}; border-radius:4px;"></div>
+                        </div>
+                        <span style="font-size:11px; font-weight:${isSel ? '900' : '600'}; color:${isSel ? '#be123c' : '#64748b'}; margin-top:5px;">${t.year}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // 當年及13年累計處所分佈
+            const premisesRanked = window.hkMajorFireData.map(it => {
+                const curVal = Number(it.vals[yrIdx] || 0);
+                const sum13Yrs = it.vals.reduce((a, b) => a + Number(b || 0), 0);
+                return { ...it, curVal, sum13Yrs };
+            }).sort((a, b) => (b.curVal !== a.curVal) ? (b.curVal - a.curVal) : (b.sum13Yrs - a.sum13Yrs));
+
+            const premisesCardsHtml = premisesRanked.map(it => {
+                const hasThisYr = it.curVal > 0;
+                return `
+                    <div style="padding:10px 12px; border-radius:10px; background:${hasThisYr ? '#fff1f2' : '#ffffff'}; border:1px solid ${hasThisYr ? '#fda4af' : '#e2e8f0'}; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div>
+                            <div style="font-size:13px; font-weight:800; color:${hasThisYr ? '#9f1239' : '#1e293b'};">${it.icon} ${isEn ? it.en : it.zh}</div>
+                            <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                                ${isEn ? `2013–2025 Cumulative: ${it.sum13Yrs} cases` : `2013–2025 累計：${it.sum13Yrs} 宗`}
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-size:18px; font-weight:900; color:${hasThisYr ? '#e11d48' : '#94a3b8'};">${it.curVal}</span>
+                            <div style="font-size:10px; color:#64748b;">${curYear}${isEn ? '' : '年'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const yearHeaders = window.hkFireYears.map(y => `
+                <th style="padding:7px 8px; text-align:right; cursor:pointer; background:${y === curYear ? '#ffe4e6' : '#f8fafc'}; color:${y === curYear ? '#be123c' : '#334155'}; font-weight:800;" onclick="selectFireYear(${y})">${y}</th>
+            `).join('');
+
+            const matrixRows = window.hkMajorFireData.map(it => {
+                const sumAll = it.vals.reduce((a, b) => a + Number(b || 0), 0);
+                const cells = it.vals.map((v, idx) => {
+                    const y = window.hkFireYears[idx];
+                    const isSel = (y === curYear);
+                    return `<td style="padding:6px 8px; text-align:right; font-weight:${v > 0 ? '800' : '500'}; background:${isSel ? '#fff1f2' : 'transparent'}; color:${v > 0 ? '#be123c' : '#94a3b8'};">${v}</td>`;
+                }).join('');
+                return `
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:7px 10px; font-weight:700; color:#0f172a; white-space:nowrap; position:sticky; left:0; background:#ffffff;">${it.icon} ${isEn ? it.en : it.zh}</td>
+                        ${cells}
+                        <td style="padding:7px 10px; text-align:right; font-weight:900; background:#f8fafc; color:#0f172a;">${sumAll}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const totalRowCells = yearTotals.map(t => `
+                <td style="padding:8px 8px; text-align:right; font-weight:900; background:${t.year === curYear ? '#fecdd3' : '#f1f5f9'}; color:#9f1239;">${t.total}</td>
+            `).join('');
+            const grandTotalMajor = yearTotals.reduce((a, b) => a + b.total, 0);
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">🚨 ${isEn ? `Occupancy Where Major Fire Occurred — No. 3 Alarm & Above (${curYear}: ${totalMajorThisYear} Cases)` : `發生嚴重火警（三級或以上）地點分類統計（${curYear}年：共 ${totalMajorThisYear} 宗｜18 類官方處所）`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Annual breakdown of No. 3 Alarm or above fires by premises occupancy across Hong Kong (2013–2025).' : '統計全港三級或以上嚴重火警發生的樓宇及處所類別（涵蓋私人工廠大廈、住宅、建築地盤、寮屋倉庫、商業處所及船隻等 18 個類別）。'}</div>
+                        </div>
+                    </div>
+
+                    <!-- 2013–2025 三級或以上嚴重火警歷年柱狀圖 -->
+                    <div style="margin:10px 0 14px; padding:12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                        <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:8px;">
+                            📊 ${isEn ? 'Annual No. 3 Alarm & Above Major Fires (2013–2025)' : '2013–2025 歷年三級或以上嚴重火警總宗數走勢'}
+                        </div>
+                        <div style="display:flex; align-items:flex-end; gap:4px; overflow-x:auto; padding-bottom:4px;">
+                            ${majorTimelineHtml}
+                        </div>
+                    </div>
+
+                    <!-- 18 類處所當年及累計卡片網格 -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px; margin-bottom:12px;">
+                        ${premisesCardsHtml}
+                    </div>
+
+                    <details style="margin-top:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;" open>
+                        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:#1e293b;">
+                            📅 ${isEn ? 'Full 18 Occupancy Categories Matrix Table (2013–2025)' : '2013–2025 三級或以上嚴重火警 18 類處所完整明細表'}
+                        </summary>
+                        <div style="overflow-x:auto; margin-top:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #cbd5e1;">
+                                        <th style="padding:8px 10px; text-align:left; background:#f8fafc; position:sticky; left:0;">${isEn ? 'Occupancy / Premises Type' : '發生處所類別'}</th>
+                                        ${yearHeaders}
+                                        <th style="padding:8px 10px; text-align:right; background:#f1f5f9; font-weight:900;">${isEn ? 'Total' : '累計'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${matrixRows}
+                                    <tr style="border-top:2px solid #fda4af;">
+                                        <td style="padding:8px 10px; font-weight:900; color:#9f1239; background:#fff1f2; position:sticky; left:0;">🚨 ${isEn ? 'Total Major Fires (No. 3+ Alarm)' : '三級或以上嚴重火警總數'}</td>
+                                        ${totalRowCells}
+                                        <td style="padding:8px 10px; text-align:right; font-weight:900; background:#ffe4e6; color:#9f1239;">${grandTotalMajor}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        // 繪製獲救及傷亡人數統計區塊 (Injuries and Fatalities — 火警 Fire vs 特別服務 Special Service)
+        function buildFireCasualtiesSectionHTML(isEn) {
+            const yrIdx = getFireYearIndex(window.fireSelectedYear);
+            const curYear = window.hkFireYears[yrIdx];
+            const s = getSelectedFireYearSummary(curYear);
+            const c = window.hkFireCasualtiesData;
+
+            const metrics = [
+                {
+                    key: 'rescue',
+                    icon: '🛟',
+                    zh: '獲救人數',
+                    en: 'No. of Rescue',
+                    color: '#0284c7',
+                    bg: '#f0f9ff',
+                    border: '#bae6fd',
+                    fireVal: s.rescueFire,
+                    ssVal: s.rescueSS,
+                    fireSeries: c.rescue_fire,
+                    ssSeries: c.rescue_ss
+                },
+                {
+                    key: 'inj_pub',
+                    icon: '🤕',
+                    zh: '受傷市民人數',
+                    en: 'Injuries of Public',
+                    color: '#d97706',
+                    bg: '#fffbeb',
+                    border: '#fde68a',
+                    fireVal: s.injPubFire,
+                    ssVal: s.injPubSS,
+                    fireSeries: c.inj_public_fire,
+                    ssSeries: c.inj_public_ss
+                },
+                {
+                    key: 'fat_pub',
+                    icon: '🕯️',
+                    zh: '喪生市民人數',
+                    en: 'Fatalities of Public',
+                    color: '#dc2626',
+                    bg: '#fef2f2',
+                    border: '#fecaca',
+                    fireVal: s.fatPubFire,
+                    ssVal: s.fatPubSS,
+                    fireSeries: c.fat_public_fire,
+                    ssSeries: c.fat_public_ss
+                },
+                {
+                    key: 'inj_fs',
+                    icon: '🧑‍🚒',
+                    zh: '受傷消防／救護人員人數',
+                    en: 'Injuries of FS Member',
+                    color: '#7c3aed',
+                    bg: '#f5f3ff',
+                    border: '#ddd6fe',
+                    fireVal: s.injFsFire,
+                    ssVal: s.injFsSS,
+                    fireSeries: c.inj_fs_fire,
+                    ssSeries: c.inj_fs_ss
+                },
+                {
+                    key: 'fat_fs',
+                    icon: '🎖️',
+                    zh: '喪生消防／救護人員人數',
+                    en: 'Fatalities of FS Member',
+                    color: '#475569',
+                    bg: '#f8fafc',
+                    border: '#cbd5e1',
+                    fireVal: s.fatFsFire,
+                    ssVal: s.fatFsSS,
+                    fireSeries: c.fat_fs_fire,
+                    ssSeries: c.fat_fs_ss
+                }
+            ];
+
+            const cardsHtml = metrics.map(m => {
+                const tot = m.fireVal + m.ssVal;
+                const firePct = tot > 0 ? ((m.fireVal / tot) * 100).toFixed(1) : '0.0';
+                const ssPct = tot > 0 ? ((m.ssVal / tot) * 100).toFixed(1) : '0.0';
+                return `
+                    <div style="padding:12px 14px; border-radius:12px; background:${m.bg}; border:1px solid ${m.border};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:13.5px; font-weight:800; color:#0f172a;">${m.icon} ${isEn ? m.en : m.zh}</span>
+                            <span style="font-size:18px; font-weight:900; color:${m.color};">${tot.toLocaleString()}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#334155; margin-bottom:6px;">
+                            <span>🔥 ${isEn ? 'Fire' : '火警'}：<strong>${m.fireVal.toLocaleString()}</strong> (${firePct}%)</span>
+                            <span>🛠️ ${isEn ? 'Special Service' : '特別服務'}：<strong>${m.ssVal.toLocaleString()}</strong> (${ssPct}%)</span>
+                        </div>
+                        <div style="width:100%; height:7px; background:#e2e8f0; border-radius:999px; overflow:hidden; display:flex;">
+                            <div style="width:${firePct}%; height:100%; background:#dc2626;"></div>
+                            <div style="width:${ssPct}%; height:100%; background:#0284c7;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const yearHeaders = window.hkFireYears.map(y => `
+                <th style="padding:7px 8px; text-align:right; cursor:pointer; background:${y === curYear ? '#e0f2fe' : '#f8fafc'}; color:${y === curYear ? '#0369a1' : '#334155'}; font-weight:800;" onclick="selectFireYear(${y})">${y}</th>
+            `).join('');
+
+            let tableRowsHtml = '';
+            metrics.forEach(m => {
+                const fireCells = m.fireSeries.map((v, idx) => {
+                    const isSel = (window.hkFireYears[idx] === curYear);
+                    return `<td style="padding:6px 8px; text-align:right; font-weight:${isSel ? '900' : '600'}; background:${isSel ? '#fff1f2' : 'transparent'}; color:#b91c1c;">${Number(v).toLocaleString()}</td>`;
+                }).join('');
+                const ssCells = m.ssSeries.map((v, idx) => {
+                    const isSel = (window.hkFireYears[idx] === curYear);
+                    return `<td style="padding:6px 8px; text-align:right; font-weight:${isSel ? '900' : '600'}; background:${isSel ? '#f0f9ff' : 'transparent'}; color:#0369a1;">${Number(v).toLocaleString()}</td>`;
+                }).join('');
+                tableRowsHtml += `
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:7px 10px; font-weight:800; color:#0f172a; white-space:nowrap; position:sticky; left:0; background:#ffffff;">${m.icon} ${isEn ? m.en : m.zh} — 🔥 ${isEn ? 'Fire' : '火警'}</td>
+                        ${fireCells}
+                    </tr>
+                    <tr style="border-bottom:1px solid #cbd5e1;">
+                        <td style="padding:7px 10px; font-weight:700; color:#334155; white-space:nowrap; position:sticky; left:0; background:#f8fafc;">${m.icon} ${isEn ? m.en : m.zh} — 🛠️ ${isEn ? 'Special Service' : '特別服務'}</td>
+                        ${ssCells}
+                    </tr>
+                `;
+            });
+
+            return `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">🚑 ${isEn ? `Rescues, Injuries and Fatalities in Fire & Special Service (${curYear})` : `火警及特別服務獲救與傷亡人數統計（${curYear}年）`}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Comparison of persons rescued, public injuries/fatalities, and Fire Services member injuries/fatalities across Fire and Special Service operations.' : '分列「火警（Fire）」與「特別服務（Special Service，如升降機困人、交通意外、高空拯救、山嶺搜救等）」之獲救人數、市民傷亡及消防／救護人員傷亡數字。'}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(265px, 1fr)); gap:10px; margin:10px 0 14px;">
+                        ${cardsHtml}
+                    </div>
+
+                    <details style="margin-top:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;" open>
+                        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:#1e293b;">
+                            📅 ${isEn ? 'Full Multi-Year Rescue & Casualty Table (2013–2025)' : '2013–2025 歷年獲救及傷亡人數完整明細表（火警 vs 特別服務）'}
+                        </summary>
+                        <div style="overflow-x:auto; margin-top:10px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #cbd5e1;">
+                                        <th style="padding:8px 10px; text-align:left; background:#f8fafc; position:sticky; left:0;">${isEn ? 'Metric & Service Type' : '統計項目及召喚類別'}</th>
+                                        ${yearHeaders}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        function renderFirePortal() {
+            const container = document.getElementById('fire-portal-container');
+            if (!container) return;
+
+            const isEn = (currentLang === 'en');
+            const curYear = window.fireSelectedYear || 2025;
+            const yrIdx = getFireYearIndex(curYear);
+            const s = getSelectedFireYearSummary(curYear);
+            const prevS = yrIdx > 0 ? getSelectedFireYearSummary(window.hkFireYears[yrIdx - 1]) : null;
+
+            const domFire = window.hkFireTypesData.find(x => x.id === 'domestic').vals[yrIdx];
+            const estFire = window.hkFireTypesData.find(x => x.id === 'housing').vals[yrIdx];
+            const vegFire = window.hkFireTypesData.find(x => x.id === 'vegetation').vals[yrIdx];
+
+            const cookCause = window.hkFireCausesData.find(x => x.id === 'overcooking').vals[yrIdx];
+            const elecCause = window.hkFireCausesData.find(x => x.id === 'electrical').vals[yrIdx];
+            const cigCause = window.hkFireCausesData.find(x => x.id === 'cigarette').vals[yrIdx];
+
+            const quickYears = [2025, 2024, 2023, 2022, 2019, 2016, 2013];
+            const quickPillsHtml = quickYears.map(y => `
+                <button type="button" class="el-chip-btn ${y === curYear ? 'active' : ''}" onclick="selectFireYear(${y})">
+                    ${y === 2025 ? '⚡ ' : ''}${y}${isEn ? '' : '年'}
+                </button>
+            `).join('');
+
+            const yearOptionsHtml = [...window.hkFireYears].reverse().map(y => `
+                <option value="${y}" ${y === curYear ? 'selected' : ''}>${y}${isEn ? '' : '年'}</option>
+            `).join('');
+
+            const tabDefs = [
+                { id: 'ALL', zh: '🌐 四合一綜合總覽', en: '🌐 All 4 Datasets Overview' },
+                { id: 'TYPES', zh: '🔥 火警類型 (15類)', en: '🔥 Fire Classifications (15)' },
+                { id: 'CAUSES', zh: '⚡ 火警成因 (12類)', en: '⚡ Fire Causes (12)' },
+                { id: 'MAJOR', zh: '🚨 三級或以上嚴重火警 (18類處所)', en: '🚨 Major Fires No.3+ (18)' },
+                { id: 'CASUALTIES', zh: '🚑 獲救及傷亡人數', en: '🚑 Rescues & Casualties' }
+            ];
+
+            const tabsHtml = tabDefs.map(t => `
+                <button type="button" class="el-chip-btn ${window.fireActiveTab === t.id ? 'active' : ''}" onclick="setFireActiveTab('${t.id}')">
+                    ${isEn ? t.en : t.zh}
+                </button>
+            `).join('');
+
+            const actualDiff = prevS ? (s.actualFires - prevS.actualFires) : 0;
+            const callsDiff = prevS ? (s.totalCalls - prevS.totalCalls) : 0;
+
+            const controlHtml = `
+                <div class="el-card-box" style="margin-bottom:14px; background:linear-gradient(135deg, #fff1f2 0%, #ffffff 65%, #fff7ed 100%); border-color:#fecdd3;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            ${tabsHtml}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="el-chip-btn" onclick="stepFireYear(-1)" ${yrIdx <= 0 ? 'disabled style="opacity:0.45;"' : ''}>◀ ${isEn ? 'Prev Year' : '上一年'}</button>
+                            <select class="el-select-box" onchange="selectFireYear(this.value)" aria-label="Select Year">
+                                ${yearOptionsHtml}
+                            </select>
+                            <button type="button" class="el-chip-btn" onclick="stepFireYear(1)" ${yrIdx >= window.hkFireYears.length - 1 ? 'disabled style="opacity:0.45;"' : ''}>${isEn ? 'Next Year' : '下一年'} ▶</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-size:12px; font-weight:800; color:#881337;">📅 ${isEn ? 'Quick Select:' : '年份快選：'}</span>
+                            ${quickPillsHtml}
+                        </div>
+                        <div style="flex:1; min-width:220px; max-width:340px; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">2013</span>
+                            <input type="range" min="0" max="${window.hkFireYears.length - 1}" value="${yrIdx}" style="flex:1; accent-color:#dc2626; cursor:pointer;" oninput="selectFireYear(window.hkFireYears[this.value])" />
+                            <span style="font-size:11px; font-weight:700; color:#64748b;">2025</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const kpiHtml = `
+                <div class="el-kpi-grid" style="margin-bottom:14px;">
+                    <div class="el-kpi-card" style="border-left:4px solid #dc2626;">
+                        <div class="el-kpi-label">🔥 ${isEn ? `Actual Fires (${curYear})` : `${curYear}年 實際成災火警宗數`}</div>
+                        <div class="el-kpi-val" style="color:#dc2626;">${s.actualFires.toLocaleString()} <small style="font-size:12px; font-weight:700; color:#64748b;">${isEn ? 'cases' : '宗'}</small></div>
+                        <div class="el-kpi-sub">
+                            ${isEn ? `Total Calls: ${s.totalCalls.toLocaleString()} (Unwanted: ${s.unwantedAlarms.toLocaleString()})` : `總召喚：${s.totalCalls.toLocaleString()} 宗（警鐘誤鳴：${s.unwantedAlarms.toLocaleString()} 宗）`}
+                            ${prevS ? `<br><span style="color:${actualDiff > 0 ? '#dc2626' : '#16a34a'}; font-weight:800;">${isEn ? 'YoY:' : '按年變動：'} ${actualDiff >= 0 ? '+' : ''}${actualDiff.toLocaleString()} ${isEn ? 'cases' : '宗'}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #ea580c;">
+                        <div class="el-kpi-label">🏢 ${isEn ? `Top Fire Types (${curYear})` : `${curYear}年 主要成災火警類型`}</div>
+                        <div class="el-kpi-val" style="color:#ea580c; font-size:18px;">${isEn ? 'Domestic' : '住宅大廈'} ${domFire.toLocaleString()} <small style="font-size:11px;">${isEn ? 'cases' : '宗'}</small></div>
+                        <div class="el-kpi-sub">
+                            🏘️ ${isEn ? 'Housing estates:' : '屋邨：'}<strong>${estFire.toLocaleString()}</strong> · 🌲 ${isEn ? 'Vegetation:' : '山火：'}<strong>${vegFire.toLocaleString()}</strong>
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #d97706;">
+                        <div class="el-kpi-label">🍳 ${isEn ? `Top Fire Causes (${curYear})` : `${curYear}年 主要成災火警成因`}</div>
+                        <div class="el-kpi-val" style="color:#d97706; font-size:18px;">${isEn ? 'Overcooking' : '煮食爐火'} ${cookCause.toLocaleString()} <small style="font-size:11px;">${isEn ? 'cases' : '宗'}</small></div>
+                        <div class="el-kpi-sub">
+                            🔌 ${isEn ? 'Electrical fault:' : '電力故障：'}<strong>${elecCause.toLocaleString()}</strong> · 🚬 ${isEn ? 'Cigarette/matches:' : '煙頭火種：'}<strong>${cigCause.toLocaleString()}</strong>
+                        </div>
+                    </div>
+
+                    <div class="el-kpi-card" style="border-left:4px solid #0284c7;">
+                        <div class="el-kpi-label">🚨 ${isEn ? `Major Fires & Rescues (${curYear})` : `${curYear}年 嚴重火警及獲救傷亡`}</div>
+                        <div class="el-kpi-val" style="color:#0284c7; font-size:18px;">${isEn ? 'No.3+ Fires:' : '三級或以上：'}${s.majorFires} <small style="font-size:11px;">${isEn ? 'cases' : '宗'}</small></div>
+                        <div class="el-kpi-sub">
+                            🛟 ${isEn ? 'Rescued:' : '全年獲救：'}<strong>${s.rescueTotal.toLocaleString()}</strong> (${isEn ? 'Fire' : '火警'} ${s.rescueFire.toLocaleString()}) · 🤕 ${isEn ? 'Fire Casualties:' : '火警傷亡：'}<strong>${s.fireCasualtiesTotal}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const trendCardHtml = `
+                <div class="el-card-box" style="margin-bottom:14px;">
+                    <div class="el-card-header">
+                        <div>
+                            <div class="el-card-title">📈 ${isEn ? 'HK Multi-Year Fire Calls & Actual Fires Trend (2013–2025)' : '香港歷年實際成災火警及全部火警召喚總數趨勢圖 (2013–2025)'}</div>
+                            <div class="el-card-subtitle">${isEn ? 'Comparison of actual fires (excluding unwanted/false alarms) versus total fire service calls.' : '對比每年實際成災火警宗數（左軸紅線）與包含警鐘誤鳴及虛報火警之全部火警召喚總數（右軸灰虛線）。'}</div>
+                        </div>
+                    </div>
+                    ${buildFireTrendSVG(isEn)}
+                </div>
+            `;
+
+            const activeTab = window.fireActiveTab || 'ALL';
+            let bodySectionsHtml = '';
+            if (activeTab === 'ALL') {
+                bodySectionsHtml =
+                    trendCardHtml +
+                    buildFireCategorySectionHTML('TYPES', isEn) +
+                    buildFireCategorySectionHTML('CAUSES', isEn) +
+                    buildMajorFireSectionHTML(isEn) +
+                    buildFireCasualtiesSectionHTML(isEn);
+            } else if (activeTab === 'TYPES') {
+                bodySectionsHtml = trendCardHtml + buildFireCategorySectionHTML('TYPES', isEn);
+            } else if (activeTab === 'CAUSES') {
+                bodySectionsHtml = trendCardHtml + buildFireCategorySectionHTML('CAUSES', isEn);
+            } else if (activeTab === 'MAJOR') {
+                bodySectionsHtml = buildMajorFireSectionHTML(isEn);
+            } else if (activeTab === 'CASUALTIES') {
+                bodySectionsHtml = buildFireCasualtiesSectionHTML(isEn);
+            }
+
+            container.innerHTML = controlHtml + kpiHtml + bodySectionsHtml;
+        }
+
         const PORTAL_HOME_CATALOG = [
             {
                 catId: 'URBAN_MGMT',
                 icon: '🏙️',
                 title_zh: '城市管理及公共設施',
                 title_en: 'Urban Management & Public Facilities',
-                desc_zh: '涵蓋全港供水系統、水塘儲水監測、道路公共照明及基礎設施保養管理',
-                desc_en: 'Covers reservoir storage monitoring, public road lighting and urban infrastructure maintenance',
+                desc_zh: '涵蓋全港供水系統、水塘儲水監測、道路公共照明、消防火警統計及公共安全設施管理',
+                desc_en: 'Covers reservoir storage monitoring, public road lighting, fire & rescue statistics and urban facilities',
                 color: '#0284c7',
                 bg: '#f0f9ff',
                 border: '#bae6fd',
@@ -20749,6 +21727,34 @@
                                     return isEn
                                         ? `💡 18 Districts Lighting${cnt > 0 ? ' (' + cnt.toLocaleString() + ' records)' : ''}`
                                         : `💡 涵蓋全港 18 區公共照明${cnt > 0 ? '（' + cnt.toLocaleString() + ' 筆紀錄）' : ''}`;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        deptId: 'HKFSD',
+                        deptIcon: '🚒',
+                        dept_zh: '香港消防處',
+                        dept_en: 'Hong Kong Fire Services Department (HKFSD)',
+                        role_zh: '負責全港滅火救援、火警類型及成因統計、三級或以上嚴重火警應變及救護服務',
+                        role_en: 'Fire-fighting, rescue operations, fire classification & cause statistics, major fire response & ambulance services',
+                        pages: [
+                            {
+                                pageKey: 'fire',
+                                icon: '🔥',
+                                name_zh: '香港火警類型、火警成因、嚴重火警及傷亡統計 (2013–2025)',
+                                name_en: 'HK Fire Classifications, Causes, Major Fires & Casualties (2013–2025)',
+                                desc_zh: '涵蓋全港 15 類火警類型、12 類火警成因、18 類三級或以上嚴重火警處所，以及火警與特別服務獲救及傷亡人數統計。',
+                                desc_en: 'Covers 15 fire classifications, 12 fire causes, 18 occupancy types for No. 3+ alarm major fires, and rescue/casualty statistics.',
+                                actionFn: 'showFirePage',
+                                getLiveBadge: function(isEn) {
+                                    const rec = (typeof getSelectedFireYearSummary === 'function') ? getSelectedFireYearSummary(2025) : null;
+                                    if (rec) {
+                                        return isEn
+                                            ? `🔥 2025: ${rec.totalCalls.toLocaleString()} Calls · ${rec.actualFires.toLocaleString()} Actual Fires · ${rec.majorFires} Major Fires`
+                                            : `🔥 2025年：總召喚 ${rec.totalCalls.toLocaleString()} 宗 · 成災火警 ${rec.actualFires.toLocaleString()} 宗 · 三級或以上 ${rec.majorFires} 宗`;
+                                    }
+                                    return isEn ? '🔥 2013–2025 Fire & Rescue Stats' : '🔥 2013–2025 消防火警及傷亡數據';
                                 }
                             }
                         ]
@@ -21200,6 +22206,8 @@
             try {
                 if (currentActivePage === 'portal') {
                     showPortalHomePage();
+                } else if (currentActivePage === 'fire') {
+                    showFirePage();
                 } else if (currentActivePage === 'labour') {
                     showLabourPage();
                 } else if (currentActivePage === 'population') {
