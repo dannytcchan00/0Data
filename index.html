@@ -619,19 +619,27 @@ box-shadow: var(--shadow-md);
 .wth-threat-seg-bar {
 display: grid;
 grid-template-columns: repeat(5, 1fr);
-gap: 4px;
-margin: 7px 0;
+gap: 5px;
+margin: 8px 0 6px 0;
 }
 .wth-threat-seg {
-height: 7px;
-border-radius: 999px;
-opacity: 0.25;
-transition: all 0.25s ease;
+padding: 4px 2px;
+border-radius: 7px;
+font-size: 0.68rem;
+font-weight: 900;
+line-height: 1.15;
+text-align: center;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0.28;
+transition: all 0.22s ease;
+user-select: none;
+letter-spacing: 0.2px;
 }
 .wth-threat-seg.active {
 opacity: 1;
-height: 9px;
-transform: translateY(-1px);
+transform: translateY(-1px) scale(1.03);
 }
 .wth-threat-factors {
 display: flex;
@@ -4409,7 +4417,7 @@ justify-content: center;
 <div class="w-item"><div class="w-label" id="t-max">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
 <div class="w-item"><div class="w-label" id="t-min">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
 </div>
-<div id="weather-threat-box" class="weather-threat-card" onclick="openWeatherThreatDetailModal()" title="點擊查看五級綜合天氣威脅計算詳情及各級指標"></div>
+<div id="weather-threat-box" class="weather-threat-card" onclick="openWeatherThreatDetailModal()" title="點擊查看綜合天氣威脅評估詳情及依據"></div>
 
 <div id="warnings-container" class="warnings-container" style="display: none;"></div>
 <div id="swt-box" class="swt-box" style="display: none;"></div>
@@ -14391,7 +14399,7 @@ function closeMtrDetailModal() { unlockBackgroundScroll(); if(lineSyncInterval) 
 // 🛡️ 五級綜合天氣威脅及出行安全評估系統 (5-Level Comprehensive Weather Threat Index)
 // =========================================================================
 window.weatherThreatState = {
-simulatedLevel: null, // null = Live Auto Calculation, or 1..5 for user preview
+simulatedLevel: null,
 lastResult: null
 };
 
@@ -14399,123 +14407,217 @@ const WEATHER_THREAT_LEVEL_META = {
 1: {
 level: 1,
 dot: '🟢',
-badge_zh: '第 1 級：安全良好',
-badge_en: 'Level 1: Safe & Ideal',
-short_zh: '1級 綠色・安全',
-short_en: 'L1 Green · Safe',
+barLabel_zh: '安全',
+barLabel_en: 'Safe',
+badge_zh: '安全良好',
+badge_en: 'Safe & Ideal',
 bg: '#ecfdf5',
 border: '#6ee7b7',
 textCol: '#065f46',
 barCol: '#10b981',
+barTextCol: '#ffffff',
 pillBg: '#10b981',
 pillText: '#ffffff',
-desc_zh: '各項氣象指標穩定正常，無生效惡劣天氣警告，適合正常出行及各類戶外活動。',
-desc_en: 'Weather conditions are stable with no severe warnings in force. Ideal for outdoor activities and normal travel.'
+desc_zh: '各項實時氣象指標穩定正常，適合正常出行及各類戶外活動。',
+desc_en: 'All meteorological indicators are within normal safe ranges. Ideal for outdoor activities and travel.',
+sim_basis_zh: [
+'🌡️ 氣溫及濕度：氣溫 24.5°C、相對濕度 72%（溫濕度處於舒適安全範圍）',
+'☀️ 其他氣象因素：紫外線指數 UV 3（中等）、過去一小時無降雨（0.0 mm）、分區風勢和緩（最高陣風 22 km/h）、能見度良好（15.0 km）'
+],
+sim_basis_en: [
+'🌡️ Temp & Humidity: 24.5°C, Relative Humidity 72% (comfortable and safe range)',
+'☀️ Other Factors: UV Index 3 (Moderate), 0.0 mm rainfall in past hour, light winds (max gust 22 km/h), good visibility (15.0 km)'
+]
 },
 2: {
 level: 2,
 dot: '🟡',
-badge_zh: '第 2 級：輕微注意',
-badge_en: 'Level 2: Mild Advisory',
-short_zh: '2級 黃色・注意',
-short_en: 'L2 Yellow · Advisory',
+barLabel_zh: '注意',
+barLabel_en: 'Advisory',
+badge_zh: '輕微注意',
+badge_en: 'Mild Advisory',
 bg: '#fefce8',
 border: '#fde047',
 textCol: '#854d0e',
 barCol: '#eab308',
+barTextCol: '#ffffff',
 pillBg: '#eab308',
 pillText: '#ffffff',
-desc_zh: '天氣有輕微潛在影響（如一號戒備信號、雷暴、偏高溫濕度或高紫外線），建議帶備雨具及注意補水防曬。',
-desc_en: 'Mild weather advisory (e.g. Standby Signal No. 1, thunderstorm, high UV or warm/humid index). Stay hydrated and bring rain gear.'
+desc_zh: '天氣有輕微潛在影響，建議留意最新天氣變化、帶備雨具及注意補水防曬。',
+desc_en: 'Mild weather advisory in effect. Stay hydrated, use sun protection, or carry rain gear.',
+sim_basis_zh: [
+'🌡️ 氣溫及濕度：氣溫 30.8°C、相對濕度 86%（氣溫及濕度偏高，天氣較為悶熱）',
+'⚠️ 天文台天氣警告：現正發出「一號戒備信號」及「雷暴警告」',
+'☀️ 其他原因：紫外線指數達 UV 7（高水平），局部地區錄得 5.5 mm 微雨及中等降雨概率'
+],
+sim_basis_en: [
+'🌡️ Temp & Humidity: 30.8°C, Relative Humidity 86% (warm and humid conditions)',
+'⚠️ HKO Warnings: Standby Signal No. 1 and Thunderstorm Warning in force',
+'☀️ Other Causes: High UV Index (UV 7) and local showers (5.5 mm/hr, Medium PSR)'
+]
 },
 3: {
 level: 3,
 dot: '🟠',
-badge_zh: '第 3 級：中度威脅',
-badge_en: 'Level 3: Moderate Threat',
-short_zh: '3級 橙色・警戒',
-short_en: 'L3 Orange · Moderate',
+barLabel_zh: '警戒',
+barLabel_en: 'Moderate',
+badge_zh: '中度警戒',
+badge_en: 'Moderate Threat',
 bg: '#fff7ed',
 border: '#fdba74',
 textCol: '#9a3412',
 barCol: '#f97316',
+barTextCol: '#ffffff',
 pillBg: '#f97316',
 pillText: '#ffffff',
-desc_zh: '中度天氣威脅（如三號強風信號、黃色暴雨、酷熱／寒冷天氣警告、強陣風或高暑熱壓力），應避免前往高危斜坡、河道或離岸海域。',
-desc_en: 'Moderate weather threat (e.g. Strong Wind Signal No. 3, Amber Rainstorm, Very Hot/Cold Warning or strong gusts). Avoid high-risk slopes and offshore waters.'
+desc_zh: '中度天氣警戒，戶外工作或活動人士應提高警覺，避免前往高危斜坡、河道或離岸海域。',
+desc_en: 'Moderate weather threat. Avoid high-risk slopes, river channels, and offshore waters.',
+sim_basis_zh: [
+'⚠️ 天文台天氣警告：現正發出「三號強風信號」、「黃色暴雨警告信號」及「酷熱天氣警告」',
+'🌡️ 氣溫及濕度：氣溫達 33.4°C、相對濕度 82%（高溫配合高濕度，構成顯著中暑風險）',
+'💨 其他原因：分區錄得強風（最高持續風速 48 km/h、陣風 68 km/h），過去一小時雨量達 32.0 mm'
+],
+sim_basis_en: [
+'⚠️ HKO Warnings: Strong Wind Signal No. 3, Amber Rainstorm Warning, and Very Hot Weather Warning in force',
+'🌡️ Temp & Humidity: 33.4°C, Relative Humidity 82% (high heat and humidity risk)',
+'💨 Other Causes: Strong winds (48 km/h, gusts 68 km/h) and 32.0 mm/hr heavy rain'
+]
 },
 4: {
 level: 4,
 dot: '🔴',
-badge_zh: '第 4 級：高度威脅',
-badge_en: 'Level 4: Severe Threat',
-short_zh: '4級 紅色・高危',
-short_en: 'L4 Red · Severe',
+barLabel_zh: '高危',
+barLabel_en: 'Severe',
+badge_zh: '高度高危',
+badge_en: 'Severe Threat',
 bg: '#fef2f2',
 border: '#fca5a5',
 textCol: '#991b1b',
 barCol: '#ef4444',
+barTextCol: '#ffffff',
 pillBg: '#ef4444',
 pillText: '#ffffff',
-desc_zh: '高度惡劣天氣威脅（如八號烈風或暴風信號、紅色暴雨警告、極端酷熱 ≥35°C／嚴寒 ≤7°C 或暴風潮風險），應暫停戶外活動並留心公共交通停駛安排。',
-desc_en: 'Severe weather threat (e.g. Gale/Storm Signal No. 8, Red Rainstorm, extreme heat ≥35°C / cold ≤7°C, or storm surge). Suspend outdoor activities.'
+desc_zh: '高度惡劣天氣威脅，應暫停所有非必要戶外活動，遠離岸邊並留心公共交通停駛安排。',
+desc_en: 'Severe weather threat. Suspend outdoor activities, stay away from shorelines, and check transport arrangements.',
+sim_basis_zh: [
+'⚠️ 天文台天氣警告：現正發出「八號東北烈風或暴風信號」及「紅色暴雨警告信號」',
+'🌀 熱帶氣旋威脅：颱風進入本港 220 公里範圍內（中心最高持續風速 135 km/h）',
+'🌧️ 其他原因：過去一小時錄得 56.0 mm 豪雨、分區烈風風速達 72 km/h（陣風 98 km/h），氣溫 26.2°C、濕度 94%'
+],
+sim_basis_en: [
+'⚠️ HKO Warnings: No. 8 Northeast Gale or Storm Signal and Red Rainstorm Warning in force',
+'🌀 Tropical Cyclone: Typhoon within 220 km of HK (max wind 135 km/h)',
+'🌧️ Other Causes: 56.0 mm/hr heavy rain, gale force winds 72 km/h (gusts 98 km/h), Temp 26.2°C, RH 94%'
+]
 },
 5: {
 level: 5,
 dot: '⚫',
-badge_zh: '第 5 級：極端惡劣',
-badge_en: 'Level 5: Extreme Hazard',
-short_zh: '5級 黑色・極端惡劣',
-short_en: 'L5 Black · Extreme',
+barLabel_zh: '最惡劣',
+barLabel_en: 'Extreme',
+badge_zh: '極端惡劣',
+badge_en: 'Extreme Hazard',
 bg: '#0f172a',
 border: '#ef4444',
 textCol: '#f8fafc',
-barCol: '#1e293b',
+barCol: '#0f172a',
+barTextCol: '#ffffff',
 pillBg: '#dc2626',
 pillText: '#ffffff',
-desc_zh: '最高級別極端災害天氣（如九號／十號風球、黑色暴雨警告、超強颱風正面吹襲或特大暴雨），請立即留在安全室內場所，切勿外出！',
-desc_en: 'Extreme hazard (Signal No. 9/10, Black Rainstorm, direct Super Typhoon hit or torrential downpour). Stay indoors in a safe shelter immediately!'
+desc_zh: '最高級別極端災害天氣！請立即留在安全室內場所，遠離當風窗戶，切勿外出！',
+desc_en: 'Extreme weather hazard! Stay indoors in a safe shelter away from exposed windows immediately!',
+sim_basis_zh: [
+'⚠️ 天文台天氣警告：現正發出「十號颶風信號」、「黑色暴雨警告信號」及「山泥傾瀉警告」',
+'🌀 熱帶氣旋正面吹襲：超強颱風距離香港僅 65 公里（中心最高持續風速 195 km/h）',
+'🌊 其他極端原因：過去一小時特大暴雨達 88.0 mm、颶風風力 118 km/h（陣風 162 km/h）、低窪地區風暴潮水位達 3.85 m、氣溫 25.4°C、濕度 98%'
+],
+sim_basis_en: [
+'⚠️ HKO Warnings: Hurricane Signal No. 10, Black Rainstorm Warning, and Landslip Warning in force',
+'🌀 Direct Typhoon Hit: Super Typhoon at 65 km from HK (max sustained wind 195 km/h)',
+'🌊 Other Extreme Causes: Torrential rain 88.0 mm/hr, hurricane winds 118 km/h (gusts 162 km/h), storm surge 3.85 m, Temp 25.4°C, RH 98%'
+]
 }
 };
 
-function computeHeatIndexCelsius(tempC, rhPct) {
-if (tempC < 26 || rhPct < 40) return tempC;
-const T = tempC * 9 / 5 + 32;
-const R = rhPct;
-const HI = -42.379 + 2.04901523 * T + 10.14333127 * R - 0.22475541 * T * R
-- 0.00683783 * T * T - 0.05481717 * R * R + 0.00122874 * T * T * R
-+ 0.00085282 * T * R * R - 0.00000199 * T * T * R * R;
-return Math.round(((HI - 32) * 5 / 9) * 10) / 10;
-}
+const HKO_WARN_NAME_FALLBACK = {
+'WFIREY': { zh: '黃色火災危險警告', en: 'Yellow Fire Danger Warning' },
+'WFIRER': { zh: '紅色火災危險警告', en: 'Red Fire Danger Warning' },
+'WRAINA': { zh: '黃色暴雨警告信號', en: 'Amber Rainstorm Warning Signal' },
+'WRAINY': { zh: '黃色暴雨警告信號', en: 'Amber Rainstorm Warning Signal' },
+'WRAINR': { zh: '紅色暴雨警告信號', en: 'Red Rainstorm Warning Signal' },
+'WRAINB': { zh: '黑色暴雨警告信號', en: 'Black Rainstorm Warning Signal' },
+'WTS': { zh: '雷暴警告', en: 'Thunderstorm Warning' },
+'WCOLD': { zh: '寒冷天氣警告', en: 'Cold Weather Warning' },
+'WHOT': { zh: '酷熱天氣警告', en: 'Very Hot Weather Warning' },
+'WFNW': { zh: '強烈季候風信號', en: 'Strong Monsoon Signal' },
+'WMSGNL': { zh: '強烈季候風信號', en: 'Strong Monsoon Signal' },
+'WL': { zh: '山泥傾瀉警告', en: 'Landslip Warning' },
+'WFROST': { zh: '霜凍警告', en: 'Frost Warning' },
+'TC1': { zh: '一號戒備信號', en: 'Standby Signal No. 1' },
+'TC3': { zh: '三號強風信號', en: 'Strong Wind Signal No. 3' },
+'TC8NE': { zh: '八號東北烈風或暴風信號', en: 'No. 8 Northeast Gale or Storm Signal' },
+'TC8NW': { zh: '八號西北烈風或暴風信號', en: 'No. 8 Northwest Gale or Storm Signal' },
+'TC8SE': { zh: '八號東南烈風或暴風信號', en: 'No. 8 Southeast Gale or Storm Signal' },
+'TC8SW': { zh: '八號西南烈風或暴風信號', en: 'No. 8 Southwest Gale or Storm Signal' },
+'TC9': { zh: '九號烈風或暴風風力增強信號', en: 'Increasing Gale or Storm Signal No. 9' },
+'TC10': { zh: '十號颶風信號', en: 'Hurricane Signal No. 10' },
+'NTFL': { zh: '新界北部水浸特別報告', en: 'Special Announcement on Flooding in northern NT' },
+'WFNTSA': { zh: '新界北部水浸特別報告', en: 'Special Announcement on Flooding in northern NT' },
+'WTMW': { zh: '海嘯警告', en: 'Tsunami Warning' }
+};
 
 function calculateLiveWeatherThreatAssessment() {
-// 1. Parse live temperature, humidity, UV, PSR from DOM & hkWeatherPortalState
 const tempTxt = document.getElementById('hk-temp')?.innerText || '';
 const humTxt = document.getElementById('hk-hum')?.innerText || '';
 const uvTxt = document.getElementById('hk-uv')?.innerText || '';
-const psrTxt = document.getElementById('hk-psr')?.innerText || '';
+const psrTxt = (document.getElementById('hk-psr')?.innerText || '').trim();
 
 const wSt = window.hkWeatherPortalState || {};
 const tempVal = parseFloat(tempTxt) || (wSt.summary && wSt.summary.avgTemp) || 25.0;
 const humVal = parseFloat(humTxt) || (wSt.summary && wSt.summary.avgHum) || 75;
-const uvVal = parseFloat(uvTxt) || (wSt.currentOverview && wSt.currentOverview.uvIndex) || 3;
+const uvVal = !isNaN(parseFloat(uvTxt)) ? parseFloat(uvTxt) : ((wSt.currentOverview && typeof wSt.currentOverview.uvIndex === 'number') ? wSt.currentOverview.uvIndex : 3);
 const maxRainMm = (wSt.summary && typeof wSt.summary.maxRain === 'number') ? wSt.summary.maxRain : 0;
 const maxWindKmh = (wSt.summary && typeof wSt.summary.maxWind === 'number') ? wSt.summary.maxWind : 18;
 const maxGustKmh = (wSt.summary && typeof wSt.summary.maxGust === 'number') ? wSt.summary.maxGust : 28;
 const minVisKm = (wSt.summary && typeof wSt.summary.minVis === 'number') ? wSt.summary.minVis : 12.0;
 const maxTideM = (wSt.summary && typeof wSt.summary.maxTide === 'number') ? wSt.summary.maxTide : 2.1;
 
-const heatIndexC = computeHeatIndexCelsius(tempVal, humVal);
-
-// 2. Check active HKO warning codes
-const warnKeys = Object.keys(window.activeWarningsData || {}).map(k => k.replace(/^warn_/, '').toUpperCase());
+// Collect active HKO warnings with full official names
+const warnMap = new Map();
+const activeWarnObj = window.activeWarningsData || activeWarningsData || {};
+Object.keys(activeWarnObj).forEach(k => {
+const item = activeWarnObj[k];
+const code = String((item && item.code) || k.replace(/^warn_/, '')).toUpperCase();
+if (!code) return;
+const fb = HKO_WARN_NAME_FALLBACK[code] || {};
+const cfg = (typeof CUSTOM_WARNING_CONFIG !== 'undefined' && CUSTOM_WARNING_CONFIG[code]) ? CUSTOM_WARNING_CONFIG[code] : {};
+warnMap.set(code, {
+code,
+zh: (item && item.name_zh) || cfg.name_zh || fb.zh || code,
+en: (item && item.name_en) || cfg.name_en || fb.en || code
+});
+});
 if (wSt.currentOverview && Array.isArray(wSt.currentOverview.warnings)) {
 wSt.currentOverview.warnings.forEach(w => {
-if (w && w.code && !warnKeys.includes(w.code.toUpperCase())) warnKeys.push(w.code.toUpperCase());
+if (w && w.code) {
+const code = String(w.code).toUpperCase();
+if (!warnMap.has(code)) {
+const fb = HKO_WARN_NAME_FALLBACK[code] || {};
+const cfg = (typeof CUSTOM_WARNING_CONFIG !== 'undefined' && CUSTOM_WARNING_CONFIG[code]) ? CUSTOM_WARNING_CONFIG[code] : {};
+warnMap.set(code, {
+code,
+zh: w.name_zh || cfg.name_zh || fb.zh || w.name || code,
+en: w.name_en || cfg.name_en || fb.en || w.name || code
 });
 }
+}
+});
+}
+const warnKeys = Array.from(warnMap.keys());
+const warnNamesZh = Array.from(warnMap.values()).map(x => x.zh);
+const warnNamesEn = Array.from(warnMap.values()).map(x => x.en);
 
-// 3. Check Tropical Cyclone proximity & intensity
+// Check Tropical Cyclone proximity & intensity
 let tcMinDistKm = null;
 let tcMaxWindKmh = 0;
 let tcNameZh = '';
@@ -14534,168 +14636,195 @@ tcNameEn = c.name_en || 'Tropical Cyclone';
 
 let level = 1;
 let score = 12;
-const reasonsZh = [];
-const reasonsEn = [];
+const basisItemsZh = [];
+const basisItemsEn = [];
 
-// Factor A: Active HKO Warnings
+// 1. HKO Active Weather Warnings (explicitly name every warning issued, without level numbers)
 const hasL5Warn = warnKeys.some(c => ['TC9', 'TC10', 'WRAINB'].includes(c));
 const hasL4Warn = warnKeys.some(c => ['TC8NE', 'TC8SE', 'TC8NW', 'TC8SW', 'WRAINR'].includes(c));
-const hasL3Warn = warnKeys.some(c => ['TC3', 'WRAINY', 'WL', 'WFNTSA', 'WHOT', 'WCOLD', 'WFROST', 'WTMW'].includes(c));
-const hasL2Warn = warnKeys.some(c => ['TC1', 'WTS', 'WMSGNL', 'WFIRER', 'WFIREY'].includes(c)) || warnKeys.length > 0;
+const hasL3Warn = warnKeys.some(c => ['TC3', 'WRAINA', 'WRAINY', 'WL', 'WFNTSA', 'NTFL', 'WHOT', 'WCOLD', 'WFROST', 'WTMW'].includes(c));
+const hasL2Warn = warnKeys.length > 0;
 
+if (warnKeys.length > 0) {
+const joinedZh = warnNamesZh.map(n => `「${n}」`).join('、');
+const joinedEn = warnNamesEn.join(', ');
 if (hasL5Warn) {
 level = Math.max(level, 5);
 score = Math.max(score, 96);
-reasonsZh.push('天文台發出最高級別惡劣天氣警告（九號／十號風球或黑色暴雨）');
-reasonsEn.push('Top-tier HKO warning in force (Signal No. 9/10 or Black Rainstorm)');
+basisItemsZh.push(`⚠️ 天文台天氣警告：現正發出最高級別惡劣天氣警告 ${joinedZh}（觸發極端惡劣警示）`);
+basisItemsEn.push(`⚠️ HKO Weather Warning: Top-tier severe warning in force — ${joinedEn} (triggers Extreme alert)`);
 } else if (hasL4Warn) {
 level = Math.max(level, 4);
 score = Math.max(score, 82);
-reasonsZh.push('八號烈風或暴風信號／紅色暴雨警告生效');
-reasonsEn.push('Signal No. 8 or Red Rainstorm Warning in force');
+basisItemsZh.push(`⚠️ 天文台天氣警告：現正發出 ${joinedZh}（觸發高危警示）`);
+basisItemsEn.push(`⚠️ HKO Weather Warning: ${joinedEn} in force (triggers Severe alert)`);
 } else if (hasL3Warn) {
 level = Math.max(level, 3);
 score = Math.max(score, 58);
-reasonsZh.push('三號強風信號／黃雨／酷熱／寒冷／水浸或山泥傾瀉警告生效');
-reasonsEn.push('Signal No. 3 / Amber Rainstorm / Hot / Cold / Landslip warning in force');
+basisItemsZh.push(`⚠️ 天文台天氣警告：現正發出 ${joinedZh}（觸發警戒警示）`);
+basisItemsEn.push(`⚠️ HKO Weather Warning: ${joinedEn} in force (triggers Moderate alert)`);
 } else if (hasL2Warn) {
 level = Math.max(level, 2);
 score = Math.max(score, 35);
-reasonsZh.push('天文台有生效天氣警告（如一號戒備信號、雷暴、季候風或火災危險警告）');
-reasonsEn.push('Active HKO weather warning in force');
+basisItemsZh.push(`⚠️ 天文台天氣警告：現正發出 ${joinedZh}（觸發注意警示）`);
+basisItemsEn.push(`⚠️ HKO Weather Warning: ${joinedEn} in force (triggers Advisory alert)`);
+}
 }
 
-// Factor B: Tropical Cyclone Proximity
+// 2. Temperature & Relative Humidity (always explicitly stated as core basis, without level numbers)
+if (tempVal >= 35.0 || tempVal <= 7.0) {
+level = Math.max(level, 4);
+score = Math.max(score, 78);
+basisItemsZh.push(`🌡️ 氣溫及濕度：現時氣溫 ${tempVal.toFixed(1)}°C、相對濕度 ${Math.round(humVal)}%（屬${tempVal >= 35.0 ? '極端高溫酷熱' : '嚴寒低溫'}水平，觸發高危警示）`);
+basisItemsEn.push(`🌡️ Temp & Humidity: ${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}% (extreme ${tempVal >= 35.0 ? 'heat' : 'cold'}, triggers Severe alert)`);
+} else if (tempVal >= 33.0 || (tempVal >= 31.5 && humVal >= 80) || tempVal <= 12.0) {
+level = Math.max(level, 3);
+score = Math.max(score, 56);
+basisItemsZh.push(`🌡️ 氣溫及濕度：現時氣溫 ${tempVal.toFixed(1)}°C、相對濕度 ${Math.round(humVal)}%（${tempVal <= 12.0 ? '天氣寒冷' : '高溫配合高濕度引致顯著悶熱壓力'}，觸發警戒警示）`);
+basisItemsEn.push(`🌡️ Temp & Humidity: ${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}% (${tempVal <= 12.0 ? 'cold weather' : 'high heat & humidity'}, triggers Moderate alert)`);
+} else if (tempVal >= 29.5 || humVal >= 88 || tempVal <= 15.0) {
+level = Math.max(level, 2);
+score = Math.max(score, 30);
+const condZh = tempVal >= 29.5 ? (humVal >= 80 ? '氣溫偏高且空氣潮濕悶熱' : '氣溫偏高') : (humVal >= 88 ? '相對濕度極高、空氣潮濕' : '氣溫稍涼');
+basisItemsZh.push(`🌡️ 氣溫及濕度：現時氣溫 ${tempVal.toFixed(1)}°C、相對濕度 ${Math.round(humVal)}%（${condZh}，納入注意原因）`);
+basisItemsEn.push(`🌡️ Temp & Humidity: ${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}% (warm/humid or cool conditions, Advisory factor)`);
+} else {
+basisItemsZh.push(`🌡️ 氣溫及濕度：現時氣溫 ${tempVal.toFixed(1)}°C、相對濕度 ${Math.round(humVal)}%（溫濕度處於正常舒適範圍）`);
+basisItemsEn.push(`🌡️ Temp & Humidity: ${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}% (within normal comfortable range)`);
+}
+
+// 3. Tropical Cyclone Proximity (ONLY added when an active cyclone is actually present)
 if (tcMinDistKm !== null) {
 if (tcMinDistKm <= 150 && tcMaxWindKmh >= 140) {
 level = Math.max(level, 5);
 score = Math.max(score, 92);
-reasonsZh.push(`${tcNameZh}極接近本港 (${tcMinDistKm}km) 且達強颱風／超強颱風強度`);
-reasonsEn.push(`${tcNameEn} within ${tcMinDistKm}km at severe/super typhoon intensity`);
+basisItemsZh.push(`🌀 熱帶氣旋威脅：${tcNameZh}極接近本港（距離約 ${tcMinDistKm} 公里，中心最高風速 ${tcMaxWindKmh} km/h），構成正面吹襲威脅`);
+basisItemsEn.push(`🌀 Tropical Cyclone: ${tcNameEn} at ${tcMinDistKm} km (max wind ${tcMaxWindKmh} km/h)`);
 } else if (tcMinDistKm <= 300 && tcMaxWindKmh >= 110) {
 level = Math.max(level, 4);
 score = Math.max(score, 76);
-reasonsZh.push(`${tcNameZh}進入香港 300km 範圍 (${tcMinDistKm}km)`);
-reasonsEn.push(`${tcNameEn} within 300km of HK (${tcMinDistKm}km)`);
+basisItemsZh.push(`🌀 熱帶氣旋威脅：${tcNameZh}進入香港 300 公里範圍（距離約 ${tcMinDistKm} 公里，中心最高風速 ${tcMaxWindKmh} km/h）`);
+basisItemsEn.push(`🌀 Tropical Cyclone: ${tcNameEn} within ${tcMinDistKm} km of HK (max wind ${tcMaxWindKmh} km/h)`);
 } else if (tcMinDistKm <= 550) {
 level = Math.max(level, 3);
 score = Math.max(score, 54);
-reasonsZh.push(`${tcNameZh}位於本港 400–550km 警戒範圍 (${tcMinDistKm}km)`);
-reasonsEn.push(`${tcNameEn} within ${tcMinDistKm}km of HK`);
+basisItemsZh.push(`🌀 熱帶氣旋威脅：${tcNameZh}位於本港警戒範圍（距離約 ${tcMinDistKm} 公里，中心最高風速 ${tcMaxWindKmh} km/h）`);
+basisItemsEn.push(`🌀 Tropical Cyclone: ${tcNameEn} at ${tcMinDistKm} km from HK (max wind ${tcMaxWindKmh} km/h)`);
 } else if (tcMinDistKm <= 1000) {
 level = Math.max(level, 2);
 score = Math.max(score, 32);
-reasonsZh.push(`西北太平洋／南海有熱帶氣旋 (${tcNameZh}，距離香港約 ${tcMinDistKm}km)`);
-reasonsEn.push(`Active cyclone ${tcNameEn} at ~${tcMinDistKm}km from HK`);
+basisItemsZh.push(`🌀 熱帶氣旋動向：${tcNameZh}距離香港約 ${tcMinDistKm} 公里（中心風速 ${tcMaxWindKmh} km/h），外圍環流可能影響天氣`);
+basisItemsEn.push(`🌀 Tropical Cyclone: ${tcNameEn} at ~${tcMinDistKm} km from HK`);
 }
 }
 
-// Factor C: Temperature & Humidity (Heat Index / Cold Stress)
-if (tempVal >= 35.5 || heatIndexC >= 42 || tempVal <= 6.5) {
-level = Math.max(level, 4);
-score = Math.max(score, 78);
-reasonsZh.push(`極端氣溫或暑熱壓力（氣溫 ${tempVal.toFixed(1)}°C，體感 ${heatIndexC.toFixed(1)}°C）`);
-reasonsEn.push(`Extreme temperature/heat stress (${tempVal.toFixed(1)}°C, Heat Index ${heatIndexC.toFixed(1)}°C)`);
-} else if (tempVal >= 33.0 || heatIndexC >= 37.5 || tempVal <= 11.5) {
-level = Math.max(level, 3);
-score = Math.max(score, 56);
-reasonsZh.push(`酷熱／寒冷或高溫高濕暑熱壓力（氣溫 ${tempVal.toFixed(1)}°C，體感 ${heatIndexC.toFixed(1)}°C）`);
-reasonsEn.push(`High heat index / cold stress (${tempVal.toFixed(1)}°C, feels like ${heatIndexC.toFixed(1)}°C)`);
-} else if (tempVal >= 30.5 || heatIndexC >= 32.5 || tempVal <= 14.5 || humVal >= 92) {
-level = Math.max(level, 2);
-score = Math.max(score, 30);
-reasonsZh.push(`溫濕度偏高或稍涼（氣溫 ${tempVal.toFixed(1)}°C、濕度 ${Math.round(humVal)}%、體感 ${heatIndexC.toFixed(1)}°C）`);
-reasonsEn.push(`Warm/humid or cool conditions (${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}%, Heat Index ${heatIndexC.toFixed(1)}°C)`);
-}
+// 4. Other Meteorological Causes (UV, Rainfall/PSR, Wind/Gusts, Visibility)
+const otherTriggeredZh = [];
+const otherTriggeredEn = [];
 
-// Factor D: UV Index
 if (uvVal >= 11) {
 level = Math.max(level, 3);
 score = Math.max(score, 60);
-reasonsZh.push(`紫外線指數達「極高」水平 (UV ${uvVal})，曝曬風險極高`);
-reasonsEn.push(`Extreme UV Index (${uvVal})`);
+otherTriggeredZh.push(`紫外線指數達 UV ${uvVal}（極高曝曬風險）`);
+otherTriggeredEn.push(`Extreme UV Index (UV ${uvVal})`);
 } else if (uvVal >= 8) {
 level = Math.max(level, 3);
 score = Math.max(score, 50);
-reasonsZh.push(`紫外線指數達「甚高」水平 (UV ${uvVal})`);
-reasonsEn.push(`Very High UV Index (${uvVal})`);
+otherTriggeredZh.push(`紫外線指數達 UV ${uvVal}（甚高水平）`);
+otherTriggeredEn.push(`Very High UV Index (UV ${uvVal})`);
 } else if (uvVal >= 6) {
 level = Math.max(level, 2);
 score = Math.max(score, 30);
-reasonsZh.push(`紫外線指數偏高 (UV ${uvVal})`);
-reasonsEn.push(`High UV Index (${uvVal})`);
+otherTriggeredZh.push(`紫外線指數偏高（UV ${uvVal}）`);
+otherTriggeredEn.push(`High UV Index (UV ${uvVal})`);
 }
 
-// Factor E: Rainfall & PSR
 if (maxRainMm >= 70) {
 level = Math.max(level, 5);
 score = Math.max(score, 95);
-reasonsZh.push(`過去一小時錄得特大暴雨 (${maxRainMm.toFixed(1)} mm)`);
-reasonsEn.push(`Torrential rainfall (${maxRainMm.toFixed(1)} mm/hr)`);
+otherTriggeredZh.push(`過去一小時錄得 ${maxRainMm.toFixed(1)} mm 特大暴雨`);
+otherTriggeredEn.push(`Torrential rainfall (${maxRainMm.toFixed(1)} mm/hr)`);
 } else if (maxRainMm >= 45) {
 level = Math.max(level, 4);
 score = Math.max(score, 80);
-reasonsZh.push(`過去一小時錄得烈性豪雨 (${maxRainMm.toFixed(1)} mm)`);
-reasonsEn.push(`Heavy rainstorm (${maxRainMm.toFixed(1)} mm/hr)`);
+otherTriggeredZh.push(`過去一小時錄得 ${maxRainMm.toFixed(1)} mm 豪雨`);
+otherTriggeredEn.push(`Heavy rainstorm (${maxRainMm.toFixed(1)} mm/hr)`);
 } else if (maxRainMm >= 20 || /High|高/.test(psrTxt)) {
 level = Math.max(level, 3);
 score = Math.max(score, 52);
-reasonsZh.push(`顯著降雨或大雨 (${maxRainMm.toFixed(1)} mm/h，降雨概率：${psrTxt || '--'})`);
-reasonsEn.push(`Significant rainfall (${maxRainMm.toFixed(1)} mm/hr, PSR: ${psrTxt || '--'})`);
+otherTriggeredZh.push(`顯著降雨（過去一小時雨量 ${maxRainMm.toFixed(1)} mm${psrTxt ? `、降雨概率：${psrTxt}` : ''}）`);
+otherTriggeredEn.push(`Significant rainfall (${maxRainMm.toFixed(1)} mm/hr${psrTxt ? `, PSR: ${psrTxt}` : ''})`);
 } else if (maxRainMm >= 3 || /Medium|中/.test(psrTxt)) {
 level = Math.max(level, 2);
 score = Math.max(score, 28);
-reasonsZh.push(`局部地區有雨或中等降雨概率 (${maxRainMm.toFixed(1)} mm/h)`);
-reasonsEn.push(`Local showers or medium rain probability (${maxRainMm.toFixed(1)} mm/hr)`);
+otherTriggeredZh.push(`局部地區有雨或中等降雨概率（雨量 ${maxRainMm.toFixed(1)} mm${psrTxt ? `、降雨概率：${psrTxt}` : ''}）`);
+otherTriggeredEn.push(`Local showers or medium rain probability (${maxRainMm.toFixed(1)} mm/hr)`);
 }
 
-// Factor F: Wind Speed & Gusts + Visibility
 if (maxWindKmh >= 88 || maxGustKmh >= 118) {
 level = Math.max(level, 5);
 score = Math.max(score, 94);
-reasonsZh.push(`錄得暴風至颶風風力（最高風速 ${maxWindKmh} km/h，陣風 ${maxGustKmh} km/h）`);
-reasonsEn.push(`Storm/hurricane force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
+otherTriggeredZh.push(`錄得暴風至颶風風力（風速 ${maxWindKmh} km/h、最高陣風 ${maxGustKmh} km/h）`);
+otherTriggeredEn.push(`Storm/hurricane force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
 } else if (maxWindKmh >= 63 || maxGustKmh >= 88) {
 level = Math.max(level, 4);
 score = Math.max(score, 78);
-reasonsZh.push(`錄得烈風風力（最高風速 ${maxWindKmh} km/h，陣風 ${maxGustKmh} km/h）`);
-reasonsEn.push(`Gale force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
-} else if (maxWindKmh >= 41 || maxGustKmh >= 62 || minVisKm < 3.0) {
+otherTriggeredZh.push(`錄得烈風風力（風速 ${maxWindKmh} km/h、最高陣風 ${maxGustKmh} km/h）`);
+otherTriggeredEn.push(`Gale force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
+} else if (maxWindKmh >= 41 || maxGustKmh >= 62) {
 level = Math.max(level, 3);
 score = Math.max(score, 55);
-reasonsZh.push(`強風或低能見度（最高陣風 ${maxGustKmh} km/h，最低能見度 ${minVisKm.toFixed(1)} km）`);
-reasonsEn.push(`Strong winds or reduced visibility (gusts ${maxGustKmh} km/h, vis ${minVisKm.toFixed(1)} km)`);
+otherTriggeredZh.push(`分區錄得強風（風速 ${maxWindKmh} km/h、最高陣風 ${maxGustKmh} km/h）`);
+otherTriggeredEn.push(`Strong winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
 }
 
-if (reasonsZh.length === 0) {
-reasonsZh.push('氣溫、濕度、紫外線、風速及能見度均處於安全理想範圍');
-reasonsEn.push('Temperature, humidity, UV, wind speed and visibility are all within safe optimal ranges');
+if (minVisKm < 3.0) {
+level = Math.max(level, 3);
+score = Math.max(score, 55);
+otherTriggeredZh.push(`分區能見度偏低（最低 ${minVisKm.toFixed(1)} km）`);
+otherTriggeredEn.push(`Reduced visibility (min ${minVisKm.toFixed(1)} km)`);
+}
+
+if (otherTriggeredZh.length > 0) {
+basisItemsZh.push(`📌 其他觸發原因：${otherTriggeredZh.join('；')}`);
+basisItemsEn.push(`📌 Other Triggering Factors: ${otherTriggeredEn.join('; ')}`);
+} else {
+basisItemsZh.push(`📌 其他評估指標：紫外線指數 UV ${uvVal}、過去一小時雨量 ${maxRainMm.toFixed(1)} mm、最高陣風 ${maxGustKmh} km/h、最低能見度 ${minVisKm.toFixed(1)} km（均處於安全正常水平）`);
+basisItemsEn.push(`📌 Other Evaluated Factors: UV ${uvVal}, 1-hr rain ${maxRainMm.toFixed(1)} mm, max gust ${maxGustKmh} km/h, min visibility ${minVisKm.toFixed(1)} km (all normal)`);
 }
 
 const simLvl = window.weatherThreatState.simulatedLevel;
-const finalLevel = (simLvl >= 1 && simLvl <= 5) ? simLvl : level;
-const finalScore = (simLvl >= 1 && simLvl <= 5) ? [12, 34, 58, 82, 97][simLvl - 1] : score;
+const isSimulated = (simLvl >= 1 && simLvl <= 5);
+const finalLevel = isSimulated ? simLvl : level;
+const finalScore = isSimulated ? [12, 34, 58, 82, 97][simLvl - 1] : score;
+const simMeta = WEATHER_THREAT_LEVEL_META[finalLevel] || WEATHER_THREAT_LEVEL_META[1];
+
+const finalBasisZh = isSimulated ? simMeta.sim_basis_zh : basisItemsZh;
+const finalBasisEn = isSimulated ? simMeta.sim_basis_en : basisItemsEn;
 
 const result = {
 level: finalLevel,
 liveLevel: level,
-isSimulated: (simLvl >= 1 && simLvl <= 5),
+isSimulated,
 score: finalScore,
 tempVal,
 humVal,
-heatIndexC,
 uvVal,
+psrTxt,
 maxRainMm,
 maxWindKmh,
 maxGustKmh,
 minVisKm,
 maxTideM,
 warnCount: warnKeys.length,
+warnNamesZh,
+warnNamesEn,
 tcMinDistKm,
+tcMaxWindKmh,
 tcNameZh,
 tcNameEn,
-reasonsZh,
-reasonsEn
+basisItemsZh: finalBasisZh,
+basisItemsEn: finalBasisEn
 };
 window.weatherThreatState.lastResult = result;
 return result;
@@ -14714,58 +14843,36 @@ box.style.background = meta.bg;
 box.style.borderColor = meta.border;
 box.style.color = meta.textCol;
 
-const segColors = ['#10b981', '#eab308', '#f97316', '#ef4444', '#0f172a'];
 const segBarHtml = [1, 2, 3, 4, 5].map(lvl => {
+const m = WEATHER_THREAT_LEVEL_META[lvl];
 const isAct = (lvl === res.level);
-const col = (lvl === 5 && isL5) ? '#f87171' : segColors[lvl - 1];
-return `<div class="wth-threat-seg ${isAct ? 'active' : ''}" style="background:${col}; ${isAct ? `box-shadow:0 0 8px ${col};` : ''}" title="Level ${lvl}"></div>`;
+const bgCol = (lvl === 5 && isL5) ? '#dc2626' : m.barCol;
+const borderStyle = isAct
+? (isL5 ? 'border:1.5px solid #ffffff; box-shadow:0 0 8px rgba(248,113,113,0.85);' : `border:1.5px solid rgba(15,23,42,0.35); box-shadow:0 2px 6px rgba(0,0,0,0.18);`)
+: 'border:1px solid transparent;';
+const labelTxt = isEn ? m.barLabel_en : m.barLabel_zh;
+return `<div class="wth-threat-seg ${isAct ? 'active' : ''}" style="background:${bgCol}; color:${m.barTextCol}; text-shadow:0 1px 2px rgba(0,0,0,0.28); ${borderStyle}">${labelTxt}</div>`;
 }).join('');
 
-const chipStyle = isL5
-? 'background:rgba(255,255,255,0.12); color:#f8fafc; border:1px solid rgba(255,255,255,0.22);'
-: 'background:rgba(255,255,255,0.78); color:#1e293b; border:1px solid rgba(15,23,42,0.1);';
-
-const tcChipText = res.tcMinDistKm !== null
-? (isEn ? `🌀 TC ${res.tcMinDistKm}km` : `🌀 颱風 ${res.tcMinDistKm}km`)
-: (isEn ? '🌀 No TC' : '🌀 無颱風威脅');
-
-const warnChipText = res.warnCount > 0
-? (isEn ? `⚠️ ${res.warnCount} Warn(s)` : `⚠️ ${res.warnCount}個生效警告`)
-: (isEn ? '⚠️ No Warning' : '⚠️ 無生效警告');
-
-const primaryReason = isEn ? res.reasonsEn[0] : res.reasonsZh[0];
+const basisList = isEn ? res.basisItemsEn : res.basisItemsZh;
+const basisHtml = basisList.map(item => `<div style="margin-top:3px; line-height:1.42;">• ${item}</div>`).join('');
 
 box.innerHTML = `
 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
 <div style="display:flex; align-items:center; gap:6px;">
-<span style="font-size:0.74rem; font-weight:900; opacity:0.9;">🛡️ ${isEn ? '5-Level Weather Threat' : '五級天氣威脅警示'}</span>
+<span style="font-size:0.74rem; font-weight:900; opacity:0.92;">🛡️ ${isEn ? 'Weather Threat Alert' : '天氣威脅警示'}</span>
 ${res.isSimulated ? `<span style="font-size:0.62rem; font-weight:900; padding:1px 5px; border-radius:4px; background:#fbbf24; color:#0f172a;">${isEn ? 'PREVIEW' : '預覽中'}</span>` : ''}
 </div>
-<span style="padding:2px 8px; border-radius:999px; background:${meta.pillBg}; color:${meta.pillText}; font-size:0.72rem; font-weight:900; letter-spacing:0.2px; box-shadow:0 2px 5px rgba(0,0,0,0.15);">
+<span style="padding:2px 9px; border-radius:999px; background:${meta.pillBg}; color:${meta.pillText}; font-size:0.72rem; font-weight:900; letter-spacing:0.2px; box-shadow:0 2px 5px rgba(0,0,0,0.15);">
 ${meta.dot} ${isEn ? meta.badge_en : meta.badge_zh}
 </span>
 </div>
 
 <div class="wth-threat-seg-bar">${segBarHtml}</div>
 
-<div style="display:flex; align-items:center; justify-content:space-between; font-size:0.63rem; font-weight:800; opacity:0.82; margin-bottom:5px;">
-<span>1 ${isEn ? 'Green (Safe)' : '綠(安全)'}</span>
-<span>2 ${isEn ? 'Yellow' : '黃(注意)'}</span>
-<span>3 ${isEn ? 'Orange' : '橙(警戒)'}</span>
-<span>4 ${isEn ? 'Red' : '紅(高危)'}</span>
-<span>5 ${isEn ? 'Black (Extreme)' : '黑(最惡劣)'}</span>
-</div>
-
-<div class="wth-threat-factors">
-<span class="wth-threat-chip" style="${chipStyle}">🌡️ ${isEn ? 'Feels' : '體感'} ${res.heatIndexC.toFixed(1)}°C</span>
-<span class="wth-threat-chip" style="${chipStyle}">${warnChipText}</span>
-<span class="wth-threat-chip" style="${chipStyle}">${tcChipText}</span>
-<span class="wth-threat-chip" style="${chipStyle}">☀️ UV ${res.uvVal}</span>
-<span class="wth-threat-chip" style="${chipStyle}">💨 ${res.maxGustKmh}km/h</span>
-</div>
-
-<div style="font-size:0.71rem; font-weight:700; line-height:1.38; margin-top:6px; padding-top:5px; border-top:1px dashed ${isL5 ? 'rgba(255,255,255,0.22)' : 'rgba(15,23,42,0.14)'};">
-💡 ${res.isSimulated ? (isEn ? meta.desc_en : meta.desc_zh) : primaryReason}
+<div style="font-size:0.7rem; font-weight:700; margin-top:6px; padding-top:6px; border-top:1px dashed ${isL5 ? 'rgba(255,255,255,0.22)' : 'rgba(15,23,42,0.16)'};">
+<div style="font-weight:900; font-size:0.71rem; margin-bottom:2px;">📋 ${isEn ? 'Basis for Current Warning:' : '發出此警告之依據：'}</div>
+${basisHtml}
 </div>
 `;
 }
@@ -14783,15 +14890,18 @@ const meta = WEATHER_THREAT_LEVEL_META[res.level] || WEATHER_THREAT_LEVEL_META[1
 
 const simBtnsHtml = [
 { id: null, zh: '🔄 實時自動計算', en: '🔄 Live Auto' },
-{ id: 1, zh: '🟢 1級 (綠)', en: '🟢 L1 Green' },
-{ id: 2, zh: '🟡 2級 (黃)', en: '🟡 L2 Yellow' },
-{ id: 3, zh: '🟠 3級 (橙)', en: '🟠 L3 Orange' },
-{ id: 4, zh: '🔴 4級 (紅)', en: '🔴 L4 Red' },
-{ id: 5, zh: '⚫ 5級 (黑)', en: '⚫ L5 Black' }
+{ id: 1, zh: '🟢 安全', en: '🟢 Safe' },
+{ id: 2, zh: '🟡 注意', en: '🟡 Advisory' },
+{ id: 3, zh: '🟠 警戒', en: '🟠 Moderate' },
+{ id: 4, zh: '🔴 高危', en: '🔴 Severe' },
+{ id: 5, zh: '⚫ 最惡劣', en: '⚫ Extreme' }
 ].map(b => {
 const active = (window.weatherThreatState.simulatedLevel === b.id);
 return `<button type="button" onclick="setSimulatedWeatherThreatLevel(${b.id === null ? 'null' : b.id})" style="cursor:pointer; padding:5px 9px; border-radius:8px; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#1e293b'}; font-size:0.74rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
 }).join('');
+
+const basisList = isEn ? res.basisItemsEn : res.basisItemsZh;
+const modalBasisHtml = basisList.map(item => `<div style="margin-bottom:6px; line-height:1.5;">• ${item}</div>`).join('');
 
 const levelScaleHtml = [1, 2, 3, 4, 5].map(lvl => {
 const m = WEATHER_THREAT_LEVEL_META[lvl];
@@ -14800,42 +14910,55 @@ return `
 <div style="padding:10px 12px; border-radius:10px; background:${m.bg}; color:${m.textCol}; border:2px solid ${isCur ? m.pillBg : m.border}; margin-bottom:8px;">
 <div style="display:flex; align-items:center; justify-content:space-between; font-weight:900; font-size:0.86rem; margin-bottom:3px;">
 <span>${m.dot} ${isEn ? m.badge_en : m.badge_zh}</span>
-${isCur ? `<span style="padding:1px 7px; border-radius:999px; background:${m.pillBg}; color:${m.pillText}; font-size:0.68rem;">${isEn ? 'CURRENT' : '目前級別'}</span>` : ''}
+${isCur ? `<span style="padding:1px 7px; border-radius:999px; background:${m.pillBg}; color:${m.pillText}; font-size:0.68rem;">${isEn ? 'CURRENT' : '目前狀態'}</span>` : ''}
 </div>
 <div style="font-size:0.76rem; font-weight:600; line-height:1.42;">${isEn ? m.desc_en : m.desc_zh}</div>
 </div>
 `;
 }).join('');
 
+const activeWarnLine = res.warnCount > 0
+? `<div>• <b>${isEn ? 'Active HKO Weather Warnings:' : '天文台現正生效之天氣警告：'}</b>${(isEn ? res.warnNamesEn : res.warnNamesZh).join('、')}</div>`
+: '';
+
+const activeTcLine = res.tcMinDistKm !== null
+? `<div>• <b>${isEn ? 'Active Tropical Cyclone:' : '熱帶氣旋距離及強度：'}</b>${isEn ? res.tcNameEn : res.tcNameZh}（${res.tcMinDistKm} km, ${res.tcMaxWindKmh} km/h）</div>`
+: '';
+
 const fullHtml = `
 <div class="detail-header-card" style="background:${meta.bg}; color:${meta.textCol}; border:2px solid ${meta.border}; text-align:center; padding:16px;">
-<div style="font-size:0.76rem; font-weight:900; opacity:0.85; margin-bottom:4px;">${isEn ? 'COMPREHENSIVE WEATHER THREAT ASSESSMENT' : '香港五級綜合天氣威脅及安全評估'}</div>
+<div style="font-size:0.76rem; font-weight:900; opacity:0.85; margin-bottom:4px;">${isEn ? 'COMPREHENSIVE WEATHER THREAT ASSESSMENT' : '香港綜合天氣威脅及安全評估'}</div>
 <div style="font-size:1.35rem; font-weight:900;">${meta.dot} ${isEn ? meta.badge_en : meta.badge_zh}</div>
 <div style="font-size:0.8rem; font-weight:700; margin-top:6px;">${isEn ? meta.desc_en : meta.desc_zh}</div>
 </div>
 
+<div style="margin:12px 0; padding:12px; background:var(--card-bg); border:1.5px solid ${meta.border}; border-radius:var(--radius-md); font-size:0.82rem;">
+<div style="font-weight:900; color:var(--text-main); margin-bottom:8px;">📋 ${isEn ? 'Specific Basis & Causes for Current Warning:' : '目前發出此警告之具體原因與依據：'}</div>
+${modalBasisHtml}
+</div>
+
 <div style="margin:12px 0; padding:10px 12px; background:var(--card-bg); border:1px solid var(--panel-border); border-radius:var(--radius-md);">
-<div style="font-size:0.78rem; font-weight:900; color:var(--text-main); margin-bottom:6px;">🎛️ ${isEn ? 'Preview / Test 5-Level Alert States:' : '切換測試五級警告顯示效果（或回復實時自動計算）：'}</div>
+<div style="font-size:0.78rem; font-weight:900; color:var(--text-main); margin-bottom:6px;">🎛️ ${isEn ? 'Preview Alert States:' : '切換測試各顏色警告顯示效果（或回復實時自動計算）：'}</div>
 <div style="display:flex; flex-wrap:wrap; gap:6px;">${simBtnsHtml}</div>
 </div>
 
 <div style="margin:12px 0; padding:12px; background:var(--card-bg); border:1px solid var(--panel-border); border-radius:var(--radius-md); font-size:0.8rem; line-height:1.55;">
-<div style="font-weight:900; color:var(--text-main); margin-bottom:6px;">📊 ${isEn ? '8 Real-Time Meteorological Factors Evaluated:' : '納入計算之 8 項實時氣象與環境指標：'}</div>
-<div>• <b>${isEn ? '1. Temp & Humidity (Heat Index):' : '1. 氣溫、相對濕度及體感暑熱指數：'}</b>${res.tempVal.toFixed(1)}°C / ${Math.round(res.humVal)}%（${isEn ? 'Apparent Heat Index:' : '綜合體感：'}${res.heatIndexC.toFixed(1)}°C）</div>
-<div>• <b>${isEn ? '2. Active HKO Weather Warnings:' : '2. 天文台生效天氣警告及暴雨／暴風信號：'}</b>${res.warnCount} ${isEn ? 'active warning(s)' : '項生效警告'}</div>
-<div>• <b>${isEn ? '3. Tropical Cyclone Proximity & Wind:' : '3. 熱帶氣旋距離及強度：'}</b>${res.tcMinDistKm !== null ? `${isEn ? res.tcNameEn : res.tcNameZh} (${res.tcMinDistKm} km, ${res.tcMaxWindKmh} km/h)` : (isEn ? 'No active cyclone near HK' : '本港鄰近海域無熱帶氣旋威脅')}</div>
-<div>• <b>${isEn ? '4. UV Radiation Exposure:' : '4. 紫外線曝曬指數 (UV Index)：'}</b>UV ${res.uvVal}</div>
-<div>• <b>${isEn ? '5. 1-Hr Rainfall & Rain Probability:' : '5. 分區最高雨量及降雨概率 (PSR)：'}</b>${res.maxRainMm.toFixed(1)} mm/h</div>
-<div>• <b>${isEn ? '6. Wind Speed & Max Gusts:' : '6. 分區風速及最高陣風：'}</b>${res.maxWindKmh} km/h（${isEn ? 'Max Gust' : '最高陣風'} ${res.maxGustKmh} km/h）</div>
-<div>• <b>${isEn ? '7. Marine & Urban Visibility:' : '7. 全港能見度監測：'}</b>${isEn ? 'Min' : '最低'} ${res.minVisKm.toFixed(1)} km</div>
-<div>• <b>${isEn ? '8. Tide Level & Storm Surge Risk:' : '8. 潮汐水位及風暴潮疊加風險：'}</b>${isEn ? 'Max Tide' : '最高潮位'} ${res.maxTideM.toFixed(2)} m</div>
+<div style="font-weight:900; color:var(--text-main); margin-bottom:6px;">📊 ${isEn ? 'Live Meteorological Readings Evaluated:' : '納入計算之實時氣象數據明細：'}</div>
+<div>• <b>${isEn ? 'Temperature & Relative Humidity:' : '實時氣溫及相對濕度：'}</b>${res.tempVal.toFixed(1)}°C ／ ${Math.round(res.humVal)}%</div>
+${activeWarnLine}
+${activeTcLine}
+<div>• <b>${isEn ? 'UV Index:' : '紫外線指數 (UV Index)：'}</b>UV ${res.uvVal}</div>
+<div>• <b>${isEn ? '1-Hr Rainfall & Rain Probability:' : '過去一小時最高雨量及降雨概率：'}</b>${res.maxRainMm.toFixed(1)} mm/h${res.psrTxt ? `（${res.psrTxt}）` : ''}</div>
+<div>• <b>${isEn ? 'Wind Speed & Max Gusts:' : '分區最高風速及陣風：'}</b>${res.maxWindKmh} km/h（${isEn ? 'Max Gust' : '最高陣風'} ${res.maxGustKmh} km/h）</div>
+<div>• <b>${isEn ? 'Visibility:' : '全港最低能見度：'}</b>${res.minVisKm.toFixed(1)} km</div>
+<div>• <b>${isEn ? 'Tide Level:' : '最高潮汐水位：'}</b>${res.maxTideM.toFixed(2)} m</div>
 </div>
 
-<h4 style="margin:12px 0 8px 0; color:var(--text-main); font-size:0.9rem; font-weight:800;">📋 ${isEn ? '5-Level Threat Grading Reference (L1 Green to L5 Black):' : '五級天氣威脅評級標準（第一級綠色至第五級黑色）：'}</h4>
+<h4 style="margin:12px 0 8px 0; color:var(--text-main); font-size:0.9rem; font-weight:800;">📋 ${isEn ? 'Weather Threat Color Reference:' : '天氣威脅顏色標準（綠色至黑色）：'}</h4>
 <div>${levelScaleHtml}</div>
 `;
 
-openWarningDetailModal(isEn ? '🛡️ 5-Level Weather Threat Index' : '🛡️ 五級綜合天氣威脅評估詳情', fullHtml);
+openWarningDetailModal(isEn ? '🛡️ Weather Threat Assessment' : '🛡️ 綜合天氣威脅評估詳情', fullHtml);
 }
 
 async function fetchWeather() {
@@ -14857,7 +14980,7 @@ let hasActiveWarn = false;
 if (warnSumRes) { for (const key in warnSumRes) { if (warnSumRes[key].actionCode && warnSumRes[key].actionCode !== "CANCEL") { hasActiveWarn = true; break; } } }
 if (hasActiveWarn) { warnInfoRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=${wLang}&_=${ts}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null); }
 
-const warningsContainer = document.getElementById('warnings-container'); activeWarningsData = {}; let warningHtml = '';
+const warningsContainer = document.getElementById('warnings-container'); activeWarningsData = {}; window.activeWarningsData = activeWarningsData; let warningHtml = '';
 let currentWarnCodes = new Set();
 let newWarnZh = [];
 let newWarnEn = [];
@@ -14902,6 +15025,9 @@ let activeTxt = currentLang === 'en' ? '⚠️ Active Warning' : '⚠️ 警告�
 let detailTitle = currentLang === 'en' ? 'Detailed Info:' : '📋 詳細提示事項：';
 
 activeWarningsData[warnId] = {
+code: w.code,
+name_zh: nameZh,
+name_en: nameEn,
 title: `<div style="display:flex; align-items:center; gap:8px;">${iconImg} <span>${currentLang==='en'?'Warning Details':'天氣警告詳情'}</span></div>`,
 html: `
 <div class="detail-header-card" style="text-align:center; padding: 20px;">
