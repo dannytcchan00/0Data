@@ -4282,7 +4282,8 @@ justify-content: center;
 
 <div class="left-menu-divider" role="separator" aria-label="治安、警務呼籲及懲教類別分隔線"></div>
 
-<div class="left-menu-group" data-menu-category="LAW_SECURITY" aria-label="治安、警務呼籲及懲教事務">
+<div class="left-menu-group" data-menu-category="LAW_SECURITY" aria-label="治安、警務及懲教事務">
+<a href="#" id="t-menu-crime" class="rail-btn-sub" title="香港警方統計數字及罪案趨勢看板" onclick="showPoliceCrimePage(); event.preventDefault();">🚔</a>
 <a href="#" id="t-menu-missing" class="rail-btn-sub" title="香港警務處失蹤人士呼籲及尋人資訊看板" onclick="showMissingPersonsPage(); event.preventDefault();">🕵️</a>
 <a href="#" id="t-menu-csd" class="rail-btn-sub" title="香港在囚人士數目、院所紀律及更生統計" onclick="showCsdPage(); event.preventDefault();">🔒</a>
 </div>
@@ -4903,6 +4904,16 @@ justify-content: center;
 </div>
 
 
+<div class="panel border-section" id="police-crime-page-view" style="display: none;">
+<h2>
+<span id="t-crime-page-title">🚔 香港警方統計數字及罪案趨勢看板</span>
+<div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<button type="button" class="device-quick-btn" id="btn-crime-sync-now" onclick="syncPoliceCrimeData(true)" title="重新整理最新警方統計數字及罪案資料">🔄 重新整理</button>
+<span class="refresh-indicator" id="crime-refresh-status" onclick="syncPoliceCrimeData(true)" style="cursor:pointer;" title="點擊重新整理最新警方統計數字及罪案資料">🟢 罪案統計已更新</span>
+</div>
+</h2>
+<div class="border-portal-scroll" id="police-crime-portal-container"></div>
+</div>
 <div class="panel border-section" id="missing-persons-page-view" style="display: none;">
 <h2>
 <span id="t-missing-page-title">🕵️ 香港警務處失蹤人士呼籲及尋人資訊看板</span>
@@ -5545,6 +5556,7 @@ if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu
 if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
 if (document.getElementById('t-menu-cruise')) document.getElementById('t-menu-cruise').title = (currentLang === 'en') ? 'HK Cruise Passenger Throughput & Number of Ship Calls' : '香港郵輪乘客人次及停泊次數統計';
 if (document.getElementById('t-menu-visitor-hotel')) document.getElementById('t-menu-visitor-hotel').title = (currentLang === 'en') ? 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy' : '訪港旅客人次、逗留時間及酒店房租與入住率統計';
+if (document.getElementById('t-menu-crime')) document.getElementById('t-menu-crime').title = (currentLang === 'en') ? 'HKPF Police in Figures & Crime Statistics Dashboard' : '香港警方統計數字及罪案趨勢看板';
 if (document.getElementById('t-menu-missing')) document.getElementById('t-menu-missing').title = (currentLang === 'en') ? 'HKPF Missing Persons Appeals & Investigation Units' : '香港警務處失蹤人士呼籲及尋人資訊看板';
 if (document.getElementById('t-menu-weather')) document.getElementById('t-menu-weather').title = (currentLang === 'en') ? 'HK Real-Time Weather, 9-Day Forecast, Radar & Cyclone Track' : '香港即時天氣、九日預報、天氣雷達及熱帶氣旋路徑看板';
 if (document.getElementById('t-menu-csd')) document.getElementById('t-menu-csd').title = (currentLang === 'en') ? 'HK Persons in Custody, Institutional Discipline & Rehabilitation Statistics' : '香港在囚人士數目、院所紀律及更生統計';
@@ -5577,6 +5589,7 @@ if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
 if (typeof applyAedLanguage === 'function') applyAedLanguage();
 if (typeof applyCruiseLanguage === 'function') applyCruiseLanguage();
 if (typeof applyVisitorHotelLanguage === 'function') applyVisitorHotelLanguage();
+if (typeof applyPoliceCrimeLanguage === 'function') applyPoliceCrimeLanguage();
 if (typeof applyMissingPersonsLanguage === 'function') applyMissingPersonsLanguage();
 if (typeof applyWeatherPortalLanguage === 'function') applyWeatherPortalLanguage();
 if (typeof applyCsdLanguage === 'function') applyCsdLanguage();
@@ -5614,7 +5627,7 @@ unlockBackgroundScroll();
 document.getElementById('settings-modal').classList.remove('active');
 }
 
-const VALID_PORTAL_PAGES = ['portal', 'weather', 'home', 'flight', 'ferry', 'aed', 'fire', 'ambulance', 'reservoir', 'lamppost', 'border', 'missing', 'csd', 'population', 'labour', 'visitor_hotel', 'cruise', 'dc', 'legco', 'iframe'];
+const VALID_PORTAL_PAGES = ['portal', 'weather', 'home', 'flight', 'ferry', 'aed', 'fire', 'ambulance', 'reservoir', 'lamppost', 'border', 'crime', 'missing', 'csd', 'population', 'labour', 'visitor_hotel', 'cruise', 'dc', 'legco', 'iframe'];
 let currentActivePage = 'portal';
 
 function persistActivePageState(pageKey) {
@@ -5683,6 +5696,7 @@ const btnAmb = document.getElementById('t-menu-ambulance');
 const btnAed = document.getElementById('t-menu-aed');
 const btnCruise = document.getElementById('t-menu-cruise');
 const btnVh = document.getElementById('t-menu-visitor-hotel');
+const btnCrime = document.getElementById('t-menu-crime');
 const btnMissing = document.getElementById('t-menu-missing');
 const btnCsd = document.getElementById('t-menu-csd');
 const btnWth = document.getElementById('t-menu-weather');
@@ -5702,6 +5716,7 @@ if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' 
 if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnCruise) btnCruise.className = (activeTab === 'cruise') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnVh) btnVh.className = (activeTab === 'visitor_hotel') ? 'rail-btn-primary' : 'rail-btn-sub';
+if (btnCrime) btnCrime.className = (activeTab === 'crime') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnMissing) btnMissing.className = (activeTab === 'missing') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnCsd) btnCsd.className = (activeTab === 'csd') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnWth) btnWth.className = (activeTab === 'weather') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5733,6 +5748,7 @@ const ambSec = document.getElementById('ambulance-page-view');
 const aedSec = document.getElementById('aed-page-view');
 const cruiseSec = document.getElementById('cruise-page-view');
 const vhSec = document.getElementById('visitor-hotel-page-view');
+const crimeSec = document.getElementById('police-crime-page-view');
 const missingSec = document.getElementById('missing-persons-page-view');
 const csdSec = document.getElementById('csd-page-view');
 const wthSec = document.getElementById('weather-page-view');
@@ -5752,6 +5768,7 @@ if (ambSec) ambSec.style.display = 'none';
 if (aedSec) aedSec.style.display = 'none';
 if (cruiseSec) cruiseSec.style.display = 'none';
 if (vhSec) vhSec.style.display = 'none';
+if (crimeSec) crimeSec.style.display = 'none';
 if (missingSec) missingSec.style.display = 'none';
 if (csdSec) csdSec.style.display = 'none';
 if (wthSec) wthSec.style.display = 'none';
@@ -5983,6 +6000,18 @@ initVisitorHotelSystem();
 renderVisitorHotelPortal();
 }
 
+function showPoliceCrimePage() {
+persistActivePageState('crime');
+const iframe = document.getElementById('app-iframe');
+iframe.src = '';
+iframe.style.display = 'none';
+hideAllRightPanels();
+const crimeSec = document.getElementById('police-crime-page-view');
+if (crimeSec) crimeSec.style.display = 'flex';
+updateMenuRailButtons('crime');
+initPoliceCrimeSystem();
+renderPoliceCrimePortal();
+}
 function showMissingPersonsPage() {
 persistActivePageState('missing');
 const iframe = document.getElementById('app-iframe');
@@ -28999,6 +29028,1005 @@ container.innerHTML = headerBannerHtml + custodySectionHtml + disciplineSafetySe
 }
 
 // =========================================================================
+// =========================================================================
+// 🚔 香港警務處警方統計數字及罪案趨勢看板 (HKPF Police in Figures - Crimes)
+// =========================================================================
+const HKPF_CRIME_API_URLS = [
+'https://www.police.gov.hk/info/psi/police-in-figures-crimes.json'
+];
+
+const HKPF_CRIME_ANNUAL_SERIES = [
+{
+year: 2015,
+overallCrimes: 66439,
+overallRate: 909,
+overallDetection: 44.8,
+violentCrimes: 10889,
+violentRate: 149,
+violentDetection: 60.8,
+deception: 9353,
+allThefts: 27512,
+woundingAssault: 5343,
+burglary: 2579,
+robbery: 223,
+homicide: 22,
+blackmail: 1366,
+criminalDamage: 5920,
+criminalIntimidation: 1840,
+seriousDrugs: 1740,
+rape: 70,
+indecentAssault: 1068,
+arson: 365,
+triadRelated: 1813,
+youthArrested: 4135
+},
+{
+year: 2016,
+overallCrimes: 60646,
+overallRate: 825,
+overallDetection: 47.3,
+violentCrimes: 10103,
+violentRate: 138,
+violentDetection: 61.6,
+deception: 7260,
+allThefts: 25628,
+woundingAssault: 5024,
+burglary: 2428,
+robbery: 260,
+homicide: 28,
+blackmail: 994,
+criminalDamage: 5272,
+criminalIntimidation: 1734,
+seriousDrugs: 1712,
+rape: 71,
+indecentAssault: 1019,
+arson: 358,
+triadRelated: 1872,
+youthArrested: 3344
+},
+{
+year: 2017,
+overallCrimes: 56017,
+overallRate: 758,
+overallDetection: 48.2,
+violentCrimes: 9086,
+violentRate: 123,
+violentDetection: 64.5,
+deception: 7091,
+allThefts: 23806,
+woundingAssault: 4611,
+burglary: 1872,
+robbery: 163,
+homicide: 24,
+blackmail: 579,
+criminalDamage: 5071,
+criminalIntimidation: 1668,
+seriousDrugs: 1553,
+rape: 65,
+indecentAssault: 1077,
+arson: 354,
+triadRelated: 1798,
+youthArrested: 2925
+},
+{
+year: 2018,
+overallCrimes: 54225,
+overallRate: 728,
+overallDetection: 46.5,
+violentCrimes: 8884,
+violentRate: 119,
+violentDetection: 65.1,
+deception: 8372,
+allThefts: 21013,
+woundingAssault: 4462,
+burglary: 1575,
+robbery: 147,
+homicide: 48,
+blackmail: 561,
+criminalDamage: 4932,
+criminalIntimidation: 1570,
+seriousDrugs: 1399,
+rape: 63,
+indecentAssault: 1092,
+arson: 315,
+triadRelated: 1715,
+youthArrested: 2774
+},
+{
+year: 2019,
+overallCrimes: 59225,
+overallRate: 789,
+overallDetection: 37.1,
+violentCrimes: 9690,
+violentRate: 129,
+violentDetection: 51.3,
+deception: 8216,
+allThefts: 20762,
+woundingAssault: 4515,
+burglary: 2394,
+robbery: 210,
+homicide: 24,
+blackmail: 498,
+criminalDamage: 7592,
+criminalIntimidation: 1456,
+seriousDrugs: 740,
+rape: 50,
+indecentAssault: 976,
+arson: 929,
+triadRelated: 1452,
+youthArrested: 4268
+},
+{
+year: 2020,
+overallCrimes: 63232,
+overallRate: 845,
+overallDetection: 37.8,
+violentCrimes: 9391,
+violentRate: 125,
+violentDetection: 52.4,
+deception: 15553,
+allThefts: 20314,
+woundingAssault: 4563,
+burglary: 2095,
+robbery: 264,
+homicide: 22,
+blackmail: 1399,
+criminalDamage: 6432,
+criminalIntimidation: 1401,
+seriousDrugs: 1149,
+rape: 64,
+indecentAssault: 682,
+arson: 473,
+triadRelated: 1761,
+youthArrested: 3987
+},
+{
+year: 2021,
+overallCrimes: 64428,
+overallRate: 871,
+overallDetection: 38.5,
+violentCrimes: 9587,
+violentRate: 130,
+violentDetection: 56.5,
+deception: 19249,
+allThefts: 19065,
+woundingAssault: 4124,
+burglary: 1472,
+robbery: 123,
+homicide: 23,
+blackmail: 1592,
+criminalDamage: 5709,
+criminalIntimidation: 1604,
+seriousDrugs: 1570,
+rape: 79,
+indecentAssault: 1018,
+arson: 315,
+triadRelated: 1888,
+youthArrested: 3021
+},
+{
+year: 2022,
+overallCrimes: 70048,
+overallRate: 961,
+overallDetection: 35.2,
+violentCrimes: 8830,
+violentRate: 121,
+violentDetection: 55.6,
+deception: 27923,
+allThefts: 18256,
+woundingAssault: 3614,
+burglary: 886,
+robbery: 77,
+homicide: 30,
+blackmail: 1826,
+criminalDamage: 5172,
+criminalIntimidation: 1361,
+seriousDrugs: 1436,
+rape: 53,
+indecentAssault: 953,
+arson: 255,
+triadRelated: 2554,
+youthArrested: 2758
+},
+{
+year: 2023,
+overallCrimes: 90276,
+overallRate: 1198,
+overallDetection: 31.1,
+violentCrimes: 10122,
+violentRate: 134,
+violentDetection: 52.1,
+deception: 39824,
+allThefts: 23135,
+woundingAssault: 3636,
+burglary: 1354,
+robbery: 97,
+homicide: 28,
+blackmail: 2659,
+criminalDamage: 5298,
+criminalIntimidation: 1505,
+seriousDrugs: 1153,
+rape: 67,
+indecentAssault: 1162,
+arson: 250,
+triadRelated: 2334,
+youthArrested: 3041
+},
+{
+year: 2024,
+overallCrimes: 94747,
+overallRate: 1259,
+overallDetection: 30.4,
+violentCrimes: 10485,
+violentRate: 139,
+violentDetection: 51.7,
+deception: 44480,
+allThefts: 22433,
+woundingAssault: 3614,
+burglary: 1220,
+robbery: 90,
+homicide: 19,
+blackmail: 3031,
+criminalDamage: 5025,
+criminalIntimidation: 1480,
+seriousDrugs: 1114,
+rape: 77,
+indecentAssault: 1185,
+arson: 232,
+triadRelated: 2325,
+youthArrested: 2840
+},
+{
+year: 2025,
+overallCrimes: 89137,
+overallRate: 1184,
+overallDetection: 30.3,
+violentCrimes: 8823,
+violentRate: 117,
+violentDetection: 58.7,
+deception: 43212,
+allThefts: 20032,
+woundingAssault: 3363,
+burglary: 816,
+robbery: 66,
+homicide: 194,
+blackmail: 1674,
+criminalDamage: 4650,
+criminalIntimidation: 1412,
+seriousDrugs: 1281,
+rape: 68,
+indecentAssault: 1137,
+arson: 218,
+triadRelated: 1944,
+youthArrested: 2662
+}
+];
+
+const HKPF_CRIME_2026_H1_COMPARISON = [
+{ key: 'overallCrimes', zh: '總體罪案', en: 'Overall Crime', h1_2025: 43407, h1_2026: 42736, diff: -671, pct: -1.5, group: 'SUMMARY', icon: '📊' },
+{ key: 'violentCrimes', zh: '暴力罪案', en: 'Violent Crime', h1_2025: 4361, h1_2026: 4144, diff: -217, pct: -5.0, group: 'VIOLENT', icon: '🚨' },
+{ key: 'deception', zh: '詐騙案', en: 'Deception', h1_2025: 20760, h1_2026: 20613, diff: -147, pct: -0.7, group: 'PROPERTY', icon: '📱' },
+{ key: 'allThefts', zh: '各類盜竊案（包括店鋪盜竊 3,997 宗）', en: 'All Thefts (incl. Shop Theft 3,997)', h1_2025: 10177, h1_2026: 9856, diff: -321, pct: -3.2, group: 'PROPERTY', icon: '🛍️' },
+{ key: 'criminalDamage', zh: '刑事毀壞', en: 'Criminal Damage', h1_2025: 1914, h1_2026: 1672, diff: -242, pct: -12.6, group: 'PROPERTY', icon: '🔨' },
+{ key: 'woundingAssault', zh: '傷人及嚴重毆打', en: 'Wounding & Serious Assault', h1_2025: 1616, h1_2026: 1644, diff: 28, pct: 1.7, group: 'VIOLENT', icon: '🩹' },
+{ key: 'triadRelated', zh: '三合會相關罪案', en: 'Triad-related Crimes', h1_2025: 815, h1_2026: 783, diff: -32, pct: -3.9, group: 'ORGANISED', icon: '🕸️' },
+{ key: 'indecentAssault', zh: '非禮', en: 'Indecent Assault', h1_2025: 569, h1_2026: 685, diff: 116, pct: 20.4, group: 'VIOLENT', icon: '⚠️' },
+{ key: 'criminalIntimidation', zh: '刑事恐嚇', en: 'Criminal Intimidation', h1_2025: 675, h1_2026: 662, diff: -13, pct: -1.9, group: 'VIOLENT', icon: '🗣️' },
+{ key: 'blackmail', zh: '勒索（包括網上裸聊勒索）', en: 'Blackmail (incl. Naked Chat)', h1_2025: 935, h1_2026: 561, diff: -374, pct: -40.0, group: 'PROPERTY', icon: '💻' },
+{ key: 'seriousDrugs', zh: '嚴重毒品罪行', en: 'Serious Drug Offences', h1_2025: 591, h1_2026: 532, diff: -59, pct: -10.0, group: 'ORGANISED', icon: '💊' },
+{ key: 'domesticViolence', zh: '家庭暴力刑事案件', en: 'Domestic Violence Crimes', h1_2025: 530, h1_2026: 516, diff: -14, pct: -2.6, group: 'VIOLENT', icon: '🏠' },
+{ key: 'burglary', zh: '爆竊案', en: 'Burglary', h1_2025: 445, h1_2026: 344, diff: -101, pct: -22.7, group: 'PROPERTY', icon: '🔓' },
+{ key: 'arson', zh: '縱火', en: 'Arson', h1_2025: 110, h1_2026: 103, diff: -7, pct: -6.4, group: 'VIOLENT', icon: '🔥' },
+{ key: 'homicide', zh: '兇殺案', en: 'Homicide', h1_2025: 7, h1_2026: 5, diff: -2, pct: -28.6, group: 'VIOLENT', icon: '⚖️' }
+];
+
+const HKPF_2025_DECEPTION_BREAKDOWN = [
+{
+id: 'ESHOP',
+name_zh: '網上購物騙案（包括演唱會門票網購騙案 2,805 宗）',
+name_en: 'Online Shopping Fraud (incl. 2,805 Concert Ticket Scams)',
+cases: 12505,
+sharePct: 28.9,
+yoyText_zh: '+8.2%（+946 宗）',
+yoyText_en: '+8.2% (+946 cases)',
+note_zh: '佔整體騙案宗數最多；啟德體育園開幕後涉及演唱會門票網購騙案按年升 61.8%。',
+note_en: 'Largest fraud category by volume; concert ticket scams rose 61.8% YoY.',
+color: '#0284c7'
+},
+{
+id: 'PHONE',
+name_zh: '電話騙案（包括「假冒客服」4,440 宗及「猜猜我是誰」）',
+name_en: 'Telephone Deception (incl. 4,440 Fake Customer Service)',
+cases: 8621,
+sharePct: 20.0,
+yoyText_zh: '-6.3%（-583 宗）',
+yoyText_en: '-6.3% (-583 cases)',
+note_zh: '「假冒客服」手法按年跌 20.4%（-1,135 宗），惟針對長者之「猜猜我是誰」升 58.1%。',
+note_en: 'Fake customer service scams dropped 20.4%, though "Guess Who I Am" targeting elderly rose 58.1%.',
+color: '#7c3aed'
+},
+{
+id: 'INVEST',
+name_zh: '網上投資騙案（涉及損失達 35.8 億港元，佔總損失 44.1%）',
+name_en: 'Online Investment Fraud (HK$3.58B Loss, 44.1% of Total Loss)',
+cases: 5135,
+sharePct: 11.9,
+yoyText_zh: '+30.7%（+1,205 宗）',
+yoyText_en: '+30.7% (+1,205 cases)',
+note_zh: '損失金額最高類別，平均每宗損失由 58 萬升至 70 萬港元；當中三分一（11.8 億元）涉及虛擬資產。',
+note_en: 'Highest financial loss category (avg HK$700k/case); one-third (HK$1.18B) involved virtual assets.',
+color: '#dc2626'
+},
+{
+id: 'JOB',
+name_zh: '網上求職騙案（96.5% 為「刷單」購物賺佣金騙案）',
+name_en: 'Online Employment Fraud (96.5% "Brushing" Commission Scams)',
+cases: 4095,
+sharePct: 9.5,
+yoyText_zh: '+6.3%（+242 宗）',
+yoyText_en: '+6.3% (+242 cases)',
+note_zh: '騙徒透過社交平台及即時通訊軟件招攬受害人墊支「刷單」衝銷量以賺取虛假佣金。',
+note_en: 'Scammers recruit victims via social media/messaging apps to prepay for fake "brushing" orders.',
+color: '#d97706'
+},
+{
+id: 'COMPENSATED',
+name_zh: '援交騙案及釣魚騙案',
+name_en: 'Compensated Dating Scams (1,122) & Phishing Scams (1,093)',
+cases: 2215,
+sharePct: 5.1,
+yoyText_zh: '釣魚 -60.0% / 援交 -44.7%',
+yoyText_en: 'Phishing -60.0% / Dating -44.7%',
+note_zh: '受惠於電訊商攔截可疑網址及「防騙視伏App」自動封鎖詐騙域名，釣魚騙案大跌六成。',
+note_en: 'Phishing scams dropped 60% following carrier URL blocking and Scameter AI domain blocking.',
+color: '#059669'
+}
+];
+
+window.hkpfCrimePortalState = {
+initialized: false,
+syncState: 'READY',
+lastSyncTime: '',
+selectedYear: 2025,
+categoryFilter: 'ALL',
+searchQuery: '',
+series: HKPF_CRIME_ANNUAL_SERIES.slice()
+};
+
+function initPoliceCrimeSystem() {
+const st = window.hkpfCrimePortalState;
+if (!st.initialized) {
+st.initialized = true;
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+syncPoliceCrimeData(false);
+}
+}
+
+async function syncPoliceCrimeData(isManual) {
+const st = window.hkpfCrimePortalState;
+const badgeEl = document.getElementById('crime-refresh-status');
+const isEn = (currentLang === 'en');
+if (badgeEl && isManual) {
+badgeEl.innerHTML = isEn ? '🔄 Syncing Crime Stats...' : '🔄 正在同步罪案統計...';
+}
+
+try {
+let rawJsonText = '';
+if (typeof fetchTextWithCorsFallback === 'function') {
+rawJsonText = await fetchTextWithCorsFallback(HKPF_CRIME_API_URLS, 5500);
+}
+if (rawJsonText && rawJsonText.trim().startsWith('{') || rawJsonText.trim().startsWith('[')) {
+const parsed = JSON.parse(rawJsonText);
+mergeLiveHkpfCrimeJson(parsed);
+st.syncState = 'LIVE';
+}
+} catch (e) {
+st.syncState = 'READY';
+}
+
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+if (badgeEl) {
+badgeEl.innerHTML = isEn
+? `🟢 Crime Stats Updated (${st.lastSyncTime})`
+: `🟢 罪案統計已更新 (${st.lastSyncTime})`;
+}
+if (currentActivePage === 'crime') {
+renderPoliceCrimePortal();
+}
+}
+
+function mergeLiveHkpfCrimeJson(payload) {
+if (!payload) return;
+const st = window.hkpfCrimePortalState;
+const rows = Array.isArray(payload)
+? payload
+: (payload.data || payload.records || payload.crimes || payload.result || []);
+if (!Array.isArray(rows) || rows.length === 0) return;
+
+rows.forEach(r => {
+if (!r || typeof r !== 'object') return;
+const yr = parseInt(r.year || r.Year || r.YEAR || r['年份'] || 0, 10);
+if (yr >= 2015 && yr <= 2030) {
+const existing = st.series.find(s => s.year === yr);
+const parseNum = (v) => {
+if (v === undefined || v === null || v === '') return null;
+const n = parseFloat(String(v).replace(/[,% ]/g, ''));
+return isNaN(n) ? null : n;
+};
+const ov = parseNum(r.overall_crimes || r.Overall_Crimes || r.overallCrimes || r['總體罪案']);
+const vc = parseNum(r.violent_crimes || r.Violent_Crimes || r.violentCrimes || r['暴力罪案']);
+const ovRate = parseNum(r.overall_crime_rate || r.Overall_Crime_Rate || r.overallRate || r['按每十萬人口計算的總體罪案']);
+const vcRate = parseNum(r.violent_crime_rate || r.Violent_Crime_Rate || r.violentRate || r['按每十萬人口計算的暴力罪案']);
+const det = parseNum(r.detection_rate || r.Detection_Rate || r.overallDetection || r['總體罪案破案率']);
+if (existing) {
+if (ov !== null) existing.overallCrimes = ov;
+if (vc !== null) existing.violentCrimes = vc;
+if (ovRate !== null) existing.overallRate = ovRate;
+if (vcRate !== null) existing.violentRate = vcRate;
+if (det !== null) existing.overallDetection = det;
+}
+}
+});
+}
+
+function setPoliceCrimeSelectedYear(yr) {
+window.hkpfCrimePortalState.selectedYear = Number(yr) || 2025;
+renderPoliceCrimePortal();
+}
+
+function setPoliceCrimeCategoryFilter(cat) {
+window.hkpfCrimePortalState.categoryFilter = cat || 'ALL';
+renderPoliceCrimePortal();
+}
+
+function onPoliceCrimeSearchInput(val) {
+window.hkpfCrimePortalState.searchQuery = String(val || '');
+const tblRegion = document.getElementById('police-crime-table-dynamic-region');
+if (tblRegion) {
+tblRegion.innerHTML = buildPoliceCrimeMultiYearTableHTML(currentLang === 'en');
+}
+}
+
+function getPoliceCrimeYearSummary(yr) {
+const st = window.hkpfCrimePortalState;
+const targetYr = yr || 2025;
+return (st.series || HKPF_CRIME_ANNUAL_SERIES).find(s => s.year === targetYr) || HKPF_CRIME_ANNUAL_SERIES[HKPF_CRIME_ANNUAL_SERIES.length - 1];
+}
+
+function buildPoliceCrimeVolumeChartSvg(isEn) {
+const series = window.hkpfCrimePortalState.series || HKPF_CRIME_ANNUAL_SERIES;
+const selYear = window.hkpfCrimePortalState.selectedYear || 2025;
+const w = 680, h = 250;
+const padL = 52, padR = 20, padT = 26, padB = 38;
+const plotW = w - padL - padR;
+const plotH = h - padT - padB;
+const maxY = 105000;
+
+let gridLines = '';
+[0, 25000, 50000, 75000, 100000].forEach(val => {
+const y = padT + plotH - (val / maxY) * plotH;
+gridLines += `
+<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1"/>
+<text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#64748b">${val === 0 ? '0' : (val / 1000) + 'k'}</text>
+`;
+});
+
+const stepX = plotW / series.length;
+let barsHtml = '';
+let decPoints = [];
+let vioPoints = [];
+
+series.forEach((item, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const isSel = (item.year === selYear);
+const barW = Math.min(26, stepX * 0.52);
+const ovH = (item.overallCrimes / maxY) * plotH;
+const ovY = padT + plotH - ovH;
+
+const decY = padT + plotH - (item.deception / maxY) * plotH;
+const vioY = padT + plotH - (item.violentCrimes / maxY) * plotH;
+decPoints.push(`${cx.toFixed(1)},${decY.toFixed(1)}`);
+vioPoints.push(`${cx.toFixed(1)},${vioY.toFixed(1)}`);
+
+barsHtml += `
+<g onclick="setPoliceCrimeSelectedYear(${item.year})" style="cursor:pointer;">
+${isSel ? `<rect x="${(cx - stepX * 0.44).toFixed(1)}" y="${padT}" width="${(stepX * 0.88).toFixed(1)}" height="${plotH}" rx="6" fill="rgba(2,132,199,0.08)"/>` : ''}
+<rect x="${(cx - barW / 2).toFixed(1)}" y="${ovY.toFixed(1)}" width="${barW.toFixed(1)}" height="${ovH.toFixed(1)}" rx="4" fill="${isSel ? '#1e3a8a' : '#3b82f6'}" opacity="${isSel ? '1' : '0.82'}"/>
+<text x="${cx.toFixed(1)}" y="${(ovY - 5).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="900" fill="${isSel ? '#1e3a8a' : '#334155'}">${(item.overallCrimes / 1000).toFixed(1)}k</text>
+<text x="${cx.toFixed(1)}" y="${h - 14}" text-anchor="middle" font-size="10.5" font-weight="${isSel ? '900' : '700'}" fill="${isSel ? '#0284c7' : '#475569'}">${item.year}</text>
+</g>
+`;
+});
+
+const decLine = `<polyline fill="none" stroke="#d97706" stroke-width="2.6" points="${decPoints.join(' ')}"/>`;
+const vioLine = `<polyline fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="4,2" points="${vioPoints.join(' ')}"/>`;
+
+const dotsHtml = series.map((item, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const decY = padT + plotH - (item.deception / maxY) * plotH;
+const vioY = padT + plotH - (item.violentCrimes / maxY) * plotH;
+return `
+<circle cx="${cx.toFixed(1)}" cy="${decY.toFixed(1)}" r="3.5" fill="#d97706" stroke="#ffffff" stroke-width="1.2"/>
+<circle cx="${cx.toFixed(1)}" cy="${vioY.toFixed(1)}" r="3.2" fill="#dc2626" stroke="#ffffff" stroke-width="1.2"/>
+`;
+}).join('');
+
+return `
+<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">
+${gridLines}
+${barsHtml}
+${decLine}
+${vioLine}
+${dotsHtml}
+</svg>
+`;
+}
+
+function buildPoliceCrimeRateAndDetectionSvg(isEn) {
+const series = window.hkpfCrimePortalState.series || HKPF_CRIME_ANNUAL_SERIES;
+const selYear = window.hkpfCrimePortalState.selectedYear || 2025;
+const w = 680, h = 250;
+const padL = 46, padR = 44, padT = 26, padB = 38;
+const plotW = w - padL - padR;
+const plotH = h - padT - padB;
+const maxRate = 1400;
+const maxPct = 80;
+
+let gridLines = '';
+[0, 350, 700, 1050, 1400].forEach((val, idx) => {
+const y = padT + plotH - (val / maxRate) * plotH;
+const pctVal = idx * 20;
+gridLines += `
+<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1"/>
+<text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#0284c7">${val}</text>
+<text x="${w - padR + 6}" y="${(y + 4).toFixed(1)}" text-anchor="start" font-size="10" font-weight="700" fill="#059669">${pctVal}%</text>
+`;
+});
+
+const stepX = plotW / series.length;
+const ovRatePts = [];
+const ovDetPts = [];
+const vioDetPts = [];
+
+series.forEach((item, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const rY = padT + plotH - (item.overallRate / maxRate) * plotH;
+const dY = padT + plotH - (item.overallDetection / maxPct) * plotH;
+const vdY = padT + plotH - (item.violentDetection / maxPct) * plotH;
+ovRatePts.push(`${cx.toFixed(1)},${rY.toFixed(1)}`);
+ovDetPts.push(`${cx.toFixed(1)},${dY.toFixed(1)}`);
+vioDetPts.push(`${cx.toFixed(1)},${vdY.toFixed(1)}`);
+});
+
+const markersHtml = series.map((item, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const isSel = (item.year === selYear);
+const rY = padT + plotH - (item.overallRate / maxRate) * plotH;
+const dY = padT + plotH - (item.overallDetection / maxPct) * plotH;
+const vdY = padT + plotH - (item.violentDetection / maxPct) * plotH;
+return `
+<g onclick="setPoliceCrimeSelectedYear(${item.year})" style="cursor:pointer;">
+${isSel ? `<rect x="${(cx - stepX * 0.44).toFixed(1)}" y="${padT}" width="${(stepX * 0.88).toFixed(1)}" height="${plotH}" rx="6" fill="rgba(5,150,105,0.08)"/>` : ''}
+<circle cx="${cx.toFixed(1)}" cy="${rY.toFixed(1)}" r="3.8" fill="#0284c7" stroke="#ffffff" stroke-width="1.3"/>
+<text x="${cx.toFixed(1)}" y="${(rY - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="800" fill="#0284c7">${item.overallRate}</text>
+<circle cx="${cx.toFixed(1)}" cy="${dY.toFixed(1)}" r="3.6" fill="#059669" stroke="#ffffff" stroke-width="1.3"/>
+<circle cx="${cx.toFixed(1)}" cy="${vdY.toFixed(1)}" r="3.6" fill="#7c3aed" stroke="#ffffff" stroke-width="1.3"/>
+<text x="${cx.toFixed(1)}" y="${(vdY - 6).toFixed(1)}" text-anchor="middle" font-size="8.8" font-weight="800" fill="#7c3aed">${item.violentDetection}%</text>
+<text x="${cx.toFixed(1)}" y="${h - 14}" text-anchor="middle" font-size="10.5" font-weight="${isSel ? '900' : '700'}" fill="${isSel ? '#059669' : '#475569'}">${item.year}</text>
+</g>
+`;
+}).join('');
+
+return `
+<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">
+${gridLines}
+<polyline fill="none" stroke="#0284c7" stroke-width="2.6" points="${ovRatePts.join(' ')}"/>
+<polyline fill="none" stroke="#059669" stroke-width="2.4" points="${ovDetPts.join(' ')}"/>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-dasharray="4,2" points="${vioDetPts.join(' ')}"/>
+${markersHtml}
+</svg>
+`;
+}
+
+function buildPoliceCrimeMultiYearTableHTML(isEn) {
+const st = window.hkpfCrimePortalState;
+const catFilter = st.categoryFilter || 'ALL';
+const q = (st.searchQuery || '').trim().toLowerCase();
+const series = st.series || HKPF_CRIME_ANNUAL_SERIES;
+
+const metrics = [
+{ key: 'overallCrimes', zh: '總體罪案數目 (宗)', en: 'Overall Crimes (Cases)', cat: 'SUMMARY', isPct: false },
+{ key: 'overallRate', zh: '總體罪案率 (每十萬人口)', en: 'Overall Crime Rate (per 100,000 pop.)', cat: 'SUMMARY', isPct: false },
+{ key: 'overallDetection', zh: '總體罪案破案率 (%)', en: 'Overall Crime Detection Rate (%)', cat: 'SUMMARY', isPct: true },
+{ key: 'violentCrimes', zh: '暴力罪案數目 (宗)', en: 'Violent Crimes (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'violentRate', zh: '暴力罪案率 (每十萬人口)', en: 'Violent Crime Rate (per 100,000 pop.)', cat: 'VIOLENT', isPct: false },
+{ key: 'violentDetection', zh: '暴力罪案破案率 (%)', en: 'Violent Crime Detection Rate (%)', cat: 'VIOLENT', isPct: true },
+{ key: 'deception', zh: '詐騙案 (宗)', en: 'Deception (Cases)', cat: 'PROPERTY', isPct: false },
+{ key: 'allThefts', zh: '各類盜竊案 (宗)', en: 'All Thefts (Cases)', cat: 'PROPERTY', isPct: false },
+{ key: 'burglary', zh: '爆竊案 (宗)', en: 'Burglary (Cases)', cat: 'PROPERTY', isPct: false },
+{ key: 'blackmail', zh: '勒索案 (宗)', en: 'Blackmail (Cases)', cat: 'PROPERTY', isPct: false },
+{ key: 'criminalDamage', zh: '刑事毀壞 (宗)', en: 'Criminal Damage (Cases)', cat: 'PROPERTY', isPct: false },
+{ key: 'woundingAssault', zh: '傷人及嚴重毆打 (宗)', en: 'Wounding & Serious Assault (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'criminalIntimidation', zh: '刑事恐嚇 (宗)', en: 'Criminal Intimidation (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'indecentAssault', zh: '非禮 (宗)', en: 'Indecent Assault (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'rape', zh: '強姦 (宗)', en: 'Rape (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'robbery', zh: '各類行劫案 (宗)', en: 'All Robberies (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'arson', zh: '縱火 (宗)', en: 'Arson (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'homicide', zh: '兇殺案 (宗)', en: 'Homicide (Cases)', cat: 'VIOLENT', isPct: false },
+{ key: 'triadRelated', zh: '三合會相關罪案 (宗)', en: 'Triad-related Crimes (Cases)', cat: 'ORGANISED', isPct: false },
+{ key: 'seriousDrugs', zh: '嚴重毒品罪行 (宗)', en: 'Serious Drug Offences (Cases)', cat: 'ORGANISED', isPct: false },
+{ key: 'youthArrested', zh: '青少年因刑事罪行被捕人數 (10–20歲)', en: 'Youths Arrested for Crime (Aged 10–20)', cat: 'ORGANISED', isPct: false }
+].filter(m => {
+if (catFilter !== 'ALL' && m.cat !== catFilter) return false;
+if (q) {
+const hay = `${m.zh} ${m.en}`.toLowerCase();
+if (!hay.includes(q)) return false;
+}
+return true;
+});
+
+if (metrics.length === 0) {
+return `<div style="padding:24px; text-align:center; color:#64748b; font-weight:800;">${isEn ? 'No matching crime metric found.' : '找不到符合搜尋條件的罪案統計項目。'}</div>`;
+}
+
+const headerYearsHtml = series.map(s => {
+const isSel = (s.year === st.selectedYear);
+return `<th onclick="setPoliceCrimeSelectedYear(${s.year})" style="cursor:pointer; padding:9px 7px; text-align:right; background:${isSel ? '#dbeafe' : '#f1f5f9'}; color:${isSel ? '#1e3a8a' : '#1e293b'}; font-weight:900; white-space:nowrap;">${s.year}</th>`;
+}).join('');
+
+const rowsHtml = metrics.map(m => {
+const latestVal = series[series.length - 1][m.key];
+const prevVal = series[series.length - 2][m.key];
+const diffPct = prevVal ? (((latestVal - prevVal) / prevVal) * 100) : 0;
+const diffColor = m.isPct
+? (diffPct >= 0 ? '#059669' : '#d97706')
+: (diffPct <= 0 ? '#059669' : '#dc2626');
+
+const cellsHtml = series.map(s => {
+const isSel = (s.year === st.selectedYear);
+const v = s[m.key];
+const disp = m.isPct ? `${v.toFixed(1)}%` : Number(v).toLocaleString('en-US');
+return `<td style="padding:9px 7px; text-align:right; font-weight:${isSel ? '900' : '700'}; background:${isSel ? '#f0f9ff' : 'transparent'}; color:${isSel ? '#0f172a' : '#334155'}; white-space:nowrap;">${disp}${m.key === 'homicide' && s.year === 2025 ? '#' : ''}</td>`;
+}).join('');
+
+return `
+<tr style="border-bottom:1px solid #e2e8f0;">
+<td style="padding:9px 8px; font-weight:900; color:#0f172a; white-space:nowrap; position:sticky; left:0; background:#ffffff;">${isEn ? m.en : m.zh}</td>
+${cellsHtml}
+<td style="padding:9px 8px; text-align:right; font-weight:900; color:${diffColor}; white-space:nowrap;">
+${m.isPct ? `${(latestVal - prevVal) >= 0 ? '+' : ''}${(latestVal - prevVal).toFixed(1)}pp` : `${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}%`}
+</td>
+</tr>
+`;
+}).join('');
+
+return `
+<div style="overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+<thead>
+<tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+<th style="padding:9px 8px; text-align:left; color:#0f172a; font-weight:900; position:sticky; left:0; background:#f1f5f9;">${isEn ? 'Crime Category / Indicator' : '罪案類別／統計指標'}</th>
+${series.map(s => `<th onclick="setPoliceCrimeSelectedYear(${s.year})" style="cursor:pointer; padding:9px 7px; text-align:right; background:${s.year === st.selectedYear ? '#dbeafe' : '#f1f5f9'}; color:${s.year === st.selectedYear ? '#1e3a8a' : '#1e293b'}; font-weight:900;">${s.year}</th>`).join('')}
+<th style="padding:9px 8px; text-align:right; color:#0f172a; font-weight:900; white-space:nowrap;">2025 vs 2024</th>
+</tr>
+</thead>
+<tbody>
+${rowsHtml}
+</tbody>
+</table>
+<div style="font-size:0.71rem; color:#64748b; font-weight:700; margin-top:8px;">
+${isEn
+? 'Note (#): The 2025 homicide figure (194 cases) includes the 168 fatalities in the Wang Fuk Court fire in Tai Po classified as manslaughter; among the remaining 26 homicide cases, 25 were detected.'
+: '註 (#)：2025 年兇殺案數字（194 宗）包括被列作誤殺案的大埔宏福苑火災中之 168 名死者；其餘 26 宗兇殺案中，有 25 宗已被偵破。'}
+</div>
+</div>
+`;
+}
+
+function renderPoliceCrimePortal() {
+const container = document.getElementById('police-crime-portal-container');
+if (!container) return;
+
+const isEn = (currentLang === 'en');
+const st = window.hkpfCrimePortalState;
+const series = st.series || HKPF_CRIME_ANNUAL_SERIES;
+const selYear = st.selectedYear || 2025;
+const curRec = series.find(s => s.year === selYear) || series[series.length - 1];
+const prevRec = series.find(s => s.year === (selYear - 1)) || curRec;
+
+const titleEl = document.getElementById('t-crime-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '🚔 HKPF Police in Figures & Crime Statistics Dashboard'
+: '🚔 香港警方統計數字及罪案趨勢看板';
+}
+const syncBtn = document.getElementById('btn-crime-sync-now');
+if (syncBtn) {
+syncBtn.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+}
+
+const ovDiffPct = prevRec && prevRec.year !== curRec.year
+? (((curRec.overallCrimes - prevRec.overallCrimes) / prevRec.overallCrimes) * 100).toFixed(1)
+: '0.0';
+const vcDiffPct = prevRec && prevRec.year !== curRec.year
+? (((curRec.violentCrimes - prevRec.violentCrimes) / prevRec.violentCrimes) * 100).toFixed(1)
+: '0.0';
+const decShare = ((curRec.deception / curRec.overallCrimes) * 100).toFixed(1);
+
+// Year Selector Pills + KPI Hero Banner
+const yearPillsHtml = series.map(s => {
+const active = (s.year === selYear);
+return `<button type="button" onclick="setPoliceCrimeSelectedYear(${s.year})" style="cursor:pointer; padding:5px 11px; border-radius:999px; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.22)'}; background:${active ? '#0284c7' : 'rgba(255,255,255,0.08)'}; color:#ffffff; font-size:0.75rem; font-weight:900;">${s.year}${isEn ? '' : '年'}</button>`;
+}).join('');
+
+const heroKpiHtml = `
+<div class="el-card-box" style="background:linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color:#ffffff; border-color:#334155; padding:16px;">
+<div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+<div>
+<div style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-size:0.72rem; font-weight:900; margin-bottom:6px;">
+🚔 ${isEn ? 'HONG KONG POLICE FORCE · POLICE IN FIGURES (CRIMES)' : '香港警務處 · 警方統計數字／罪案及整體治安指標'}
+</div>
+<div style="font-size:1.08rem; font-weight:900; color:#f8fafc;">
+${isEn ? `${selYear} Hong Kong Overall Law & Order and Crime Statistics` : `${selYear} 年香港整體治安情況、破案率及主要罪案統計`}
+</div>
+</div>
+<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+${yearPillsHtml}
+</div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(195px, 1fr)); gap:10px;">
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px 14px;">
+<div style="font-size:0.73rem; color:#94a3b8; font-weight:800;">${isEn ? `Overall Crimes (${selYear})` : `${selYear}年總體罪案數目`}</div>
+<div style="font-size:1.48rem; font-weight:900; color:#38bdf8; margin-top:2px;">
+${curRec.overallCrimes.toLocaleString('en-US')} <span style="font-size:0.78rem; color:#cbd5e1;">${isEn ? 'cases' : '宗'}</span>
+</div>
+<div style="font-size:0.72rem; color:#e2e8f0; font-weight:700; margin-top:3px;">
+${isEn ? `Rate: ${curRec.overallRate.toLocaleString()} per 100k pop. (${ovDiffPct >= 0 ? '+' : ''}${ovDiffPct}% YoY)` : `每十萬人口 ${curRec.overallRate.toLocaleString()} 宗（按年 ${Number(ovDiffPct) >= 0 ? '+' : ''}${ovDiffPct}%）`}
+</div>
+</div>
+
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px 14px;">
+<div style="font-size:0.73rem; color:#94a3b8; font-weight:800;">${isEn ? `Violent Crimes (${selYear})` : `${selYear}年暴力罪案數目`}</div>
+<div style="font-size:1.48rem; font-weight:900; color:#f87171; margin-top:2px;">
+${curRec.violentCrimes.toLocaleString('en-US')} <span style="font-size:0.78rem; color:#cbd5e1;">${isEn ? 'cases' : '宗'}</span>
+</div>
+<div style="font-size:0.72rem; color:#e2e8f0; font-weight:700; margin-top:3px;">
+${isEn ? `Rate: ${curRec.violentRate} per 100k pop. (${vcDiffPct >= 0 ? '+' : ''}${vcDiffPct}% YoY)` : `每十萬人口 ${curRec.violentRate} 宗（按年 ${Number(vcDiffPct) >= 0 ? '+' : ''}${vcDiffPct}%）`}
+</div>
+</div>
+
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px 14px;">
+<div style="font-size:0.73rem; color:#94a3b8; font-weight:800;">${isEn ? 'Crime Detection Rates' : '總體及暴力罪案破案率'}</div>
+<div style="font-size:1.42rem; font-weight:900; color:#34d399; margin-top:2px;">
+${curRec.overallDetection.toFixed(1)}% <span style="font-size:0.78rem; color:#cbd5e1;">/ ${isEn ? 'Violent' : '暴力'} ${curRec.violentDetection.toFixed(1)}%</span>
+</div>
+<div style="font-size:0.72rem; color:#e2e8f0; font-weight:700; margin-top:3px;">
+${isEn ? 'Robbery detection: 90.9% · Rape: 95.6%' : '行劫破案率達 90.9% · 強姦破案率 95.6%'}
+</div>
+</div>
+
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px 14px;">
+<div style="font-size:0.73rem; color:#94a3b8; font-weight:800;">${isEn ? `Deception & Traditional Crimes (${selYear})` : `${selYear}年詐騙案及傳統罪案指標`}</div>
+<div style="font-size:1.42rem; font-weight:900; color:#fbbf24; margin-top:2px;">
+${curRec.deception.toLocaleString('en-US')} <span style="font-size:0.76rem; color:#cbd5e1;">(${decShare}%)</span>
+</div>
+<div style="font-size:0.72rem; color:#e2e8f0; font-weight:700; margin-top:3px;">
+${isEn
+? `Robbery: ${curRec.robbery} · Burglary: ${curRec.burglary.toLocaleString()} · Theft: ${curRec.allThefts.toLocaleString()}`
+: `行劫 ${curRec.robbery} 宗 · 爆竊 ${curRec.burglary.toLocaleString()} 宗 · 盜竊 ${curRec.allThefts.toLocaleString()} 宗`}
+</div>
+</div>
+</div>
+</div>
+`;
+
+// Dual Charts Section
+const chartsRowHtml = `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px;">
+<div class="el-card-box" style="padding:14px;">
+<div class="el-card-header" style="margin-bottom:8px;">
+<div>
+<div class="el-card-title" style="font-size:0.95rem;">📊 ${isEn ? 'Overall Crimes, Deception & Violent Crimes Trend (2015–2025)' : '歷年總體罪案、詐騙案及暴力罪案宗數走勢 (2015–2025)'}</div>
+<div class="el-card-subtitle">${isEn ? 'Click any year bar to inspect detailed figures for that year.' : '點擊圖中任何年份柱狀圖即可切換檢視該年度明細。'}</div>
+</div>
+</div>
+<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:0.73rem; font-weight:800; margin-bottom:6px;">
+<span style="color:#2563eb;">🟦 ${isEn ? 'Overall Crimes' : '總體罪案 (柱狀)'}</span>
+<span style="color:#d97706;">🟠 ${isEn ? 'Deception Cases' : '詐騙案 (橙線)'}</span>
+<span style="color:#dc2626;">🔴 ${isEn ? 'Violent Crimes' : '暴力罪案 (紅虛線)'}</span>
+</div>
+${buildPoliceCrimeVolumeChartSvg(isEn)}
+</div>
+
+<div class="el-card-box" style="padding:14px;">
+<div class="el-card-header" style="margin-bottom:8px;">
+<div>
+<div class="el-card-title" style="font-size:0.95rem;">📈 ${isEn ? 'Crime Rate (per 100k pop.) & Detection Rates (2015–2025)' : '按每十萬人口計算的罪案率及破案率走勢 (2015–2025)'}</div>
+<div class="el-card-subtitle">${isEn ? 'Left axis: Crime Rate per 100,000 pop. | Right axis: Detection Rate (%)' : '左軸：每十萬人口總體罪案率 ｜ 右軸：暴力及總體罪案破案率 (%)'}</div>
+</div>
+</div>
+<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:0.73rem; font-weight:800; margin-bottom:6px;">
+<span style="color:#0284c7;">🔵 ${isEn ? 'Overall Crime Rate (/100k)' : '總體罪案率 (每十萬人)'}</span>
+<span style="color:#7c3aed;">🟣 ${isEn ? 'Violent Crime Detection %' : '暴力罪案破案率 (%)'}</span>
+<span style="color:#059669;">🟢 ${isEn ? 'Overall Detection %' : '總體罪案破案率 (%)'}</span>
+</div>
+${buildPoliceCrimeRateAndDetectionSvg(isEn)}
+</div>
+</div>
+`;
+
+// 2026 Jan-Jun vs 2025 Jan-Jun Comparison Section
+const h1CardsHtml = HKPF_CRIME_2026_H1_COMPARISON.map(item => {
+const isDown = (item.diff <= 0);
+const badgeBg = isDown ? '#ecfdf5' : '#fef2f2';
+const badgeCol = isDown ? '#059669' : '#dc2626';
+const badgeBdr = isDown ? '#a7f3d0' : '#fecaca';
+return `
+<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:11px; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
+<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:6px;">
+<div style="font-size:0.8rem; font-weight:900; color:#0f172a;">${item.icon} ${isEn ? item.en : item.zh}</div>
+<span style="padding:2px 7px; border-radius:999px; background:${badgeBg}; color:${badgeCol}; border:1px solid ${badgeBdr}; font-size:0.69rem; font-weight:900; white-space:nowrap;">
+${item.pct > 0 ? '+' : ''}${item.pct.toFixed(1)}%
+</span>
+</div>
+<div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+<div>
+<span style="font-size:1.12rem; font-weight:900; color:#1e3a8a;">${item.h1_2026.toLocaleString('en-US')}</span>
+<span style="font-size:0.7rem; color:#64748b; font-weight:700;">${isEn ? ' (2026 H1)' : ' 宗 (2026上半年)'}</span>
+</div>
+<div style="font-size:0.72rem; color:#475569; font-weight:700;">
+${isEn ? `2025 H1: ${item.h1_2025.toLocaleString()}` : `2025同期：${item.h1_2025.toLocaleString()} 宗`}
+</div>
+</div>
+</div>
+`;
+}).join('');
+
+const h1ComparisonSectionHtml = `
+<div class="el-card-box" style="border-top:3px solid #0284c7; padding:14px;">
+<div class="el-card-header" style="margin-bottom:10px;">
+<div>
+<div class="el-card-title" style="font-size:0.96rem;">⚡ ${isEn ? 'Latest 2026 (Jan–Jun) vs 2025 (Jan–Jun) Crime Situation Comparison' : '最新 2026 年（1 至 6 月）與 2025 年同期罪案數字比較'}</div>
+<div class="el-card-subtitle">${isEn ? 'Overall crime in 1H 2026 fell 1.5% to 42,736 cases, and violent crime fell 5.0% to 4,144 cases.' : '2026 年上半年全港總體罪案錄得 42,736 宗（按年跌 1.5%），暴力罪案錄得 4,144 宗（按年跌 5.0%），爆竊及勒索案分別顯著下跌 22.7% 及 40.0%。'}</div>
+</div>
+</div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(225px, 1fr)); gap:9px;">
+${h1CardsHtml}
+</div>
+</div>
+`;
+
+// Deception Breakdown & Smart Policing ("SmartView" CCTV & "Scameter") Section
+const decCardsHtml = HKPF_2025_DECEPTION_BREAKDOWN.map(d => {
+return `
+<div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid ${d.color}; border-radius:10px; padding:10px 12px;">
+<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px;">
+<span style="font-size:0.82rem; font-weight:900; color:#0f172a;">${isEn ? d.name_en : d.name_zh}</span>
+<span style="padding:2px 8px; border-radius:999px; background:#f8fafc; color:${d.color}; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:900; white-space:nowrap;">
+${d.cases.toLocaleString('en-US')} ${isEn ? 'cases' : '宗'} (${d.sharePct}%)
+</span>
+</div>
+<div style="width:100%; height:7px; background:#f1f5f9; border-radius:999px; overflow:hidden; margin-bottom:6px;">
+<div style="width:${Math.min(100, d.sharePct * 2.5)}%; height:100%; background:${d.color}; border-radius:999px;"></div>
+</div>
+<div style="font-size:0.73rem; color:#475569; font-weight:600; line-height:1.4;">
+<strong style="color:#0f172a;">${isEn ? 'YoY Change:' : '按年變動：'}${isEn ? d.yoyText_en : d.yoyText_zh}</strong> — ${isEn ? d.note_en : d.note_zh}
+</div>
+</div>
+`;
+}).join('');
+
+const deceptionAndInitiativesHtml = `
+<div class="el-card-box" style="padding:14px;">
+<div class="el-card-header" style="margin-bottom:10px;">
+<div>
+<div class="el-card-title" style="font-size:0.96rem;">🛡️ ${isEn ? 'Deception Sub-Category Breakdown & Anti-Crime Technology Highlights' : '詐騙案結構分類剖析（佔總體罪案 48.5%）及防罪科技成效指標'}</div>
+<div class="el-card-subtitle">${isEn ? 'In 2025, total deception cases edged down 2.9% to 43,212 (first drop since 2019), with total financial loss down 11.3% to HK$8.1 billion.' : '2025 年全港詐騙案共 43,212 宗（按年跌 2.9%，為 2019 年以來首次錄得跌幅），涉及總損失金額由約 92 億港元減至約 81 億港元（跌 11.3%）。'}</div>
+</div>
+</div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px; margin-bottom:12px;">
+${decCardsHtml}
+</div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:12px;">
+<div>
+<div style="font-size:0.8rem; font-weight:900; color:#1e3a8a;">📹 ${isEn ? '"SmartView" CCTV Programme' : '「銳眼」全港閉路電視計劃'}</div>
+<div style="font-size:0.74rem; color:#334155; font-weight:600; margin-top:3px; line-height:1.45;">
+${isEn
+? 'Street crime detection rates rose by 2.5 to 22.8 percentage points and street crime offences fell 3.1% to 71.8% across covered areas; 90% of homicide/robbery/burglary cases assisted by CCTV were solved within 2 days.'
+: '安裝後多類街道罪案破案率上升 2.5 至 22.8 個百分點，罪案數字下跌 3.1% 至 71.8%；在閉路電視協助偵破之兇殺、行劫及爆竊案中，九成平均破案時間僅為 2 日。'}
+</div>
+</div>
+<div>
+<div style="font-size:0.8rem; font-weight:900; color:#059669;">📲 ${isEn ? 'Scameter App & FINEST Alert' : '「防騙視伏App」及銀行「騙案預警」'}</div>
+<div style="font-size:0.74rem; color:#334155; font-weight:600; margin-top:3px; line-height:1.45;">
+${isEn
+? 'Scameter downloads reached 1.15M; Police & banks proactively intercepted 4,060 ongoing scams (+69.4%) in 2025, stopping HK$480M in fraud transfers (+158.4%).'
+: '「防騙視伏App」下載量達 115 萬次；警方聯同銀行透過「騙案預警」主動勸阻 4,060 宗騙案（+69.4%），成功阻截騙款達 4.8 億港元（+158.4%）。'}
+</div>
+</div>
+<div>
+<div style="font-size:0.8rem; font-weight:900; color:#d97706;">🚁 ${isEn ? 'Drone Patrols & Anti-Triad Operations' : '無人機反爆竊巡邏及「雷霆」反黑行動'}</div>
+<div style="font-size:0.74rem; color:#334155; font-weight:600; margin-top:3px; line-height:1.45;">
+${isEn
+? 'Holiday drone patrols helped drive burglary down 33.1% to a record low since 1969 (816 cases); Operation THUNDERBOLT arrested 4,140 persons and seized HK$550M in illicit assets.'
+: '長假期無人機反爆竊行動令爆竊案跌 33.1% 至 1969 年以來最低（816 宗）；粵港澳「雷霆」行動港方拘捕 4,140 人，檢獲毒品及贓款約 5.5 億港元。'}
+</div>
+</div>
+</div>
+</div>
+`;
+
+// Multi-Year Table Section
+const catButtons = [
+{ id: 'ALL', zh: '全部指標 (21)', en: 'All Indicators (21)' },
+{ id: 'SUMMARY', zh: '📊 總體罪案及破案率', en: '📊 Overall Summary' },
+{ id: 'VIOLENT', zh: '🚨 暴力及嚴重罪案', en: '🚨 Violent & Serious Crimes' },
+{ id: 'PROPERTY', zh: '💼 詐騙、盜竊及財產罪案', en: '💼 Deception, Theft & Property' },
+{ id: 'ORGANISED', zh: '🕸️ 三合會、毒品及青少年', en: '🕸️ Triad, Drugs & Youth' }
+];
+
+const multiYearTableSectionHtml = `
+<div class="el-card-box" style="padding:14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+<div>
+<div class="el-card-title" style="font-size:0.96rem;">📋 ${isEn ? 'Multi-Year Crime Statistics Comparison Table (2015–2025)' : '香港警務處歷年罪案統計及破案率完整對比表 (2015–2025)'}</div>
+<div class="el-card-subtitle">${isEn ? 'Filter by offence category or search any crime indicator below.' : '可按罪案大類篩選或輸入關鍵字搜尋各項罪案歷年數據及按年變動。'}</div>
+</div>
+<div style="min-width:240px;">
+<input
+type="text"
+class="el-search-input"
+style="width:100%; background:#ffffff;"
+value="${(st.searchQuery || '').replace(/"/g, '&quot;')}"
+oninput="onPoliceCrimeSearchInput(this.value)"
+placeholder="${isEn ? '🔍 Search offence (e.g. Robbery, Burglary, Fraud)...' : '🔍 搜尋罪案名稱（如：行劫、爆竊、詐騙、破案率）...'}"
+/>
+</div>
+</div>
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+${catButtons.map(b => {
+const active = (st.categoryFilter === b.id);
+return `<button type="button" onclick="setPoliceCrimeCategoryFilter('${b.id}')" style="cursor:pointer; padding:4px 10px; border-radius:999px; border:1px solid ${active ? '#1e3a8a' : '#cbd5e1'}; background:${active ? '#1e3a8a' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-size:0.74rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('')}
+</div>
+<div id="police-crime-table-dynamic-region">
+${buildPoliceCrimeMultiYearTableHTML(isEn)}
+</div>
+</div>
+`;
+
+container.innerHTML = `
+${heroKpiHtml}
+${chartsRowHtml}
+${h1ComparisonSectionHtml}
+${deceptionAndInitiativesHtml}
+${multiYearTableSectionHtml}
+`;
+}
+
+function applyPoliceCrimeLanguage() {
+const isEn = (currentLang === 'en');
+const titleEl = document.getElementById('t-crime-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '🚔 HKPF Police in Figures & Crime Statistics Dashboard'
+: '🚔 香港警方統計數字及罪案趨勢看板';
+}
+const btnEl = document.getElementById('btn-crime-sync-now');
+if (btnEl) {
+btnEl.innerText = isEn ? '🔄 Refresh' : '🔄 重新整理';
+}
+const statusEl = document.getElementById('crime-refresh-status');
+if (statusEl) {
+statusEl.innerText = isEn ? '🟢 Crime Stats Updated' : '🟢 罪案統計已更新';
+}
+if (currentActivePage === 'crime') {
+renderPoliceCrimePortal();
+}
+}
 // 🕵️ 香港警務處失蹤人士呼籲及尋人資訊看板 (HKPF Missing Persons Appeals Dashboard)
 // =========================================================================
 const HKPF_RMPU_UNITS = [
@@ -30472,12 +31500,26 @@ border: '#cbd5e1',
 departments: [
 {
 deptId: 'HKPF_MPU',
-deptIcon: '🕵️',
-dept_zh: '香港警務處・總區失蹤人口調查組',
-dept_en: 'Hong Kong Police Force (HKPF) · Regional Missing Persons Units',
-role_zh: '負責發佈全港失蹤人士尋人呼籲、接收市民提供線索，並由港島、東九龍、西九龍、新界北及新界南五大總區失蹤人口調查組專責跟進',
-role_en: 'Issues public appeals for missing persons across HK and coordinates investigations across the 5 Regional Missing Persons Units (HKI, KE, KW, NTN, NTS)',
+deptIcon: '🚔',
+dept_zh: '香港警務處（刑事及保安處・總區失蹤人口調查組）',
+dept_en: 'Hong Kong Police Force (HKPF · Crime & Security / RMPU)',
+role_zh: '負責維持全港治安、編製警方罪案統計數字及破案率，以及統籌五大總區失蹤人口調查組發佈尋人呼籲',
+role_en: 'Maintains law and order, compiles Police in Figures crime statistics & detection rates, and coordinates the 5 Regional Missing Persons Units',
 pages: [
+{
+pageKey: 'crime',
+icon: '🚔',
+name_zh: '香港警方統計數字及罪案趨勢看板',
+name_en: 'HKPF Police in Figures & Crime Statistics Dashboard',
+desc_zh: '整合 2015–2025 年及 2026 上半年總體罪案、暴力罪案、每十萬人口罪案率、破案率，以及詐騙、盜竊、行劫、爆竊、三合會及毒品等分類統計。',
+desc_en: 'Integrates 2015–2025 & 1H 2026 overall crimes, violent crimes, crime rates per 100k pop., detection rates, and deception, theft, robbery & burglary breakdowns.',
+actionFn: 'showPoliceCrimePage',
+getLiveBadge: function(isEn) {
+return isEn
+? '🚔 2025 Overall: 89,137 (-5.9%) · Violent: 8,823 (-15.9%) · 2026 H1: 42,736 (-1.5%)'
+: '🚔 2025總體罪案：89,137宗 (-5.9%) · 暴力罪案：8,823宗 (-15.9%) · 2026上半年：42,736宗';
+}
+},
 {
 pageKey: 'missing',
 icon: '🕵️',
@@ -30915,6 +31957,8 @@ if (currentActivePage === 'portal') {
 showPortalHomePage();
 } else if (currentActivePage === 'weather') {
 showWeatherPage();
+} else if (currentActivePage === 'crime') {
+showPoliceCrimePage();
 } else if (currentActivePage === 'missing') {
 showMissingPersonsPage();
 } else if (currentActivePage === 'csd') {
