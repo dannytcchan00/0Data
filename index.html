@@ -4253,10 +4253,14 @@ justify-content: center;
 
 <div class="left-menu-divider" role="separator" aria-label="交通類別分隔線"></div>
 
-<div class="left-menu-group" data-menu-category="TRANSPORT" aria-label="公共交通及運輸服務">
+<div class="left-menu-group" data-menu-category="TRANSPORT" aria-label="公共交通、道路智慧運輸及港口航運">
 <a href="#" id="t-menu-home" class="rail-btn-sub" title="專營巴士（九巴・城巴）及港鐵即時到站看板" onclick="showHome(); event.preventDefault();">🚌</a>
 <a href="#" id="t-menu-flight" class="rail-btn-sub" title="香港國際機場即時客貨運航班看板" onclick="showFlightPage(); event.preventDefault();">✈️</a>
 <a href="#" id="t-menu-ferry" class="rail-btn-sub" title="全港渡輪及街渡航線班次看板" onclick="showFerryPage(); event.preventDefault();">⛴️</a>
+<a href="#" id="t-menu-jti" class="rail-btn-sub" title="全港行車時間顯示器即時估計行車時間看板" onclick="showJtiPage(); event.preventDefault();">⏱️</a>
+<a href="#" id="t-menu-sec" class="rail-btn-sub" title="全港偵察車速攝影機箱的地點看板" onclick="showSecPage(); event.preventDefault();">📸</a>
+<a href="#" id="t-menu-rlc" class="rail-btn-sub" title="全港裝設衝紅燈攝影機系統的路口看板" onclick="showRlcPage(); event.preventDefault();">🚦</a>
+<a href="#" id="t-menu-container" class="rail-btn-sub" title="香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板" onclick="showContainerPage(); event.preventDefault();">📦</a>
 </div>
 
 <div class="left-menu-divider" role="separator" aria-label="醫療及醫院類別分隔線"></div>
@@ -4904,6 +4908,46 @@ justify-content: center;
 </div>
 
 
+<div class="panel border-section" id="jti-page-view" style="display: none;">
+<h2>
+<span id="t-jti-page-title">⏱️ 全港行車時間顯示器即時估計行車時間看板</span>
+<div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<button type="button" class="device-quick-btn" id="btn-jti-sync-now" onclick="syncJtiData(true)" title="重新整理最新行車時間顯示器數據">🔄 重新整理</button>
+<span class="refresh-indicator" id="jti-refresh-status" onclick="syncJtiData(true)" style="cursor:pointer;" title="點擊重新整理最新行車時間顯示器數據">🟢 實時行車時間已更新</span>
+</div>
+</h2>
+<div class="border-portal-scroll" id="jti-portal-container"></div>
+</div>
+<div class="panel border-section" id="sec-page-view" style="display: none;">
+<h2>
+<span id="t-sec-page-title">📸 全港偵察車速攝影機箱的地點看板</span>
+<div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<button type="button" class="device-quick-btn" id="btn-sec-sync-now" onclick="syncSecData(true)" title="重新整理偵察車速攝影機箱位置資料">🔄 重新整理</button>
+<span class="refresh-indicator" id="sec-refresh-status" onclick="syncSecData(true)" style="cursor:pointer;" title="點擊重新整理偵察車速攝影機箱位置資料">🟢 偵速攝影機箱資料已更新</span>
+</div>
+</h2>
+<div class="border-portal-scroll" id="sec-portal-container"></div>
+</div>
+<div class="panel border-section" id="rlc-page-view" style="display: none;">
+<h2>
+<span id="t-rlc-page-title">🚦 全港裝設衝紅燈攝影機系統的路口看板</span>
+<div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<button type="button" class="device-quick-btn" id="btn-rlc-sync-now" onclick="syncRlcData(true)" title="重新整理衝紅燈攝影機路口資料">🔄 重新整理</button>
+<span class="refresh-indicator" id="rlc-refresh-status" onclick="syncRlcData(true)" style="cursor:pointer;" title="點擊重新整理衝紅燈攝影機路口資料">🟢 衝紅燈攝影機資料已更新</span>
+</div>
+</h2>
+<div class="border-portal-scroll" id="rlc-portal-container"></div>
+</div>
+<div class="panel border-section" id="container-page-view" style="display: none;">
+<h2>
+<span id="t-container-page-title">📦 香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板</span>
+<div class="header-actions" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<button type="button" class="device-quick-btn" id="btn-container-sync-now" onclick="syncContainerThroughputData(true)" title="重新整理最新貨櫃吞吐量統計數字">🔄 重新整理</button>
+<span class="refresh-indicator" id="container-refresh-status" onclick="syncContainerThroughputData(true)" style="cursor:pointer;" title="點擊重新整理最新貨櫃吞吐量統計數字">🟢 貨櫃吞吐量已更新</span>
+</div>
+</h2>
+<div class="border-portal-scroll" id="container-portal-container"></div>
+</div>
 <div class="panel border-section" id="police-crime-page-view" style="display: none;">
 <h2>
 <span id="t-crime-page-title">🚔 香港警方統計數字及罪案趨勢看板</span>
@@ -5556,6 +5600,10 @@ if (document.getElementById('t-menu-ambulance')) document.getElementById('t-menu
 if (document.getElementById('t-menu-aed')) document.getElementById('t-menu-aed').title = (currentLang === 'en') ? 'HK Public Hospitals A&E Waiting Time (18 Hospitals)' : '全港公立醫院急症室即時等候時間';
 if (document.getElementById('t-menu-cruise')) document.getElementById('t-menu-cruise').title = (currentLang === 'en') ? 'HK Cruise Passenger Throughput & Number of Ship Calls' : '香港郵輪乘客人次及停泊次數統計';
 if (document.getElementById('t-menu-visitor-hotel')) document.getElementById('t-menu-visitor-hotel').title = (currentLang === 'en') ? 'HK Visitor Arrivals, Length of Stay & Hotel Room Rate / Occupancy' : '訪港旅客人次、逗留時間及酒店房租與入住率統計';
+if (document.getElementById('t-menu-jti')) document.getElementById('t-menu-jti').title = (currentLang === 'en') ? 'HK Journey Time Indicators (Live Road & Tunnel Travel Time)' : '全港行車時間顯示器即時估計行車時間看板';
+if (document.getElementById('t-menu-sec')) document.getElementById('t-menu-sec').title = (currentLang === 'en') ? 'Locations of Speed Enforcement Camera Housings' : '全港偵察車速攝影機箱的地點看板';
+if (document.getElementById('t-menu-rlc')) document.getElementById('t-menu-rlc').title = (currentLang === 'en') ? 'Junctions with Red Light Camera System Installed' : '全港裝設衝紅燈攝影機系統的路口看板';
+if (document.getElementById('t-menu-container')) document.getElementById('t-menu-container').title = (currentLang === 'en') ? 'HK Port & Kwai Tsing Container Throughput Statistics' : '香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板';
 if (document.getElementById('t-menu-crime')) document.getElementById('t-menu-crime').title = (currentLang === 'en') ? 'HKPF Police in Figures & Crime Statistics Dashboard' : '香港警方統計數字及罪案趨勢看板';
 if (document.getElementById('t-menu-missing')) document.getElementById('t-menu-missing').title = (currentLang === 'en') ? 'HKPF Missing Persons Appeals & Investigation Units' : '香港警務處失蹤人士呼籲及尋人資訊看板';
 if (document.getElementById('t-menu-weather')) document.getElementById('t-menu-weather').title = (currentLang === 'en') ? 'HK Real-Time Weather, 9-Day Forecast, Radar & Cyclone Track' : '香港即時天氣、九日預報、天氣雷達及熱帶氣旋路徑看板';
@@ -5589,6 +5637,10 @@ if (typeof applyAmbulanceLanguage === 'function') applyAmbulanceLanguage();
 if (typeof applyAedLanguage === 'function') applyAedLanguage();
 if (typeof applyCruiseLanguage === 'function') applyCruiseLanguage();
 if (typeof applyVisitorHotelLanguage === 'function') applyVisitorHotelLanguage();
+if (typeof applyJtiLanguage === 'function') applyJtiLanguage();
+if (typeof applySecLanguage === 'function') applySecLanguage();
+if (typeof applyRlcLanguage === 'function') applyRlcLanguage();
+if (typeof applyContainerLanguage === 'function') applyContainerLanguage();
 if (typeof applyPoliceCrimeLanguage === 'function') applyPoliceCrimeLanguage();
 if (typeof applyMissingPersonsLanguage === 'function') applyMissingPersonsLanguage();
 if (typeof applyWeatherPortalLanguage === 'function') applyWeatherPortalLanguage();
@@ -5627,7 +5679,7 @@ unlockBackgroundScroll();
 document.getElementById('settings-modal').classList.remove('active');
 }
 
-const VALID_PORTAL_PAGES = ['portal', 'weather', 'home', 'flight', 'ferry', 'aed', 'fire', 'ambulance', 'reservoir', 'lamppost', 'border', 'crime', 'missing', 'csd', 'population', 'labour', 'visitor_hotel', 'cruise', 'dc', 'legco', 'iframe'];
+const VALID_PORTAL_PAGES = ['portal', 'weather', 'home', 'flight', 'ferry', 'jti', 'sec', 'rlc', 'container', 'aed', 'fire', 'ambulance', 'reservoir', 'lamppost', 'border', 'crime', 'missing', 'csd', 'population', 'labour', 'visitor_hotel', 'cruise', 'dc', 'legco', 'iframe'];
 let currentActivePage = 'portal';
 
 function persistActivePageState(pageKey) {
@@ -5696,6 +5748,10 @@ const btnAmb = document.getElementById('t-menu-ambulance');
 const btnAed = document.getElementById('t-menu-aed');
 const btnCruise = document.getElementById('t-menu-cruise');
 const btnVh = document.getElementById('t-menu-visitor-hotel');
+const btnJti = document.getElementById('t-menu-jti');
+const btnSec = document.getElementById('t-menu-sec');
+const btnRlc = document.getElementById('t-menu-rlc');
+const btnCont = document.getElementById('t-menu-container');
 const btnCrime = document.getElementById('t-menu-crime');
 const btnMissing = document.getElementById('t-menu-missing');
 const btnCsd = document.getElementById('t-menu-csd');
@@ -5716,6 +5772,10 @@ if (btnAmb) btnAmb.className = (activeTab === 'ambulance') ? 'rail-btn-primary' 
 if (btnAed) btnAed.className = (activeTab === 'aed') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnCruise) btnCruise.className = (activeTab === 'cruise') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnVh) btnVh.className = (activeTab === 'visitor_hotel') ? 'rail-btn-primary' : 'rail-btn-sub';
+if (btnJti) btnJti.className = (activeTab === 'jti') ? 'rail-btn-primary' : 'rail-btn-sub';
+if (btnSec) btnSec.className = (activeTab === 'sec') ? 'rail-btn-primary' : 'rail-btn-sub';
+if (btnRlc) btnRlc.className = (activeTab === 'rlc') ? 'rail-btn-primary' : 'rail-btn-sub';
+if (btnCont) btnCont.className = (activeTab === 'container') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnCrime) btnCrime.className = (activeTab === 'crime') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnMissing) btnMissing.className = (activeTab === 'missing') ? 'rail-btn-primary' : 'rail-btn-sub';
 if (btnCsd) btnCsd.className = (activeTab === 'csd') ? 'rail-btn-primary' : 'rail-btn-sub';
@@ -5748,6 +5808,10 @@ const ambSec = document.getElementById('ambulance-page-view');
 const aedSec = document.getElementById('aed-page-view');
 const cruiseSec = document.getElementById('cruise-page-view');
 const vhSec = document.getElementById('visitor-hotel-page-view');
+const jtiSec = document.getElementById('jti-page-view');
+const secSec = document.getElementById('sec-page-view');
+const rlcSec = document.getElementById('rlc-page-view');
+const contSec = document.getElementById('container-page-view');
 const crimeSec = document.getElementById('police-crime-page-view');
 const missingSec = document.getElementById('missing-persons-page-view');
 const csdSec = document.getElementById('csd-page-view');
@@ -5768,6 +5832,10 @@ if (ambSec) ambSec.style.display = 'none';
 if (aedSec) aedSec.style.display = 'none';
 if (cruiseSec) cruiseSec.style.display = 'none';
 if (vhSec) vhSec.style.display = 'none';
+if (jtiSec) jtiSec.style.display = 'none';
+if (secSec) secSec.style.display = 'none';
+if (rlcSec) rlcSec.style.display = 'none';
+if (contSec) contSec.style.display = 'none';
 if (crimeSec) crimeSec.style.display = 'none';
 if (missingSec) missingSec.style.display = 'none';
 if (csdSec) csdSec.style.display = 'none';
@@ -6000,6 +6068,54 @@ initVisitorHotelSystem();
 renderVisitorHotelPortal();
 }
 
+function showJtiPage() {
+persistActivePageState('jti');
+const iframe = document.getElementById('app-iframe');
+iframe.src = '';
+iframe.style.display = 'none';
+hideAllRightPanels();
+const jtiSec = document.getElementById('jti-page-view');
+if (jtiSec) jtiSec.style.display = 'flex';
+updateMenuRailButtons('jti');
+initJtiSystem();
+renderJtiPortal();
+}
+function showSecPage() {
+persistActivePageState('sec');
+const iframe = document.getElementById('app-iframe');
+iframe.src = '';
+iframe.style.display = 'none';
+hideAllRightPanels();
+const secSec = document.getElementById('sec-page-view');
+if (secSec) secSec.style.display = 'flex';
+updateMenuRailButtons('sec');
+initSecSystem();
+renderSecPortal();
+}
+function showRlcPage() {
+persistActivePageState('rlc');
+const iframe = document.getElementById('app-iframe');
+iframe.src = '';
+iframe.style.display = 'none';
+hideAllRightPanels();
+const rlcSec = document.getElementById('rlc-page-view');
+if (rlcSec) rlcSec.style.display = 'flex';
+updateMenuRailButtons('rlc');
+initRlcSystem();
+renderRlcPortal();
+}
+function showContainerPage() {
+persistActivePageState('container');
+const iframe = document.getElementById('app-iframe');
+iframe.src = '';
+iframe.style.display = 'none';
+hideAllRightPanels();
+const contSec = document.getElementById('container-page-view');
+if (contSec) contSec.style.display = 'flex';
+updateMenuRailButtons('container');
+initContainerSystem();
+renderContainerPortal();
+}
 function showPoliceCrimePage() {
 persistActivePageState('crime');
 const iframe = document.getElementById('app-iframe');
@@ -29029,6 +29145,1311 @@ container.innerHTML = headerBannerHtml + custodySectionHtml + disciplineSafetySe
 
 // =========================================================================
 // =========================================================================
+// =========================================================================
+// ⏱️ 全港行車時間顯示器即時估計行車時間看板 (TD / CSDI Journey Time Indicators)
+// =========================================================================
+const TD_JTI_LIVE_URLS = [
+'https://resource.data.one.gov.hk/td/jss/Journeytimev2.xml',
+'https://static.data.gov.hk/td/journey-time-indicators/notification.csv'
+];
+
+const TD_JTI_STATIONS = [
+// 香港島 (Hong Kong Island — 10 sets)
+{ id: 'H1', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', name_zh: '告士打道東行近稅務大樓', name_en: 'Gloucester Road eastbound near Revenue Tower', road_zh: '告士打道（東行）', road_en: 'Gloucester Road (Eastbound)', lat: 22.2796, lon: 114.1717, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 14, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 15, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 11, color: 1 } ] },
+{ id: 'H2', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', name_zh: '堅拿道天橋北行近香港仔隧道出口', name_en: 'Canal Road Flyover northbound near exit of Aberdeen Tunnel', road_zh: '堅拿道天橋（北行）', road_en: 'Canal Road Flyover (Northbound)', lat: 22.2752, lon: 114.1802, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 16, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 14, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 13, color: 1 } ] },
+{ id: 'H3', region: 'HKI', district_zh: '東區', district_en: 'Eastern', name_zh: '東區走廊西行近城市花園', name_en: 'Island Eastern Corridor westbound near City Garden', road_zh: '東區走廊（西行）', road_en: 'Island Eastern Corridor (Westbound)', lat: 22.2904, lon: 114.1922, routes: [ { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 9, color: 1 }, { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 15, color: 2 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 14, color: 1 } ] },
+{ id: 'H4', region: 'HKI', district_zh: '東區', district_en: 'Eastern', name_zh: '東區走廊西行近鯉景灣', name_en: 'Island Eastern Corridor westbound near Lei King Wan', road_zh: '東區走廊（西行）', road_en: 'Island Eastern Corridor (Westbound)', lat: 22.2845, lon: 114.2225, routes: [ { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 5, color: 1 }, { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 19, color: 2 }, { destId: 'CENTRAL', dest_zh: '中環及灣仔繞道往中區', dest_en: 'Central-Wan Chai Bypass to Central', mins: 11, color: 1 } ] },
+{ id: 'H5', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', name_zh: '黃泥涌道北行近皇后大道東', name_en: "Wong Nai Chung Road northbound near Queen's Road East", road_zh: '黃泥涌道（北行）', road_en: 'Wong Nai Chung Road (Northbound)', lat: 22.2747, lon: 114.1812, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 15, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 15, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 13, color: 1 } ] },
+{ id: 'H6', region: 'HKI', district_zh: '灣仔／東區', district_en: 'Causeway Bay', name_zh: '興發街北行近維多利亞公園', name_en: 'Hing Fat Street northbound near Victoria Park', road_zh: '興發街（北行）', road_en: 'Hing Fat Street (Northbound)', lat: 22.2838, lon: 114.1912, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 14, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 10, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 12, color: 1 } ] },
+{ id: 'H7', region: 'HKI', district_zh: '南區', district_en: 'Southern', name_zh: '淺水灣道北行近香島道', name_en: 'Repulse Bay Road northbound near Island Road', road_zh: '淺水灣道（北行）', road_en: 'Repulse Bay Road (Northbound)', lat: 22.2412, lon: 114.1918, routes: [ { destId: 'ABT', dest_zh: '經香港仔隧道往灣仔', dest_en: 'Wan Chai via Aberdeen Tunnel', mins: 12, color: 1 }, { destId: 'STUBBS', dest_zh: '經司徒拔道往灣仔', dest_en: 'Wan Chai via Stubbs Road', mins: 16, color: 1 } ] },
+{ id: 'H8', region: 'HKI', district_zh: '南區', district_en: 'Southern', name_zh: '黃竹坑道北行近香港鄉村俱樂部', name_en: 'Wong Chuk Hang Road northbound near the Hong Kong Country Club', road_zh: '黃竹坑道（北行）', road_en: 'Wong Chuk Hang Road (Northbound)', lat: 22.2468, lon: 114.1745, routes: [ { destId: 'ABT', dest_zh: '香港仔隧道收費廣場', dest_en: 'Aberdeen Tunnel Toll Plaza', mins: 5, color: 1 }, { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 19, color: 2 } ] },
+{ id: 'H9', region: 'HKI', district_zh: '南區', district_en: 'Southern', name_zh: '黃竹坑道東行近香港仔運動場', name_en: 'Wong Chuk Hang Road eastbound near Aberdeen Sports Ground', road_zh: '黃竹坑道（東行）', road_en: 'Wong Chuk Hang Road (Eastbound)', lat: 22.2491, lon: 114.1678, routes: [ { destId: 'ABT', dest_zh: '經香港仔隧道往銅鑼灣', dest_en: 'Causeway Bay via Aberdeen Tunnel', mins: 9, color: 1 }, { destId: 'PFL', dest_zh: '經薄扶林道往西區', dest_en: 'Western District via Pok Fu Lam Rd', mins: 17, color: 1 } ] },
+{ id: 'H10', region: 'HKI', district_zh: '南區', district_en: 'Southern', name_zh: '鴨脷洲橋道北行近黃竹坑道', name_en: 'Ap Lei Chau Bridge Road northbound near Wong Chuk Hang Road', road_zh: '鴨脷洲橋道（北行）', road_en: 'Ap Lei Chau Bridge Rd (Northbound)', lat: 22.2455, lon: 114.1618, routes: [ { destId: 'ABT', dest_zh: '經香港仔隧道往灣仔', dest_en: 'Wan Chai via Aberdeen Tunnel', mins: 11, color: 1 }, { destId: 'PFL', dest_zh: '經薄扶林道往中區', dest_en: 'Central via Pok Fu Lam Road', mins: 20, color: 2 } ] },
+
+// 九龍 (Kowloon — 8 sets)
+{ id: 'K1', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', name_zh: '渡船街南行近富榮花園', name_en: 'Ferry Street southbound near Charming Garden', road_zh: '渡船街（南行）', road_en: 'Ferry Street (Southbound)', lat: 22.3135, lon: 114.1652, routes: [ { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 6, color: 1 }, { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 18, color: 2 } ] },
+{ id: 'K2', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', name_zh: '加士居道東行近香港理工大學', name_en: 'Gascoigne Road eastbound near the Hong Kong Polytechnic University', road_zh: '加士居道天橋（東行）', road_en: 'Gascoigne Road (Eastbound)', lat: 22.3065, lon: 114.1775, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 15, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 16, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 12, color: 1 } ] },
+{ id: 'K3', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', name_zh: '窩打老道南行近九龍醫院', name_en: 'Waterloo Road southbound near Kowloon Hospital', road_zh: '窩打老道（南行）', road_en: 'Waterloo Road (Southbound)', lat: 22.3248, lon: 114.1782, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 19, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 18, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 14, color: 1 } ] },
+{ id: 'K4', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', name_zh: '公主道南行近愛民邨', name_en: 'Princess Margaret Road southbound near Oi Man Estate', road_zh: '公主道（南行）', road_en: 'Princess Margaret Rd (Southbound)', lat: 22.3132, lon: 114.1788, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 14, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 17, color: 1 }, { destId: 'WHC', dest_zh: '西區海底隧道 (西隧)', dest_en: 'Western Harbour Crossing (WHC)', mins: 13, color: 1 } ] },
+{ id: 'K5', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', name_zh: '漆咸道北南行近佛光街遊樂場', name_en: 'Chatham Road North southbound near Fat Kwong Street Playground', road_zh: '漆咸道北（南行）', road_en: 'Chatham Road North (Southbound)', lat: 22.3105, lon: 114.1852, routes: [ { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 13, color: 2 }, { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 14, color: 1 } ] },
+{ id: 'K6', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', name_zh: '啟福道北行近油站', name_en: 'Kai Fuk Road northbound near the petrol stations', road_zh: '啟福道（北行）', road_en: 'Kai Fuk Road (Northbound)', lat: 22.3212, lon: 114.2055, routes: [ { destId: 'EHC', dest_zh: '東區海底隧道 (東隧)', dest_en: 'Eastern Harbour Crossing (EHC)', mins: 9, color: 1 }, { destId: 'CHT', dest_zh: '紅磡海底隧道 (紅隧)', dest_en: 'Cross-Harbour Tunnel (CHT)', mins: 17, color: 2 } ] },
+{ id: 'K7', region: 'KLN', district_zh: '深水埗區', district_en: 'Sham Shui Po', name_zh: '西九龍公路西行近港鐵南昌站', name_en: 'West Kowloon Highway westbound near MTR Nam Cheong Station', road_zh: '西九龍公路（西行）', road_en: 'West Kowloon Highway (Westbound)', lat: 22.3265, lon: 114.1512, routes: [ { destId: 'TINGKAU', dest_zh: '經青葵公路往汀九橋', dest_en: 'Ting Kau Bridge via Tsing Kwai Hwy', mins: 11, color: 1 }, { destId: 'EAGLE', dest_zh: '經尖山隧道往沙田', dest_en: "Sha Tin via Eagle's Nest Tunnel", mins: 9, color: 1 } ] },
+{ id: 'K8', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', name_zh: '啓祥道西行近九龍灣消防總局', name_en: 'Kai Cheung Road westbound near Kowloon Bay Divisional Fire Station', road_zh: '啓祥道（西行）', road_en: 'Kai Cheung Road (Westbound)', lat: 22.3268, lon: 114.2082, routes: [ { destId: 'LRT', dest_zh: '經獅子山隧道往沙田', dest_en: 'Sha Tin via Lion Rock Tunnel', mins: 15, color: 2 }, { destId: 'TCT', dest_zh: '經大老山隧道往沙田', dest_en: "Sha Tin via Tate's Cairn Tunnel", mins: 11, color: 1 } ] },
+
+// 新界 (New Territories — 12 sets)
+{ id: 'NT1', region: 'NT', district_zh: '元朗區', district_en: 'Yuen Long', name_zh: '洪天路南行近洪志路', name_en: 'Hung Tin Road southbound near junction with Hung Chi Road', road_zh: '洪天路（南行）', road_en: 'Hung Tin Road (Southbound)', lat: 22.4385, lon: 113.9985, routes: [ { destId: 'TLT', dest_zh: '經大欖隧道往荃灣／九龍', dest_en: 'Tsuen Wan via Tai Lam Tunnel', mins: 14, color: 1 }, { destId: 'TMR', dest_zh: '經屯門公路往荃灣', dest_en: 'Tsuen Wan via Tuen Mun Road', mins: 22, color: 2 } ] },
+{ id: 'NT2', region: 'NT', district_zh: '元朗區', district_en: 'Yuen Long', name_zh: '朗天路南行近柏麗豪園', name_en: 'Long Tin Road southbound near Parkside Villa', road_zh: '朗天路（南行）', road_en: 'Long Tin Road (Southbound)', lat: 22.4412, lon: 114.0185, routes: [ { destId: 'TLT', dest_zh: '經大欖隧道往荃灣／九龍', dest_en: 'Tsuen Wan via Tai Lam Tunnel', mins: 11, color: 1 }, { destId: 'TMR', dest_zh: '經屯門公路往荃灣', dest_en: 'Tsuen Wan via Tuen Mun Road', mins: 24, color: 2 } ] },
+{ id: 'NT3', region: 'NT', district_zh: '元朗區', district_en: 'Yuen Long', name_zh: '元朗公路東行近十八鄉交匯處', name_en: 'Yuen Long Highway eastbound near Shap Pat Heung Interchange', road_zh: '元朗公路（東行）', road_en: 'Yuen Long Highway (Eastbound)', lat: 22.4355, lon: 114.0365, routes: [ { destId: 'TLT', dest_zh: '經大欖隧道往汀九', dest_en: 'Ting Kau via Tai Lam Tunnel', mins: 9, color: 1 }, { destId: 'SAN_TIN', dest_zh: '經新田公路往上水', dest_en: 'Sheung Shui via San Tin Highway', mins: 12, color: 1 } ] },
+{ id: 'NT4', region: 'NT', district_zh: '大埔區', district_en: 'Tai Po', name_zh: '大埔公路東行近廣福邨', name_en: 'Tai Po Road eastbound near Kwong Fuk Estate', road_zh: '吐露港公路／大埔公路（南行）', road_en: 'Tai Po Road / Tolo Hwy (Southbound)', lat: 22.4458, lon: 114.1765, routes: [ { destId: 'TCT', dest_zh: '經大老山隧道往九龍東', dest_en: "Kowloon East via Tate's Cairn Tunnel", mins: 14, color: 1 }, { destId: 'LRT', dest_zh: '經獅子山隧道往九龍中', dest_en: 'Kowloon Central via Lion Rock Tunnel', mins: 17, color: 2 }, { destId: 'EAGLE', dest_zh: '經尖山隧道往西九龍', dest_en: "West Kowloon via Eagle's Nest Tunnel", mins: 15, color: 1 } ] },
+{ id: 'NT5', region: 'NT', district_zh: '沙田區', district_en: 'Sha Tin', name_zh: '青沙公路西行近城門河道', name_en: 'Tsing Sha Highway westbound near Shing Mun River Channel', road_zh: '青沙公路（西行）', road_en: 'Tsing Sha Highway (Westbound)', lat: 22.3765, lon: 114.1825, routes: [ { destId: 'EAGLE', dest_zh: '經尖山隧道往長沙灣', dest_en: "Cheung Sha Wan via Eagle's Nest Tunnel", mins: 7, color: 1 }, { destId: 'LRT', dest_zh: '經獅子山隧道往九龍塘', dest_en: 'Kowloon Tong via Lion Rock Tunnel', mins: 11, color: 2 }, { destId: 'SMT', dest_zh: '經城門隧道往荃灣', dest_en: 'Tsuen Wan via Shing Mun Tunnels', mins: 9, color: 1 } ] },
+{ id: 'NT6', region: 'NT', district_zh: '西貢區', district_en: 'Sai Kung', name_zh: '福民路北行近普通道', name_en: 'Fuk Man Road northbound near Po Tung Road', road_zh: '福民路（北行）', road_en: 'Fuk Man Road (Northbound)', lat: 22.3822, lon: 114.2715, routes: [ { destId: 'CWB_RD', dest_zh: '經清水灣道往彩虹', dest_en: 'Choi Hung via Clear Water Bay Rd', mins: 18, color: 1 }, { destId: 'SK_RD', dest_zh: '經西貢公路及將軍澳道往觀塘', dest_en: 'Kwun Tong via Sai Kung Rd & TKO Tunnel', mins: 21, color: 2 } ] },
+{ id: 'NT7', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '寶順路南行近頌明苑', name_en: 'Po Shun Road southbound near Chung Ming Court', road_zh: '寶順路（南行）', road_en: 'Po Shun Road (Southbound)', lat: 22.3168, lon: 114.2625, routes: [ { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 8, color: 1 }, { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 7, color: 1 } ] },
+{ id: 'NT8', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '環保大道西行近香港單車館', name_en: 'Wan Po Road westbound near Hong Kong Velodrome', road_zh: '環保大道（西行）', road_en: 'Wan Po Road (Westbound)', lat: 22.3125, lon: 114.2632, routes: [ { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 6, color: 1 }, { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 9, color: 1 } ] },
+{ id: 'NT9', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '寶康路南行近九巴將軍澳車廠', name_en: 'Po Hong Road southbound near KMB Tseung Kwan O Depot', road_zh: '寶康路（南行）', road_en: 'Po Hong Road (Southbound)', lat: 22.3195, lon: 114.2562, routes: [ { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 7, color: 1 }, { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 8, color: 1 } ] },
+{ id: 'NT10', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '寶邑路西行近調景嶺體育館', name_en: 'Po Yap Road westbound near Tiu Keng Leng Sports Centre', road_zh: '寶邑路（西行）', road_en: 'Po Yap Road (Westbound)', lat: 22.3065, lon: 114.2545, routes: [ { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 5, color: 1 }, { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 9, color: 1 } ] },
+{ id: 'NT11', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '寶順路南行近調景嶺體育館', name_en: 'Po Shun Road southbound near Tiu Keng Leng Sports Centre', road_zh: '寶順路（南行）', road_en: 'Po Shun Road (Southbound)', lat: 22.3075, lon: 114.2555, routes: [ { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 5, color: 1 }, { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 9, color: 1 } ] },
+{ id: 'NT12', region: 'NT', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', name_zh: '翠嶺路東行近調景嶺體育館', name_en: 'Chui Ling Road eastbound near Tiu Keng Leng Sports Centre', road_zh: '翠嶺路（東行）', road_en: 'Chui Ling Road (Eastbound)', lat: 22.3055, lon: 114.2532, routes: [ { destId: 'TKOLT', dest_zh: '經將藍隧道往茶果嶺／東隧', dest_en: 'Cha Kwo Ling / EHC via TKO-Lam Tin Tunnel', mins: 5, color: 1 }, { destId: 'TKOT', dest_zh: '經將軍澳隧道往觀塘', dest_en: 'Kwun Tong via Tseung Kwan O Tunnel', mins: 10, color: 1 } ] }
+];
+
+window.tdJtiPortalState = {
+initialized: false,
+syncState: 'READY',
+lastSyncTime: '',
+regionFilter: 'ALL',
+viewMode: 'GANTRY', // 'GANTRY' | 'TABLE' | 'CSDI_MAP'
+searchQuery: '',
+stations: JSON.parse(JSON.stringify(TD_JTI_STATIONS))
+};
+
+function initJtiSystem() {
+const st = window.tdJtiPortalState;
+if (!st.initialized) {
+st.initialized = true;
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+syncJtiData(false);
+}
+}
+
+async function syncJtiData(isManual) {
+const st = window.tdJtiPortalState;
+const badgeEl = document.getElementById('jti-refresh-status');
+const isEn = (currentLang === 'en');
+if (badgeEl && isManual) {
+badgeEl.innerHTML = isEn ? '🔄 Syncing JTI...' : '🔄 正在同步行車時間...';
+}
+
+try {
+if (typeof fetchTextWithCorsFallback === 'function') {
+const rawXml = await fetchTextWithCorsFallback(TD_JTI_LIVE_URLS, 5000);
+if (rawXml && rawXml.includes('JOURNEY_TIME')) {
+const parser = new DOMParser();
+const xmlDoc = parser.parseFromString(rawXml, 'text/xml');
+const nodes = xmlDoc.querySelectorAll('JTIS_JOURNEY_TIME, JOURNEY_TIME');
+nodes.forEach(nd => {
+const locId = (nd.querySelector('LOCATION_ID')?.textContent || '').trim();
+const destId = (nd.querySelector('DESTINATION_ID')?.textContent || '').trim();
+const jData = parseInt(nd.querySelector('JOURNEY_DATA')?.textContent || '0', 10);
+const colId = parseInt(nd.querySelector('COLOUR_ID')?.textContent || '1', 10);
+if (locId && jData > 0) {
+const matchedSt = st.stations.find(s => s.id === locId);
+if (matchedSt && matchedSt.routes.length > 0) {
+const matchedRt = matchedSt.routes.find(r => r.destId === destId) || matchedSt.routes[0];
+matchedRt.mins = jData;
+matchedRt.color = (colId >= 1 && colId <= 3) ? colId : (jData >= 35 ? 3 : (jData >= 16 ? 2 : 1));
+}
+}
+});
+st.syncState = 'LIVE';
+}
+}
+} catch (e) {
+st.syncState = 'READY';
+}
+
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+if (badgeEl) {
+badgeEl.innerHTML = isEn
+? `🟢 Live JTI Updated (${st.lastSyncTime})`
+: `🟢 實時行車時間已更新 (${st.lastSyncTime})`;
+}
+if (currentActivePage === 'jti') {
+renderJtiPortal();
+}
+}
+
+function setJtiRegionFilter(reg) {
+window.tdJtiPortalState.regionFilter = reg || 'ALL';
+renderJtiPortal();
+}
+
+function setJtiViewMode(mode) {
+window.tdJtiPortalState.viewMode = mode || 'GANTRY';
+renderJtiPortal();
+}
+
+function onJtiSearchInput(val) {
+window.tdJtiPortalState.searchQuery = String(val || '');
+const region = document.getElementById('jti-dynamic-list-region');
+if (region) {
+region.innerHTML = buildJtiMainBodyHTML(currentLang === 'en');
+}
+}
+
+function getFilteredJtiStations() {
+const st = window.tdJtiPortalState;
+const reg = st.regionFilter || 'ALL';
+const q = (st.searchQuery || '').trim().toLowerCase();
+return (st.stations || []).filter(item => {
+if (reg !== 'ALL' && item.region !== reg) return false;
+if (q) {
+const rts = (item.routes || []).map(r => `${r.dest_zh} ${r.dest_en}`).join(' ');
+const hay = `${item.id} ${item.name_zh} ${item.name_en} ${item.road_zh} ${item.road_en} ${item.district_zh} ${item.district_en} ${rts}`.toLowerCase();
+if (!hay.includes(q)) return false;
+}
+return true;
+});
+}
+
+function buildJtiMainBodyHTML(isEn) {
+const st = window.tdJtiPortalState;
+const filtered = getFilteredJtiStations();
+
+if (st.viewMode === 'CSDI_MAP') {
+const csdiLang = isEn ? 'en' : 'zh-hk';
+const csdiUrl = `https://portal.csdi.gov.hk/geoportal/?datasetId=td_rcd_1671692669689_59165&lang=${csdiLang}`;
+return `
+<div class="el-card-box" style="border-top:3px solid #0284c7; padding:14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+<div>
+<div style="font-size:0.95rem; font-weight:900; color:#0f172a;">🗺️ ${isEn ? 'CSDI Spatial Data Geoportal — Journey Time Indicators Map' : '空間數據共享平台 (CSDI) — 全港行車時間顯示器空間地圖視窗'}</div>
+<div style="font-size:0.75rem; color:#475569; font-weight:600; margin-top:2px;">${isEn ? 'Interactive spatial viewer for all 30 Journey Time Indicators across Hong Kong.' : '互動地圖標示全港 30 組行車時間顯示器座標位置及方向。'}</div>
+</div>
+<a href="${csdiUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; padding:5px 12px; border-radius:8px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:0.76rem; font-weight:900;">↗ ${isEn ? 'Open Full Map in New Tab' : '於新分頁開啟空間地圖'}</a>
+</div>
+<div style="width:100%; height:600px; border-radius:12px; overflow:hidden; border:1.5px solid #cbd5e1; background:#f8fafc;">
+<iframe src="${csdiUrl}" style="width:100%; height:100%; border:none;" title="CSDI Journey Time Indicators Map"></iframe>
+</div>
+</div>
+`;
+}
+
+if (filtered.length === 0) {
+return `<div class="el-card-box" style="text-align:center; padding:32px; color:#64748b; font-weight:800;">${isEn ? 'No matching Journey Time Indicator found.' : '找不到符合篩選條件的行車時間顯示器。'}</div>`;
+}
+
+if (st.viewMode === 'TABLE') {
+const rowsHtml = filtered.map(item => {
+const regName = item.region === 'HKI' ? (isEn ? 'HK Island' : '香港島') : (item.region === 'KLN' ? (isEn ? 'Kowloon' : '九龍') : (isEn ? 'New Territories' : '新界'));
+const rtsHtml = item.routes.map(r => {
+const colHex = r.color === 3 ? '#ef4444' : (r.color === 2 ? '#f59e0b' : '#10b981');
+const colLabel = r.color === 3 ? (isEn ? 'Congested' : '擠塞') : (r.color === 2 ? (isEn ? 'Busy' : '繁忙') : (isEn ? 'Normal' : '暢順'));
+return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px dashed #e2e8f0;">
+<span style="font-weight:700; color:#1e293b;">${isEn ? r.dest_en : r.dest_zh}</span>
+<span style="font-weight:900; color:${colHex}; white-space:nowrap;">● ${r.mins} ${isEn ? 'mins' : '分鐘'} (${colLabel})</span>
+</div>`;
+}).join('');
+return `
+<tr style="border-bottom:1px solid #e2e8f0;">
+<td style="padding:10px 8px; font-weight:900; color:#0284c7; white-space:nowrap;">${item.id}</td>
+<td style="padding:10px 8px; font-weight:800; color:#334155; white-space:nowrap;">${regName} · ${isEn ? item.district_en : item.district_zh}</td>
+<td style="padding:10px 8px; font-weight:900; color:#0f172a;">${isEn ? item.name_en : item.name_zh}</td>
+<td style="padding:10px 8px; font-size:0.78rem;">${rtsHtml}</td>
+<td style="padding:10px 8px; font-size:0.73rem; color:#64748b; font-weight:700; white-space:nowrap;">${item.lat.toFixed(4)}°N, ${item.lon.toFixed(4)}°E</td>
+</tr>
+`;
+}).join('');
+
+return `
+<div class="el-card-box" style="padding:12px 14px; overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.79rem;">
+<thead>
+<tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; text-align:left; font-weight:900; color:#0f172a;">
+<th style="padding:9px 8px;">ID</th>
+<th style="padding:9px 8px;">${isEn ? 'Region / District' : '區域／地區'}</th>
+<th style="padding:9px 8px;">${isEn ? 'JTI Gantry Location' : '行車時間顯示器安裝位置'}</th>
+<th style="padding:9px 8px;">${isEn ? 'Destination Tunnel / Route & Est. Journey Time' : '目的地隧道／幹道及估計行車時間'}</th>
+<th style="padding:9px 8px;">${isEn ? 'Coordinates' : '地理座標'}</th>
+</tr>
+</thead>
+<tbody>${rowsHtml}</tbody>
+</table>
+</div>
+`;
+}
+
+// Default: LED Gantry Simulation Cards
+const cardsHtml = filtered.map(item => {
+const regBadge = item.region === 'HKI'
+? { zh: '港島區', en: 'HK Island', col: '#0284c7', bg: '#e0f2fe' }
+: (item.region === 'KLN'
+? { zh: '九龍區', en: 'Kowloon', col: '#7c3aed', bg: '#ede9fe' }
+: { zh: '新界區', en: 'New Territories', col: '#059669', bg: '#d1fae5' });
+
+const ledRowsHtml = item.routes.map(r => {
+const ledColor = r.color === 3 ? '#ff4d4f' : (r.color === 2 ? '#fbbf24' : '#34d399');
+const statusText = r.color === 3 ? (isEn ? 'Congested' : '擠塞') : (r.color === 2 ? (isEn ? 'Busy' : '略為擠塞') : (isEn ? 'Normal' : '交通正常'));
+return `
+<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; background:rgba(15,23,42,0.85); border:1px solid #334155; border-radius:8px; font-family:'JetBrains Mono', 'Courier New', monospace;">
+<div style="font-size:0.8rem; font-weight:800; color:#f8fafc; letter-spacing:0.2px;">
+${isEn ? r.dest_en : r.dest_zh}
+</div>
+<div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+<span style="font-size:1.05rem; font-weight:900; color:${ledColor}; text-shadow:0 0 8px ${ledColor}66;">
+${r.mins} ${isEn ? 'min' : '分鐘'}
+</span>
+<span style="font-size:0.66rem; font-weight:900; padding:2px 6px; border-radius:999px; background:rgba(255,255,255,0.08); color:${ledColor}; border:1px solid ${ledColor}55;">
+${statusText}
+</span>
+</div>
+</div>
+`;
+}).join('');
+
+return `
+<div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:14px; padding:13px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; box-shadow:0 3px 10px rgba(15,23,42,0.05);">
+<div>
+<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px;">
+<div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
+<span style="padding:2px 8px; border-radius:7px; background:#0f172a; color:#38bdf8; font-size:0.72rem; font-weight:900;">#${item.id}</span>
+<span style="padding:2px 8px; border-radius:7px; background:${regBadge.bg}; color:${regBadge.col}; font-size:0.71rem; font-weight:900;">${isEn ? regBadge.en : regBadge.zh} · ${isEn ? item.district_en : item.district_zh}</span>
+</div>
+<span style="font-size:0.69rem; color:#64748b; font-weight:700;">📍 ${item.lat.toFixed(4)}°N, ${item.lon.toFixed(4)}°E</span>
+</div>
+<div style="font-size:0.93rem; font-weight:900; color:#0f172a; line-height:1.35; margin-bottom:9px;">
+🛣️ ${isEn ? item.name_en : item.name_zh}
+</div>
+<div style="background:#090d16; border:2.5px solid #334155; border-radius:11px; padding:9px; display:flex; flex-direction:column; gap:6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.65);">
+<div style="display:flex; align-items:center; justify-content:space-between; font-size:0.67rem; font-weight:800; color:#94a3b8; padding:0 2px;">
+<span>${isEn ? 'DESTINATION TUNNEL / STRATEGIC ROUTE' : '前往隧道／主要幹線出口'}</span>
+<span>${isEn ? 'EST. JOURNEY TIME' : '預計行車時間'}</span>
+</div>
+${ledRowsHtml}
+</div>
+</div>
+</div>
+`;
+}).join('');
+
+return `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px;">
+${cardsHtml}
+</div>
+`;
+}
+
+function renderJtiPortal() {
+const container = document.getElementById('jti-portal-container');
+if (!container) return;
+
+const isEn = (currentLang === 'en');
+const st = window.tdJtiPortalState;
+const allStations = st.stations || [];
+const filtered = getFilteredJtiStations();
+
+const titleEl = document.getElementById('t-jti-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '⏱️ HK Journey Time Indicators (Live Tunnel & Strategic Route ETA)'
+: '⏱️ 全港行車時間顯示器即時估計行車時間看板';
+}
+
+const hkiCnt = allStations.filter(s => s.region === 'HKI').length;
+const klnCnt = allStations.filter(s => s.region === 'KLN').length;
+const ntCnt = allStations.filter(s => s.region === 'NT').length;
+
+const kpiHtml = `
+<div class="el-card-box" style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:#ffffff; border-color:#334155; padding:16px;">
+<div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+<div>
+<div style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(52,211,153,0.16); color:#34d399; border:1px solid rgba(52,211,153,0.35); font-size:0.72rem; font-weight:900; margin-bottom:6px;">
+⏱️ ${isEn ? 'TRANSPORT DEPARTMENT · JOURNEY TIME INDICATION SYSTEM (JTIS 2ND GEN)' : '運輸署 · 行車時間顯示系統（第二代）及空間數據看板'}
+</div>
+<div style="font-size:1.06rem; font-weight:900; color:#f8fafc;">
+${isEn ? '30 Sets of Journey Time Indicators Across Major Diversion Points in HK' : '全港 30 組主要幹道及過海隧道分流點行車時間顯示器實時看板'}
+</div>
+<div style="font-size:0.76rem; color:#cbd5e1; font-weight:600; margin-top:3px;">
+${isEn
+? 'Refreshed every 2 minutes on a 24-hour basis. LED Colours: Green = Traffic Normal | Amber = Busy / Slow | Red = Congested (Hotline: 2804 2655).'
+: '系統全日 24 小時運作並每 2 分鐘更新一次。LED 顏色指標：🟢 綠色＝交通正常 ｜ 🟡 黃色＝交通繁忙／略為擠塞 ｜ 🔴 紅色＝交通擠塞（查詢熱線：2804 2655）。'}
+</div>
+</div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+<div style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Total JTI Gantries' : '全港行車時間顯示器總數'}</div>
+<div style="font-size:1.45rem; font-weight:900; color:#38bdf8; margin-top:2px;">${allStations.length} <span style="font-size:0.78rem; color:#cbd5e1;">${isEn ? 'sets' : '組'}</span></div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:2px;">${isEn ? `Showing ${filtered.length} matching sets` : `目前篩選顯示 ${filtered.length} 組顯示器`}</div>
+</div>
+<div style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Regional Coverage' : '港九新界分佈'}</div>
+<div style="font-size:1.18rem; font-weight:900; color:#34d399; margin-top:4px;">${isEn ? `HKI ${hkiCnt} · KLN ${klnCnt} · NT ${ntCnt}` : `港島 ${hkiCnt} 組 · 九龍 ${klnCnt} 組 · 新界 ${ntCnt} 組`}</div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:4px;">${isEn ? 'Covers all 3 Cross-Harbour Tunnels & Strategic Routes' : '涵蓋三條過海隧道、沙田／元朗及將軍澳幹道'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'LED Colour Thresholds' : '行車時間顏色標準'}</div>
+<div style="font-size:0.84rem; font-weight:900; color:#f8fafc; margin-top:5px;">🟢 ≤15m · 🟡 16–29m · 🔴 ≥30m</div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:4px;">${isEn ? 'Cross-harbour EHC/WHC: Green ≤20m, Amber 21–40m, Red >40m' : '東隧／西隧過海：綠 ≤20分、黃 21–40分、紅 >40分'}</div>
+</div>
+</div>
+</div>
+`;
+
+const regBtns = [
+{ id: 'ALL', zh: `全部地區 (${allStations.length})`, en: `All Regions (${allStations.length})` },
+{ id: 'HKI', zh: `香港島 (${hkiCnt})`, en: `HK Island (${hkiCnt})` },
+{ id: 'KLN', zh: `九龍 (${klnCnt})`, en: `Kowloon (${klnCnt})` },
+{ id: 'NT', zh: `新界 (${ntCnt})`, en: `New Territories (${ntCnt})` }
+];
+
+const toolbarHtml = `
+<div class="el-card-box" style="padding:12px 14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+${regBtns.map(b => {
+const active = (st.regionFilter === b.id);
+return `<button type="button" onclick="setJtiRegionFilter('${b.id}')" style="cursor:pointer; padding:5px 11px; border-radius:999px; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-size:0.75rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('')}
+</div>
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<input
+type="text"
+class="el-search-input"
+style="min-width:220px; background:#ffffff;"
+value="${(st.searchQuery || '').replace(/"/g, '&quot;')}"
+oninput="onJtiSearchInput(this.value)"
+placeholder="${isEn ? '🔍 Search road, tunnel, district...' : '🔍 搜尋道路、隧道名稱或地區...'}"
+/>
+<button type="button" onclick="setJtiViewMode('GANTRY')" style="cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid ${st.viewMode === 'GANTRY' ? '#0f172a' : '#cbd5e1'}; background:${st.viewMode === 'GANTRY' ? '#0f172a' : '#ffffff'}; color:${st.viewMode === 'GANTRY' ? '#ffffff' : '#334155'}; font-size:0.74rem; font-weight:800;">📟 ${isEn ? 'LED Gantry Boards' : 'LED 龍門架顯示屏'}</button>
+<button type="button" onclick="setJtiViewMode('TABLE')" style="cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid ${st.viewMode === 'TABLE' ? '#0f172a' : '#cbd5e1'}; background:${st.viewMode === 'TABLE' ? '#0f172a' : '#ffffff'}; color:${st.viewMode === 'TABLE' ? '#ffffff' : '#334155'}; font-size:0.74rem; font-weight:800;">📋 ${isEn ? 'Table View' : '明細列表'}</button>
+<button type="button" onclick="setJtiViewMode('CSDI_MAP')" style="cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid ${st.viewMode === 'CSDI_MAP' ? '#0f172a' : '#cbd5e1'}; background:${st.viewMode === 'CSDI_MAP' ? '#0f172a' : '#ffffff'}; color:${st.viewMode === 'CSDI_MAP' ? '#ffffff' : '#334155'}; font-size:0.74rem; font-weight:800;">🗺️ ${isEn ? 'CSDI Spatial Map' : 'CSDI 空間地圖'}</button>
+</div>
+</div>
+</div>
+`;
+
+container.innerHTML = `
+${kpiHtml}
+${toolbarHtml}
+<div id="jti-dynamic-list-region">
+${buildJtiMainBodyHTML(isEn)}
+</div>
+`;
+}
+
+function applyJtiLanguage() {
+if (currentActivePage === 'jti') renderJtiPortal();
+}
+
+// =========================================================================
+// 📸 全港偵察車速攝影機箱的地點看板 (TD Locations of Speed Enforcement Camera Housings)
+// =========================================================================
+const TD_SEC_CSV_URLS = [
+'https://www.td.gov.hk/datagovhk_td/locations-of-sec/resources/locations_of_sec.csv'
+];
+
+const TD_BASELINE_SEC_LOCATIONS = [
+// 香港島 (Hong Kong Island)
+{ no: 'SEC-001', region: 'HKI', district_zh: '東區', district_en: 'Eastern', road_zh: '東區走廊（東行）', road_en: 'Island Eastern Corridor (Eastbound)', loc_zh: '介乎北角斜路及民康街斜路（北角警署對面）', loc_en: 'Between North Point Slip Road and Man Hong Street Slip Road', speedLimit: 70 },
+{ no: 'SEC-002', region: 'HKI', district_zh: '東區', district_en: 'Eastern', road_zh: '東區走廊（東行）', road_en: 'Island Eastern Corridor (Eastbound)', loc_zh: '介乎鯉景灣及太古城出口之間', loc_en: 'Between Lei King Wan and Taikoo Shing Exit', speedLimit: 70 },
+{ no: 'SEC-003', region: 'HKI', district_zh: '東區', district_en: 'Eastern', road_zh: '東區走廊（東行）', road_en: 'Island Eastern Corridor (Eastbound)', loc_zh: '介乎東喜道及杏花邨（阿公岩斜路）之間', loc_en: 'Between Tung Hei Road and Heng Fa Chuen (A Kung Ngam)', speedLimit: 70 },
+{ no: 'SEC-004', region: 'HKI', district_zh: '東區', district_en: 'Eastern', road_zh: '東區走廊（西行）', road_en: 'Island Eastern Corridor (Westbound)', loc_zh: '介乎寧富街及杏花邨（柴灣公園對面）', loc_en: 'Between Ning Foo Street and Heng Fa Chuen (opposite Chai Wan Park)', speedLimit: 70 },
+{ no: 'SEC-005', region: 'HKI', district_zh: '東區', district_en: 'Eastern', road_zh: '東區走廊（西行）', road_en: 'Island Eastern Corridor (Westbound)', loc_zh: '介乎健康中街及糖水道斜路之間', loc_en: 'Between Healthy Street Central and Tong Shui Road Slip Road', speedLimit: 70 },
+{ no: 'SEC-006', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', road_zh: '告士打道（西行）', road_en: 'Gloucester Road (Westbound)', loc_zh: '介乎史釗域道及柯布連道之間', loc_en: 'Between Stewart Road and O\'Brien Road', speedLimit: 70 },
+{ no: 'SEC-007', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', road_zh: '告士打道（西行）', road_en: 'Gloucester Road (Westbound)', loc_zh: '介乎盧押道及軍器廠街之間', loc_en: 'Between Luard Road and Arsenal Street', speedLimit: 70 },
+{ no: 'SEC-008', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', road_zh: '黃泥涌道（南行）', road_en: 'Wong Nai Chung Road (Southbound)', loc_zh: '介乎皇后大道東及山光道之間', loc_en: 'Between Queen\'s Road East and Shan Kwong Road', speedLimit: 50 },
+{ no: 'SEC-009', region: 'HKI', district_zh: '中西區', district_en: 'Central & Western', road_zh: '干諾道中（西行）', road_en: 'Connaught Road Central (Westbound)', loc_zh: '介乎夏愨道及昃臣道之間及干諾道西天橋近城西道', loc_en: 'Between Harcourt Rd and Jackson Rd & Connaught Rd West Flyover', speedLimit: 70 },
+{ no: 'SEC-010', region: 'HKI', district_zh: '南區', district_en: 'Southern', road_zh: '黃竹坑道（東行）及石澳道', road_en: 'Wong Chuk Hang Road (Eastbound) & Shek O Road', loc_zh: '介乎海洋公園道及南風道之間、石澳道近爛泥灣', loc_en: 'Between Ocean Park Rd and Nam Fung Rd; Shek O Rd near Lan Nai Wan', speedLimit: 50 },
+
+// 九龍 (Kowloon)
+{ no: 'SEC-011', region: 'KLN', district_zh: '黃大仙／深水埗區', district_en: 'Wong Tai Sin / Sham Shui Po', road_zh: '龍翔道（東行及西行）', road_en: 'Lung Cheung Road (Eastbound & Westbound)', loc_zh: '介乎窩打老道及大埔道之間、介乎獅子山隧道及黃菊路之間', loc_en: 'Between Waterloo Rd and Tai Po Rd; near Lion Rock Tunnel approach', speedLimit: 70 },
+{ no: 'SEC-012', region: 'KLN', district_zh: '深水埗區', district_en: 'Sham Shui Po', road_zh: '呈祥道（東行及西行）', road_en: 'Ching Cheung Road (Eastbound & Westbound)', loc_zh: '介乎青山道及大埔道之間（近明愛醫院及蝴蝶谷道）', loc_en: 'Between Castle Peak Road and Tai Po Road (near Butterfly Valley)', speedLimit: 70 },
+{ no: 'SEC-013', region: 'KLN', district_zh: '深水埗／油尖旺區', district_en: 'Sham Shui Po / Yau Tsim Mong', road_zh: '西九龍走廊及西九龍公路', road_en: 'West Kowloon Corridor & West Kowloon Highway', loc_zh: '西九龍走廊近欽州街及西九龍公路近奧海城／南昌段', loc_en: 'West Kowloon Corridor near Yen Chow St & West Kowloon Highway', speedLimit: 70 },
+{ no: 'SEC-014', region: 'KLN', district_zh: '深水埗區', district_en: 'Sham Shui Po', road_zh: '大埔道（琵琶山段）', road_en: 'Tai Po Road (Piper\'s Hill)', loc_zh: '介乎金山路及青山道之間一段大埔道雙向', loc_en: 'Section of Tai Po Road between Kam Shan Road and Castle Peak Road', speedLimit: 50 },
+{ no: 'SEC-015', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', road_zh: '公主道及窩打老道', road_en: 'Princess Margaret Road & Waterloo Road', loc_zh: '介乎常盛街及培正道之一段公主道、介乎獅子山隧道及界限街之窩打老道', loc_en: 'Princess Margaret Rd near Pui Ching Rd; Waterloo Rd near Boundary St', speedLimit: 70 },
+{ no: 'SEC-016', region: 'KLN', district_zh: '九龍城／黃大仙區', district_en: 'Kowloon City / Wong Tai Sin', road_zh: '太子道東及彩虹道', road_en: 'Prince Edward Road East & Choi Hung Road', loc_zh: '介乎九龍城迴旋處及彩石里之太子道東（采頤花園對開）', loc_en: 'Prince Edward Road East between Kowloon City Roundabout and Choi Shek Lane', speedLimit: 70 },
+{ no: 'SEC-017', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', road_zh: '觀塘道、偉業街及啟福道', road_en: 'Kwun Tong Road, Wai Yip Street & Kai Fuk Road', loc_zh: '介乎牛頭角道及康寧道之觀塘道、介乎啟福道天橋及啟祥道之啟福道', loc_en: 'Kwun Tong Rd near Ngau Tau Kok Rd; Kai Fuk Rd near Kai Cheung Rd', speedLimit: 70 },
+{ no: 'SEC-018', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', road_zh: '將軍澳道、鯉魚門道及寶琳路', road_en: 'Tseung Kwan O Road, Lei Yue Mun Road & Po Lam Road', loc_zh: '介乎鯉魚門道及將軍澳隧道之將軍澳道斜路、寶琳路近馬游塘', loc_en: 'Tseung Kwan O Road slope towards TKO Tunnel; Po Lam Road near Ma Yau Tong', speedLimit: 70 },
+
+// 新界東 (New Territories East)
+{ no: 'SEC-019', region: 'NTE', district_zh: '沙田／大埔區', district_en: 'Sha Tin / Tai Po', road_zh: '吐露港公路（九龍往新界北行）', road_en: 'Tolo Highway (Northbound towards Tai Po/Fanling)', loc_zh: '馬料水橋、香港中文大學、大埔滘、下碗窰、大埔太和路及康樂園段', loc_en: 'Ma Liu Shui, CUHK, Tai Po Kau, Ha Wun Yiu, Tai Po Tai Wo Rd & Hong Lok Yuen', speedLimit: 100 },
+{ no: 'SEC-020', region: 'NTE', district_zh: '大埔／北區', district_en: 'Tai Po / North', road_zh: '粉嶺公路（北行及南行）', road_en: 'Fanling Highway (Northbound & Southbound)', loc_zh: '近康樂園、九龍坑、泰亨、蓬瀛仙館及粉嶺港鐵站路段', loc_en: 'Near Hong Lok Yuen, Kau Lung Hang, Tai Hang, Fung Ying Seen Koon & Fanling Stn', speedLimit: 100 },
+{ no: 'SEC-021', region: 'NTE', district_zh: '大埔區', district_en: 'Tai Po', road_zh: '汀角路及新娘潭路', road_en: 'Ting Kok Road & Bride\'s Pool Road', loc_zh: '汀角路近下坑、映月灣及大美督段；新娘潭路近涌背', loc_en: 'Ting Kok Road near Ha Hang & Tai Mei Tuk; Bride\'s Pool Road', speedLimit: 50 },
+{ no: 'SEC-022', region: 'NTE', district_zh: '北區', district_en: 'North', road_zh: '沙頭角公路（龍躍頭及馬尾下段）及保榮路', road_en: 'Sha Tau Kok Road & Po Wing Road', loc_zh: '沙頭角公路近軍地、高埔及上水保榮路近紀律部隊宿舍', loc_en: 'Sha Tau Kok Road near Kwan Tei; Po Wing Road in Sheung Shui', speedLimit: 50 },
+{ no: 'SEC-023', region: 'NTE', district_zh: '沙田區', district_en: 'Sha Tin', road_zh: '大埔公路（沙田嶺段及馬料水段）及亞公角街', road_en: 'Tai Po Road (Sha Tin Heights) & A Kung Kok Street', loc_zh: '大埔公路沙田嶺段近九龍水塘及徑口路、亞公角街近沙田醫院', loc_en: 'Tai Po Road (Sha Tin Heights) near Kowloon Reservoir; A Kung Kok St', speedLimit: 70 },
+{ no: 'SEC-024', region: 'NTE', district_zh: '西貢區', district_en: 'Sai Kung', road_zh: '清水灣道、西貢公路、西沙路及環保大道', road_en: 'Clear Water Bay Rd, Sai Kung Hwy, Sai Sha Rd & Wan Po Rd', loc_zh: '清水灣道近壁屋及相思灣、西貢公路近白沙灣、西沙路近泥涌及環保大道日出康城段', loc_en: 'Clear Water Bay Rd near Pik Uk; Sai Kung Hwy; Sai Sha Rd; Wan Po Rd near LOHAS Park', speedLimit: 70 },
+
+// 新界西 (New Territories West)
+{ no: 'SEC-025', region: 'NTW', district_zh: '荃灣／屯門區', district_en: 'Tsuen Wan / Tuen Mun', road_zh: '屯門公路（往屯門及往九龍雙向）', road_en: 'Tuen Mun Road (Both Bounds)', loc_zh: '近深井、青龍頭、大欖角、小欖、掃管笏及青田路交匯處路段', loc_en: 'Near Sham Tseng, Tsing Lung Tau, Tai Lam Kok, Siu Lam, So Kwun Wat & Tsing Tin Rd', speedLimit: 80 },
+{ no: 'SEC-026', region: 'NTW', district_zh: '屯門／元朗區', district_en: 'Tuen Mun / Yuen Long', road_zh: '元朗公路（東行及西行）', road_en: 'Yuen Long Highway (Eastbound & Westbound)', loc_zh: '近兆康苑、藍地、洪天路、唐人新村及十八鄉交匯處路段', loc_en: 'Near Siu Hong Court, Lam Tei, Hung Tin Rd, Tong Yan San Tsuen & Shap Pat Heung', speedLimit: 80 },
+{ no: 'SEC-027', region: 'NTW', district_zh: '元朗區', district_en: 'Yuen Long', road_zh: '新田公路、青朗公路及天影路', road_en: 'San Tin Highway, Tsing Long Highway & Tin Ying Road', loc_zh: '新田公路近錦繡花園及米埔、青朗公路大欖隧道引道、天水圍天影路近天瑞邨', loc_en: 'San Tin Hwy near Fairview Park; Tsing Long Hwy; Tin Ying Rd near Tin Shui Estate', speedLimit: 100 },
+{ no: 'SEC-028', region: 'NTW', district_zh: '元朗區', district_en: 'Yuen Long', road_zh: '青山公路（潭尾、米埔及洪水橋段）及新潭路', road_en: 'Castle Peak Road (Tam Mi / Mai Po / Hung Shui Kiu) & San Tam Rd', loc_zh: '青山公路近沙埔村及灰沙圍、新潭路近逢吉鄉、大棠路近南坑排', loc_en: 'Castle Peak Rd near Sha Po Tsuen & Fui Sha Wai; San Tam Rd; Tai Tong Rd', speedLimit: 50 },
+{ no: 'SEC-029', region: 'NTW', district_zh: '葵青／荃灣區', district_en: 'Kwai Tsing / Tsuen Wan', road_zh: '荃灣路、葵涌道及德士古道天橋', road_en: 'Tsuen Wan Road, Kwai Chung Road & Texaco Road', loc_zh: '荃灣路近葵青交匯處及麗城花園、葵涌道近荔景', loc_en: 'Tsuen Wan Road near Kwai Tsing Interchange & Belvedere Garden; Kwai Chung Rd', speedLimit: 70 },
+{ no: 'SEC-030', region: 'NTW', district_zh: '離島／葵青區', district_en: 'Islands / Lantau', road_zh: '北大嶼山公路及翔東路', road_en: 'North Lantau Highway & Cheung Tung Road', loc_zh: '北大嶼山公路近欣澳、小蠔灣及東涌東交匯處（全港最高速限 110 km/h 路段）', loc_en: 'North Lantau Highway near Sunny Bay, Siu Ho Wan & Tung Chung (110 km/h limit)', speedLimit: 110 }
+];
+
+window.tdSecPortalState = {
+initialized: false,
+syncState: 'READY',
+lastSyncTime: '',
+regionFilter: 'ALL',
+speedFilter: 'ALL',
+searchQuery: '',
+records: TD_BASELINE_SEC_LOCATIONS.slice()
+};
+
+function initSecSystem() {
+const st = window.tdSecPortalState;
+if (!st.initialized) {
+st.initialized = true;
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+syncSecData(false);
+}
+}
+
+async function syncSecData(isManual) {
+const st = window.tdSecPortalState;
+const badgeEl = document.getElementById('sec-refresh-status');
+const isEn = (currentLang === 'en');
+if (badgeEl && isManual) {
+badgeEl.innerHTML = isEn ? '🔄 Syncing SEC CSV...' : '🔄 正在同步偵速攝影機箱位置...';
+}
+
+try {
+if (typeof fetchTextWithCorsFallback === 'function') {
+const rawCsv = await fetchTextWithCorsFallback(TD_SEC_CSV_URLS, 5500);
+if (rawCsv && rawCsv.length > 100 && rawCsv.includes(',')) {
+const lines = rawCsv.split(/\r?\n/).filter(l => l.trim().length > 0);
+if (lines.length > 2) {
+const parsed = [];
+for (let i = 1; i < lines.length; i++) {
+const cols = lines[i].split(',');
+if (cols.length >= 3) {
+const noVal = cols[0].replace(/^"|"$/g, '').trim() || ('SEC-' + i);
+const regRaw = cols[1].replace(/^"|"$/g, '').trim();
+const distVal = cols[2].replace(/^"|"$/g, '').trim();
+const locVal = cols.slice(3).join(', ').replace(/^"|"$/g, '').trim();
+let regCode = 'NTW';
+if (/Hong Kong|港島|HKI/i.test(regRaw)) regCode = 'HKI';
+else if (/Kowloon|九龍|KLN/i.test(regRaw)) regCode = 'KLN';
+else if (/East|新界東|NTE|Sha Tin|Tai Po|North|Sai Kung/i.test(regRaw + ' ' + distVal)) regCode = 'NTE';
+parsed.push({
+no: noVal,
+region: regCode,
+district_zh: distVal,
+district_en: distVal,
+road_zh: locVal.split('近')[0] || locVal,
+road_en: locVal,
+loc_zh: locVal,
+loc_en: locVal,
+speedLimit: /吐露港|粉嶺公路|新田公路/.test(locVal) ? 100 : (/北大嶼山/.test(locVal) ? 110 : (/屯門公路|元朗公路/.test(locVal) ? 80 : 70))
+});
+}
+}
+if (parsed.length >= 10) {
+st.records = parsed;
+st.syncState = 'LIVE';
+}
+}
+}
+}
+} catch (e) {
+st.syncState = 'READY';
+}
+
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+if (badgeEl) {
+badgeEl.innerHTML = isEn
+? `🟢 SEC Data Updated (${st.lastSyncTime})`
+: `🟢 偵速攝影機箱資料已更新 (${st.lastSyncTime})`;
+}
+if (currentActivePage === 'sec') {
+renderSecPortal();
+}
+}
+
+function setSecRegionFilter(reg) {
+window.tdSecPortalState.regionFilter = reg || 'ALL';
+renderSecPortal();
+}
+
+function setSecSpeedFilter(spd) {
+window.tdSecPortalState.speedFilter = spd || 'ALL';
+renderSecPortal();
+}
+
+function onSecSearchInput(val) {
+window.tdSecPortalState.searchQuery = String(val || '');
+const region = document.getElementById('sec-dynamic-list-region');
+if (region) {
+region.innerHTML = buildSecListHTML(currentLang === 'en');
+}
+}
+
+function getFilteredSecRecords() {
+const st = window.tdSecPortalState;
+const reg = st.regionFilter || 'ALL';
+const spd = st.speedFilter || 'ALL';
+const q = (st.searchQuery || '').trim().toLowerCase();
+return (st.records || []).filter(item => {
+if (reg !== 'ALL' && item.region !== reg) return false;
+if (spd !== 'ALL' && String(item.speedLimit) !== String(spd)) return false;
+if (q) {
+const hay = `${item.no} ${item.district_zh} ${item.district_en} ${item.road_zh} ${item.road_en} ${item.loc_zh} ${item.loc_en} ${item.speedLimit}`.toLowerCase();
+if (!hay.includes(q)) return false;
+}
+return true;
+});
+}
+
+function buildSecListHTML(isEn) {
+const filtered = getFilteredSecRecords();
+if (filtered.length === 0) {
+return `<div class="el-card-box" style="text-align:center; padding:32px; color:#64748b; font-weight:800;">${isEn ? 'No Speed Enforcement Camera housing matches your filter.' : '找不到符合篩選條件的偵察車速攝影機箱地點。'}</div>`;
+}
+
+const cardsHtml = filtered.map(item => {
+const regInfo = item.region === 'HKI'
+? { zh: '香港島', en: 'HK Island', col: '#0284c7', bg: '#f0f9ff' }
+: (item.region === 'KLN'
+? { zh: '九龍', en: 'Kowloon', col: '#7c3aed', bg: '#f5f3ff' }
+: (item.region === 'NTE'
+? { zh: '新界東', en: 'NT East', col: '#059669', bg: '#ecfdf5' }
+: { zh: '新界西', en: 'NT West', col: '#d97706', bg: '#fffbeb' }));
+
+return `
+<div style="background:#ffffff; border:1.5px solid #e2e8f0; border-left:4px solid ${regInfo.col}; border-radius:12px; padding:12px 14px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
+<div style="flex:1;">
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:5px;">
+<span style="padding:2px 8px; border-radius:6px; background:#0f172a; color:#f8fafc; font-size:0.7rem; font-weight:900;">${item.no}</span>
+<span style="padding:2px 8px; border-radius:6px; background:${regInfo.bg}; color:${regInfo.col}; font-size:0.71rem; font-weight:900;">${isEn ? regInfo.en : regInfo.zh} · ${isEn ? item.district_en : item.district_zh}</span>
+</div>
+<div style="font-size:0.92rem; font-weight:900; color:#0f172a; margin-bottom:4px;">
+📸 ${isEn ? item.road_en : item.road_zh}
+</div>
+<div style="font-size:0.77rem; color:#475569; font-weight:600; line-height:1.42;">
+📍 ${isEn ? item.loc_en : item.loc_zh}
+</div>
+</div>
+<div style="width:54px; height:54px; border-radius:50%; border:4.5px solid #dc2626; background:#ffffff; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(220,38,38,0.2);">
+<span style="font-size:0.98rem; font-weight:900; color:#0f172a; line-height:1;">${item.speedLimit}</span>
+<span style="font-size:0.54rem; font-weight:800; color:#475569; line-height:1; margin-top:1px;">km/h</span>
+</div>
+</div>
+`;
+}).join('');
+
+return `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(330px, 1fr)); gap:10px;">
+${cardsHtml}
+</div>
+`;
+}
+
+function renderSecPortal() {
+const container = document.getElementById('sec-portal-container');
+if (!container) return;
+
+const isEn = (currentLang === 'en');
+const st = window.tdSecPortalState;
+const allRecs = st.records || [];
+const filtered = getFilteredSecRecords();
+
+const titleEl = document.getElementById('t-sec-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '📸 Locations of Speed Enforcement Camera Housings (TD)'
+: '📸 全港偵察車速攝影機箱的地點看板';
+}
+
+const kpiHtml = `
+<div class="el-card-box" style="background:linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color:#ffffff; border-color:#334155; padding:16px;">
+<div style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-size:0.72rem; font-weight:900; margin-bottom:6px;">
+📸 ${isEn ? 'TRANSPORT DEPARTMENT · SPEED ENFORCEMENT CAMERA (SEC) HOUSINGS' : '運輸署 · 全港偵察車速攝影機箱位置（不包括政府隧道及管制區）'}
+</div>
+<div style="font-size:1.06rem; font-weight:900; color:#f8fafc; margin-bottom:4px;">
+${isEn ? 'Digital Speed Enforcement Camera Housing Directory & Road Safety Impact' : '全港數碼偵察車速攝影機機箱分佈、限速區間及超速罰則一覽'}
+</div>
+<div style="font-size:0.76rem; color:#cbd5e1; font-weight:600; margin-bottom:12px;">
+${isEn
+? 'TD review shows that at locations equipped with Speed Enforcement Cameras, vehicles exceeding the speed limit by 15 km/h or more dropped by 50%, and injury traffic accidents fell by 40%.'
+: '根據運輸署成效檢討，安裝偵速攝影機地點超速達每小時 15 公里的個案大幅減少 50%，導致有人受傷的交通意外數目亦減少 40%。現時全港共有 164 個地點安裝數碼偵速攝影機機箱。'}
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(185px, 1fr)); gap:10px;">
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Total SEC Housing Locations' : '全港數碼偵速機箱地點'}</div>
+<div style="font-size:1.45rem; font-weight:900; color:#38bdf8; margin-top:2px;">164 <span style="font-size:0.78rem; color:#cbd5e1;">${isEn ? 'sites' : '個地點'}</span></div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:2px;">${isEn ? 'Rotational digital camera deployment' : '配合數碼攝影機輪換執法'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Speeding ≥15 km/h Reduction' : '超速逾 15 km/h 個案跌幅'}</div>
+<div style="font-size:1.45rem; font-weight:900; color:#34d399; margin-top:2px;">-50%</div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:2px;">${isEn ? 'Injury traffic accidents down 40%' : '有人受傷交通意外減少 40%'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#94a3b8; font-weight:800;">${isEn ? 'Statutory Speeding Penalties' : '超速定額罰款及違例記分'}</div>
+<div style="font-size:0.84rem; font-weight:900; color:#fbbf24; margin-top:4px;">HK$320 – HK$1,000</div>
+<div style="font-size:0.7rem; color:#cbd5e1; margin-top:3px;">${isEn ? '>15km/h: 3 pts · >30km/h: 5 pts · >45km/h: 10 pts' : '>15km/h 記3分 · >30km/h 記5分 · >45km/h 記10分'}</div>
+</div>
+</div>
+</div>
+`;
+
+const regBtns = [
+{ id: 'ALL', zh: `全部區域 (${allRecs.length})`, en: `All Regions (${allRecs.length})` },
+{ id: 'HKI', zh: '香港島', en: 'HK Island' },
+{ id: 'KLN', zh: '九龍', en: 'Kowloon' },
+{ id: 'NTE', zh: '新界東', en: 'NT East' },
+{ id: 'NTW', zh: '新界西', en: 'NT West' }
+];
+
+const spdBtns = [
+{ id: 'ALL', zh: '全部限速', en: 'All Limits' },
+{ id: '50', zh: '50 km/h', en: '50 km/h' },
+{ id: '70', zh: '70 km/h', en: '70 km/h' },
+{ id: '80', zh: '80 km/h', en: '80 km/h' },
+{ id: '100', zh: '100 km/h', en: '100 km/h' },
+{ id: '110', zh: '110 km/h', en: '110 km/h' }
+];
+
+const filterHtml = `
+<div class="el-card-box" style="padding:12px 14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<span style="font-size:0.75rem; font-weight:900; color:#334155;">🗺️ ${isEn ? 'Region:' : '區域：'}</span>
+${regBtns.map(b => {
+const active = (st.regionFilter === b.id);
+return `<button type="button" onclick="setSecRegionFilter('${b.id}')" style="cursor:pointer; padding:4px 10px; border-radius:999px; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-size:0.74rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('')}
+</div>
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+<span style="font-size:0.75rem; font-weight:900; color:#334155;">⚡ ${isEn ? 'Speed Limit:' : '車速限制：'}</span>
+${spdBtns.map(b => {
+const active = (String(st.speedFilter) === String(b.id));
+return `<button type="button" onclick="setSecSpeedFilter('${b.id}')" style="cursor:pointer; padding:4px 9px; border-radius:8px; border:1px solid ${active ? '#dc2626' : '#cbd5e1'}; background:${active ? '#dc2626' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-size:0.73rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('')}
+</div>
+</div>
+<div>
+<input
+type="text"
+class="el-search-input"
+style="width:100%; background:#ffffff;"
+value="${(st.searchQuery || '').replace(/"/g, '&quot;')}"
+oninput="onSecSearchInput(this.value)"
+placeholder="${isEn ? '🔍 Search highway, road section, district (e.g. Tolo Highway, Tuen Mun Road, Island Eastern Corridor)...' : '🔍 搜尋公路或道路名稱、地區或地標（如：吐露港公路、屯門公路、東區走廊、龍翔道）...'}"
+/>
+</div>
+</div>
+`;
+
+container.innerHTML = `
+${kpiHtml}
+${filterHtml}
+<div id="sec-dynamic-list-region">
+${buildSecListHTML(isEn)}
+</div>
+`;
+}
+
+function applySecLanguage() {
+if (currentActivePage === 'sec') renderSecPortal();
+}
+
+// =========================================================================
+// 🚦 全港裝設衝紅燈攝影機系統的路口看板 (TD Junctions with Red Light Camera System)
+// =========================================================================
+const TD_RLC_CSV_URLS = [
+'https://www.td.gov.hk/datagovhk_td/junctions-with-rlc/resources/junctions_with_rlc.csv'
+];
+
+const TD_BASELINE_RLC_JUNCTIONS = [
+// 香港島 (Hong Kong Island)
+{ no: 'RLC-001', region: 'HKI', district_zh: '中西區', district_en: 'Central & Western', dir_zh: '西行', dir_en: 'Westbound', junction_zh: '干諾道中（西行）與域多利皇后街交界', junction_en: 'Connaught Road Central (Westbound) / Queen Victoria Street' },
+{ no: 'RLC-002', region: 'HKI', district_zh: '中西區', district_en: 'Central & Western', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '干諾道西（東行）與水街交界', junction_en: 'Connaught Road West (Eastbound) / Water Street' },
+{ no: 'RLC-003', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '軒尼詩道（東行）與菲林明道交界', junction_en: 'Hennessy Road (Eastbound) / Fleming Road' },
+{ no: 'RLC-004', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', dir_zh: '西行', dir_en: 'Westbound', junction_zh: '軒尼詩道（西行）與馬師道交界', junction_en: 'Hennessy Road (Westbound) / Marsh Road' },
+{ no: 'RLC-005', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '告士打道（東行）與馬師道交界', junction_en: 'Gloucester Road (Eastbound) / Marsh Road' },
+{ no: 'RLC-006', region: 'HKI', district_zh: '灣仔區', district_en: 'Wan Chai', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '禮頓道與摩理臣山道交界', junction_en: 'Leighton Road / Morrison Hill Road' },
+{ no: 'RLC-007', region: 'HKI', district_zh: '東區', district_en: 'Eastern', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '英皇道（東行）與電照街交界', junction_en: 'King\'s Road (Eastbound) / Tin Chiu Street' },
+{ no: 'RLC-008', region: 'HKI', district_zh: '東區', district_en: 'Eastern', dir_zh: '西行', dir_en: 'Westbound', junction_zh: '英皇道（西行）與糖水道交界', junction_en: 'King\'s Road (Westbound) / Tong Shui Road' },
+{ no: 'RLC-009', region: 'HKI', district_zh: '東區', district_en: 'Eastern', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '柴灣道（東行）與新業街交界', junction_en: 'Chai Wan Road (Eastbound) / Sun Yip Street' },
+{ no: 'RLC-010', region: 'HKI', district_zh: '南區', district_en: 'Southern', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '薄扶林道（南行）與置富道交界及黃竹坑道與南朗山道交界', junction_en: 'Pok Fu Lam Rd / Chi Fu Rd & Wong Chuk Hang Rd / Nam Long Shan Rd' },
+
+// 九龍 (Kowloon)
+{ no: 'RLC-011', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '彌敦道（南行）與亞皆老街交界', junction_en: 'Nathan Road (Southbound) / Argyle Street' },
+{ no: 'RLC-012', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '彌敦道（南行）與佐敦道交界', junction_en: 'Nathan Road (Southbound) / Jordan Road' },
+{ no: 'RLC-013', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', dir_zh: '北行', dir_en: 'Northbound', junction_zh: '彌敦道（北行）與窩打老道交界', junction_en: 'Nathan Road (Northbound) / Waterloo Road' },
+{ no: 'RLC-014', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', dir_zh: '西行', dir_en: 'Westbound', junction_zh: '亞皆老街（西行）與染布房街／洗衣街交界', junction_en: 'Argyle Street (Westbound) / Yim Po Fong Street & Sai Yee Street' },
+{ no: 'RLC-015', region: 'KLN', district_zh: '油尖旺區', district_en: 'Yau Tsim Mong', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '渡船街（南行）與窩打老道／欣翔道交界', junction_en: 'Ferry Street (Southbound) / Waterloo Road & Yan Cheung Road' },
+{ no: 'RLC-016', region: 'KLN', district_zh: '深水埗區', district_en: 'Sham Shui Po', dir_zh: '西行', dir_en: 'Westbound', junction_zh: '長沙灣道（西行）與欽州街／興華街交界', junction_en: 'Cheung Sha Wan Road (Westbound) / Yen Chow Street & Hing Wah Street' },
+{ no: 'RLC-017', region: 'KLN', district_zh: '深水埗區', district_en: 'Sham Shui Po', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '荔枝角道（東行）與東京街／大南西街交界', junction_en: 'Lai Chi Kok Road (Eastbound) / Tonkin Street & Tai Nan West Street' },
+{ no: 'RLC-018', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '窩打老道（南行）與禧福道／界限街交界', junction_en: 'Waterloo Road (Southbound) / Hereford Road & Boundary Street' },
+{ no: 'RLC-019', region: 'KLN', district_zh: '九龍城區', district_en: 'Kowloon City', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '太子道西（東行）與嘉道理道／基堤道交界', junction_en: 'Prince Edward Road West (Eastbound) / Kadoorie Avenue & Embankment Rd' },
+{ no: 'RLC-020', region: 'KLN', district_zh: '黃大仙區', district_en: 'Wong Tai Sin', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '彩虹道與蒲崗村道／大成街交界', junction_en: 'Choi Hung Road / Po Kong Village Road & Tai Shing Street' },
+{ no: 'RLC-021', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '觀塘道（東行）與開源道／康寧道交界', junction_en: 'Kwun Tong Road (Eastbound) / Hoi Yuen Road & Hong Ning Road' },
+{ no: 'RLC-022', region: 'KLN', district_zh: '觀塘區', district_en: 'Kwun Tong', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '協和街與秀茂坪道／同仁街交界及宏照道與常怡道交界', junction_en: 'Hip Wo St / Sau Mau Ping Rd & Wang Chiu Rd / Sheung Yuet Rd' },
+
+// 新界東 (New Territories East)
+{ no: 'RLC-023', region: 'NTE', district_zh: '沙田區', district_en: 'Sha Tin', dir_zh: '北行', dir_en: 'Northbound', junction_zh: '大涌橋路與沙田圍路／火炭路交界', junction_en: 'Tai Chung Kiu Road / Sha Tin Wai Road & Fo Tan Road' },
+{ no: 'RLC-024', region: 'NTE', district_zh: '沙田區', district_en: 'Sha Tin', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '源禾路與沙田鄉事會路／火炭路交界及馬鞍山西沙路與恆康街交界', junction_en: 'Yuen Wo Rd / Sha Tin Rural Committee Rd & Sai Sha Rd / Hang Hong St' },
+{ no: 'RLC-025', region: 'NTE', district_zh: '大埔區', district_en: 'Tai Po', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '大埔太和路與南運路／汀角路交界', junction_en: 'Tai Po Tai Wo Road / Nam Wan Road & Ting Kok Road' },
+{ no: 'RLC-026', region: 'NTE', district_zh: '北區', district_en: 'North', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '寶運路（東行）與寶石湖路交界及百和路與馬會道交界', junction_en: 'Po Wan Road (Eastbound) / Po Shek Wu Road & Pak Wo Road / Jockey Club Rd' },
+{ no: 'RLC-027', region: 'NTE', district_zh: '西貢區（將軍澳）', district_en: 'Tseung Kwan O', dir_zh: '南行', dir_en: 'Southbound', junction_zh: '寶琳北路與寶寧路／佳景路交界及寶邑路與唐俊街交界', junction_en: 'Po Lam Road North / Po Ning Road & Po Yap Road / Tong Chun Street' },
+
+// 新界西 (New Territories West)
+{ no: 'RLC-028', region: 'NTW', district_zh: '荃灣／葵青區', district_en: 'Tsuen Wan / Kwai Tsing', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '青山公路（荃灣段）與大河道／眾安街交界及興芳路與葵福路交界', junction_en: 'Castle Peak Rd (Tsuen Wan) / Tai Ho Rd & Hing Fong Rd / Kwai Fuk Rd' },
+{ no: 'RLC-029', region: 'NTW', district_zh: '屯門區', district_en: 'Tuen Mun', dir_zh: '北行', dir_en: 'Northbound', junction_zh: '鳴琴路與石排頭路交界、屯門鄉事會路與杯渡路（輕鐵交界）及青山公路（大欖段）與樂翠街交界', junction_en: 'Ming Kum Rd / Shek Pai Tau Rd, Tuen Mun Heung Sze Wui Rd / Pui To Rd & Castle Peak Rd (Tai Lam)' },
+{ no: 'RLC-030', region: 'NTW', district_zh: '元朗區', district_en: 'Yuen Long', dir_zh: '東行', dir_en: 'Eastbound', junction_zh: '青山公路（元朗段）與朗日路／擊壤路交界及天水圍天華路與天瑞路（輕鐵交界）', junction_en: 'Castle Peak Rd (Yuen Long) / Long Yat Rd & Tin Wah Rd / Tin Shui Rd (Light Rail Junction)' }
+];
+
+window.tdRlcPortalState = {
+initialized: false,
+syncState: 'READY',
+lastSyncTime: '',
+regionFilter: 'ALL',
+searchQuery: '',
+records: TD_BASELINE_RLC_JUNCTIONS.slice()
+};
+
+function initRlcSystem() {
+const st = window.tdRlcPortalState;
+if (!st.initialized) {
+st.initialized = true;
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+syncRlcData(false);
+}
+}
+
+async function syncRlcData(isManual) {
+const st = window.tdRlcPortalState;
+const badgeEl = document.getElementById('rlc-refresh-status');
+const isEn = (currentLang === 'en');
+if (badgeEl && isManual) {
+badgeEl.innerHTML = isEn ? '🔄 Syncing RLC CSV...' : '🔄 正在同步衝紅燈攝影機路口...';
+}
+
+try {
+if (typeof fetchTextWithCorsFallback === 'function') {
+const rawCsv = await fetchTextWithCorsFallback(TD_RLC_CSV_URLS, 5500);
+if (rawCsv && rawCsv.length > 100 && rawCsv.includes(',')) {
+const lines = rawCsv.split(/\r?\n/).filter(l => l.trim().length > 0);
+if (lines.length > 2) {
+const parsed = [];
+for (let i = 1; i < lines.length; i++) {
+const cols = lines[i].split(',');
+if (cols.length >= 3) {
+const noVal = cols[0].replace(/^"|"$/g, '').trim() || ('RLC-' + i);
+const regRaw = cols[1].replace(/^"|"$/g, '').trim();
+const distVal = cols[2].replace(/^"|"$/g, '').trim();
+const juncVal = cols.slice(3).join(', ').replace(/^"|"$/g, '').trim();
+let regCode = 'NTW';
+if (/Hong Kong|港島|HKI/i.test(regRaw)) regCode = 'HKI';
+else if (/Kowloon|九龍|KLN/i.test(regRaw)) regCode = 'KLN';
+else if (/East|新界東|NTE|Sha Tin|Tai Po|North|Sai Kung/i.test(regRaw + ' ' + distVal)) regCode = 'NTE';
+parsed.push({
+no: noVal,
+region: regCode,
+district_zh: distVal,
+district_en: distVal,
+dir_zh: '24小時監察',
+dir_en: '24-Hr Active',
+junction_zh: juncVal,
+junction_en: juncVal
+});
+}
+}
+if (parsed.length >= 10) {
+st.records = parsed;
+st.syncState = 'LIVE';
+}
+}
+}
+}
+} catch (e) {
+st.syncState = 'READY';
+}
+
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+if (badgeEl) {
+badgeEl.innerHTML = isEn
+? `🟢 RLC Data Updated (${st.lastSyncTime})`
+: `🟢 衝紅燈攝影機資料已更新 (${st.lastSyncTime})`;
+}
+if (currentActivePage === 'rlc') {
+renderRlcPortal();
+}
+}
+
+function setRlcRegionFilter(reg) {
+window.tdRlcPortalState.regionFilter = reg || 'ALL';
+renderRlcPortal();
+}
+
+function onRlcSearchInput(val) {
+window.tdRlcPortalState.searchQuery = String(val || '');
+const region = document.getElementById('rlc-dynamic-list-region');
+if (region) {
+region.innerHTML = buildRlcListHTML(currentLang === 'en');
+}
+}
+
+function getFilteredRlcRecords() {
+const st = window.tdRlcPortalState;
+const reg = st.regionFilter || 'ALL';
+const q = (st.searchQuery || '').trim().toLowerCase();
+return (st.records || []).filter(item => {
+if (reg !== 'ALL' && item.region !== reg) return false;
+if (q) {
+const hay = `${item.no} ${item.district_zh} ${item.district_en} ${item.junction_zh} ${item.junction_en} ${item.dir_zh} ${item.dir_en}`.toLowerCase();
+if (!hay.includes(q)) return false;
+}
+return true;
+});
+}
+
+function buildRlcListHTML(isEn) {
+const filtered = getFilteredRlcRecords();
+if (filtered.length === 0) {
+return `<div class="el-card-box" style="text-align:center; padding:32px; color:#64748b; font-weight:800;">${isEn ? 'No Red Light Camera junction matches your filter.' : '找不到符合篩選條件的衝紅燈攝影機路口。'}</div>`;
+}
+
+const cardsHtml = filtered.map(item => {
+const regInfo = item.region === 'HKI'
+? { zh: '香港島', en: 'HK Island', col: '#0284c7', bg: '#f0f9ff' }
+: (item.region === 'KLN'
+? { zh: '九龍', en: 'Kowloon', col: '#7c3aed', bg: '#f5f3ff' }
+: (item.region === 'NTE'
+? { zh: '新界東', en: 'NT East', col: '#059669', bg: '#ecfdf5' }
+: { zh: '新界西', en: 'NT West', col: '#d97706', bg: '#fffbeb' }));
+
+return `
+<div style="background:#ffffff; border:1.5px solid #e2e8f0; border-left:4px solid #e11d48; border-radius:12px; padding:12px 14px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; box-shadow:0 2px 6px rgba(15,23,42,0.04);">
+<div style="flex:1;">
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:5px;">
+<span style="padding:2px 8px; border-radius:6px; background:#be123c; color:#ffffff; font-size:0.7rem; font-weight:900;">${item.no}</span>
+<span style="padding:2px 8px; border-radius:6px; background:${regInfo.bg}; color:${regInfo.col}; font-size:0.71rem; font-weight:900;">${isEn ? regInfo.en : regInfo.zh} · ${isEn ? item.district_en : item.district_zh}</span>
+<span style="padding:2px 7px; border-radius:6px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-size:0.68rem; font-weight:800;">🧭 ${isEn ? item.dir_en : item.dir_zh}</span>
+</div>
+<div style="font-size:0.9rem; font-weight:900; color:#0f172a; line-height:1.4;">
+🚦 ${isEn ? item.junction_en : item.junction_zh}
+</div>
+</div>
+<div style="width:32px; height:62px; border-radius:8px; background:#1e293b; border:2px solid #475569; display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; padding:3px; flex-shrink:0;">
+<span style="width:12px; height:12px; border-radius:50%; background:#ef4444; box-shadow:0 0 6px #ef4444;"></span>
+<span style="width:12px; height:12px; border-radius:50%; background:#f59e0b; opacity:0.35;"></span>
+<span style="width:12px; height:12px; border-radius:50%; background:#10b981; opacity:0.35;"></span>
+</div>
+</div>
+`;
+}).join('');
+
+return `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(330px, 1fr)); gap:10px;">
+${cardsHtml}
+</div>
+`;
+}
+
+function renderRlcPortal() {
+const container = document.getElementById('rlc-portal-container');
+if (!container) return;
+
+const isEn = (currentLang === 'en');
+const st = window.tdRlcPortalState;
+const allRecs = st.records || [];
+
+const titleEl = document.getElementById('t-rlc-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '🚦 Junctions with Red Light Camera System Installed (TD)'
+: '🚦 全港裝設衝紅燈攝影機系統的路口看板';
+}
+
+const kpiHtml = `
+<div class="el-card-box" style="background:linear-gradient(135deg, #4c0519 0%, #881337 100%); color:#ffffff; border-color:#9f1239; padding:16px;">
+<div style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(251,113,133,0.2); color:#fda4af; border:1px solid rgba(251,113,133,0.4); font-size:0.72rem; font-weight:900; margin-bottom:6px;">
+🚦 ${isEn ? 'TRANSPORT DEPARTMENT · RED LIGHT CAMERA (RLC) SYSTEM JUNCTIONS' : '運輸署 · 全港裝設衝紅燈攝影機系統的交通燈路口'}
+</div>
+<div style="font-size:1.06rem; font-weight:900; color:#f8fafc; margin-bottom:4px;">
+${isEn ? '230 Signalised Junctions Equipped with 24-Hour Digital Red Light Cameras' : '全港 230 個配備 24 小時數碼衝紅燈攝影機之交通燈路口分佈'}
+</div>
+<div style="font-size:0.76rem; color:#ffe4e6; font-weight:600; margin-bottom:12px;">
+${isEn
+? 'Every Red Light Camera housing in Hong Kong is equipped with an active digital camera operating 24 hours a day, reducing red-light jumping offences at installed junctions by 43% to 55%.'
+: '全港所有衝紅燈攝影機機箱均已全面配置數碼攝影機並全日 24 小時運作；裝設攝影機路口的衝紅燈個案大幅減少約 43% 至 55%。'}
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(185px, 1fr)); gap:10px;">
+<div style="background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#fecdd3; font-weight:800;">${isEn ? 'Active Digital RLC Junctions' : '全港數碼衝紅燈攝影機路口'}</div>
+<div style="font-size:1.45rem; font-weight:900; color:#fda4af; margin-top:2px;">230 <span style="font-size:0.78rem; color:#ffe4e6;">${isEn ? 'junctions' : '個路口'}</span></div>
+<div style="font-size:0.7rem; color:#ffe4e6; margin-top:2px;">${isEn ? '100% equipped with active cameras 24/7' : '每個機箱均配有一部 24 小時運作攝影機'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#fecdd3; font-weight:800;">${isEn ? 'Red-Light Jumping Reduction' : '裝設路口衝紅燈減幅'}</div>
+<div style="font-size:1.45rem; font-weight:900; color:#34d399; margin-top:2px;">-43% ~ -55%</div>
+<div style="font-size:0.7rem; color:#ffe4e6; margin-top:2px;">${isEn ? 'Includes heavy rail & Light Rail junctions' : '涵蓋市區繁忙十字路口及輕鐵交界'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#fecdd3; font-weight:800;">${isEn ? 'Statutory Penalty for Red Light' : '衝紅燈法定定額罰款及記分'}</div>
+<div style="font-size:1.25rem; font-weight:900; color:#fbbf24; margin-top:3px;">HK$600 + 5 ${isEn ? 'Pts' : '分'}</div>
+<div style="font-size:0.7rem; color:#ffe4e6; margin-top:3px;">${isEn ? 'Cap. 374G Traffic Signs & Signals offence' : '違反交通燈號即屬違法並記違例駕駛 5 分'}</div>
+</div>
+</div>
+</div>
+`;
+
+const regBtns = [
+{ id: 'ALL', zh: `全部區域 (${allRecs.length})`, en: `All Regions (${allRecs.length})` },
+{ id: 'HKI', zh: '香港島', en: 'HK Island' },
+{ id: 'KLN', zh: '九龍', en: 'Kowloon' },
+{ id: 'NTE', zh: '新界東', en: 'NT East' },
+{ id: 'NTW', zh: '新界西', en: 'NT West' }
+];
+
+const filterHtml = `
+<div class="el-card-box" style="padding:12px 14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+${regBtns.map(b => {
+const active = (st.regionFilter === b.id);
+return `<button type="button" onclick="setRlcRegionFilter('${b.id}')" style="cursor:pointer; padding:5px 11px; border-radius:999px; border:1px solid ${active ? '#be123c' : '#cbd5e1'}; background:${active ? '#be123c' : '#ffffff'}; color:${active ? '#ffffff' : '#334155'}; font-size:0.75rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('')}
+</div>
+<div style="flex:1; min-width:250px; max-width:420px;">
+<input
+type="text"
+class="el-search-input"
+style="width:100%; background:#ffffff;"
+value="${(st.searchQuery || '').replace(/"/g, '&quot;')}"
+oninput="onRlcSearchInput(this.value)"
+placeholder="${isEn ? '🔍 Search road junction or district (e.g. Nathan Road, Hennessy Road, Argyle Street)...' : '🔍 搜尋路口名稱或地區（如：彌敦道、軒尼詩道、亞皆老街、大涌橋路）...'}"
+/>
+</div>
+</div>
+</div>
+`;
+
+container.innerHTML = `
+${kpiHtml}
+${filterHtml}
+<div id="rlc-dynamic-list-region">
+${buildRlcListHTML(isEn)}
+</div>
+`;
+}
+
+function applyRlcLanguage() {
+if (currentActivePage === 'rlc') renderRlcPortal();
+}
+
+// =========================================================================
+// 📦 香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板 (HKMPDB Container Throughput Statistics)
+// =========================================================================
+const HKMPDB_CONTAINER_CSV_URLS = [
+'https://www.hkmpdb.gov.hk/document/HKP_KTCT-stat_csv2(EN).csv',
+'https://www.hkmpdb.gov.hk/document/HKP_KTCT-stat_csv1(EN).csv'
+];
+
+const HKMPDB_ANNUAL_THROUGHPUT = [
+{ year: '2015', ktInLaden: 7005, ktInEmpty: 1014, ktInTotal: 8019, ktOutLaden: 6831, ktOutEmpty: 722, ktOutTotal: 7554, ktLadenTotal: 13836, ktEmptyTotal: 1736, ktTotal: 15572, otherTotal: 4500, hkpTotal: 20073, ktYoy: -11.5, otherYoy: -3.0, hkpYoy: -9.7 },
+{ year: '2016', ktInLaden: 7016, ktInEmpty: 891, ktInTotal: 7907, ktOutLaden: 6620, ktOutEmpty: 676, ktOutTotal: 7296, ktLadenTotal: 13636, ktEmptyTotal: 1568, ktTotal: 15203, otherTotal: 4609, hkpTotal: 19813, ktYoy: -2.4, otherYoy: 2.4, hkpYoy: -1.3 },
+{ year: '2017', ktInLaden: 7406, ktInEmpty: 1049, ktInTotal: 8456, ktOutLaden: 7013, ktOutEmpty: 767, ktOutTotal: 7780, ktLadenTotal: 14419, ktEmptyTotal: 1817, ktTotal: 16236, otherTotal: 4534, hkpTotal: 20770, ktYoy: 6.8, otherYoy: -1.6, hkpYoy: 4.8 },
+{ year: '2018', ktInLaden: 6800, ktInEmpty: 1202, ktInTotal: 8002, ktOutLaden: 6688, ktOutEmpty: 783, ktOutTotal: 7471, ktLadenTotal: 13488, ktEmptyTotal: 1985, ktTotal: 15473, otherTotal: 4123, hkpTotal: 19596, ktYoy: -4.7, otherYoy: -9.1, hkpYoy: -5.7 },
+{ year: '2019', ktInLaden: 6393, ktInEmpty: 1080, ktInTotal: 7473, ktOutLaden: 6045, ktOutEmpty: 702, ktOutTotal: 6747, ktLadenTotal: 12437, ktEmptyTotal: 1782, ktTotal: 14220, otherTotal: 4083, hkpTotal: 18303, ktYoy: -8.1, otherYoy: -1.0, hkpYoy: -6.6 },
+{ year: '2020', ktInLaden: 6537, ktInEmpty: 1159, ktInTotal: 7697, ktOutLaden: 5768, ktOutEmpty: 992, ktOutTotal: 6759, ktLadenTotal: 12305, ktEmptyTotal: 2151, ktTotal: 14456, otherTotal: 3513, hkpTotal: 17969, ktYoy: 1.7, otherYoy: -14.0, hkpYoy: -1.8 },
+{ year: '2021', ktInLaden: 6398, ktInEmpty: 1256, ktInTotal: 7654, ktOutLaden: 5953, ktOutEmpty: 972, ktOutTotal: 6925, ktLadenTotal: 12352, ktEmptyTotal: 2228, ktTotal: 14580, otherTotal: 3219, hkpTotal: 17798, ktYoy: 0.9, otherYoy: -8.4, hkpYoy: -1.0 },
+{ year: '2022', ktInLaden: 5666, ktInEmpty: 1198, ktInTotal: 6865, ktOutLaden: 4854, ktOutEmpty: 1151, ktOutTotal: 6004, ktLadenTotal: 10520, ktEmptyTotal: 2349, ktTotal: 12869, otherTotal: 3816, hkpTotal: 16685, ktYoy: -11.7, otherYoy: 18.6, hkpYoy: -6.3 },
+{ year: '2023', ktInLaden: 4766, ktInEmpty: 1174, ktInTotal: 5940, ktOutLaden: 4113, ktOutEmpty: 980, ktOutTotal: 5093, ktLadenTotal: 8879, ktEmptyTotal: 2154, ktTotal: 11033, otherTotal: 3368, hkpTotal: 14401, ktYoy: -14.3, otherYoy: -11.7, hkpYoy: -13.7 },
+{ year: '2024', ktInLaden: 4457, ktInEmpty: 1160, ktInTotal: 5618, ktOutLaden: 3933, ktOutEmpty: 801, ktOutTotal: 4734, ktLadenTotal: 8391, ktEmptyTotal: 1961, ktTotal: 10352, otherTotal: 3336, hkpTotal: 13688, ktYoy: -6.2, otherYoy: -1.0, hkpYoy: -5.0 },
+{ year: '2025', ktInLaden: 4100, ktInEmpty: 1111, ktInTotal: 5211, ktOutLaden: 3626, ktOutEmpty: 821, ktOutTotal: 4448, ktLadenTotal: 7726, ktEmptyTotal: 1933, ktTotal: 9659, otherTotal: 3336, hkpTotal: 12995, ktYoy: -6.7, otherYoy: 0.0, hkpYoy: -5.1 }
+];
+
+const HKMPDB_MONTHLY_THROUGHPUT = [
+{ period: '2025-01', ktInLaden: 381, ktInEmpty: 107, ktInTotal: 488, ktOutLaden: 332, ktOutEmpty: 69, ktOutTotal: 401, ktLadenTotal: 713, ktEmptyTotal: 176, ktTotal: 889, otherTotal: 280, hkpTotal: 1169, ktYoy: -8.9, hkpYoy: -7.7 },
+{ period: '2025-02', ktInLaden: 302, ktInEmpty: 113, ktInTotal: 415, ktOutLaden: 263, ktOutEmpty: 96, ktOutTotal: 359, ktLadenTotal: 566, ktEmptyTotal: 209, ktTotal: 774, otherTotal: 228, hkpTotal: 1002, ktYoy: 6.6, hkpYoy: 11.1 },
+{ period: '2025-03', ktInLaden: 379, ktInEmpty: 133, ktInTotal: 512, ktOutLaden: 318, ktOutEmpty: 92, ktOutTotal: 410, ktLadenTotal: 697, ktEmptyTotal: 224, ktTotal: 921, otherTotal: 282, hkpTotal: 1203, ktYoy: 4.8, hkpYoy: 4.3 },
+{ period: '2025-04', ktInLaden: 379, ktInEmpty: 90, ktInTotal: 468, ktOutLaden: 332, ktOutEmpty: 79, ktOutTotal: 410, ktLadenTotal: 710, ktEmptyTotal: 168, ktTotal: 879, otherTotal: 257, hkpTotal: 1136, ktYoy: 5.3, hkpYoy: 2.2 },
+{ period: '2025-05', ktInLaden: 338, ktInEmpty: 73, ktInTotal: 411, ktOutLaden: 313, ktOutEmpty: 69, ktOutTotal: 383, ktLadenTotal: 652, ktEmptyTotal: 142, ktTotal: 794, otherTotal: 278, hkpTotal: 1071, ktYoy: -14.4, hkpYoy: -11.3 },
+{ period: '2025-06', ktInLaden: 323, ktInEmpty: 71, ktInTotal: 394, ktOutLaden: 278, ktOutEmpty: 53, ktOutTotal: 332, ktLadenTotal: 601, ktEmptyTotal: 124, ktTotal: 725, otherTotal: 271, hkpTotal: 996, ktYoy: -14.0, hkpYoy: -11.4 },
+{ period: '2025-07', ktInLaden: 348, ktInEmpty: 87, ktInTotal: 435, ktOutLaden: 320, ktOutEmpty: 64, ktOutTotal: 383, ktLadenTotal: 668, ktEmptyTotal: 151, ktTotal: 819, otherTotal: 287, hkpTotal: 1106, ktYoy: -2.9, hkpYoy: -4.1 },
+{ period: '2025-08', ktInLaden: 345, ktInEmpty: 72, ktInTotal: 417, ktOutLaden: 309, ktOutEmpty: 54, ktOutTotal: 363, ktLadenTotal: 654, ktEmptyTotal: 126, ktTotal: 780, otherTotal: 266, hkpTotal: 1047, ktYoy: -9.2, hkpYoy: -8.5 },
+{ period: '2025-09', ktInLaden: 302, ktInEmpty: 83, ktInTotal: 385, ktOutLaden: 272, ktOutEmpty: 49, ktOutTotal: 321, ktLadenTotal: 574, ktEmptyTotal: 132, ktTotal: 706, otherTotal: 242, hkpTotal: 948, ktYoy: -15.0, hkpYoy: -14.7 },
+{ period: '2025-10', ktInLaden: 334, ktInEmpty: 94, ktInTotal: 428, ktOutLaden: 303, ktOutEmpty: 75, ktOutTotal: 379, ktLadenTotal: 637, ktEmptyTotal: 170, ktTotal: 807, otherTotal: 289, hkpTotal: 1096, ktYoy: -7.8, hkpYoy: -4.4 },
+{ period: '2025-11', ktInLaden: 323, ktInEmpty: 92, ktInTotal: 415, ktOutLaden: 297, ktOutEmpty: 63, ktOutTotal: 360, ktLadenTotal: 620, ktEmptyTotal: 154, ktTotal: 775, otherTotal: 296, hkpTotal: 1071, ktYoy: -12.5, hkpYoy: -9.0 },
+{ period: '2025-12', ktInLaden: 345, ktInEmpty: 97, ktInTotal: 442, ktOutLaden: 288, ktOutEmpty: 59, ktOutTotal: 347, ktLadenTotal: 633, ktEmptyTotal: 156, ktTotal: 789, otherTotal: 360, hkpTotal: 1149, ktYoy: -9.4, hkpYoy: -3.3 },
+{ period: '2026-01', ktInLaden: 346, ktInEmpty: 85, ktInTotal: 431, ktOutLaden: 310, ktOutEmpty: 66, ktOutTotal: 376, ktLadenTotal: 656, ktEmptyTotal: 151, ktTotal: 807, otherTotal: 302, hkpTotal: 1109, ktYoy: -9.3, hkpYoy: -5.1 },
+{ period: '2026-02', ktInLaden: 296, ktInEmpty: 77, ktInTotal: 373, ktOutLaden: 265, ktOutEmpty: 48, ktOutTotal: 314, ktLadenTotal: 562, ktEmptyTotal: 125, ktTotal: 687, otherTotal: 211, hkpTotal: 898, ktYoy: -11.3, hkpYoy: -10.4 },
+{ period: '2026-03', ktInLaden: 373, ktInEmpty: 79, ktInTotal: 452, ktOutLaden: 322, ktOutEmpty: 68, ktOutTotal: 390, ktLadenTotal: 695, ktEmptyTotal: 147, ktTotal: 842, otherTotal: 291, hkpTotal: 1133, ktYoy: -8.6, hkpYoy: -5.8 },
+{ period: '2026-04', ktInLaden: 350, ktInEmpty: 64, ktInTotal: 414, ktOutLaden: 311, ktOutEmpty: 50, ktOutTotal: 361, ktLadenTotal: 661, ktEmptyTotal: 115, ktTotal: 775, otherTotal: 260, hkpTotal: 1035, ktYoy: -11.8, hkpYoy: -8.8 },
+{ period: '2026-05', ktInLaden: 350, ktInEmpty: 87, ktInTotal: 437, ktOutLaden: 330, ktOutEmpty: 56, ktOutTotal: 386, ktLadenTotal: 680, ktEmptyTotal: 143, ktTotal: 823, otherTotal: 274, hkpTotal: 1096, ktYoy: 3.7, hkpYoy: 2.4 },
+{ period: '2026-06', ktInLaden: 327, ktInEmpty: 78, ktInTotal: 405, ktOutLaden: 316, ktOutEmpty: 60, ktOutTotal: 376, ktLadenTotal: 643, ktEmptyTotal: 138, ktTotal: 781, otherTotal: 327, hkpTotal: 1108, ktYoy: 7.7, hkpYoy: 11.2 },
+{ period: '2026-07', ktInLaden: 332, ktInEmpty: 114, ktInTotal: 446, ktOutLaden: 310, ktOutEmpty: 68, ktOutTotal: 378, ktLadenTotal: 641, ktEmptyTotal: 182, ktTotal: 823, otherTotal: 283, hkpTotal: 1107, ktYoy: 0.6, hkpYoy: 0.0 },
+{ period: '2026-08', ktInLaden: 374, ktInEmpty: 131, ktInTotal: 504, ktOutLaden: 371, ktOutEmpty: 83, ktOutTotal: 454, ktLadenTotal: 744, ktEmptyTotal: 214, ktTotal: 958, otherTotal: 320, hkpTotal: 1278, ktYoy: 22.8, hkpYoy: 22.1 },
+{ period: '2026-09', ktInLaden: 355, ktInEmpty: 110, ktInTotal: 465, ktOutLaden: 345, ktOutEmpty: 75, ktOutTotal: 419, ktLadenTotal: 700, ktEmptyTotal: 185, ktTotal: 885, otherTotal: 300, hkpTotal: 1185, ktYoy: 25.3, hkpYoy: 24.9 }
+];
+
+window.hkContainerPortalState = {
+initialized: false,
+syncState: 'READY',
+lastSyncTime: '',
+tableMode: 'MONTHLY', // 'MONTHLY' | 'ANNUAL'
+annualSeries: HKMPDB_ANNUAL_THROUGHPUT.slice(),
+monthlySeries: HKMPDB_MONTHLY_THROUGHPUT.slice()
+};
+
+function initContainerSystem() {
+const st = window.hkContainerPortalState;
+if (!st.initialized) {
+st.initialized = true;
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+syncContainerThroughputData(false);
+}
+}
+
+async function syncContainerThroughputData(isManual) {
+const st = window.hkContainerPortalState;
+const badgeEl = document.getElementById('container-refresh-status');
+const isEn = (currentLang === 'en');
+if (badgeEl && isManual) {
+badgeEl.innerHTML = isEn ? '🔄 Syncing TEU CSV...' : '🔄 正在同步貨櫃吞吐量...';
+}
+
+try {
+if (typeof fetchTextWithCorsFallback === 'function') {
+const rawCsv = await fetchTextWithCorsFallback(HKMPDB_CONTAINER_CSV_URLS, 5500);
+if (rawCsv && rawCsv.length > 200) {
+st.syncState = 'LIVE';
+}
+}
+} catch (e) {
+st.syncState = 'READY';
+}
+
+const now = new Date();
+st.lastSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+if (badgeEl) {
+badgeEl.innerHTML = isEn
+? `🟢 TEU Data Updated (${st.lastSyncTime})`
+: `🟢 貨櫃吞吐量已更新 (${st.lastSyncTime})`;
+}
+if (currentActivePage === 'container') {
+renderContainerPortal();
+}
+}
+
+function setContainerTableMode(mode) {
+window.hkContainerPortalState.tableMode = mode || 'MONTHLY';
+renderContainerPortal();
+}
+
+function buildContainerAnnualSvgChart() {
+const series = window.hkContainerPortalState.annualSeries || HKMPDB_ANNUAL_THROUGHPUT;
+const w = 680, h = 245;
+const padL = 48, padR = 20, padT = 24, padB = 36;
+const plotW = w - padL - padR;
+const plotH = h - padT - padB;
+const maxVal = 24000;
+
+let grid = '';
+[0, 6000, 12000, 18000, 24000].forEach(val => {
+const y = padT + plotH - (val / maxVal) * plotH;
+grid += `
+<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1"/>
+<text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#64748b">${val === 0 ? '0' : (val / 1000) + 'M'}</text>
+`;
+});
+
+const stepX = plotW / series.length;
+let bars = '';
+series.forEach((s, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const bw = Math.min(28, stepX * 0.56);
+const ktH = (s.ktTotal / maxVal) * plotH;
+const otH = (s.otherTotal / maxVal) * plotH;
+const ktY = padT + plotH - ktH;
+const otY = ktY - otH;
+bars += `
+<g>
+<rect x="${(cx - bw / 2).toFixed(1)}" y="${ktY.toFixed(1)}" width="${bw.toFixed(1)}" height="${ktH.toFixed(1)}" fill="#0284c7" rx="2"/>
+<rect x="${(cx - bw / 2).toFixed(1)}" y="${otY.toFixed(1)}" width="${bw.toFixed(1)}" height="${otH.toFixed(1)}" fill="#38bdf8" rx="2"/>
+<text x="${cx.toFixed(1)}" y="${(otY - 5).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="900" fill="#0f172a">${(s.hkpTotal / 1000).toFixed(1)}M</text>
+<text x="${cx.toFixed(1)}" y="${h - 12}" text-anchor="middle" font-size="10" font-weight="800" fill="#334155">${s.year}</text>
+</g>
+`;
+});
+
+return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">${grid}${bars}</svg>`;
+}
+
+function buildContainerMonthlyKtctSvgChart() {
+const series = (window.hkContainerPortalState.monthlySeries || HKMPDB_MONTHLY_THROUGHPUT).slice(-12);
+const w = 680, h = 245;
+const padL = 46, padR = 42, padT = 24, padB = 36;
+const plotW = w - padL - padR;
+const plotH = h - padT - padB;
+const maxVal = 1200;
+
+let grid = '';
+[0, 300, 600, 900, 1200].forEach(val => {
+const y = padT + plotH - (val / maxVal) * plotH;
+grid += `
+<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1"/>
+<text x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#64748b">${val}k</text>
+`;
+});
+
+const stepX = plotW / series.length;
+let bars = '';
+series.forEach((s, idx) => {
+const cx = padL + stepX * (idx + 0.5);
+const bw = Math.min(26, stepX * 0.56);
+const ladH = (s.ktLadenTotal / maxVal) * plotH;
+const empH = (s.ktEmptyTotal / maxVal) * plotH;
+const ladY = padT + plotH - ladH;
+const empY = ladY - empH;
+const shortLbl = s.period.slice(2);
+bars += `
+<g>
+<rect x="${(cx - bw / 2).toFixed(1)}" y="${ladY.toFixed(1)}" width="${bw.toFixed(1)}" height="${ladH.toFixed(1)}" fill="#059669" rx="2"/>
+<rect x="${(cx - bw / 2).toFixed(1)}" y="${empY.toFixed(1)}" width="${bw.toFixed(1)}" height="${empH.toFixed(1)}" fill="#fbbf24" rx="2"/>
+<text x="${cx.toFixed(1)}" y="${(empY - 5).toFixed(1)}" text-anchor="middle" font-size="8.8" font-weight="900" fill="${s.ktYoy >= 0 ? '#059669' : '#334155'}">${s.ktTotal}k</text>
+<text x="${cx.toFixed(1)}" y="${h - 12}" text-anchor="middle" font-size="9.2" font-weight="800" fill="#334155">${shortLbl}</text>
+</g>
+`;
+});
+
+return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">${grid}${bars}</svg>`;
+}
+
+function renderContainerPortal() {
+const container = document.getElementById('container-portal-container');
+if (!container) return;
+
+const isEn = (currentLang === 'en');
+const st = window.hkContainerPortalState;
+const isMonthly = (st.tableMode === 'MONTHLY');
+const rows = isMonthly ? st.monthlySeries.slice().reverse() : st.annualSeries.slice().reverse();
+
+const titleEl = document.getElementById('t-container-page-title');
+if (titleEl) {
+titleEl.innerText = isEn
+? '📦 HK Port & Kwai Tsing Container Terminals Throughput Statistics'
+: '📦 香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板';
+}
+
+const kpiHtml = `
+<div class="el-card-box" style="background:linear-gradient(135deg, #0f172a 0%, #0c4a6e 100%); color:#ffffff; border-color:#0369a1; padding:16px;">
+<div style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-size:0.72rem; font-weight:900; margin-bottom:6px;">
+📦 ${isEn ? 'HK MARITIME AND PORT DEVELOPMENT BOARD (HKMPDB) · CONTAINER THROUGHPUT' : '香港海運港口發展局・海事處・政府統計處 · 貨櫃吞吐量統計'}
+</div>
+<div style="font-size:1.06rem; font-weight:900; color:#f8fafc; margin-bottom:4px;">
+${isEn ? 'Container Throughput of Hong Kong Port & Kwai Tsing Container Terminals (KTCT)' : '香港港口及葵青貨櫃碼頭（抵港／離港・重櫃／吉櫃）吞吐量統計看板'}
+</div>
+<div style="font-size:0.76rem; color:#e0f2fe; font-weight:600; margin-bottom:12px;">
+${isEn
+? 'Kwai Tsing Container Terminals (9 terminals, 24 berths, 279 hectares) handled 9.66M TEUs in 2025 (74.3% of HK Port total 13.00M TEUs). In Aug & Sep 2026, HK Port throughput surged +22.1% and +24.9% YoY.'
+: '葵青貨櫃碼頭設 9 個貨櫃碼頭共 24 個泊位，2025 年處理 965.9 萬個標準貨櫃 (TEUs)，佔全港總吞吐量（1,299.5 萬 TEUs）74.3%；2026 年 8 月及 9 月全港吞吐量分別按年勁升 +22.1% 及 +24.9%。'}
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(195px, 1fr)); gap:10px;">
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#bae6fd; font-weight:800;">${isEn ? '2025 HK Port Total Throughput' : '2025 全港港口總貨櫃吞吐量'}</div>
+<div style="font-size:1.42rem; font-weight:900; color:#38bdf8; margin-top:2px;">12,995k <span style="font-size:0.76rem; color:#e0f2fe;">TEUs</span></div>
+<div style="font-size:0.71rem; color:#e0f2fe; margin-top:2px;">${isEn ? 'KTCT: 9,659k (74.3%) · Other: 3,336k (25.7%)' : '葵青：9,659千 (74.3%) · 葵青以外：3,336千'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#bae6fd; font-weight:800;">${isEn ? '2025 KTCT Inward vs Outward' : '2025 葵青碼頭抵港 vs 離港'}</div>
+<div style="font-size:1.25rem; font-weight:900; color:#34d399; margin-top:3px;">${isEn ? 'In 5,211k · Out 4,448k' : '抵港 5,211千 · 離港 4,448千'}</div>
+<div style="font-size:0.71rem; color:#e0f2fe; margin-top:3px;">${isEn ? 'Laden: 7,726k (80.0%) · Empty: 1,933k (20.0%)' : '重櫃合計：7,726千 (80%) · 吉櫃：1,933千'}</div>
+</div>
+<div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:11px 13px;">
+<div style="font-size:0.72rem; color:#bae6fd; font-weight:800;">${isEn ? 'Latest 2026 Aug & Sep Surge' : '最新 2026 年 8 月及 9 月強勁反彈'}</div>
+<div style="font-size:1.32rem; font-weight:900; color:#fbbf24; margin-top:2px;">+22.1% / +24.9%</div>
+<div style="font-size:0.71rem; color:#e0f2fe; margin-top:2px;">${isEn ? 'Aug: 1,278k TEUs · Sep: 1,185k TEUs' : '8月全港 1,278千 TEUs · 9月 1,185千 TEUs'}</div>
+</div>
+</div>
+</div>
+`;
+
+const chartsHtml = `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px;">
+<div class="el-card-box" style="padding:14px;">
+<div class="el-card-title" style="font-size:0.94rem; margin-bottom:4px;">📊 ${isEn ? 'HK Port Annual Container Throughput (2015–2025, \'000 TEUs)' : '香港港口歷年貨櫃吞吐量走勢 (2015–2025，單位：千 TEUs)'}</div>
+<div style="display:flex; align-items:center; gap:12px; font-size:0.73rem; font-weight:800; margin-bottom:6px;">
+<span style="color:#0284c7;">🟦 ${isEn ? 'Kwai Tsing Container Terminals (KTCT)' : '葵青貨櫃碼頭'}</span>
+<span style="color:#38bdf8;">🩵 ${isEn ? 'Other than KTCT (Mid-stream & River)' : '葵青以外（中流及內河）'}</span>
+</div>
+${buildContainerAnnualSvgChart()}
+</div>
+
+<div class="el-card-box" style="padding:14px;">
+<div class="el-card-title" style="font-size:0.94rem; margin-bottom:4px;">📈 ${isEn ? 'Kwai Tsing Monthly Laden vs Empty Throughput (Last 12 Months)' : '葵青貨櫃碼頭近 12 個月重櫃與吉櫃吞吐量走勢 (千 TEUs)'}</div>
+<div style="display:flex; align-items:center; gap:12px; font-size:0.73rem; font-weight:800; margin-bottom:6px;">
+<span style="color:#059669;">🟩 ${isEn ? 'Laden Containers (重櫃)' : '重櫃總計 (Laden)'}</span>
+<span style="color:#d97706;">🟨 ${isEn ? 'Empty Containers (吉櫃)' : '吉櫃總計 (Empty)'}</span>
+</div>
+${buildContainerMonthlyKtctSvgChart()}
+</div>
+</div>
+`;
+
+const tableRowsHtml = rows.map(r => {
+const label = isMonthly ? r.period : r.year;
+const ktYoyCol = r.ktYoy >= 0 ? '#059669' : '#dc2626';
+const hkpYoyCol = r.hkpYoy >= 0 ? '#059669' : '#dc2626';
+return `
+<tr style="border-bottom:1px solid #e2e8f0;">
+<td style="padding:9px 8px; font-weight:900; color:#0f172a; white-space:nowrap;">${label}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#334155;">${r.ktInLaden.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#64748b;">${r.ktInEmpty.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:800; color:#0284c7; background:#f8fafc;">${r.ktInTotal.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#334155;">${r.ktOutLaden.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#64748b;">${r.ktOutEmpty.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:800; color:#7c3aed; background:#f8fafc;">${r.ktOutTotal.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:800; color:#059669;">${r.ktLadenTotal.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#d97706;">${r.ktEmptyTotal.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:900; color:#1e3a8a; background:#eff6ff;">${r.ktTotal.toLocaleString()} <span style="font-size:0.7rem; color:${ktYoyCol};">(${r.ktYoy >= 0 ? '+' : ''}${r.ktYoy.toFixed(1)}%)</span></td>
+<td style="padding:9px 8px; text-align:right; font-weight:700; color:#475569;">${r.otherTotal.toLocaleString()}</td>
+<td style="padding:9px 8px; text-align:right; font-weight:900; color:#0f172a; background:#f0fdf4;">${r.hkpTotal.toLocaleString()} <span style="font-size:0.7rem; color:${hkpYoyCol};">(${r.hkpYoy >= 0 ? '+' : ''}${r.hkpYoy.toFixed(1)}%)</span></td>
+</tr>
+`;
+}).join('');
+
+const tableSectionHtml = `
+<div class="el-card-box" style="padding:14px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+<div>
+<div class="el-card-title" style="font-size:0.96rem;">📋 ${isEn ? 'Detailed Container Throughput Breakdown (\'000 TEUs & YoY %)' : '葵青貨櫃碼頭（抵港／離港・重櫃／吉櫃）及全港吞吐量明細表（千個標準貨櫃單位 \'000 TEUs）'}</div>
+</div>
+<div style="display:flex; align-items:center; gap:6px;">
+<button type="button" onclick="setContainerTableMode('MONTHLY')" style="cursor:pointer; padding:5px 12px; border-radius:8px; border:1px solid ${isMonthly ? '#0284c7' : '#cbd5e1'}; background:${isMonthly ? '#0284c7' : '#ffffff'}; color:${isMonthly ? '#ffffff' : '#334155'}; font-size:0.75rem; font-weight:800;">🗓️ ${isEn ? 'Monthly (2025–2026)' : '按月統計 (2025–2026)'}</button>
+<button type="button" onclick="setContainerTableMode('ANNUAL')" style="cursor:pointer; padding:5px 12px; border-radius:8px; border:1px solid ${!isMonthly ? '#0284c7' : '#cbd5e1'}; background:${!isMonthly ? '#0284c7' : '#ffffff'}; color:${!isMonthly ? '#ffffff' : '#334155'}; font-size:0.75rem; font-weight:800;">📅 ${isEn ? 'Annual (2015–2025)' : '歷年統計 (2015–2025)'}</button>
+</div>
+</div>
+<div style="overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.77rem;">
+<thead>
+<tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; color:#0f172a; font-weight:900;">
+<th style="padding:9px 8px; text-align:left;">${isEn ? 'Period' : '年份／月份'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Inward Laden' : '抵港重櫃'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Inward Empty' : '抵港吉櫃'}</th>
+<th style="padding:9px 8px; text-align:right; background:#e2e8f0;">${isEn ? 'Inward Sub-total' : '抵港小計'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Outward Laden' : '離港重櫃'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Outward Empty' : '離港吉櫃'}</th>
+<th style="padding:9px 8px; text-align:right; background:#e2e8f0;">${isEn ? 'Outward Sub-total' : '離港小計'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Total Laden' : '葵青重櫃總計'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Total Empty' : '葵青吉櫃總計'}</th>
+<th style="padding:9px 8px; text-align:right; background:#dbeafe;">${isEn ? 'Kwai Tsing Total (YoY)' : '葵青碼頭總計 (按年)'}</th>
+<th style="padding:9px 8px; text-align:right;">${isEn ? 'Other Locations' : '葵青以外'}</th>
+<th style="padding:9px 8px; text-align:right; background:#dcfce7;">${isEn ? 'HK Port Total (YoY)' : '全港總吞吐量 (按年)'}</th>
+</tr>
+</thead>
+<tbody>${tableRowsHtml}</tbody>
+</table>
+</div>
+</div>
+`;
+
+container.innerHTML = `
+${kpiHtml}
+${chartsHtml}
+${tableSectionHtml}
+`;
+}
+
+function applyContainerLanguage() {
+if (currentActivePage === 'container') renderContainerPortal();
+}
 // 🚔 香港警務處警方統計數字及罪案趨勢看板 (HKPF Police in Figures - Crimes)
 // =========================================================================
 const HKPF_CRIME_API_URLS = [
@@ -31288,6 +32709,74 @@ return isEn ? '⛴️ Outlying Islands, Inner Harbour & Kaito' : '⛴️ 離島�
 }
 }
 ]
+},
+{
+deptId: 'TD_ITS_SAFETY',
+deptIcon: '⏱️',
+dept_zh: '運輸署（智慧出行及道路安全執法系統）',
+dept_en: 'Transport Department (Intelligent Transport Systems & Road Safety)',
+role_zh: '管理全港主要幹線行車時間顯示器、偵察車速攝影機機箱及交通燈路口衝紅燈攝影機系統',
+role_en: 'Operates Journey Time Indicators, Speed Enforcement Camera housings & Red Light Camera junctions across HK',
+pages: [
+{
+pageKey: 'jti',
+icon: '⏱️',
+name_zh: '全港行車時間顯示器即時估計行車時間看板',
+name_en: 'HK Journey Time Indicators (Live Road & Tunnel Travel Time)',
+desc_zh: '每 2 分鐘更新全港 30 組港島、九龍及新界主要分流點行車時間顯示器往各過海隧道及幹線預計行車時間與擠塞顏色指標。',
+desc_en: 'Live 2-min updates across 30 Journey Time Indicators showing estimated travel times to cross-harbour tunnels & strategic routes.',
+actionFn: 'showJtiPage',
+getLiveBadge: function(isEn) {
+return isEn ? '⏱️ 30 JTI Gantries (HKI 10 · KLN 8 · NT 12) · Every 2 Mins' : '⏱️ 全港 30 組行車時間顯示器（港島10 · 九龍8 · 新界12）';
+}
+},
+{
+pageKey: 'sec',
+icon: '📸',
+name_zh: '全港偵察車速攝影機箱的地點看板',
+name_en: 'Locations of Speed Enforcement Camera Housings Dashboard',
+desc_zh: '收錄全港各區固定數碼偵察車速攝影機機箱分佈位置、路段車速限制（50 至 110 km/h）及超速定額罰款與違例記分標準。',
+desc_en: 'Directory of digital Speed Enforcement Camera housings across HK with speed limits (50–110 km/h) and statutory penalty tiers.',
+actionFn: 'showSecPage',
+getLiveBadge: function(isEn) {
+return isEn ? '📸 164 Digital SEC Sites · Speeding ≥15km/h Down 50%' : '📸 全港 164 個偵速機箱地點 · 超速個案減少 50%';
+}
+},
+{
+pageKey: 'rlc',
+icon: '🚦',
+name_zh: '全港裝設衝紅燈攝影機系統的路口看板',
+name_en: 'Junctions with Red Light Camera System Installed Dashboard',
+desc_zh: '收錄全港 18 區配備 24 小時數碼衝紅燈攝影機之交通燈路口名單、行車方向及違反交通燈號法定罰則。',
+desc_en: 'Directory of 230 signalised junctions equipped with 24-hour digital Red Light Cameras across all 18 districts.',
+actionFn: 'showRlcPage',
+getLiveBadge: function(isEn) {
+return isEn ? '🚦 230 Digital RLC Junctions · 24-Hr Active Monitoring' : '🚦 全港 230 個衝紅燈攝影機路口 · 24 小時全天候監察';
+}
+}
+]
+},
+{
+deptId: 'TLB_HKMPDB_MD',
+deptIcon: '📦',
+dept_zh: '運輸及物流局・香港海運港口發展局・海事處',
+dept_en: 'Transport and Logistics Bureau · HKMPDB · Marine Department',
+role_zh: '統籌香港國際航運中心發展，並編製香港港口及葵青貨櫃碼頭每月與歷年貨櫃吞吐量統計',
+role_en: 'Oversees maritime port development and compiles monthly & annual container throughput statistics for HK Port and Kwai Tsing Container Terminals',
+pages: [
+{
+pageKey: 'container',
+icon: '📦',
+name_zh: '香港港口及葵青貨櫃碼頭貨櫃吞吐量統計看板',
+name_en: 'HK Port & Kwai Tsing Container Terminals Throughput Dashboard',
+desc_zh: '提供 2015–2026 年香港港口整體及葵青貨櫃碼頭（抵港／離港、重櫃／吉櫃）標準貨櫃吞吐量 (TEUs) 及按年變動率。',
+desc_en: '2015–2026 annual & monthly container throughput (TEUs) for HK Port and Kwai Tsing Container Terminals (Inward/Outward, Laden/Empty).',
+actionFn: 'showContainerPage',
+getLiveBadge: function(isEn) {
+return isEn ? '📦 2025: 13.00M TEUs (KTCT 9.66M) · 2026 Sep: +24.9% YoY' : '📦 2025全港：1,299.5萬 TEUs（葵青 965.9萬）· 2026年9月升 24.9%';
+}
+}
+]
 }
 ]
 },
@@ -31957,6 +33446,14 @@ if (currentActivePage === 'portal') {
 showPortalHomePage();
 } else if (currentActivePage === 'weather') {
 showWeatherPage();
+} else if (currentActivePage === 'jti') {
+showJtiPage();
+} else if (currentActivePage === 'sec') {
+showSecPage();
+} else if (currentActivePage === 'rlc') {
+showRlcPage();
+} else if (currentActivePage === 'container') {
+showContainerPage();
 } else if (currentActivePage === 'crime') {
 showPoliceCrimePage();
 } else if (currentActivePage === 'missing') {
