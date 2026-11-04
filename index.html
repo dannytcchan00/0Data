@@ -3539,6 +3539,132 @@ scrollbar-width: none;
 .left-menu-rail::-webkit-scrollbar {
 display: none;
 }
+@keyframes menuArrowBounceUp {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-2px); }
+}
+@keyframes menuArrowBounceDown {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(2px); }
+}
+.menu-scroll-cap {
+position: sticky;
+z-index: 35;
+width: calc(100% + 12px);
+margin-left: -6px;
+margin-right: -6px;
+display: flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+cursor: pointer;
+user-select: none;
+}
+.menu-scroll-prev {
+top: -10px;
+margin-top: -10px;
+padding: 6px 4px 5px 4px;
+background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0));
+border-radius: 20px 20px 0 0;
+}
+.menu-scroll-next {
+bottom: -10px;
+margin-bottom: -10px;
+padding: 5px 4px 6px 4px;
+background: linear-gradient(0deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0));
+border-radius: 0 0 20px 20px;
+}
+.menu-scroll-pill {
+width: 42px;
+min-height: 22px;
+padding: 2px 3px;
+border-radius: 8px;
+background: rgba(15, 23, 42, 0.08);
+color: #64748b;
+border: 1px solid rgba(15, 23, 42, 0.12);
+font-size: 0.62rem;
+font-weight: 900;
+line-height: 1.1;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 1px;
+transition: all 0.2s ease;
+}
+.menu-scroll-cap.can-scroll .menu-scroll-pill {
+background: #0284c7;
+color: #ffffff;
+border-color: #0369a1;
+box-shadow: 0 2px 7px rgba(2, 132, 199, 0.38);
+}
+.menu-scroll-cap:hover .menu-scroll-pill {
+transform: scale(1.06);
+}
+.menu-scroll-prev.can-scroll .menu-scroll-icon {
+display: inline-block;
+animation: menuArrowBounceUp 1.2s ease-in-out infinite;
+}
+.menu-scroll-next.can-scroll .menu-scroll-icon {
+display: inline-block;
+animation: menuArrowBounceDown 1.2s ease-in-out infinite;
+}
+.menu-scroll-more-txt {
+font-size: 0.56rem;
+font-weight: 900;
+letter-spacing: -0.2px;
+white-space: nowrap;
+}
+body[data-device-mode="iphone"] .menu-scroll-cap {
+width: auto !important;
+height: calc(100% + 12px) !important;
+margin: -6px 0 !important;
+padding: 0 4px !important;
+}
+body[data-device-mode="iphone"] .menu-scroll-prev {
+top: auto !important;
+left: -10px !important;
+margin-left: -10px !important;
+background: linear-gradient(90deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0)) !important;
+border-radius: 16px 0 0 16px !important;
+}
+body[data-device-mode="iphone"] .menu-scroll-next {
+bottom: auto !important;
+right: -10px !important;
+margin-right: -10px !important;
+background: linear-gradient(270deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0)) !important;
+border-radius: 0 16px 16px 0 !important;
+}
+body[data-device-mode="iphone"] .menu-scroll-pill {
+width: 26px !important;
+height: 38px !important;
+}
+@media screen and (max-width: 767px) {
+body[data-device-mode="auto"] .menu-scroll-cap {
+width: auto !important;
+height: calc(100% + 12px) !important;
+margin: -6px 0 !important;
+padding: 0 4px !important;
+}
+body[data-device-mode="auto"] .menu-scroll-prev {
+top: auto !important;
+left: -10px !important;
+margin-left: -10px !important;
+background: linear-gradient(90deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0)) !important;
+border-radius: 16px 0 0 16px !important;
+}
+body[data-device-mode="auto"] .menu-scroll-next {
+bottom: auto !important;
+right: -10px !important;
+margin-right: -10px !important;
+background: linear-gradient(270deg, rgba(248, 250, 252, 0.98) 72%, rgba(248, 250, 252, 0)) !important;
+border-radius: 0 16px 16px 0 !important;
+}
+body[data-device-mode="auto"] .menu-scroll-pill {
+width: 26px !important;
+height: 38px !important;
+}
+}
 @media screen and (max-height: 700px) {
 .left-menu-rail {
 padding: 8px 5px;
@@ -4172,7 +4298,13 @@ justify-content: center;
 </div>
 <div id="global-toast"></div>
 <div id="ptr-indicator" class="ptr-indicator">⬇️ <span id="t-pull">下拉以更新數據</span></div>
-<nav id="bottom-menu" class="left-menu-rail" aria-label="Main Navigation">
+<nav id="bottom-menu" class="left-menu-rail" aria-label="Main Navigation" onscroll="updateMenuRailScrollIndicators()">
+<div id="menu-scroll-prev" class="menu-scroll-cap menu-scroll-prev" role="button" tabindex="0" onclick="scrollMenuRail(-1); event.stopPropagation();" title="向上拉或點擊向上滾動查看更多版面">
+<span class="menu-scroll-pill">
+<span class="menu-scroll-icon" id="menu-scroll-prev-icon">▲</span>
+<span class="menu-scroll-more-txt" id="menu-scroll-prev-txt">頂部</span>
+</span>
+</div>
 <div class="left-menu-group" data-menu-category="portal" aria-label="網站總主頁">
 <a href="#" id="t-menu-portal" class="rail-btn-primary" title="網站總主頁（按分類及政府部門目錄）" onclick="showPortalHomePage(); event.preventDefault();">🏠</a>
 </div>
@@ -4232,6 +4364,12 @@ justify-content: center;
 </div>
 <div class="left-menu-spacer"></div>
 <a href="#" id="t-menu-setting" class="rail-btn-sub" title="系統設定" onclick="openSettingsModal(); event.preventDefault();">⚙️</a>
+<div id="menu-scroll-next" class="menu-scroll-cap menu-scroll-next can-scroll" role="button" tabindex="0" onclick="scrollMenuRail(1); event.stopPropagation();" title="向下拉或點擊向下滾動查看更多版面">
+<span class="menu-scroll-pill">
+<span class="menu-scroll-more-txt" id="menu-scroll-next-txt">更多</span>
+<span class="menu-scroll-icon" id="menu-scroll-next-icon">▼</span>
+</span>
+</div>
 </nav>
 <iframe id="app-iframe" style="display: none;"></iframe>
 <div class="main-content">
@@ -5431,6 +5569,7 @@ if (typeof applyCsdLanguage === 'function') applyCsdLanguage();
 if (typeof applyPortalHomeLanguage === 'function') applyPortalHomeLanguage();
 document.getElementById('t-menu-setting').title = dict['menu-setting'];
 if (typeof applyFlightLanguage === 'function') applyFlightLanguage();
+if (typeof updateMenuRailScrollIndicators === 'function') updateMenuRailScrollIndicators();
 document.getElementById('btn-lang-zh').classList.toggle('active', currentLang === 'zh');
 document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
 } catch(e) { console.warn('Language apply error ignored to prevent crash.'); }
@@ -5559,8 +5698,88 @@ const activeEl = document.querySelector('#bottom-menu .rail-btn-primary');
 if (activeEl && typeof activeEl.scrollIntoView === 'function') {
 activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
+setTimeout(updateMenuRailScrollIndicators, 180);
 } catch (e) {}
 }
+function isMenuRailHorizontal() {
+const mode = document.body.getAttribute("data-device-mode") || "auto";
+if (mode === "iphone") return true;
+if (mode === "auto" && window.innerWidth <= 767) return true;
+return false;
+}
+
+function updateMenuRailScrollIndicators() {
+const nav = document.getElementById("bottom-menu");
+const prevBtn = document.getElementById("menu-scroll-prev");
+const nextBtn = document.getElementById("menu-scroll-next");
+if (!nav || !prevBtn || !nextBtn) return;
+
+const isEn = (currentLang === "en");
+const horiz = isMenuRailHorizontal();
+const prevIcon = document.getElementById("menu-scroll-prev-icon");
+const nextIcon = document.getElementById("menu-scroll-next-icon");
+const prevTxt = document.getElementById("menu-scroll-prev-txt");
+const nextTxt = document.getElementById("menu-scroll-next-txt");
+
+if (prevIcon) prevIcon.innerText = horiz ? "◀" : "▲";
+if (nextIcon) nextIcon.innerText = horiz ? "▶" : "▼";
+
+const canPrev = horiz ? (nav.scrollLeft > 8) : (nav.scrollTop > 8);
+const canNext = horiz
+? (nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 8)
+: (nav.scrollTop + nav.clientHeight < nav.scrollHeight - 8);
+
+prevBtn.classList.toggle("can-scroll", canPrev);
+nextBtn.classList.toggle("can-scroll", canNext);
+
+if (prevTxt) {
+prevTxt.innerText = canPrev ? (isEn ? "Up" : (horiz ? "左拉" : "上拉")) : (isEn ? "Top" : "頂部");
+}
+if (nextTxt) {
+nextTxt.innerText = canNext ? (isEn ? "More" : "更多") : (isEn ? "End" : "底部");
+}
+
+prevBtn.title = isEn
+? (canPrev ? "Click or scroll up to see more pages" : "At the top of Menu Bar (Click to jump to bottom)")
+: (canPrev ? "點擊或向上拉動查看更多版面" : "已到最頂（點擊可跳至最底）");
+nextBtn.title = isEn
+? (canNext ? "Click or scroll down to see more pages" : "At the bottom of Menu Bar (Click to jump to top)")
+: (canNext ? "點擊或向下拉動查看更多版面" : "已到最底（點擊可跳回最頂）");
+}
+
+function scrollMenuRail(dir) {
+const nav = document.getElementById("bottom-menu");
+if (!nav) return;
+const horiz = isMenuRailHorizontal();
+const step = 220;
+if (horiz) {
+const canPrev = nav.scrollLeft > 8;
+const canNext = nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 8;
+if (dir < 0 && !canPrev) {
+nav.scrollTo({ left: nav.scrollWidth, behavior: "smooth" });
+} else if (dir > 0 && !canNext) {
+nav.scrollTo({ left: 0, behavior: "smooth" });
+} else {
+nav.scrollBy({ left: dir * step, behavior: "smooth" });
+}
+} else {
+const canPrev = nav.scrollTop > 8;
+const canNext = nav.scrollTop + nav.clientHeight < nav.scrollHeight - 8;
+if (dir < 0 && !canPrev) {
+nav.scrollTo({ top: nav.scrollHeight, behavior: "smooth" });
+} else if (dir > 0 && !canNext) {
+nav.scrollTo({ top: 0, behavior: "smooth" });
+} else {
+nav.scrollBy({ top: dir * step, behavior: "smooth" });
+}
+}
+setTimeout(updateMenuRailScrollIndicators, 260);
+}
+
+window.addEventListener("resize", () => {
+try { updateMenuRailScrollIndicators(); } catch (e) {}
+});
+
 function toggleBottomMenu() {}
 function hideAllRightPanels() {
 const portalSec = document.getElementById('portal-home-page-view');
