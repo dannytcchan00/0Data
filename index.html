@@ -30,6 +30,8 @@
 --accent-warm: #0f172a;
 --kmb-accent: #e11d48; 
 --ctb-accent: #d97706;
+--nlb-accent: #0d9488;
+--mtrb-accent: #7c3aed;
 
 /* 漫射光影與立體高光邊緣 */
 --shadow-sm: 
@@ -592,6 +594,61 @@ gap: 6px;
 .bus-dir-btn { width: 100%; padding: 12px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 0.9rem; display:flex; justify-content:space-between; align-items:center; }
 .bus-dir-btn.kmb { border-left: 4px solid var(--kmb-accent); }
 .bus-dir-btn.ctb { border-left: 4px solid var(--ctb-accent); }
+.bus-card-wrapper.nlb { border-top: 3.5px solid var(--nlb-accent); }
+.bus-card-wrapper.mtrb { border-top: 3.5px solid var(--mtrb-accent); }
+.bus-card-wrapper.nlb .bus-no { color: var(--nlb-accent); }
+.bus-card-wrapper.mtrb .bus-no { color: var(--mtrb-accent); }
+.bus-dir-btn.nlb { border-left: 4px solid var(--nlb-accent); }
+.bus-dir-btn.mtrb { border-left: 4px solid var(--mtrb-accent); }
+
+/* 🛡️ 五級綜合天氣威脅警示格仔 */
+.weather-threat-card {
+margin-top: 8px;
+padding: 10px 12px;
+border-radius: var(--radius-md);
+border: 1.5px solid var(--panel-border);
+background: var(--card-bg);
+box-shadow: var(--shadow-sm);
+cursor: pointer;
+transition: all 0.2s ease;
+}
+.weather-threat-card:hover {
+transform: translateY(-1px);
+box-shadow: var(--shadow-md);
+}
+.wth-threat-seg-bar {
+display: grid;
+grid-template-columns: repeat(5, 1fr);
+gap: 4px;
+margin: 7px 0;
+}
+.wth-threat-seg {
+height: 7px;
+border-radius: 999px;
+opacity: 0.25;
+transition: all 0.25s ease;
+}
+.wth-threat-seg.active {
+opacity: 1;
+height: 9px;
+transform: translateY(-1px);
+}
+.wth-threat-factors {
+display: flex;
+flex-wrap: wrap;
+gap: 4px;
+margin-top: 6px;
+}
+.wth-threat-chip {
+font-size: 0.68rem;
+font-weight: 800;
+padding: 2px 6px;
+border-radius: 6px;
+background: rgba(15, 23, 42, 0.05);
+color: var(--text-main);
+border: 1px solid rgba(15, 23, 42, 0.08);
+white-space: nowrap;
+}
 
 .bus-stop-list { max-height: 44vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y; padding: 0; background: var(--card-bg); border-radius: var(--radius-md); border: 1px solid var(--panel-border); box-shadow: var(--shadow-sm); }
 .stop-item-group { border-bottom: 1px solid var(--hairline-border); }
@@ -4352,6 +4409,7 @@ justify-content: center;
 <div class="w-item"><div class="w-label" id="t-max">今日最高</div><div class="w-val" id="hk-max">--°C</div></div>
 <div class="w-item"><div class="w-label" id="t-min">今日最低</div><div class="w-val" id="hk-min">--°C</div></div>
 </div>
+<div id="weather-threat-box" class="weather-threat-card" onclick="openWeatherThreatDetailModal()" title="點擊查看五級綜合天氣威脅計算詳情及各級指標"></div>
 
 <div id="warnings-container" class="warnings-container" style="display: none;"></div>
 <div id="swt-box" class="swt-box" style="display: none;"></div>
@@ -5045,25 +5103,41 @@ justify-content: center;
 <div class="modal-body">
 
 <div id="bus-search-interface" style="margin-bottom: 16px; border-bottom: 1px solid var(--hairline-border); padding-bottom: 8px;">
-<div class="search-engine-box">
-<h4 style="color:var(--kmb-accent);" id="t-sch-kmb">🔴 搜尋路線 (九巴)</h4>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; margin-bottom:8px;">
+<div class="search-engine-box" style="margin-bottom:0;">
+<h4 style="color:var(--kmb-accent);" id="t-sch-kmb">🔴 搜尋路線 (九巴 KMB)</h4>
 <div class="search-flex-bar">
-<input type="text" id="kmb-route-input" placeholder="例 / Ex: 112" autocomplete="off">
+<input type="text" id="kmb-route-input" placeholder="例 / Ex: 112, 1A, 968" autocomplete="off">
 <button onclick="searchRoute('kmb')" class="t-btn-sch">搜尋</button>
 </div>
 </div>
-<div class="search-engine-box">
-<h4 style="color:var(--ctb-accent);" id="t-sch-ctb">🟡 搜尋路線 (城巴)</h4>
+<div class="search-engine-box" style="margin-bottom:0;">
+<h4 style="color:var(--ctb-accent);" id="t-sch-ctb">🟡 搜尋路線 (城巴 CTB)</h4>
 <div class="search-flex-bar">
-<input type="text" id="ctb-route-input" placeholder="例 / Ex: 2A" autocomplete="off">
+<input type="text" id="ctb-route-input" placeholder="例 / Ex: 2A, E21, A11" autocomplete="off">
 <button onclick="searchRoute('ctb')" class="t-btn-sch">搜尋</button>
 </div>
 </div>
-<div class="search-engine-box">
-<h4 style="color:var(--text-main);" id="t-sch-stop">🚏 搜尋車站</h4>
-<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;" id="t-sch-desc">輸入站名，支援中英雙語搜尋。</div>
+<div class="search-engine-box" style="margin-bottom:0;">
+<h4 style="color:var(--nlb-accent);" id="t-sch-nlb">🟢 搜尋路線 (大嶼山巴士 NLB)</h4>
 <div class="search-flex-bar">
-<input type="text" id="stop-name-input" placeholder="例 / Ex: Quarry Bay / 鰂魚涌" autocomplete="off">
+<input type="text" id="nlb-route-input" placeholder="例 / Ex: 3M, 11, 23, 37M, B2, B6" autocomplete="off">
+<button onclick="searchRoute('nlb')" class="t-btn-sch">搜尋</button>
+</div>
+</div>
+<div class="search-engine-box" style="margin-bottom:0;">
+<h4 style="color:var(--mtrb-accent);" id="t-sch-mtrb">🟣 搜尋路線 (港鐵巴士 MTR Bus)</h4>
+<div class="search-flex-bar">
+<input type="text" id="mtrb-route-input" placeholder="例 / Ex: K51, K52, K65, K73, K12, 506" autocomplete="off">
+<button onclick="searchRoute('mtrb')" class="t-btn-sch">搜尋</button>
+</div>
+</div>
+</div>
+<div class="search-engine-box">
+<h4 style="color:var(--text-main);" id="t-sch-stop">🚏 搜尋車站（支援九巴・城巴・嶼巴・港鐵巴士）</h4>
+<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;" id="t-sch-desc">輸入站名，支援中英雙語搜尋全港各巴士營辦商車站。</div>
+<div class="search-flex-bar">
+<input type="text" id="stop-name-input" placeholder="例 / Ex: 鰂魚涌 / 屯門碼頭 / 東涌 / 大埔墟站" autocomplete="off">
 <button onclick="searchStop()" class="t-btn-sch">搜尋</button>
 </div>
 </div>
@@ -5296,7 +5370,7 @@ if (!myBuses || myBuses.length === 0) return;
 let updated = false;
 await Promise.allSettled(myBuses.map(async (b) => {
 let hasValidEn = b.name_en && !/[\u4e00-\u9fa5]/.test(b.name_en);
-if (!hasValidEn && b.stop) {
+if (!hasValidEn && b.stop && (b.co === 'kmb' || b.co === 'ctb')) {
 if (b.co === 'kmb' && kmbStopsCache) {
 let cached = kmbStopsCache.find(s => s.stop === b.stop);
 if (cached && cached.name_en) {
@@ -5560,6 +5634,9 @@ document.getElementById('t-save-1').innerText = dict['save-1'];
 document.getElementById('t-sel-bus').innerText = dict['sel-bus'];
 document.getElementById('t-sch-kmb').innerText = dict['sch-kmb'];
 document.getElementById('t-sch-ctb').innerText = dict['sch-ctb'];
+if (document.getElementById('t-sch-nlb')) document.getElementById('t-sch-nlb').innerText = (currentLang === 'en') ? '🟢 Route (New Lantao Bus NLB)' : '🟢 搜尋路線 (大嶼山巴士 NLB)';
+if (document.getElementById('t-sch-mtrb')) document.getElementById('t-sch-mtrb').innerText = (currentLang === 'en') ? '🟣 Route (MTR Bus)' : '🟣 搜尋路線 (港鐵巴士 MTR Bus)';
+if (typeof evaluateAndRenderWeatherThreatBox === 'function') evaluateAndRenderWeatherThreatBox();
 document.getElementById('t-sch-stop').innerText = dict['sch-stop'];
 document.getElementById('t-sch-desc').innerText = dict['sch-desc'];
 document.querySelectorAll('.t-btn-sch').forEach(el => el.innerText = dict['btn-sch']);
@@ -5614,6 +5691,10 @@ const kmbInp = document.getElementById('kmb-route-input');
 if (kmbInp) kmbInp.placeholder = (currentLang === 'en') ? 'Ex: 112' : '例 / Ex: 112';
 const ctbInp = document.getElementById('ctb-route-input');
 if (ctbInp) ctbInp.placeholder = (currentLang === 'en') ? 'Ex: 2A' : '例 / Ex: 2A';
+const nlbInp = document.getElementById('nlb-route-input');
+if (nlbInp) nlbInp.placeholder = (currentLang === 'en') ? 'Ex: 3M, 11, 23, B2, B6' : '例 / Ex: 3M, 11, 23, B2, B6';
+const mtrbInp = document.getElementById('mtrb-route-input');
+if (mtrbInp) mtrbInp.placeholder = (currentLang === 'en') ? 'Ex: K51, K52, K65, K73, K12, 506' : '例 / Ex: K51, K52, K65, K73, K12, 506';
 const stopInp = document.getElementById('stop-name-input');
 if (stopInp) stopInp.placeholder = (currentLang === 'en') ? 'Ex: Quarry Bay / Central' : '例 / Ex: Quarry Bay / 鰂魚涌';
 const refSt = document.getElementById('refresh-status');
@@ -8691,6 +8772,7 @@ return `
 }
 
 function renderWeatherPortal() {
+try { if (typeof evaluateAndRenderWeatherThreatBox === "function") evaluateAndRenderWeatherThreatBox(); } catch(e){}
 const container = document.getElementById('weather-portal-container');
 if (!container) return;
 const st = window.hkWeatherPortalState;
@@ -12926,6 +13008,107 @@ setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0
 }
 }
 
+const MTR_BUS_OFFICIAL_ROUTES_DATA = {"506":{"Outbound":[{"stop":"506-U010","lat":22.37299,"lng":113.9665,"tc":"屯門碼頭","en":"Tuen Mun Ferry Pier"},{"stop":"506-U020","lat":22.37583,"lng":113.96063,"tc":"美樂花園","en":"Melody Garden"},{"stop":"506-U030","lat":22.37836,"lng":113.96197,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"506-U040","lat":22.3822,"lng":113.96359,"tc":"輕鐵車廠站","en":"Light Rail Depot Stop"},{"stop":"506-U050","lat":22.3854,"lng":113.96522,"tc":"輕鐵龍門站","en":"LR Lung Mun Stop"},{"stop":"506-U060","lat":22.39363,"lng":113.96752,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"506-U070","lat":22.39506,"lng":113.96995,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"506-U080","lat":22.39412,"lng":113.97399,"tc":"港鐵屯門站","en":"MTR Tuen Mun Station"},{"stop":"506-U090","lat":22.39135,"lng":113.97547,"tc":"屯門市中心","en":"Tuen Mun Town Centre"},{"stop":"506-U100","lat":22.38731,"lng":113.97534,"tc":"安定邨","en":"On Ting Estate"},{"stop":"506-U110","lat":22.38292,"lng":113.97628,"tc":"輕鐵三聖站","en":"LR Sam Shing Stop"},{"stop":"506-U120","lat":22.38551,"lng":113.9767,"tc":"兆麟","en":"Siu Lun"}],"Inbound":[{"stop":"506-D010","lat":22.38551,"lng":113.9767,"tc":"兆麟","en":"Siu Lun"},{"stop":"506-D020","lat":22.38778,"lng":113.97519,"tc":"友愛邨","en":"Yau Oi Estate"},{"stop":"506-D030","lat":22.39213,"lng":113.97513,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"506-D040","lat":22.39394,"lng":113.9739,"tc":"輕鐵屯門站(港鐵屯門站)","en":"LR Tuen Mun Stop (MTR Tuen Mun Station)"},{"stop":"506-D050","lat":22.39469,"lng":113.97075,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"506-D060","lat":22.39338,"lng":113.96771,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"506-D070","lat":22.39172,"lng":113.96773,"tc":"聖彼得堂","en":"SKH St. Peter's Church"},{"stop":"506-D080","lat":22.38362,"lng":113.96448,"tc":"富健花園","en":"Glorious Garden"},{"stop":"506-D090","lat":22.38227,"lng":113.96383,"tc":"新屯門中心","en":"Sun Tuen Mun Centre"},{"stop":"506-D100","lat":22.37755,"lng":113.96148,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"506-D110","lat":22.37422,"lng":113.96211,"tc":"蝴蝶邨蝶心樓","en":"Tip Sum House, Butterfly Estate"},{"stop":"506-D120","lat":22.37355,"lng":113.96434,"tc":"湖景邨湖碧樓","en":"Wu Pik House, Wu King Estate"},{"stop":"506-D130","lat":22.37319,"lng":113.96605,"tc":"海翠花園","en":"Pierhead Garden"},{"stop":"506-D140","lat":22.37299,"lng":113.9665,"tc":"屯門碼頭","en":"Tuen Mun Ferry Pier"}]},"K12":{"Outbound":[{"stop":"K12-U010","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"},{"stop":"K12-U020","lat":22.45097,"lng":114.16996,"tc":"大埔超級城","en":"Tai Po Mega Mall"},{"stop":"K12-U030","lat":22.45284,"lng":114.1665,"tc":"八號花園","en":"Eightland Garden"}],"Inbound":[{"stop":"K12-D010","lat":22.45284,"lng":114.1665,"tc":"八號花園","en":"Eightland Garden"},{"stop":"K12-D020","lat":22.45128,"lng":114.17009,"tc":"大埔超級城","en":"Tai Po Mega Mall"},{"stop":"K12-D030","lat":22.44371,"lng":114.16991,"tc":"新達廣場","en":"Uptown Plaza"},{"stop":"K12-D040","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"}]},"K14":{"Single Direction":[{"stop":"K14-D010","lat":22.45128,"lng":114.17009,"tc":"大埔超級城","en":"Tai Po Mega Mall"},{"stop":"K14-D020","lat":22.44371,"lng":114.16991,"tc":"新達廣場","en":"Uptown Plaza"},{"stop":"K14-D030","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"}]},"K17":{"Outbound":[{"stop":"K17-U010","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"},{"stop":"K17-U020","lat":22.45302,"lng":114.17233,"tc":"大埔中心第五期","en":"Tai Po Centre Phase 5"},{"stop":"K17-U030","lat":22.45454,"lng":114.17443,"tc":"怡雅苑","en":"Yee Nga Court"},{"stop":"K17-U040","lat":22.45432,"lng":114.1741,"tc":"富善","en":"Fu Shin"}],"Inbound":[{"stop":"K17-D010","lat":22.45432,"lng":114.1741,"tc":"富善","en":"Fu Shin"},{"stop":"K17-D020","lat":22.44371,"lng":114.16991,"tc":"新達廣場","en":"Uptown Plaza"},{"stop":"K17-D030","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"}]},"K18":{"Outbound":[{"stop":"K18-U010","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"},{"stop":"K18-U020","lat":22.44753,"lng":114.17473,"tc":"宏福苑","en":"Wang Fuk Court"},{"stop":"K18-U030","lat":22.4487,"lng":114.1744,"tc":"廣福","en":"Kwong Fuk"}],"Inbound":[{"stop":"K18-D010","lat":22.4487,"lng":114.1744,"tc":"廣福","en":"Kwong Fuk"},{"stop":"K18-D020","lat":22.44371,"lng":114.16991,"tc":"新達廣場","en":"Uptown Plaza"},{"stop":"K18-D030","lat":22.44441,"lng":114.16947,"tc":"大埔墟站","en":"Tai Po Market Station"}]},"K51":{"Outbound":[{"stop":"K51-U010","lat":22.41329,"lng":113.98289,"tc":"富泰","en":"Fu Tai"},{"stop":"K51-U020","lat":22.41202,"lng":113.98377,"tc":"聚康山莊","en":"Beneville"},{"stop":"K51-U030","lat":22.41059,"lng":113.98239,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K51-U040","lat":22.40857,"lng":113.98005,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K51-U050","lat":22.41025,"lng":113.97858,"tc":"港鐵兆康站(南), (輕鐵兆康站)","en":"MTR Siu Hong Station (South), (LR Siu Hong Stop)"},{"stop":"K51-U060","lat":22.40205,"lng":113.9776,"tc":"井財街","en":"Tseng Choi Street"},{"stop":"K51-U070","lat":22.39834,"lng":113.9752,"tc":"雅都商場","en":"ACME Shopping Arcade"},{"stop":"K51-U080","lat":22.39494,"lng":113.9746,"tc":"德政圍(港鐵屯門站)","en":"Tak Ching Court (MTR Tuen Mun Station)"},{"stop":"K51-U090","lat":22.39153,"lng":113.9755,"tc":"屯門市中心(輕鐵市中心站)","en":"Tuen Mun Town Centre (LR Town Centre Stop)"},{"stop":"K51-U100","lat":22.3906,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K51-U110","lat":22.38771,"lng":113.9807,"tc":"恒順園","en":"Handsome Court"},{"stop":"K51-U120","lat":22.38519,"lng":113.981,"tc":"恒豐園","en":"Harvest Garden"},{"stop":"K51-U130","lat":22.38175,"lng":113.97886,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K51-U140","lat":22.3789,"lng":113.98075,"tc":"青山灣","en":"Castle Peak Beach"},{"stop":"K51-U150","lat":22.37794,"lng":113.98347,"tc":"海景花園","en":"Seaview Garden"},{"stop":"K51-U160","lat":22.37493,"lng":113.98674,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K51-U170","lat":22.37378,"lng":113.99076,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K51-U180","lat":22.37203,"lng":113.99357,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K51-U190","lat":22.36945,"lng":113.9954,"tc":"嘉禾里村","en":"Kar Wo Lei Tsuen"},{"stop":"K51-U200","lat":22.36817,"lng":113.9991,"tc":"小秀村","en":"Siu Sau Tsuen"},{"stop":"K51-U210","lat":22.36627,"lng":114.0033,"tc":"愛琴灣","en":"The Aegean"},{"stop":"K51-U220","lat":22.36638,"lng":114.0063,"tc":"小欖新村","en":"Siu Lam San Tsuen"},{"stop":"K51-U230","lat":22.3663,"lng":114.0113,"tc":"小欖村","en":"Siu Lam Tsuen"},{"stop":"K51-U240","lat":22.36497,"lng":114.0133,"tc":"小欖澄麗路","en":"Ching Lai Road Siu Lam"},{"stop":"K51-U250","lat":22.36249,"lng":114.01911,"tc":"大欖","en":"Tai Lam"}],"Inbound":[{"stop":"K51-D010","lat":22.36249,"lng":114.01911,"tc":"大欖","en":"Tai Lam"},{"stop":"K51-D020","lat":22.36416,"lng":114.01499,"tc":"小欖","en":"Siu Lam"},{"stop":"K51-D030","lat":22.3657,"lng":114.01244,"tc":"小欖澄麗路","en":"Ching Lai Road Siu Lam"},{"stop":"K51-D040","lat":22.36634,"lng":114.00949,"tc":"小欖村","en":"Siu Lam Tsuen"},{"stop":"K51-D050","lat":22.3661,"lng":114.00552,"tc":"小欖新村","en":"Siu Lam San Tsuen"},{"stop":"K51-D060","lat":22.36657,"lng":114.00162,"tc":"愛琴灣","en":"The Aegean"},{"stop":"K51-D070","lat":22.368,"lng":113.99908,"tc":"小秀上村","en":"Siu Sau Sheung Tsuen"},{"stop":"K51-D080","lat":22.36803,"lng":113.99626,"tc":"龍珠島","en":"Pearl Island"},{"stop":"K51-D090","lat":22.37129,"lng":113.99388,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K51-D100","lat":22.37363,"lng":113.99121,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K51-D110","lat":22.3759,"lng":113.98564,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K51-D120","lat":22.37793,"lng":113.98324,"tc":"碧翠花園","en":"Bayview Terrace"},{"stop":"K51-D130","lat":22.37896,"lng":113.9806,"tc":"青山灣碼頭","en":"Castle Peak Bay Pier"},{"stop":"K51-D140","lat":22.38121,"lng":113.97909,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K51-D150","lat":22.38206,"lng":113.97715,"tc":"恆福花園(輕鐵三聖站)","en":"Hanford Garden (LR Sam Shing Stop)"},{"stop":"K51-D160","lat":22.38377,"lng":113.97939,"tc":"胡陳金枝中學","en":"Mrs Aw Boon Haw Secondary School"},{"stop":"K51-D170","lat":22.3846,"lng":113.98064,"tc":"青善遊樂場","en":"Tsing Sin Playground"},{"stop":"K51-D180","lat":22.38735,"lng":113.98069,"tc":"置樂花園","en":"Chi Lok Fa Yuen"},{"stop":"K51-D190","lat":22.39043,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K51-D200","lat":22.39212,"lng":113.97508,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"K51-D210","lat":22.39502,"lng":113.97444,"tc":"港鐵屯門站(輕鐵屯門站)","en":"MTR Tuen Mun Station (LR Tuen Mun Stop)"},{"stop":"K51-D220","lat":22.39731,"lng":113.97485,"tc":"聖公會聖西門呂明才中學","en":"SKH St. Simon's Lui Ming Choi Secondary School"},{"stop":"K51-D230","lat":22.40334,"lng":113.97925,"tc":"景峰花園","en":"Prime View Garden"},{"stop":"K51-D240","lat":22.40725,"lng":113.97864,"tc":"輕鐵鳳地站","en":"LR Fung Tei Stop"},{"stop":"K51-D250","lat":22.41038,"lng":113.97861,"tc":"港鐵兆康站(南), (輕鐵兆康站)","en":"MTR Siu Hong Station (South), (LR Siu Hong Stop)"},{"stop":"K51-D260","lat":22.40878,"lng":113.9804,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K51-D270","lat":22.41069,"lng":113.98221,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K51-D280","lat":22.41193,"lng":113.98313,"tc":"倚嶺南庭","en":"South Hillcrest"},{"stop":"K51-D290","lat":22.41329,"lng":113.98289,"tc":"富泰","en":"Fu Tai"}]},"K51A":{"Outbound":[{"stop":"K51A-U010","lat":22.41329,"lng":113.98289,"tc":"富泰","en":"Fu Tai"},{"stop":"K51A-U020","lat":22.41202,"lng":113.98377,"tc":"聚康山莊","en":"Beneville"},{"stop":"K51A-U030","lat":22.41059,"lng":113.98239,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K51A-U040","lat":22.40857,"lng":113.98005,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K51A-U050","lat":22.41025,"lng":113.97858,"tc":"港鐵兆康站(南) (輕鐵兆康站)","en":"MTR Siu Hong Station (South) (LR Siu Hong Stop)"},{"stop":"K51A-U060","lat":22.40205,"lng":113.9776,"tc":"井財街","en":"Tseng Choi Street"},{"stop":"K51A-U070","lat":22.39834,"lng":113.9752,"tc":"雅都商場","en":"ACME Shopping Arcade"},{"stop":"K51A-U080","lat":22.39494,"lng":113.9746,"tc":"德政圍(港鐵屯門站)","en":"Tak Ching Court (MTR Tuen Mun Station)"},{"stop":"K51A-U090","lat":22.39153,"lng":113.9755,"tc":"屯門市中心(輕鐵市中心站)","en":"Tuen Mun Town Centre (LR Town Centre Stop)"},{"stop":"K51A-U100","lat":22.3906,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K51A-U110","lat":22.38771,"lng":113.9807,"tc":"恒順園","en":"Handsome Court"},{"stop":"K51A-U120","lat":22.38519,"lng":113.981,"tc":"恒豐園","en":"Harvest Garden"},{"stop":"K51A-U130","lat":22.38175,"lng":113.97886,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K51A-U140","lat":22.3789,"lng":113.98075,"tc":"青山灣","en":"Castle Peak Beach"},{"stop":"K51A-U150","lat":22.37794,"lng":113.98347,"tc":"海景花園","en":"Seaview Garden"},{"stop":"K51A-U160","lat":22.37493,"lng":113.98674,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K51A-U170","lat":22.37378,"lng":113.99076,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K51A-U180","lat":22.37203,"lng":113.99357,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K51A-U190","lat":22.3716,"lng":113.9954,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K51A-U200","lat":22.37388,"lng":113.99614,"tc":"掃管笏變電站","en":"So Kwun Wat Sub- station"},{"stop":"K51A-U210","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"},{"stop":"K51A-U220","lat":22.37202,"lng":114.00359,"tc":"掃管笏(鄭任安夫人千禧小學)","en":"So Kwun Wat (Mrs. Cheng Yam On Millennium School)"},{"stop":"K51A-U230","lat":22.37422,"lng":114.0023,"tc":"掃管笏路","en":"So Kwun Wat Road"},{"stop":"K51A-U240","lat":22.37387,"lng":114.00102,"tc":"管翠路18 號","en":"18 Kwun Chui Road"},{"stop":"K51A-U250","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"}],"Inbound":[{"stop":"K51A-D010","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"},{"stop":"K51A-D020","lat":22.37202,"lng":114.00359,"tc":"掃管笏(鄭任安夫人千禧小學)","en":"So Kwun Wat (Mrs. Cheng Yam On Millennium School)"},{"stop":"K51A-D030","lat":22.37422,"lng":114.0023,"tc":"掃管笏路","en":"So Kwun Wat Road"},{"stop":"K51A-D040","lat":22.37387,"lng":114.00102,"tc":"管翠路18 號","en":"18 Kwun Chui Road"},{"stop":"K51A-D050","lat":22.37512,"lng":113.99771,"tc":"管翠路","en":"Kwun Chui Road"},{"stop":"K51A-D060","lat":22.37147,"lng":113.99538,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K51A-D070","lat":22.37129,"lng":113.99391,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K51A-D080","lat":22.37363,"lng":113.99121,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K51A-D090","lat":22.3759,"lng":113.98564,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K51A-D100","lat":22.37793,"lng":113.98324,"tc":"碧翠花園","en":"Bayview Terrace"},{"stop":"K51A-D110","lat":22.37896,"lng":113.9806,"tc":"青山灣碼頭","en":"Castle Peak Bay Pier"},{"stop":"K51A-D120","lat":22.38121,"lng":113.97909,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K51A-D140","lat":22.38377,"lng":113.97939,"tc":"胡陳金枝中學","en":"Mrs Aw Boon Haw Secondary School"},{"stop":"K51A-D150","lat":22.3846,"lng":113.98064,"tc":"青善遊樂場","en":"Tsing Sin Playground"},{"stop":"K51A-D160","lat":22.38735,"lng":113.98069,"tc":"置樂花園","en":"Chi Lok Fa Yuen"},{"stop":"K51A-D170","lat":22.39043,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K51A-D180","lat":22.39212,"lng":113.97508,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"K51A-D190","lat":22.39502,"lng":113.97444,"tc":"港鐵屯門站(輕鐵屯門站)","en":"MTR Tuen Mun Station (LR Tuen Mun Stop)"},{"stop":"K51A-D200","lat":22.39731,"lng":113.97485,"tc":"聖公會聖西門呂明才中學","en":"SKH St. Simon's Lui Ming Choi Secondary School"},{"stop":"K51A-D210","lat":22.40334,"lng":113.97925,"tc":"景峰花園","en":"Prime View Garden"},{"stop":"K51A-D220","lat":22.40725,"lng":113.97864,"tc":"輕鐵鳳地站","en":"LR Fung Tei Stop"},{"stop":"K51A-D230","lat":22.41038,"lng":113.97861,"tc":"港鐵兆康站(南) (輕鐵兆康站)","en":"MTR Siu Hong Station (South) (LR Siu Hong Stop)"},{"stop":"K51A-D240","lat":22.40878,"lng":113.9804,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K51A-D250","lat":22.41069,"lng":113.98221,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K51A-D260","lat":22.41193,"lng":113.98313,"tc":"倚嶺南庭","en":"South Hillcrest"},{"stop":"K51A-D270","lat":22.41329,"lng":113.98289,"tc":"富泰","en":"Fu Tai"}]},"K52":{"Outbound":[{"stop":"K52-nU010","lat":22.37526,"lng":113.96853,"tc":"悅湖山莊","en":"Yuet Wu Villa"},{"stop":"K52-nU020","lat":22.37281,"lng":113.9701,"tc":"邁亞美海灣","en":"Miami Beach Towers"},{"stop":"K52-nU030","lat":22.3728,"lng":113.96739,"tc":"屯門碼頭","en":"Tuen Mun Ferry Pier"},{"stop":"K52-nU040","lat":22.3745,"lng":113.9656,"tc":"湖景邨 湖畔樓","en":"Wu Boon House, Wu King Estate"},{"stop":"K52-nU050","lat":22.37674,"lng":113.96629,"tc":"湖景邨 湖翠樓","en":"Wu Tsui House, Wu King Estate"},{"stop":"K52-nU060","lat":22.38122,"lng":113.97229,"tc":"屯門中央廣場","en":"Tuen Mun Central Square"},{"stop":"K52-nU070","lat":22.38294,"lng":113.97628,"tc":"輕鐵三聖站","en":"LR Sam Shing Stop"},{"stop":"K52-nU080","lat":22.38377,"lng":113.97939,"tc":"胡陳金枝中學","en":"Mrs Aw Boon Haw Secondary School"},{"stop":"K52-nU090","lat":22.38457,"lng":113.98065,"tc":"青善遊樂場","en":"Tsing Sin Playground"},{"stop":"K52-nU100","lat":22.38738,"lng":113.98067,"tc":"置樂花園","en":"Chi Lok Fa Yuen"},{"stop":"K52-nU110","lat":22.39046,"lng":113.97885,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K52-nU120","lat":22.39212,"lng":113.97508,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"K52-nU140","lat":22.39394,"lng":113.9739,"tc":"輕鐵屯門站(港鐵屯門站)","en":"LR Tuen Mun Stop (MTR Tuen Mun Station)"},{"stop":"K52-nU150","lat":22.39469,"lng":113.97075,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K52-nU160","lat":22.39338,"lng":113.96771,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"K52-nU170","lat":22.39172,"lng":113.96773,"tc":"聖彼得堂","en":"SKH St. Peter's Church"},{"stop":"K52-nU180","lat":22.38362,"lng":113.96448,"tc":"富健花園","en":"Glorious Garden"},{"stop":"K52-nU190","lat":22.38227,"lng":113.96383,"tc":"新屯門中心","en":"Sun Tuen Mun Centre"},{"stop":"K52-nU200","lat":22.37755,"lng":113.96147,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"K52-nU210","lat":22.37548,"lng":113.95932,"tc":"屯門公眾騎術學校","en":"Tuen Mun Public Riding School"},{"stop":"K52-nU220","lat":22.37319,"lng":113.95473,"tc":"蝴蝶灣公園","en":"Butterfly Beach Park"},{"stop":"K52-nU230","lat":22.36853,"lng":113.9489,"tc":"望后石","en":"Pillar Point"},{"stop":"K52-nU240","lat":22.36673,"lng":113.94371,"tc":"政府車場","en":"Government Depot"},{"stop":"K52-nU250","lat":22.36857,"lng":113.93822,"tc":"內河碼頭","en":"River Trade Terminal"},{"stop":"K52-nU260","lat":22.36999,"lng":113.93403,"tc":"環保園","en":"EcoPark"},{"stop":"K52-nU270","lat":22.36995,"lng":113.92874,"tc":"紹榮鋼鐵","en":"Shiu Wing Steel Mill"},{"stop":"K52-nU280","lat":22.38638,"lng":113.92112,"tc":"沙埔崗312 號","en":"No.312 Sha Po Kong"},{"stop":"K52-nU290","lat":22.38803,"lng":113.92079,"tc":"沙埔崗177 號","en":"No.177 Sha Po Kong"},{"stop":"K52-nU300","lat":22.38931,"lng":113.92022,"tc":"沙埔崗127 號","en":"No.127 Sha Po Kong"},{"stop":"K52-nU310","lat":22.39062,"lng":113.92015,"tc":"龍鼓灘","en":"Lung Kwu Tan"}],"Inbound":[{"stop":"K52-nD010","lat":22.39062,"lng":113.92015,"tc":"龍鼓灘","en":"Lung Kwu Tan"},{"stop":"K52-nD020","lat":22.3891,"lng":113.9203,"tc":"沙埔崗127 號","en":"No.127 Sha Po Kong"},{"stop":"K52-nD030","lat":22.38806,"lng":113.92079,"tc":"沙埔崗177 號","en":"No.177 Sha Po Kong"},{"stop":"K52-nD040","lat":22.38662,"lng":113.92116,"tc":"沙埔崗288 號","en":"No.288 Sha Po Kong"},{"stop":"K52-nD050","lat":22.38551,"lng":113.92126,"tc":"沙埔崗351 號","en":"No.351 Sha Po Kong"},{"stop":"K52-nD060","lat":22.38252,"lng":113.92102,"tc":"中電A 廠","en":"CLP (Plant A)"},{"stop":"K52-nD070","lat":22.37012,"lng":113.92898,"tc":"紹榮鋼鐵","en":"Shiu Wing Steel Mill"},{"stop":"K52-nD080","lat":22.37001,"lng":113.93439,"tc":"環保園","en":"EcoPark"},{"stop":"K52-nD090","lat":22.36855,"lng":113.93806,"tc":"內河碼頭","en":"River Trade Terminal"},{"stop":"K52-nD100","lat":22.36688,"lng":113.94427,"tc":"政府車場","en":"Government Depot"},{"stop":"K52-nD110","lat":22.36867,"lng":113.94884,"tc":"望后石","en":"Pillar Point"},{"stop":"K52-nD120","lat":22.3729,"lng":113.95463,"tc":"蝴蝶灣公園","en":"Butterfly Beach Park"},{"stop":"K52-nD130","lat":22.37526,"lng":113.95858,"tc":"屯門公眾騎術學校","en":"Tuen Mun Public Riding School"},{"stop":"K52-nD140","lat":22.37836,"lng":113.96196,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"K52-nD150","lat":22.3822,"lng":113.96359,"tc":"輕鐵車廠站","en":"Light Rail Depot Stop"},{"stop":"K52-nD160","lat":22.3854,"lng":113.96522,"tc":"輕鐵龍門站","en":"LR Lung Mun Stop"},{"stop":"K52-nD170","lat":22.39363,"lng":113.96752,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"K52-nD180","lat":22.39506,"lng":113.96995,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K52-nD190","lat":22.39412,"lng":113.97399,"tc":"屯門站","en":"Tuen Mun Station"},{"stop":"K52-nD200","lat":22.39154,"lng":113.97544,"tc":"屯門市中心","en":"Tuen Mun Town Centre"},{"stop":"K52-nD210","lat":22.3906,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K52-nD220","lat":22.38771,"lng":113.9807,"tc":"恒順園","en":"Handsome Court"},{"stop":"K52-nD230","lat":22.38519,"lng":113.981,"tc":"恒豐園","en":"Harvest Garden"},{"stop":"K52-nD240","lat":22.38277,"lng":113.97626,"tc":"輕鐵三聖站","en":"LR Sam Shing Stop"},{"stop":"K52-nD250","lat":22.3809,"lng":113.97202,"tc":"屯門中央廣場","en":"Tuen Mun Central Square"},{"stop":"K52-nD260","lat":22.37652,"lng":113.96637,"tc":"湖景邨 湖翠樓","en":"Wu Tsui House, Wu King Estate"},{"stop":"K52-nD270","lat":22.3746,"lng":113.96583,"tc":"兆禧苑","en":"Siu Hei Court"},{"stop":"K52-nD280","lat":22.37324,"lng":113.96596,"tc":"海翠花園","en":"Pierhead Garden"},{"stop":"K52-nD290","lat":22.37284,"lng":113.9697,"tc":"邁亞美海灣","en":"Miami Beach Towers"},{"stop":"K52-nD300","lat":22.37526,"lng":113.96848,"tc":"悅湖山莊","en":"Yuet Wu Villa"}]},"K52A":{"Outbound":[{"stop":"K52A-U010","lat":22.39422,"lng":113.97336,"tc":"屯門站","en":"Tuen Mun Station"},{"stop":"K52A-U015","lat":22.39394,"lng":113.9739,"tc":"輕鐵屯門站(港鐵屯門站)","en":"LR Tuen Mun Stop (MTR Tuen Mun Station)"},{"stop":"K52A-U020","lat":22.39469,"lng":113.97075,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K52A-U030","lat":22.39338,"lng":113.96771,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"K52A-U040","lat":22.39172,"lng":113.96773,"tc":"聖彼得堂","en":"SKH St. Peter's Church"},{"stop":"K52A-U050","lat":22.38362,"lng":113.96448,"tc":"富健花園","en":"Glorious Garden"},{"stop":"K52A-U060","lat":22.38227,"lng":113.96383,"tc":"新屯門中心","en":"Sun Tuen Mun Centre"},{"stop":"K52A-U070","lat":22.37755,"lng":113.96148,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"K52A-U080","lat":22.37548,"lng":113.95932,"tc":"屯門公眾騎術學校","en":"Tuen Mun Public Riding School"},{"stop":"K52A-U090","lat":22.37319,"lng":113.95473,"tc":"蝴蝶灣公園","en":"Butterfly Beach Park"},{"stop":"K52A-U100","lat":22.36853,"lng":113.9489,"tc":"望后石","en":"Pillar Point"},{"stop":"K52A-U110","lat":22.36673,"lng":113.94371,"tc":"政府車場","en":"Government Depot"},{"stop":"K52A-U120","lat":22.36857,"lng":113.93822,"tc":"內河碼頭","en":"River Trade Terminal"},{"stop":"K52A-U130","lat":22.36999,"lng":113.93403,"tc":"環保園","en":"EcoPark"},{"stop":"K52A-U140","lat":22.36995,"lng":113.92874,"tc":"紹榮鋼鐵","en":"Shiu Wing Steel Mill"},{"stop":"K52A-U150","lat":22.38638,"lng":113.92112,"tc":"沙埔崗312 號","en":"No.312 Sha Po Kong"},{"stop":"K52A-U160","lat":22.38803,"lng":113.92079,"tc":"沙埔崗177 號","en":"No.177 Sha Po Kong"},{"stop":"K52A-U170","lat":22.38931,"lng":113.92022,"tc":"沙埔崗127 號","en":"No.127 Sha Po Kong"},{"stop":"K52A-U180","lat":22.42,"lng":113.91964,"tc":"曾咀","en":"Tsang Tsui"}],"Inbound":[{"stop":"K52A-D010","lat":22.42,"lng":113.91964,"tc":"曾咀","en":"Tsang Tsui"},{"stop":"K52A-D020","lat":22.3891,"lng":113.9203,"tc":"沙埔崗127 號","en":"No.127 Sha Po Kong"},{"stop":"K52A-D030","lat":22.38806,"lng":113.92079,"tc":"沙埔崗177 號","en":"No.177 Sha Po Kong"},{"stop":"K52A-D040","lat":22.38662,"lng":113.92116,"tc":"沙埔崗288 號","en":"No.288 Sha Po Kong"},{"stop":"K52A-D050","lat":22.38551,"lng":113.92126,"tc":"沙埔崗351 號","en":"No.351 Sha Po Kong"},{"stop":"K52A-D060","lat":22.38252,"lng":113.92102,"tc":"中電A 廠","en":"CLP (Plant A)"},{"stop":"K52A-D070","lat":22.37012,"lng":113.92898,"tc":"紹榮鋼鐵","en":"Shiu Wing Steel Mill"},{"stop":"K52A-D080","lat":22.37001,"lng":113.93439,"tc":"環保園","en":"EcoPark"},{"stop":"K52A-D090","lat":22.36855,"lng":113.93806,"tc":"內河碼頭","en":"River Trade Terminal"},{"stop":"K52A-D100","lat":22.36688,"lng":113.94427,"tc":"政府車場","en":"Government Depot"},{"stop":"K52A-D110","lat":22.36867,"lng":113.94884,"tc":"望后石","en":"Pillar Point"},{"stop":"K52A-D120","lat":22.3729,"lng":113.95463,"tc":"蝴蝶灣公園","en":"Butterfly Beach Park"},{"stop":"K52A-D130","lat":22.37526,"lng":113.95858,"tc":"屯門公眾騎術學校","en":"Tuen Mun Public Riding School"},{"stop":"K52A-D140","lat":22.37836,"lng":113.96196,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"K52A-D150","lat":22.3822,"lng":113.96359,"tc":"輕鐵車廠站","en":"Light Rail Depot Stop"},{"stop":"K52A-D160","lat":22.3854,"lng":113.96522,"tc":"輕鐵龍門站","en":"LR Lung Mun Stop"},{"stop":"K52A-D170","lat":22.39363,"lng":113.96752,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"K52A-D180","lat":22.39506,"lng":113.96995,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K52A-D190","lat":22.39422,"lng":113.97336,"tc":"屯門站","en":"Tuen Mun Station"}]},"K53":{"Circular":[{"stop":"K53-U010","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"},{"stop":"K53-U020","lat":22.39154,"lng":113.97544,"tc":"屯門市中心","en":"Tuen Mun Town Centre"},{"stop":"K53-U030","lat":22.39062,"lng":113.97875,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K53-U040","lat":22.38772,"lng":113.98076,"tc":"恒順園","en":"Handsome Court"},{"stop":"K53-U050","lat":22.38525,"lng":113.98107,"tc":"恒豐園","en":"Harvest Garden"},{"stop":"K53-U060","lat":22.38173,"lng":113.97885,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K53-U070","lat":22.37892,"lng":113.98076,"tc":"青山灣","en":"Castle Peak Beach"},{"stop":"K53-U080","lat":22.37788,"lng":113.98356,"tc":"海景花園","en":"Seaview Garden"},{"stop":"K53-U090","lat":22.37493,"lng":113.98674,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K53-U100","lat":22.37379,"lng":113.99085,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K53-U110","lat":22.37205,"lng":113.99361,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K53-U120","lat":22.3716,"lng":113.9954,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K53-U130","lat":22.37388,"lng":113.99614,"tc":"掃管笏變電站","en":"So Kwun Wat Sub- station"},{"stop":"K53-U140","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"},{"stop":"K53-D010","lat":22.37202,"lng":114.00359,"tc":"掃管笏(鄭任安夫人千禧小學)","en":"So Kwun Wat (Mrs. Cheng Yam On Millennium School)"},{"stop":"K53-D015","lat":22.37422,"lng":114.0023,"tc":"掃管笏路","en":"So Kwun Wat Road"},{"stop":"K53-D020","lat":22.37387,"lng":114.00102,"tc":"管翠路18 號","en":"18 Kwun Chui Road"},{"stop":"K53-D030","lat":22.37512,"lng":113.99771,"tc":"管翠路","en":"Kwun Chui Road"},{"stop":"K53-D040","lat":22.37147,"lng":113.99538,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K53-D050","lat":22.37129,"lng":113.99391,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K53-D060","lat":22.37365,"lng":113.99124,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K53-D070","lat":22.37592,"lng":113.98566,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K53-D080","lat":22.37794,"lng":113.98329,"tc":"碧翠花園","en":"Bayview Terrace"},{"stop":"K53-D090","lat":22.37895,"lng":113.98061,"tc":"青山灣碼頭","en":"Castle Peak Bay Pier"},{"stop":"K53-D100","lat":22.38124,"lng":113.97912,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K53-D110","lat":22.38208,"lng":113.97716,"tc":"恆福花園(輕鐵三聖站)","en":"Hanford Garden (LR Sam Shing Stop)"},{"stop":"K53-D120","lat":22.38377,"lng":113.97939,"tc":"胡陳金枝中學","en":"Mrs Aw Boon Haw Secondary School"},{"stop":"K53-D130","lat":22.38463,"lng":113.98064,"tc":"青善遊樂場","en":"Tsing Sin Playground"},{"stop":"K53-D140","lat":22.38733,"lng":113.98067,"tc":"置樂花園","en":"Chi Lok Fa Yuen"},{"stop":"K53-D150","lat":22.39045,"lng":113.97885,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K53-D160","lat":22.39212,"lng":113.97508,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"K53-U011","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"}]},"K53*":{"Circular":[{"stop":"K53*-U010","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"},{"stop":"K53*-U020","lat":22.39167,"lng":113.97155,"tc":"天后路","en":"Tin Hau Road"},{"stop":"K53*-U030","lat":22.38814,"lng":113.97015,"tc":"業旺邨","en":"Yip Wong Estate"},{"stop":"K53*-U040","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"}]},"K54":{"Circular":[{"stop":"K54-U010","lat":22.41295,"lng":113.96864,"tc":"和田邨","en":"Wo Tin Estate"},{"stop":"K54-U020","lat":22.41229,"lng":113.97058,"tc":"菁田邨","en":"Ching Tin Estate"},{"stop":"K54-U030","lat":22.41439,"lng":113.97388,"tc":"紫田村","en":"Tsz Tin Tsuen"},{"stop":"K54-U040","lat":22.41435,"lng":113.97701,"tc":"欣田邨","en":"Yan Tin Estate"},{"stop":"K54-U050","lat":22.4134,"lng":113.97902,"tc":"港鐵兆康站(北) (輕鐵兆康站)","en":"MTR Siu Hong Station (North) (LR Siu Hong Stop)"},{"stop":"K54-U060","lat":22.402,"lng":113.97749,"tc":"紅橋","en":"Hung Kiu"},{"stop":"K54-U070","lat":22.39139,"lng":113.97546,"tc":"屯門市中心","en":"Tuen Mun Town Centre"},{"stop":"K54-D010","lat":22.39273,"lng":113.97696,"tc":"屯門市廣場","en":"Tuen Mun Town Plaza"},{"stop":"K54-D020","lat":22.39894,"lng":113.9766,"tc":"新墟街市","en":"San Hui Market"},{"stop":"K54-D030","lat":22.41357,"lng":113.9791,"tc":"港鐵兆康站(北) (輕鐵兆康站)","en":"MTR Siu Hong Station (North) (LR Siu Hong Stop)"},{"stop":"K54-D040","lat":22.41491,"lng":113.97741,"tc":"兆康苑","en":"Siu Hong Court"},{"stop":"K54-D050","lat":22.4131,"lng":113.97234,"tc":"欣寶路公共運輸交匯處","en":"Yan Po Road Public Transport Interchange"},{"stop":"K54-D060","lat":22.41197,"lng":113.97033,"tc":"菁田邨","en":"Ching Tin Estate"},{"stop":"K54-D070","lat":22.41295,"lng":113.96864,"tc":"和田邨","en":"Wo Tin Estate"}]},"K54A":{"Outbound":[{"stop":"K54A-U010","lat":22.41295,"lng":113.96864,"tc":"和田邨","en":"Wo Tin Estate"},{"stop":"K54A-U020","lat":22.41229,"lng":113.97058,"tc":"菁田邨","en":"Ching Tin Estate"},{"stop":"K54A-U030","lat":22.41439,"lng":113.97388,"tc":"紫田村","en":"Tsz Tin Tsuen"},{"stop":"K54A-U040","lat":22.41435,"lng":113.97701,"tc":"欣田邨","en":"Yan Tin Estate"},{"stop":"K54A-U050","lat":22.4134,"lng":113.97902,"tc":"港鐵兆康站(北) (輕鐵兆康站)","en":"MTR Siu Hong Station (North) (LR Siu Hong Stop)"}],"Inbound":[{"stop":"K54A-D010","lat":22.4134,"lng":113.97902,"tc":"港鐵兆康站(北) (輕鐵兆康站)","en":"MTR Siu Hong Station (North) (LR Siu Hong Stop)"},{"stop":"K54A-D020","lat":22.41491,"lng":113.97741,"tc":"兆康苑","en":"Siu Hong Court"},{"stop":"K54A-D030","lat":22.4131,"lng":113.97234,"tc":"欣寶路公共運輸交匯處","en":"Yan Po Road Public Transport Interchange"},{"stop":"K54A-D040","lat":22.41197,"lng":113.97033,"tc":"菁田邨","en":"Ching Tin Estate"},{"stop":"K54A-D050","lat":22.41295,"lng":113.96864,"tc":"和田邨","en":"Wo Tin Estate"}]},"K58":{"Outbound":[{"stop":"K58-U010","lat":22.41281,"lng":113.98295,"tc":"富泰","en":"Fu Tai"},{"stop":"K58-U020","lat":22.412,"lng":113.98378,"tc":"聚康山莊","en":"Beneville"},{"stop":"K58-U023","lat":22.41059,"lng":113.98239,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K58-U026","lat":22.40857,"lng":113.98005,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K58-U030","lat":22.41025,"lng":113.97858,"tc":"港鐵兆康站(南), (輕鐵兆康站)","en":"MTR Siu Hong Station (South), (LR Siu Hong Stop)"},{"stop":"K58-U040","lat":22.4137,"lng":113.97695,"tc":"兆康苑","en":"Siu Hong Court"},{"stop":"K58-U050","lat":22.41013,"lng":113.97651,"tc":"輕鐵麒麟站","en":"LR Kei Lun Stop"},{"stop":"K58-U060","lat":22.40861,"lng":113.97557,"tc":"屯門醫院","en":"Tuen Mun Hospital"},{"stop":"K58-U070","lat":22.40628,"lng":113.97194,"tc":"青松觀","en":"Tsing Chung Koon"},{"stop":"K58-U080","lat":22.40495,"lng":113.96884,"tc":"保良局莊啟程第二小學","en":"PLK Vicwood K.T. Chong No.2 Primary School"},{"stop":"K58-U090","lat":22.40573,"lng":113.96701,"tc":"何壽基小學","en":"Ho Sau Kei Primary School"},{"stop":"K58-U100","lat":22.40709,"lng":113.96425,"tc":"良景邨","en":"Leung King Estate"},{"stop":"K58-U110","lat":22.40539,"lng":113.96465,"tc":"輕鐵新圍站","en":"LR San Wai Stop"},{"stop":"K58-U120","lat":22.40189,"lng":113.96805,"tc":"輕鐵石排站","en":"LR Shek Pai Stop"},{"stop":"K58-U130","lat":22.39696,"lng":113.96762,"tc":"輕鐵鳴琴站","en":"LR Ming Kum Stop"},{"stop":"K58-U140","lat":22.39502,"lng":113.96998,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K58-U150","lat":22.39422,"lng":113.97336,"tc":"港鐵屯門站","en":"MTR Tuen Mun Station"},{"stop":"K58-U160","lat":22.39139,"lng":113.97546,"tc":"屯門市中心","en":"Tuen Mun Town Centre"},{"stop":"K58-U170","lat":22.39065,"lng":113.9788,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K58-U180","lat":22.3878,"lng":113.98074,"tc":"恒順園","en":"Handsome Court"},{"stop":"K58-U190","lat":22.38527,"lng":113.98107,"tc":"恒豐園","en":"Harvest Garden"},{"stop":"K58-U200","lat":22.38171,"lng":113.97885,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K58-U215","lat":22.37892,"lng":113.98076,"tc":"青山灣","en":"Castle Peak Beach"},{"stop":"K58-U220","lat":22.37788,"lng":113.98356,"tc":"海景花園","en":"Seaview Garden"},{"stop":"K58-U230","lat":22.37493,"lng":113.98674,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K58-U240","lat":22.37379,"lng":113.99085,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K58-U250","lat":22.37205,"lng":113.99361,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K58-U260","lat":22.3716,"lng":113.9954,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K58-U270","lat":22.37388,"lng":113.99614,"tc":"掃管笏變電站","en":"So Kwun Wat Sub-station"},{"stop":"K58-U280","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"},{"stop":"K58-U290","lat":22.37202,"lng":114.00359,"tc":"掃管笏(鄭任安夫人千禧小學)","en":"So Kwun Wat (Mrs. Cheng Yam On Millennium School)"},{"stop":"K58-U300","lat":22.37422,"lng":114.0023,"tc":"掃管笏路","en":"So Kwun Wat Road"},{"stop":"K58-U310","lat":22.37387,"lng":114.00102,"tc":"管翠路18號","en":"18 Kwun Chui Road"},{"stop":"K58-U320","lat":22.37512,"lng":113.99771,"tc":"管翠路","en":"Kwun Chui Road"}],"Inbound":[{"stop":"K58-D001","lat":22.37574,"lng":113.99983,"tc":"掃管笏村","en":"So Kwun Wat Tsuen"},{"stop":"K58-D002","lat":22.37202,"lng":114.00359,"tc":"掃管笏(鄭任安夫人千禧小學)","en":"So Kwun Wat (Mrs. Cheng Yam On Millennium School)"},{"stop":"K58-D003","lat":22.37422,"lng":114.0023,"tc":"掃管笏路","en":"So Kwun Wat Road"},{"stop":"K58-D004","lat":22.37387,"lng":114.00102,"tc":"管翠路18號","en":"18 Kwun Chui Road"},{"stop":"K58-D005","lat":22.37512,"lng":113.99771,"tc":"管翠路","en":"Kwun Chui Road"},{"stop":"K58-D006","lat":22.37147,"lng":113.99538,"tc":"愛琴海岸","en":"Aegean Coast"},{"stop":"K58-D007","lat":22.37129,"lng":113.99391,"tc":"香港黃金海岸","en":"Hong Kong Gold Coast"},{"stop":"K58-D008","lat":22.37365,"lng":113.99124,"tc":"黃金泳灘","en":"Golden Beach"},{"stop":"K58-D009","lat":22.37592,"lng":113.98566,"tc":"咖啡灣","en":"Cafeteria Beach"},{"stop":"K58-D011","lat":22.37794,"lng":113.98329,"tc":"碧翠花園","en":"Bayview Terrace"},{"stop":"K58-D012","lat":22.37895,"lng":113.98061,"tc":"青山灣碼頭","en":"Castle Peak Bay Pier"},{"stop":"K58-D020","lat":22.38119,"lng":113.97915,"tc":"三聖邨","en":"Sam Shing Estate"},{"stop":"K58-D030","lat":22.38377,"lng":113.97939,"tc":"胡陳金枝中學","en":"Mrs Aw Boon Haw Secondary School"},{"stop":"K58-D040","lat":22.38458,"lng":113.98066,"tc":"青善遊樂場","en":"Tsing Sin Playground"},{"stop":"K58-D050","lat":22.38731,"lng":113.98067,"tc":"置樂花園","en":"Chi Lok Fa Yuen"},{"stop":"K58-D060","lat":22.39043,"lng":113.97887,"tc":"屯門官立中學","en":"Tuen Mun Government Secondary School"},{"stop":"K58-D070","lat":22.3921,"lng":113.97512,"tc":"輕鐵市中心站","en":"LR Town Centre Stop"},{"stop":"K58-D080","lat":22.39395,"lng":113.9737,"tc":"輕鐵屯門站(港鐵屯門站)","en":"LR Tuen Mun Stop (MTR Tuen Mun Station)"},{"stop":"K58-D090","lat":22.3947,"lng":113.97076,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K58-D100","lat":22.39677,"lng":113.96743,"tc":"輕鐵鳴琴站","en":"LR Ming Kum Stop"},{"stop":"K58-D110","lat":22.40198,"lng":113.96788,"tc":"輕鐵石排站","en":"LR Shek Pai Stop"},{"stop":"K58-D120","lat":22.4054,"lng":113.96397,"tc":"輕鐵新圍站","en":"LR San Wai Stop"},{"stop":"K58-D130","lat":22.40772,"lng":113.96598,"tc":"輕鐵田景站","en":"LR Tin King Stop"},{"stop":"K58-D140","lat":22.40597,"lng":113.96721,"tc":"青田遊樂場","en":"Tsing Tin Playground"},{"stop":"K58-D150","lat":22.40517,"lng":113.9689,"tc":"建生邨樂生樓","en":"Lok Sang House, Kin Sang Estate"},{"stop":"K58-D160","lat":22.40639,"lng":113.97167,"tc":"建生邨泰生樓","en":"Tai Sang House, Kin Sang Estate"},{"stop":"K58-D170","lat":22.41104,"lng":113.97648,"tc":"輕鐵麒麟站","en":"LR Kei Lun Stop"},{"stop":"K58-D180","lat":22.41429,"lng":113.97714,"tc":"欣田邨","en":"Yan Tin Estate"},{"stop":"K58-D190","lat":22.41038,"lng":113.97861,"tc":"港鐵兆康站(南) (輕鐵兆康站)","en":"MTR Siu Hong Station (South) (LR Siu Hong Stop)"},{"stop":"K58-D193","lat":22.40878,"lng":113.9804,"tc":"彩暉花園","en":"Brilliant Garden"},{"stop":"K58-D196","lat":22.41069,"lng":113.98221,"tc":"嶺南大學","en":"Lingnan University"},{"stop":"K58-D200","lat":22.41192,"lng":113.98324,"tc":"倚嶺南庭","en":"South Hillcrest"},{"stop":"K58-D210","lat":22.41281,"lng":113.98295,"tc":"富泰","en":"Fu Tai"}]},"K65":{"Outbound":[{"stop":"K65-U010","lat":22.44514,"lng":114.03519,"tc":"元朗站(輕鐵元朗站, 港鐵元朗站)","en":"Yuen Long Station (LR Yuen Long Stop, MTR Yuen Long Station)"},{"stop":"K65-U020","lat":22.44451,"lng":114.03152,"tc":"又新街","en":"Yau San Street"},{"stop":"K65-U030","lat":22.44462,"lng":114.02842,"tc":"大棠路","en":"Tai Tong Road"},{"stop":"K65-U040","lat":22.44478,"lng":114.02643,"tc":"康樂路","en":"Hong Lok Road"},{"stop":"K65-U050","lat":22.44449,"lng":114.02414,"tc":"元朗警署","en":"Yuen Long Police Station"},{"stop":"K65-U060","lat":22.44449,"lng":114.02119,"tc":"輕鐵水邊圍站","en":"LR Shui Pin Wai Stop"},{"stop":"K65-U070","lat":22.44416,"lng":114.01877,"tc":"元朗公園","en":"Yuen Long Park"},{"stop":"K65-U080","lat":22.44348,"lng":114.01491,"tc":"朗邊","en":"Long Bin"},{"stop":"K65-U090","lat":22.4436,"lng":114.00991,"tc":"屏山屏興里","en":"Ping Hing Lane, Ping Shan"},{"stop":"K65-U100","lat":22.44378,"lng":114.00774,"tc":"坑尾村","en":"Hang Mei Tsuen"},{"stop":"K65-U110","lat":22.44575,"lng":114.00491,"tc":"輕鐵坑尾村站","en":"LR Hang Mei Tsuen Stop"},{"stop":"K65-U120","lat":22.44693,"lng":114.00313,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K65-U130","lat":22.44668,"lng":113.99812,"tc":"石埗路","en":"Shek Po Road"},{"stop":"K65-U140","lat":22.44607,"lng":113.99546,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K65-U150","lat":22.44757,"lng":113.99388,"tc":"廈村","en":"Ha Tsuen"},{"stop":"K65-U160","lat":22.44952,"lng":113.99428,"tc":"錫降圍","en":"Shek Kong Wai"},{"stop":"K65-U170","lat":22.45129,"lng":113.99488,"tc":"羅屋村","en":"Lo Uk Tsuen"},{"stop":"K65-U180","lat":22.45295,"lng":113.99467,"tc":"東頭村(南)","en":"Tung Tau Tsuen (South)"},{"stop":"K65-U190","lat":22.4567,"lng":113.99166,"tc":"東頭村(北)","en":"Tung Tau Tsuen (North)"},{"stop":"K65-U200","lat":22.4591,"lng":113.99037,"tc":"鳳降村","en":"Fung Kong Tsuen"},{"stop":"K65-U210","lat":22.46156,"lng":113.98887,"tc":"沙江圍","en":"Sha Kong Wai"},{"stop":"K65-U220","lat":22.46464,"lng":113.9862,"tc":"新慶村","en":"San Hing Tsuen"},{"stop":"K65-U230","lat":22.46761,"lng":113.98398,"tc":"流浮山","en":"Lau Fau Shan"}],"Inbound":[{"stop":"K65-D010","lat":22.46761,"lng":113.98398,"tc":"流浮山","en":"Lau Fau Shan"},{"stop":"K65-D020","lat":22.46416,"lng":113.98674,"tc":"新慶村","en":"San Hing Tsuen"},{"stop":"K65-D030","lat":22.46141,"lng":113.98934,"tc":"沙江圍","en":"Sha Kong Wai"},{"stop":"K65-D040","lat":22.45915,"lng":113.99052,"tc":"鳳降村","en":"Fung Kong Tsuen"},{"stop":"K65-D050","lat":22.45593,"lng":113.99251,"tc":"東頭村","en":"Tung Tau Tsuen"},{"stop":"K65-D060","lat":22.45257,"lng":113.99493,"tc":"羅屋村","en":"Lo Uk Tsuen"},{"stop":"K65-D070","lat":22.44877,"lng":113.99413,"tc":"錫降圍","en":"Shek Kong Wai"},{"stop":"K65-D080","lat":22.44671,"lng":113.99476,"tc":"廈村","en":"Ha Tsuen"},{"stop":"K65-D090","lat":22.44664,"lng":113.99715,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K65-D100","lat":22.44694,"lng":114.00282,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K65-D110","lat":22.44589,"lng":114.00512,"tc":"輕鐵坑尾村站","en":"LR Hang Mei Tsuen Stop"},{"stop":"K65-D120","lat":22.4439,"lng":114.00768,"tc":"坑尾村","en":"Hang Mei Tsuen"},{"stop":"K65-D130","lat":22.44371,"lng":114.01023,"tc":"屏山屏興里","en":"Ping Hing Lane, Ping Shan"},{"stop":"K65-D140","lat":22.44322,"lng":114.01292,"tc":"輕鐵屏山站","en":"LR Ping Shan Stop"},{"stop":"K65-D150","lat":22.44458,"lng":114.01973,"tc":"輕鐵水邊圍站","en":"LR Shui Pin Wai Stop"},{"stop":"K65-D160","lat":22.44458,"lng":114.02379,"tc":"元朗廣場","en":"Yuen Long Plaza"},{"stop":"K65-D170","lat":22.44447,"lng":114.02828,"tc":"開心廣場","en":"Yuen Long Landmark"},{"stop":"K65-D180","lat":22.44441,"lng":114.03033,"tc":"谷亭街","en":"Kuk Ting Street"},{"stop":"K65-D190","lat":22.44514,"lng":114.03519,"tc":"元朗站(輕鐵元朗站, 港鐵元朗站)","en":"Yuen Long Station (LR Yuen Long Stop, MTR Yuen Long Station)"}]},"K65A":{"Outbound":[{"stop":"K65A-U010","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"},{"stop":"K65A-U020","lat":22.44693,"lng":114.00313,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K65A-U030","lat":22.44668,"lng":113.99812,"tc":"石埗路","en":"Shek Po Road"},{"stop":"K65A-U040","lat":22.44607,"lng":113.99546,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K65A-U050","lat":22.44757,"lng":113.99388,"tc":"廈村","en":"Ha Tsuen"},{"stop":"K65A-U060","lat":22.44952,"lng":113.99428,"tc":"錫降圍","en":"Shek Kong Wai"},{"stop":"K65A-U070","lat":22.45129,"lng":113.99488,"tc":"羅屋村","en":"Lo Uk Tsuen"},{"stop":"K65A-U080","lat":22.45295,"lng":113.99467,"tc":"東頭村(南)","en":"Tung Tau Tsuen (South)"},{"stop":"K65A-U090","lat":22.4567,"lng":113.99166,"tc":"東頭村(北)","en":"Tung Tau Tsuen (North)"},{"stop":"K65A-U100","lat":22.4591,"lng":113.99037,"tc":"鳳降村","en":"Fung Kong Tsuen"},{"stop":"K65A-U110","lat":22.46156,"lng":113.98887,"tc":"沙江圍","en":"Sha Kong Wai"},{"stop":"K65A-U120","lat":22.46464,"lng":113.9862,"tc":"新慶村","en":"San Hing Tsuen"},{"stop":"K65A-U130","lat":22.46761,"lng":113.98398,"tc":"流浮山","en":"Lau Fau Shan"}],"Inbound":[{"stop":"K65A-D010","lat":22.46761,"lng":113.98398,"tc":"流浮山","en":"Lau Fau Shan"},{"stop":"K65A-D020","lat":22.46416,"lng":113.98674,"tc":"新慶村","en":"San Hing Tsuen"},{"stop":"K65A-D030","lat":22.4614,"lng":113.98934,"tc":"沙江圍","en":"Sha Kong Wai"},{"stop":"K65A-D040","lat":22.45915,"lng":113.99052,"tc":"鳳降村","en":"Fung Kong Tsuen"},{"stop":"K65A-D050","lat":22.45593,"lng":113.99251,"tc":"東頭村","en":"Tung Tau Tsuen"},{"stop":"K65A-D060","lat":22.45257,"lng":113.99493,"tc":"羅屋村","en":"Lo Uk Tsuen"},{"stop":"K65A-D070","lat":22.44877,"lng":113.99413,"tc":"錫降圍","en":"Shek Kong Wai"},{"stop":"K65A-D080","lat":22.44671,"lng":113.99476,"tc":"廈村","en":"Ha Tsuen"},{"stop":"K65A-D090","lat":22.44664,"lng":113.99715,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K65A-D100","lat":22.44694,"lng":114.00282,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K65A-D110","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"}]},"K66":{"Outbound":[{"stop":"K66-U010","lat":22.45078,"lng":114.02293,"tc":"朗屏","en":"Long Ping"},{"stop":"K66-U020","lat":22.45135,"lng":114.0254,"tc":"楊屋村","en":"Yeung Uk Tsuen"},{"stop":"K66-U030","lat":22.44767,"lng":114.0233,"tc":"屏昌徑(港鐵朗屏站)","en":"Ping Cheong Path (MTR Long Ping Station)"},{"stop":"K66-U040","lat":22.446,"lng":114.02261,"tc":"元朗盲人安老院","en":"Yuen Long Home for the Aged Blind"},{"stop":"K66-U050","lat":22.44347,"lng":114.02232,"tc":"元朗大會堂(輕鐵豐年路站)","en":"Yuen Long Town Hall (LR Fung Nin Road Stop)"},{"stop":"K66-U060","lat":22.44306,"lng":114.02366,"tc":"安康路","en":"On Hong Road"},{"stop":"K66-U070","lat":22.44297,"lng":114.02775,"tc":"元朗商業中心","en":"Yuen Long Commercial Centre"},{"stop":"K66-U080","lat":22.4412,"lng":114.0294,"tc":"富達廣場","en":"Manhattan Plaza"},{"stop":"K66-U090","lat":22.4369,"lng":114.02941,"tc":"蝶翠峰","en":"Sereno Verde"},{"stop":"K66-U100","lat":22.43541,"lng":114.02877,"tc":"禮修村","en":"Fraser Village"},{"stop":"K66-U110","lat":22.4337,"lng":114.02859,"tc":"深涌村","en":"Sham Chung Tsuen"},{"stop":"K66-U120","lat":22.4324,"lng":114.02852,"tc":"羅家園","en":"Law Ka Yuen"},{"stop":"K66-U130","lat":22.42979,"lng":114.02861,"tc":"崇正公立學校","en":"Shung Ching School"},{"stop":"K66-U140","lat":22.4274,"lng":114.02951,"tc":"崇正菜站","en":"Shung Ching Vegetable Market"},{"stop":"K66-U150","lat":22.42562,"lng":114.03127,"tc":"老圍","en":"Lo Wai"},{"stop":"K66-U160","lat":22.42356,"lng":114.03218,"tc":"振華花園","en":"Chun Wah Villas"},{"stop":"K66-U170","lat":22.42266,"lng":114.03089,"tc":"南坑排","en":"Nam Hang Pai"},{"stop":"K66-U180","lat":22.42248,"lng":114.02988,"tc":"水蕉新村","en":"Shui Chiu San Tsuen"},{"stop":"K66-U190","lat":22.42194,"lng":114.02826,"tc":"華苑","en":"Wah Yuen"},{"stop":"K66-U200","lat":22.41837,"lng":114.02566,"tc":"大棠迴旋處","en":"Tai Tong Roundabout"},{"stop":"K66-U210","lat":22.41619,"lng":114.0237,"tc":"大棠山路","en":"Tai Tong Shan Road"},{"stop":"K66-U220","lat":22.41639,"lng":114.02187,"tc":"大棠黃泥墩村","en":"Tai Tong Wong Nai Tun Tsuen"}],"Inbound":[{"stop":"K66-D010","lat":22.41639,"lng":114.02187,"tc":"大棠黃泥墩村","en":"Tai Tong Wong Nai Tun Tsuen"},{"stop":"K66-D020","lat":22.41621,"lng":114.0239,"tc":"大棠山路","en":"Tai Tong Shan Road"},{"stop":"K66-D030","lat":22.41833,"lng":114.02484,"tc":"大棠迴旋處","en":"Tai Tong Roundabout"},{"stop":"K66-D040","lat":22.42208,"lng":114.02838,"tc":"華苑","en":"Wah Yuen"},{"stop":"K66-D050","lat":22.42254,"lng":114.02993,"tc":"水蕉新村","en":"Shui Chiu San Tsuen"},{"stop":"K66-D060","lat":22.42271,"lng":114.03103,"tc":"南坑排","en":"Nam Hang Pai"},{"stop":"K66-D070","lat":22.42418,"lng":114.03223,"tc":"南坑村","en":"Nam Hang Tsuen"},{"stop":"K66-D080","lat":22.42571,"lng":114.03112,"tc":"紅棗田村","en":"Hung Tso Tin Tsuen"},{"stop":"K66-D090","lat":22.42752,"lng":114.02935,"tc":"普盛圍","en":"Po Shing Wai"},{"stop":"K66-D100","lat":22.42994,"lng":114.02857,"tc":"崇正公立學校","en":"Shung Ching School"},{"stop":"K66-D110","lat":22.43217,"lng":114.02849,"tc":"羅家園","en":"Law Ka Yuen"},{"stop":"K66-D120","lat":22.43377,"lng":114.02856,"tc":"深涌村","en":"Sham Chung Tsuen"},{"stop":"K66-D130","lat":22.43543,"lng":114.02872,"tc":"禮修村","en":"Fraser Village"},{"stop":"K66-D140","lat":22.43724,"lng":114.02958,"tc":"蝶翠峰","en":"Sereno Verde"},{"stop":"K66-D150","lat":22.43837,"lng":114.02945,"tc":"恆香製餅廠","en":"Hang Heung Cake Shop"},{"stop":"K66-D160","lat":22.44119,"lng":114.02934,"tc":"富達廣場","en":"Manhattan Plaza"},{"stop":"K66-D170","lat":22.44298,"lng":114.0278,"tc":"千色廣場","en":"Citi Mall"},{"stop":"K66-D180","lat":22.44303,"lng":114.02301,"tc":"安康路","en":"On Hong Road"},{"stop":"K66-D190","lat":22.44362,"lng":114.02223,"tc":"元朗大會堂(輕鐵豐年路站)","en":"Yuen Long Town Hall (LR Fung Nin Road Stop)"},{"stop":"K66-D200","lat":22.44614,"lng":114.02134,"tc":"水邊圍邨康水樓","en":"Hong Shui House, Shui Pin Wai Estate"},{"stop":"K66-D210","lat":22.44785,"lng":114.02273,"tc":"朗屏邨悅屏樓(港鐵朗屏站)","en":"Yuet Ping House, Long Ping Estate (MTR Long Ping Station)"},{"stop":"K66-D220","lat":22.44952,"lng":114.02553,"tc":"惠州學校","en":"Wai Chow School"},{"stop":"K66-D230","lat":22.45141,"lng":114.02533,"tc":"朗屏邨珠屏樓","en":"Chu Ping House, Long Ping Estate"},{"stop":"K66-D240","lat":22.45078,"lng":114.02293,"tc":"朗屏","en":"Long Ping"}]},"K68":{"Circular":[{"stop":"K68-U010","lat":22.46083,"lng":114.02651,"tc":"元朗工業邨","en":"Yuen Long Industrial Estate"},{"stop":"K68-U020","lat":22.46207,"lng":114.02898,"tc":"凸版資訊卡","en":"Toppan Forms Card Tech Ltd"},{"stop":"K68-U030","lat":22.46375,"lng":114.02758,"tc":"雀巢","en":"Nestle (HK) Ltd"},{"stop":"K68-U040","lat":22.46552,"lng":114.02684,"tc":"元朗污水處理廠","en":"Yuen Long Sewage Treatment Works"},{"stop":"K68-U050","lat":22.46475,"lng":114.02482,"tc":"位元堂藥業大廈","en":"Wai Yuen Tong Medicine Building"},{"stop":"K68-U060","lat":22.46222,"lng":114.02345,"tc":"東電化電子零件","en":"TDK Manufacturing (HK) Co Ltd"},{"stop":"K68-U070","lat":22.46039,"lng":114.02217,"tc":"凸版印刷","en":"Toppan Printing Co (HK) Ltd"},{"stop":"K68-U080","lat":22.45845,"lng":114.02316,"tc":"匯泉國際實業","en":"Telford International Industries Ltd"},{"stop":"K68-U090","lat":22.45512,"lng":114.02409,"tc":"橫洲福慶村","en":"Wang Chau Fuk Hing Tsuen"},{"stop":"K68-U100","lat":22.45078,"lng":114.02293,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K68-U110","lat":22.45138,"lng":114.02558,"tc":"楊屋村","en":"Yeung Uk Tsuen"},{"stop":"K68-U120","lat":22.44765,"lng":114.023,"tc":"屏昌徑(港鐵朗屏站)","en":"Ping Cheong Path (MTR Long Ping Station)"},{"stop":"K68-U130","lat":22.446,"lng":114.02261,"tc":"元朗盲人安老院","en":"Yuen Long Home for the Aged Blind"},{"stop":"K68-U140","lat":22.44259,"lng":114.02224,"tc":"聿修堂(輕鐵豐年路站)","en":"Lut Sau Hall (LR Fung Nin Road Stop)"},{"stop":"K68-U150","lat":22.44131,"lng":114.02224,"tc":"元朗劇院","en":"Yuen Long Theatre"},{"stop":"K68-U160","lat":22.43953,"lng":114.02226,"tc":"銀田花園","en":"Silver Field Garden"},{"stop":"K68-U170","lat":22.4388,"lng":114.02024,"tc":"南元朗官立小學","en":"South Yuen Long Government Primary School"},{"stop":"K68-D010","lat":22.44193,"lng":114.02007,"tc":"元朗公園","en":"Yuen Long Park"},{"stop":"K68-D020","lat":22.4425,"lng":114.01766,"tc":"御豪山莊","en":"Park Royale"},{"stop":"K68-D030","lat":22.44009,"lng":114.01905,"tc":"藝典居","en":"Villa Art Deco"},{"stop":"K68-D040","lat":22.44041,"lng":114.02131,"tc":"御庭居","en":"Springdale Villas"},{"stop":"K68-D050","lat":22.4415,"lng":114.02214,"tc":"元朗游泳池","en":"Yuen Long Swimming Pool"},{"stop":"K68-D060","lat":22.44364,"lng":114.02216,"tc":"元朗大會堂","en":"Yuen Long Town Hall"},{"stop":"K68-D070","lat":22.44468,"lng":114.02371,"tc":"元朗廣場(輕鐵豐年路站)","en":"Yuen Long Plaza (LR Fung Nin Road Stop)"},{"stop":"K68-D080","lat":22.44616,"lng":114.02658,"tc":"元朗安寧路","en":"Yuen Long On Ning Road"},{"stop":"K68-D090","lat":22.44754,"lng":114.02683,"tc":"大橋村(港鐵朗屏站)","en":"Tai Kiu Tsuen (MTR Long Ping Station)"},{"stop":"K68-D100","lat":22.4495,"lng":114.02553,"tc":"惠州學校","en":"Wai Chow School"},{"stop":"K68-D110","lat":22.45143,"lng":114.02532,"tc":"朗屏邨珠屏樓","en":"Chu Ping House, Long Ping Estate"},{"stop":"K68-D120","lat":22.45078,"lng":114.02293,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K68-D130","lat":22.45517,"lng":114.02403,"tc":"橫洲福慶村","en":"Wang Chau Fuk Hing Tsuen"},{"stop":"K68-D140","lat":22.45789,"lng":114.02335,"tc":"元朗紡織品","en":"Yuen Long Textile Co Ltd"},{"stop":"K68-D150","lat":22.46024,"lng":114.02224,"tc":"大昌行食品加工及物流中心","en":"DCH Food Processing & Logistics Centre"},{"stop":"K68-D160","lat":22.46231,"lng":114.02341,"tc":"有生鉛水(熱浸鋅)","en":"Yau Sang Galvanizers (Hot-Dip) Co Ltd"},{"stop":"K68-D170","lat":22.46497,"lng":114.02478,"tc":"余仁生中心","en":"Eu Yan Sang Centre"},{"stop":"K68-D180","lat":22.46548,"lng":114.0269,"tc":"元朗污水處理廠","en":"Yuen Long Sewage Treatment Works"},{"stop":"K68-D190","lat":22.46378,"lng":114.02764,"tc":"雀巢","en":"Nestle (HK) Ltd"},{"stop":"K68-D200","lat":22.46166,"lng":114.02931,"tc":"牛尾香港","en":"Ushio HK Ltd"},{"stop":"K68-U011","lat":22.46083,"lng":114.02651,"tc":"元朗工業邨","en":"Yuen Long Industrial Estate"}]},"K73":{"Outbound":[{"stop":"K73-U010","lat":22.46901,"lng":113.99966,"tc":"天恆","en":"Tin Heng"},{"stop":"K73-U020","lat":22.4681,"lng":113.99916,"tc":"天逸邨逸潭樓","en":"Yat Tam House, Tin Yat Estate"},{"stop":"K73-U030","lat":22.46551,"lng":114.00016,"tc":"天逸邨逸洋樓","en":"Yat Yeung House, Tin Yat Estate"},{"stop":"K73-U040","lat":22.46448,"lng":114.00313,"tc":"天晴邨晴碧樓","en":"Ching Pik House, Tin Ching Estate"},{"stop":"K73-U050","lat":22.46325,"lng":114.00414,"tc":"香港青年協會李兆基書院","en":"HKFYG Lee Shau Kee College"},{"stop":"K73-U060","lat":22.46082,"lng":114.00456,"tc":"天葵路美湖居","en":"Maywood Court, Tin Kwai Road"},{"stop":"K73-U070","lat":22.45744,"lng":114.00558,"tc":"天城路景湖居","en":"Kenswood Court, Tin Shing Road"},{"stop":"K73-U080","lat":22.45328,"lng":114.00612,"tc":"天慈邨","en":"Tin Tsz Estate"},{"stop":"K73-U090","lat":22.44845,"lng":114.01863,"tc":"鳳池村","en":"Fung Chi Tsuen"},{"stop":"K73-U100","lat":22.45078,"lng":114.02293,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K73-U110","lat":22.446,"lng":114.02261,"tc":"元朗盲人安老院","en":"Yuen Long Home for the Aged Blind"},{"stop":"K73-U120","lat":22.44518,"lng":114.02492,"tc":"元朗西(輕鐵豐年路站)","en":"Yuen Long West (LR Fung Nin Road Stop)"}],"Inbound":[{"stop":"K73-D010","lat":22.44518,"lng":114.02492,"tc":"元朗西(輕鐵豐年路站)","en":"Yuen Long West (LR Fung Nin Road Stop)"},{"stop":"K73-D020","lat":22.44616,"lng":114.02673,"tc":"元朗安寧路","en":"Yuen Long On Ning Road"},{"stop":"K73-D030","lat":22.44749,"lng":114.02686,"tc":"大橋村(港鐵朗屏站)","en":"Tai Kiu Tsuen (MTR Long Ping Station)"},{"stop":"K73-D040","lat":22.4495,"lng":114.02552,"tc":"惠州學校","en":"Wai Chow School"},{"stop":"K73-D050","lat":22.45141,"lng":114.02533,"tc":"朗屏邨珠屏樓","en":"Chu Ping House, Long Ping Estate"},{"stop":"K73-D070","lat":22.45078,"lng":114.02293,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K73-D080","lat":22.4483,"lng":114.01856,"tc":"鳳池村","en":"Fung Chi Tsuen"},{"stop":"K73-D090","lat":22.45336,"lng":114.00589,"tc":"輕鐵天慈站","en":"LR Tin Tsz Stop"},{"stop":"K73-D100","lat":22.45504,"lng":114.00716,"tc":"天水圍游泳池","en":"Tin Shui Wai Swimming Pool"},{"stop":"K73-D110","lat":22.45899,"lng":114.00528,"tc":"天龍路景湖居","en":"Kenswood Court, Tin Lung Road"},{"stop":"K73-D120","lat":22.46049,"lng":114.00463,"tc":"天葵路麗湖居","en":"Lynwood Court, Tin Kwai Road"},{"stop":"K73-D130","lat":22.46337,"lng":114.00392,"tc":"天晴邨晴雲樓","en":"Ching Wan House, Tin Ching Estate"},{"stop":"K73-D140","lat":22.4654,"lng":114.00007,"tc":"天富苑能富閣","en":"Nang Fu House, Tin Fu Court"},{"stop":"K73-D150","lat":22.46813,"lng":113.99918,"tc":"天澤邨","en":"Tin Chak Estate"},{"stop":"K73-D160","lat":22.46901,"lng":113.99966,"tc":"天恆","en":"Tin Heng"}]},"K74":{"Circular":[{"stop":"K74-U001","lat":22.45855,"lng":114.00141,"tc":"天水圍市中心","en":"Tin Shui Wai Town Centre"},{"stop":"K74-U004","lat":22.46185,"lng":114.00038,"tc":"天頌苑頌棋閣","en":"Chung Ki House Tin Chung Court"},{"stop":"K74-U007","lat":22.46073,"lng":113.99716,"tc":"天頌苑","en":"Tin Chung Court"},{"stop":"K74-U010","lat":22.45532,"lng":113.99869,"tc":"天瑞","en":"Tin Shui"},{"stop":"K74-U020","lat":22.45445,"lng":114.00315,"tc":"天水圍公園","en":"Tin Shui Wai Park"},{"stop":"K74-U030","lat":22.45329,"lng":114.00614,"tc":"天慈邨","en":"Tin Tsz Estate"},{"stop":"K74-U040","lat":22.44847,"lng":114.0186,"tc":"鳳池村","en":"Fung Chi Tsuen"},{"stop":"K74-U050","lat":22.45055,"lng":114.02269,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K74-U060","lat":22.44597,"lng":114.02257,"tc":"元朗盲人安老院","en":"Yuen Long Home for the Aged Blind"},{"stop":"K74-U070","lat":22.44467,"lng":114.02372,"tc":"元朗廣場(輕鐵豐年路站)","en":"Yuen Long Plaza (LR Fung Nin Road Stop)"},{"stop":"K74-U080","lat":22.4444,"lng":114.02836,"tc":"開心廣場","en":"Yuen Long Landmark"},{"stop":"K74-U090","lat":22.44663,"lng":114.03494,"tc":"港鐵元朗站(朗日路) (港鐵元朗站)","en":"MTR Yuen Long Station (Long Yat Road) (MTR Yuen Long Station)"},{"stop":"K74-U100","lat":22.44479,"lng":114.04038,"tc":"博愛醫院","en":"Pok Oi Hospital"},{"stop":"K74-D010","lat":22.44437,"lng":114.04367,"tc":"東成里","en":"Tung Shing Lei"},{"stop":"K74-D020","lat":22.44404,"lng":114.04394,"tc":"東華三院馬振玉中學(近朗善邨)","en":"TWGHs C.Y.Ma Memorial College (near Long Shin Estate)"},{"stop":"K74-D030","lat":22.44749,"lng":114.02685,"tc":"大橋村(港鐵朗屏站)","en":"Tai Kiu Tsuen (MTR Long Ping Station)"},{"stop":"K74-D040","lat":22.4495,"lng":114.02553,"tc":"惠州學校","en":"Wai Chow School"},{"stop":"K74-D050","lat":22.45142,"lng":114.02532,"tc":"朗屏邨珠屏樓","en":"Chu Ping House, Long Ping Estate"},{"stop":"K74-D060","lat":22.45055,"lng":114.02269,"tc":"朗屏(巴士總站)","en":"Long Ping (Bus Terminus)"},{"stop":"K74-D070","lat":22.44826,"lng":114.01858,"tc":"鳳池村","en":"Fung Chi Tsuen"},{"stop":"K74-D080","lat":22.45321,"lng":114.00592,"tc":"輕鐵天慈站","en":"LR Tin Tsz Stop"},{"stop":"K74-D090","lat":22.45462,"lng":114.00264,"tc":"天水圍公園","en":"Tin Shui Wai Park"},{"stop":"K74-U011","lat":22.45532,"lng":113.99869,"tc":"天瑞","en":"Tin Shui"},{"stop":"K74-D100","lat":22.46028,"lng":113.99702,"tc":"天華邨","en":"Tin Wah Estate"},{"stop":"K74-D110","lat":22.46212,"lng":113.99909,"tc":"天悅邨","en":"Tin Yuet Estate"},{"stop":"K74-U002","lat":22.45855,"lng":114.00141,"tc":"天水圍市中心","en":"Tin Shui Wai Town Centre"}]},"K75A":{"Circular":[{"stop":"K75A-U010","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"},{"stop":"K75A-U020","lat":22.44684,"lng":114.00307,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75A-U030","lat":22.44031,"lng":113.99896,"tc":"石埗村","en":"Shek Po Tsuen"},{"stop":"K75A-D010","lat":22.43349,"lng":113.99772,"tc":"輕鐵洪水橋站","en":"LR Hung Shui Kiu Stop"},{"stop":"K75A-D020","lat":22.4329,"lng":113.99284,"tc":"鄉事委員會","en":"Rural Committee"},{"stop":"K75A-D030","lat":22.43453,"lng":113.99261,"tc":"田心","en":"Tin Sam"},{"stop":"K75A-D040","lat":22.4365,"lng":113.99185,"tc":"新李屋村","en":"San Lee Uk Tsuen"},{"stop":"K75A-D050","lat":22.43961,"lng":113.99158,"tc":"新生村","en":"San Sang Tsuen"},{"stop":"K75A-D060","lat":22.44355,"lng":113.99131,"tc":"李屋村","en":"Lee Uk Tsuen"},{"stop":"K75A-D070","lat":22.44511,"lng":113.99235,"tc":"新屋村","en":"San Uk Tsuen"},{"stop":"K75A-D080","lat":22.44626,"lng":113.99334,"tc":"廈村市","en":"Ha Tsuen Shi"},{"stop":"K75A-D090","lat":22.44671,"lng":113.99476,"tc":"廈村","en":"Ha Tsuen"},{"stop":"K75A-D100","lat":22.44664,"lng":113.99715,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K75A-D110","lat":22.44693,"lng":114.00289,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75A-U011","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"}]},"K75P":{"Circular":[{"stop":"K75P-U010","lat":22.45536,"lng":113.99898,"tc":"天瑞","en":"Tin Shui"},{"stop":"K75P-U020","lat":22.45449,"lng":114.00313,"tc":"天水圍公園","en":"Tin Shui Wai Park"},{"stop":"K75P-U030","lat":22.45235,"lng":114.00224,"tc":"天耀邨耀盛樓","en":"Yiu Shing House, Tin Yiu Estate"},{"stop":"K75P-U040","lat":22.45004,"lng":114.00284,"tc":"輕鐵天耀站","en":"LR Tin Yiu Stop"},{"stop":"K75P-U050","lat":22.44692,"lng":114.0031,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75P-U060","lat":22.44671,"lng":113.99825,"tc":"石埗路","en":"Shek Po Road"},{"stop":"K75P-U070","lat":22.44611,"lng":113.99562,"tc":"沙洲里村","en":"Sha Chau Lei Tsuen"},{"stop":"K75P-U080","lat":22.44619,"lng":113.99335,"tc":"廈村市","en":"Ha Tsuen Shi"},{"stop":"K75P-U090","lat":22.44511,"lng":113.99238,"tc":"新屋村","en":"San Uk Tsuen"},{"stop":"K75P-U100","lat":22.44372,"lng":113.99138,"tc":"李屋村","en":"Lee Uk Tsuen"},{"stop":"K75P-U110","lat":22.44018,"lng":113.99171,"tc":"新生村","en":"San Sang Tsuen"},{"stop":"K75P-U120","lat":22.43613,"lng":113.99224,"tc":"新李屋村","en":"San Lee Uk Tsuen"},{"stop":"K75P-U130","lat":22.43343,"lng":113.99269,"tc":"田心","en":"Tin Sam"},{"stop":"K75P-U140","lat":22.4316,"lng":113.99282,"tc":"鄉事委員會","en":"Rural Committee"},{"stop":"K75P-D010","lat":22.43389,"lng":113.99763,"tc":"輕鐵洪水橋站","en":"LR Hung Shui Kiu Stop"},{"stop":"K75P-D020","lat":22.43608,"lng":113.99985,"tc":"洪水橋巴士廠","en":"Hung Shui Kiu Bus Depot"},{"stop":"K75P-D030","lat":22.43744,"lng":113.99903,"tc":"洪福邨","en":"Hung Fuk Estate"},{"stop":"K75P-D040","lat":22.44038,"lng":113.99841,"tc":"石埗村","en":"Shek Po Tsuen"},{"stop":"K75P-D050","lat":22.4469,"lng":114.00279,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75P-D060","lat":22.44946,"lng":114.00296,"tc":"天水圍警署","en":"Tin Shui Wai Police Station"},{"stop":"K75P-D070","lat":22.45254,"lng":114.00223,"tc":"賞湖居","en":"Sherwood Court"},{"stop":"K75P-D080","lat":22.45452,"lng":114.00274,"tc":"天水圍公園","en":"Tin Shui Wai Park"},{"stop":"K75P-U011","lat":22.45536,"lng":113.99898,"tc":"天瑞","en":"Tin Shui"}]},"K76":{"Outbound":[{"stop":"K76-U010","lat":22.46901,"lng":113.99966,"tc":"天恆","en":"Tin Heng"},{"stop":"K76-U020","lat":22.46818,"lng":113.99938,"tc":"天逸邨逸潭樓","en":"Yat Tam House, Tin Yat Estate"},{"stop":"K76-U030","lat":22.46435,"lng":113.99744,"tc":"天富苑欣富閣","en":"Yan Fu House, Tin Fu Court"},{"stop":"K76-U040","lat":22.44686,"lng":114.00282,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K76-U050","lat":22.44656,"lng":114.00373,"tc":"天水圍站(港鐵天水圍站)","en":"Tin Shui Wai Station (MTR Tin Shui Wai Station)"}],"Inbound":[{"stop":"K76-D010","lat":22.44656,"lng":114.00373,"tc":"天水圍站(港鐵天水圍站)","en":"Tin Shui Wai Station (MTR Tin Shui Wai Station)"},{"stop":"K76-D020","lat":22.46459,"lng":113.99725,"tc":"天恩邨","en":"Tin Yan Estate"},{"stop":"K76-D030","lat":22.46806,"lng":113.99906,"tc":"天澤邨","en":"Tin Chak Estate"},{"stop":"K76-D040","lat":22.46901,"lng":113.99966,"tc":"天恆","en":"Tin Heng"}]},"K53S":{"Circular":[{"stop":"K53*-U010","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"},{"stop":"K53*-U020","lat":22.39167,"lng":113.97155,"tc":"天后路","en":"Tin Hau Road"},{"stop":"K53*-U030","lat":22.38814,"lng":113.97015,"tc":"業旺邨","en":"Yip Wong Estate"},{"stop":"K53*-U040","lat":22.39422,"lng":113.97336,"tc":"屯門站(輕鐵屯門站)","en":"Tuen Mun Station (LR Tuen Mun Stop)"}]},"K52P":{"Inbound":[{"stop":"K52-nD010","lat":22.39062,"lng":113.92015,"tc":"龍鼓灘","en":"Lung Kwu Tan"},{"stop":"K52-nD020","lat":22.3891,"lng":113.9203,"tc":"沙埔崗127 號","en":"No.127 Sha Po Kong"},{"stop":"K52-nD030","lat":22.38806,"lng":113.92079,"tc":"沙埔崗177 號","en":"No.177 Sha Po Kong"},{"stop":"K52-nD040","lat":22.38662,"lng":113.92116,"tc":"沙埔崗288 號","en":"No.288 Sha Po Kong"},{"stop":"K52-nD050","lat":22.38551,"lng":113.92126,"tc":"沙埔崗351 號","en":"No.351 Sha Po Kong"},{"stop":"K52-nD060","lat":22.38252,"lng":113.92102,"tc":"中電A 廠","en":"CLP (Plant A)"},{"stop":"K52-nD070","lat":22.37012,"lng":113.92898,"tc":"紹榮鋼鐵","en":"Shiu Wing Steel Mill"},{"stop":"K52-nD080","lat":22.37001,"lng":113.93439,"tc":"環保園","en":"EcoPark"},{"stop":"K52-nD090","lat":22.36855,"lng":113.93806,"tc":"內河碼頭","en":"River Trade Terminal"},{"stop":"K52-nD100","lat":22.36688,"lng":113.94427,"tc":"政府車場","en":"Government Depot"},{"stop":"K52-nD110","lat":22.36867,"lng":113.94884,"tc":"望后石","en":"Pillar Point"},{"stop":"K52-nD120","lat":22.3729,"lng":113.95463,"tc":"蝴蝶灣公園","en":"Butterfly Beach Park"},{"stop":"K52-nD130","lat":22.37526,"lng":113.95858,"tc":"屯門公眾騎術學校","en":"Tuen Mun Public Riding School"},{"stop":"K52-nD140","lat":22.37836,"lng":113.96196,"tc":"輕鐵蝴蝶站","en":"LR Butterfly Stop"},{"stop":"K52-nD150","lat":22.3822,"lng":113.96359,"tc":"輕鐵車廠站","en":"Light Rail Depot Stop"},{"stop":"K52-nD160","lat":22.3854,"lng":113.96522,"tc":"輕鐵龍門站","en":"LR Lung Mun Stop"},{"stop":"K52-nD170","lat":22.39363,"lng":113.96752,"tc":"輕鐵青雲站","en":"LR Tsing Wun Stop"},{"stop":"K52-nD180","lat":22.39506,"lng":113.96995,"tc":"輕鐵建安站","en":"LR Kin On Stop"},{"stop":"K52-nD190","lat":22.39412,"lng":113.97399,"tc":"屯門站","en":"Tuen Mun Station"}]},"K75S":{"Circular":[{"stop":"K75S-U010","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"},{"stop":"K75S-U020","lat":22.44684,"lng":114.00307,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75S-D010","lat":22.43744,"lng":113.99903,"tc":"洪福邨","en":"Hung Fuk Estate"},{"stop":"K75S-D020","lat":22.4469,"lng":114.00279,"tc":"天盛苑(港鐵天水圍站)","en":"Tin Shing Court (MTR Tin Shui Wai Station)"},{"stop":"K75S-U011","lat":22.44654,"lng":114.00375,"tc":"天水圍站(輕鐵天水圍站)","en":"Tin Shui Wai Station (LR Tin Shui Wai Stop)"}]}};
+
+const NLB_FALLBACK_ROUTES = [
+{ routeId: '1', routeNo: '1', routeName_c: '梅窩碼頭 > 大澳', routeName_e: 'Mui Wo Ferry Pier > Tai O' },
+{ routeId: '2', routeNo: '1', routeName_c: '大澳 > 梅窩碼頭', routeName_e: 'Tai O > Mui Wo Ferry Pier' },
+{ routeId: '3', routeNo: '2', routeName_c: '梅窩碼頭 > 昂坪', routeName_e: 'Mui Wo Ferry Pier > Ngong Ping' },
+{ routeId: '4', routeNo: '2', routeName_c: '昂坪 > 梅窩碼頭', routeName_e: 'Ngong Ping > Mui Wo Ferry Pier' },
+{ routeId: '5', routeNo: '3M', routeName_c: '梅窩碼頭 > 東涌站巴士總站', routeName_e: 'Mui Wo Ferry Pier > Tung Chung Station Bus Terminus' },
+{ routeId: '6', routeNo: '3M', routeName_c: '東涌站巴士總站 > 梅窩碼頭', routeName_e: 'Tung Chung Station Bus Terminus > Mui Wo Ferry Pier' },
+{ routeId: '7', routeNo: '4', routeName_c: '梅窩碼頭 > 塘福', routeName_e: 'Mui Wo Ferry Pier > Tong Fuk' },
+{ routeId: '8', routeNo: '4', routeName_c: '塘福 > 梅窩碼頭', routeName_e: 'Tong Fuk > Mui Wo Ferry Pier' },
+{ routeId: '9', routeNo: '11', routeName_c: '東涌站巴士總站 > 大澳', routeName_e: 'Tung Chung Station Bus Terminus > Tai O' },
+{ routeId: '10', routeNo: '11', routeName_c: '大澳 > 東涌站巴士總站', routeName_e: 'Tai O > Tung Chung Station Bus Terminus' },
+{ routeId: '11', routeNo: '21', routeName_c: '昂坪 > 大澳', routeName_e: 'Ngong Ping > Tai O' },
+{ routeId: '12', routeNo: '21', routeName_c: '大澳 > 昂坪', routeName_e: 'Tai O > Ngong Ping' },
+{ routeId: '13', routeNo: '23', routeName_c: '東涌達東路巴士總站 > 昂坪', routeName_e: 'Tung Chung Tat Tung Road Bus Terminus > Ngong Ping' },
+{ routeId: '14', routeNo: '23', routeName_c: '昂坪 > 東涌達東路巴士總站', routeName_e: 'Ngong Ping > Tung Chung Tat Tung Road Bus Terminus' },
+{ routeId: '15', routeNo: '34', routeName_c: '東涌達東路巴士總站 > 石門甲', routeName_e: 'Tung Chung Tat Tung Road Bus Terminus > Shek Mun Kap' },
+{ routeId: '16', routeNo: '34', routeName_c: '石門甲 > 東涌達東路巴士總站', routeName_e: 'Shek Mun Kap > Tung Chung Tat Tung Road Bus Terminus' },
+{ routeId: '17', routeNo: '36', routeName_c: '東涌達東路巴士總站 > 小蠔灣', routeName_e: 'Tung Chung Tat Tung Road Bus Terminus > Siu Ho Wan' },
+{ routeId: '18', routeNo: '37', routeName_c: '迎東邨 > 逸東邨', routeName_e: 'Ying Tung Estate > Yat Tung Estate' },
+{ routeId: '19', routeNo: '37', routeName_c: '逸東邨 > 迎東邨', routeName_e: 'Yat Tung Estate > Ying Tung Estate' },
+{ routeId: '20', routeNo: '37H', routeName_c: '迎東邨 > 北大嶼山醫院 (循環線)', routeName_e: 'Ying Tung Estate > North Lantau Hospital (Circular)' },
+{ routeId: '21', routeNo: '37M', routeName_c: '迎東邨 > 東涌站巴士總站 (循環線)', routeName_e: 'Ying Tung Estate > Tung Chung Station Bus Terminus (Circular)' },
+{ routeId: '22', routeNo: '38', routeName_c: '逸東邨 > 東涌站巴士總站 (循環線)', routeName_e: 'Yat Tung Estate > Tung Chung Station Bus Terminus (Circular)' },
+{ routeId: '23', routeNo: '39M', routeName_c: '滿東邨 > 東涌站巴士總站 (循環線)', routeName_e: 'Mun Tung Estate > Tung Chung Station Bus Terminus (Circular)' },
+{ routeId: '24', routeNo: 'A35', routeName_c: '梅窩碼頭 > 大橋香港口岸', routeName_e: 'Mui Wo Ferry Pier > HZMB Hong Kong Port' },
+{ routeId: '25', routeNo: 'A35', routeName_c: '大橋香港口岸 > 梅窩碼頭', routeName_e: 'HZMB Hong Kong Port > Mui Wo Ferry Pier' },
+{ routeId: '26', routeNo: 'B2', routeName_c: '元朗站 > 深圳灣口岸', routeName_e: 'Yuen Long Station > Shenzhen Bay Port' },
+{ routeId: '27', routeNo: 'B2', routeName_c: '深圳灣口岸 > 元朗站', routeName_e: 'Shenzhen Bay Port > Yuen Long Station' },
+{ routeId: '28', routeNo: 'B2P', routeName_c: '天慈邨 > 深圳灣口岸', routeName_e: 'Tin Tsz Estate > Shenzhen Bay Port' },
+{ routeId: '29', routeNo: 'B2P', routeName_c: '深圳灣口岸 > 天慈邨', routeName_e: 'Shenzhen Bay Port > Tin Tsz Estate' },
+{ routeId: '30', routeNo: 'B2X', routeName_c: '天耀邨 > 深圳灣口岸', routeName_e: 'Tin Yiu Estate > Shenzhen Bay Port' },
+{ routeId: '31', routeNo: 'B2X', routeName_c: '深圳灣口岸 > 天耀邨', routeName_e: 'Shenzhen Bay Port > Tin Yiu Estate' },
+{ routeId: '32', routeNo: 'B4', routeName_c: '大橋香港口岸 > 機場 (客運大樓) (循環線)', routeName_e: 'HZMB Hong Kong Port > Airport (Passenger Terminal) (Circular)' },
+{ routeId: '33', routeNo: 'B6', routeName_c: '滿東邨 > 大橋香港口岸', routeName_e: 'Mun Tung Estate > HZMB Hong Kong Port' },
+{ routeId: '34', routeNo: 'B6', routeName_c: '大橋香港口岸 > 滿東邨', routeName_e: 'HZMB Hong Kong Port > Mun Tung Estate' }
+];
+
+const NLB_FALLBACK_STOPS_BY_ROUTE = {
+'3M': [
+{ stopId: 'NLB-3M-01', stopName_c: '梅窩碼頭', stopName_e: 'Mui Wo Ferry Pier', latitude: 22.2645, longitude: 114.0016 },
+{ stopId: 'NLB-3M-02', stopName_c: '銀鑛灣濾水廠', stopName_e: 'Silver Mine Bay Water Treatment Works', latitude: 22.2682, longitude: 113.9912 },
+{ stopId: 'NLB-3M-03', stopName_c: '貝澳老圍村', stopName_e: 'Pui O Lo Wai Tsuen', latitude: 22.2435, longitude: 113.9772 },
+{ stopId: 'NLB-3M-04', stopName_c: '長沙下村', stopName_e: 'Cheung Sha Ha Tsuen', latitude: 22.2348, longitude: 113.9575 },
+{ stopId: 'NLB-3M-05', stopName_c: '伯公坳', stopName_e: 'Pak Kung Au', latitude: 22.2488, longitude: 113.9432 },
+{ stopId: 'NLB-3M-06', stopName_c: '東涌消防局', stopName_e: 'Tung Chung Fire Station', latitude: 22.2862, longitude: 113.9412 },
+{ stopId: 'NLB-3M-07', stopName_c: '東涌站巴士總站', stopName_e: 'Tung Chung Station Bus Terminus', latitude: 22.2892, longitude: 113.9415 }
+],
+'11': [
+{ stopId: 'NLB-11-01', stopName_c: '東涌站巴士總站', stopName_e: 'Tung Chung Station Bus Terminus', latitude: 22.2892, longitude: 113.9415 },
+{ stopId: 'NLB-11-02', stopName_c: '伯公坳', stopName_e: 'Pak Kung Au', latitude: 22.2488, longitude: 113.9432 },
+{ stopId: 'NLB-11-03', stopName_c: '長沙引水道', stopName_e: 'Cheung Sha Catchwater', latitude: 22.2348, longitude: 113.9512 },
+{ stopId: 'NLB-11-04', stopName_c: '塘福村', stopName_e: 'Tong Fuk Village', latitude: 22.2282, longitude: 113.9318 },
+{ stopId: 'NLB-11-05', stopName_c: '水口村', stopName_e: 'Shui Hau Village', latitude: 22.2215, longitude: 113.9148 },
+{ stopId: 'NLB-11-06', stopName_c: '羗山道深屈道口', stopName_e: 'Keung Shan Rd / Sham Wat Rd', latitude: 22.2485, longitude: 113.8865 },
+{ stopId: 'NLB-11-07', stopName_c: '大澳', stopName_e: 'Tai O', latitude: 22.2532, longitude: 113.8645 }
+],
+'23': [
+{ stopId: 'NLB-23-01', stopName_c: '東涌達東路巴士總站', stopName_e: 'Tung Chung Tat Tung Road Bus Terminus', latitude: 22.2895, longitude: 113.9405 },
+{ stopId: 'NLB-23-02', stopName_c: '伯公坳', stopName_e: 'Pak Kung Au', latitude: 22.2488, longitude: 113.9432 },
+{ stopId: 'NLB-23-03', stopName_c: '深屈道口', stopName_e: 'Sham Wat Road Junction', latitude: 22.2495, longitude: 113.8965 },
+{ stopId: 'NLB-23-04', stopName_c: '昂坪（寶蓮禪寺／天壇大佛）', stopName_e: 'Ngong Ping (Po Lin Monastery / Big Buddha)', latitude: 22.2555, longitude: 113.9045 }
+],
+'B2': [
+{ stopId: 'NLB-B2-01', stopName_c: '元朗站', stopName_e: 'Yuen Long Station', latitude: 22.4455, longitude: 114.0352 },
+{ stopId: 'NLB-B2-02', stopName_c: '元朗大馬路（大棠路）', stopName_e: 'Castle Peak Rd - Yuen Long (Tai Tong Rd)', latitude: 22.4445, longitude: 114.0285 },
+{ stopId: 'NLB-B2-03', stopName_c: '元朗警署', stopName_e: 'Yuen Long Police Station', latitude: 22.4445, longitude: 114.0242 },
+{ stopId: 'NLB-B2-04', stopName_c: '洪水橋', stopName_e: 'Hung Shui Kiu', latitude: 22.4338, longitude: 113.9975 },
+{ stopId: 'NLB-B2-05', stopName_c: '藍地站', stopName_e: 'Lam Tei Station', latitude: 22.4182, longitude: 113.9825 },
+{ stopId: 'NLB-B2-06', stopName_c: '深圳灣口岸', stopName_e: 'Shenzhen Bay Port', latitude: 22.5032, longitude: 113.9445 }
+],
+'B6': [
+{ stopId: 'NLB-B6-01', stopName_c: '滿東邨', stopName_e: 'Mun Tung Estate', latitude: 22.2782, longitude: 113.9325 },
+{ stopId: 'NLB-B6-02', stopName_c: '逸東邨美逸樓', stopName_e: 'Mei Yat House, Yat Tung Estate', latitude: 22.2805, longitude: 113.9365 },
+{ stopId: 'NLB-B6-03', stopName_c: '東涌市中心（東涌站）', stopName_e: 'Tung Chung Town Centre (Tung Chung Stn)', latitude: 22.2892, longitude: 113.9415 },
+{ stopId: 'NLB-B6-04', stopName_c: '大橋香港口岸旅檢大樓', stopName_e: 'HZMB Hong Kong Port Passenger Clearance Building', latitude: 22.3165, longitude: 113.9515 }
+]
+};
+
+window.nlbRoutesCache = null;
+async function fetchNlbRoutesList() {
+if (window.nlbRoutesCache && window.nlbRoutesCache.length > 0) return window.nlbRoutesCache;
+try {
+let res = await fetch('https://rt.data.gov.hk/v2/transport/nlb/route.php?action=list').then(r => r.json());
+if (res && Array.isArray(res.routes) && res.routes.length > 0) {
+window.nlbRoutesCache = res.routes;
+return res.routes;
+}
+} catch (e) {}
+return NLB_FALLBACK_ROUTES;
+}
+
+function getBusOperatorMeta(co, isEn) {
+const c = String(co || 'kmb').toLowerCase();
+if (c === 'ctb') return { code: 'ctb', color: 'var(--ctb-accent)', hex: '#d97706', label: isEn ? 'CTB' : '城巴', full: isEn ? 'Citybus (CTB)' : '城巴 (CTB)' };
+if (c === 'nlb') return { code: 'nlb', color: 'var(--nlb-accent)', hex: '#0d9488', label: isEn ? 'NLB' : '嶼巴', full: isEn ? 'New Lantao Bus (NLB)' : '新大嶼山巴士 (NLB)' };
+if (c === 'mtrb') return { code: 'mtrb', color: 'var(--mtrb-accent)', hex: '#7c3aed', label: isEn ? 'MTR Bus' : '港鐵巴士', full: isEn ? 'MTR Bus / Feeder Bus' : '港鐵巴士 (MTR Bus)' };
+return { code: 'kmb', color: 'var(--kmb-accent)', hex: '#e11d48', label: isEn ? 'KMB' : '九巴', full: isEn ? 'KMB' : '九巴 (KMB)' };
+}
+
 function openBusModal() { lockBackgroundScroll(); renderBusManagerList(); resetBusSearchUI(); document.getElementById('bus-modal').classList.add('active'); }
 function closeBusModal() { unlockBackgroundScroll(); document.getElementById('bus-modal').classList.remove('active'); }
 function resetBusSearchUI() { document.getElementById('bus-search-interface').style.display = 'block'; document.getElementById('bus-search-results').style.display = 'none'; }
@@ -12935,53 +13118,102 @@ const dict = i18n[currentLang]; const area = document.getElementById('bus-manage
 if (myBuses.length === 0) { area.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px; font-weight:600;">${currentLang==='en'?'No trackings added yet.':'尚未加入任何巴士追蹤'}</div>`; return; }
 let html = '';
 myBuses.forEach(b => {
-let coColor = b.co === 'kmb' ? 'var(--kmb-accent)' : 'var(--ctb-accent)';
+let opMeta = getBusOperatorMeta(b.co, currentLang === 'en');
 let bName = currentLang === 'en' ? (b.name_en || b.name_tc || b.name || '') : (b.name_tc || b.name || '');
 let bDest = currentLang === 'en' ? (b.dest_en || b.dest_tc || b.dest || '') : (b.dest_tc || b.dest || '');
-html += `<div class="bus-manager-item"><div class="bus-manager-info"><span class="bm-route"><span style="color:${coColor}; font-size:0.8rem; margin-right:6px;">${b.co==='kmb'?(currentLang==='en'?'KMB':'九巴'):(currentLang==='en'?'CTB':'城巴')}</span>${b.route} <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">${dict['txt-to']}${bDest}</span></span><span class="bm-stop">🚏 ${bName}</span></div><button class="bm-delete" onclick="deleteBusTrack('${b.id}')">${currentLang==='en'?'Del':'刪除'}</button></div>`;
+html += `<div class="bus-manager-item"><div class="bus-manager-info"><span class="bm-route"><span style="color:${opMeta.color}; font-size:0.8rem; margin-right:6px;">${opMeta.label}</span>${b.route} <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">${dict['txt-to']}${bDest}</span></span><span class="bm-stop">🚏 ${bName}</span></div><button class="bm-delete" onclick="deleteBusTrack('${b.id}')">${currentLang==='en'?'Del':'刪除'}</button></div>`;
 });
 area.innerHTML = html;
 }
 function deleteBusTrack(id) { myBuses = myBuses.filter(b => b.id !== id); try{ localStorage.setItem('my_saved_buses', JSON.stringify(myBuses)); }catch(e){} renderBusManagerList(); fetchRealBusData(); renderUI(); }
 
 async function searchRoute(co) {
-let inputId = co === 'kmb' ? 'kmb-route-input' : 'ctb-route-input'; let route = document.getElementById(inputId).value.trim().toUpperCase();
+let inputMap = { 'kmb': 'kmb-route-input', 'ctb': 'ctb-route-input', 'nlb': 'nlb-route-input', 'mtrb': 'mtrb-route-input' };
+let inputId = inputMap[co] || 'kmb-route-input';
+let route = (document.getElementById(inputId)?.value || '').trim().toUpperCase();
 if (!route) return;
-document.getElementById('bus-search-interface').style.display = 'none'; let resDiv = document.getElementById('bus-search-results'); resDiv.style.display = 'block';
+document.getElementById('bus-search-interface').style.display = 'none';
+let resDiv = document.getElementById('bus-search-results');
+resDiv.style.display = 'block';
 resDiv.innerHTML = `<div class="anim-pulse" style="text-align:center; color:var(--text-muted); font-weight:600; padding: 20px;"><span class="icon-spin">🔍</span> ${currentLang==='en'?'Searching...':'搜尋緊路線資料...'}</div>`;
-let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回搜尋頁'}</button>`; let found = false;
+let html = `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回搜尋頁'}</button>`;
+let found = false;
 
 try {
 if (co === 'kmb') {
 let d = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
 let matchedRoutes = d?.data ? d.data.filter(r => r.route === route) : [];
 if (matchedRoutes.length > 0) {
-found = true; html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
+found = true;
+html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
 matchedRoutes.forEach(dir => {
 let bnd = (dir.bound === 'O' || String(dir.bound) === '1') ? 'outbound' : 'inbound';
 let renderDest = currentLang === 'en' ? dir.dest_en : dir.dest_tc;
 html += `<button class="bus-dir-btn kmb" onclick="loadRouteStops('kmb', '${route}', '${bnd}', '${dir.service_type}', '${dir.dest_tc}', '${dir.dest_en}')"><div><span style="font-weight:800; font-size:1.1rem;">KMB ${route}</span><br><span style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">${i18n[currentLang]['txt-to']}${renderDest}</span></div><div style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
 });
 }
-} else {
+} else if (co === 'ctb') {
 let d = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route/CTB/${route}`).then(r=>r.json());
-if (d && d.data) {
-found = true; html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
+if (d && d.data && d.data.route) {
+found = true;
+html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction:':'選擇行車方向：'}</h4>`;
 let d1 = currentLang === 'en' ? d.data.dest_en : d.data.dest_tc;
 let o1 = currentLang === 'en' ? d.data.orig_en : d.data.orig_tc;
 html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'outbound', '1', '${d.data.dest_tc}', '${d.data.dest_en}')"><div><span style="font-weight:800; font-size:1.1rem;">CTB ${route}</span><br><span style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">${i18n[currentLang]['txt-to']}${d1}</span></div><div style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
 html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route}', 'inbound', '1', '${d.data.orig_tc}', '${d.data.orig_en}')"><div><span style="font-weight:800; font-size:1.1rem;">CTB ${route}</span><br><span style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">${i18n[currentLang]['txt-to']}${o1}</span></div><div style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
 }
+} else if (co === 'nlb') {
+let nlbRoutes = await fetchNlbRoutesList();
+let matched = (nlbRoutes || []).filter(r => String(r.routeNo || '').toUpperCase() === route);
+if (matched.length > 0) {
+found = true;
+html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction (New Lantao Bus):':'選擇行車方向（新大嶼山巴士）：'}</h4>`;
+matched.forEach(dir => {
+let partsTc = String(dir.routeName_c || '').split('>');
+let partsEn = String(dir.routeName_e || '').split('>');
+let destTc = (partsTc[partsTc.length - 1] || dir.routeName_c || '').trim();
+let destEn = (partsEn[partsEn.length - 1] || dir.routeName_e || '').trim();
+let fullDesc = currentLang === 'en' ? (dir.routeName_e || destEn) : (dir.routeName_c || destTc);
+let safeDestTc = destTc.replace(/'/g, "\'");
+let safeDestEn = destEn.replace(/'/g, "\'");
+html += `<button class="bus-dir-btn nlb" onclick="loadRouteStops('nlb', '${route}', 'outbound', '${dir.routeId}', '${safeDestTc}', '${safeDestEn}')"><div><span style="font-weight:800; font-size:1.1rem; color:var(--nlb-accent);">NLB ${route}</span><br><span style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">${fullDesc}</span></div><div style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
+});
+}
+} else if (co === 'mtrb') {
+let mtrRouteObj = MTR_BUS_OFFICIAL_ROUTES_DATA[route] || (route === 'K53S' ? MTR_BUS_OFFICIAL_ROUTES_DATA['K53*'] : null);
+if (mtrRouteObj) {
+found = true;
+html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction (MTR Bus):':'選擇行車方向（港鐵巴士）：'}</h4>`;
+Object.keys(mtrRouteObj).forEach(dirKey => {
+let stopsArr = mtrRouteObj[dirKey] || [];
+if (stopsArr.length > 0) {
+let firstSt = stopsArr[0];
+let lastSt = stopsArr[stopsArr.length - 1];
+let destSt = (dirKey === 'Circular' && stopsArr.length > 2) ? stopsArr[Math.floor(stopsArr.length / 2)] : lastSt;
+let destTc = destSt.tc || lastSt.tc;
+let destEn = destSt.en || lastSt.en;
+let descText = currentLang === 'en'
+? `${firstSt.en} ➔ ${destEn}${dirKey === 'Circular' ? ' (Circular)' : ''}`
+: `${firstSt.tc} ➔ ${destTc}${dirKey === 'Circular' ? ' (循環線)' : ''}`;
+let safeDestTc = destTc.replace(/'/g, "\'");
+let safeDestEn = destEn.replace(/'/g, "\'");
+html += `<button class="bus-dir-btn mtrb" onclick="loadRouteStops('mtrb', '${route}', '${dirKey}', '1', '${safeDestTc}', '${safeDestEn}')"><div><span style="font-weight:800; font-size:1.1rem; color:var(--mtrb-accent);">MTR Bus ${route}</span><br><span style="color:var(--text-muted); font-size:0.9rem; font-weight:600;">${descText}</span></div><div style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${currentLang==='en'?'Select Stop 👉':'選擇車站 👉'}</div></button>`;
+}
+});
+}
 }
 } catch(e) {}
-if (!found) html += `<div style="text-align:center; color:var(--warning-red); font-weight:600; padding: 20px;">${currentLang==='en'?'Route Not Found':'搵唔到路線'}「${route}」</div>`; resDiv.innerHTML = html;
+if (!found) html += `<div style="text-align:center; color:var(--warning-red); font-weight:600; padding: 20px;">${currentLang==='en'?'Route Not Found':'搵唔到路線'}「${route}」</div>`;
+resDiv.innerHTML = html;
 }
 
 async function loadRouteStops(co, route, bound, service_type, destNameTc, destNameEn) {
-let resDiv = document.getElementById('bus-search-results'); resDiv.innerHTML = `<div class="anim-pulse" style="text-align:center; color:var(--text-muted); font-weight:600; padding: 20px;"><span class="icon-spin">⏳</span> ${currentLang==='en'?'Loading Stops...':'讀取緊沿途車站...'}</div>`;
+let resDiv = document.getElementById('bus-search-results');
+resDiv.innerHTML = `<div class="anim-pulse" style="text-align:center; color:var(--text-muted); font-weight:600; padding: 20px;"><span class="icon-spin">⏳</span> ${currentLang==='en'?'Loading Stops...':'讀取緊沿途車站...'}</div>`;
 try {
 let rName = currentLang === 'en' ? destNameEn : destNameTc;
-let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--hairline-border); padding-bottom:10px; margin-bottom:12px;"><span style="color:var(--text-main); font-size:1rem; font-weight:700;">${i18n[currentLang]['txt-to']}${rName} <br><span style="color:var(--text-muted); font-size:0.8rem;">(${currentLang==='en'?'Check a stop to see other routes at the same stop':'打剔車站會即時彈出同站其他路線俾你一併加入'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
+let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--hairline-border); padding-bottom:10px; margin-bottom:12px;"><span style="color:var(--text-main); font-size:1rem; font-weight:700;">${i18n[currentLang]['txt-to']}${rName} <br><span style="color:var(--text-muted); font-size:0.8rem;">(${currentLang==='en'?'Check a stop to add real-time tracking':'打剔車站即可加入實時到站時間追蹤'})</span></span><button class="btn-back" onclick="resetBusSearchUI()" style="margin:0;">🔙 ${currentLang==='en'?'Cancel':'取消'}</button></div><div class="bus-stop-list">`;
+
 if (co === 'kmb') {
 let d = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/${service_type}`).then(r=>r.json());
 let kmbStops = await fetchKmbStopsCache();
@@ -12999,7 +13231,7 @@ html += `
 <div class="same-stop-drawer" style="display:none;"></div>
 </div>`;
 }
-} else {
+} else if (co === 'ctb') {
 let d = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`).then(r=>r.json());
 for (let s of d.data) {
 let st = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`).then(r=>r.json()).catch(()=>null);
@@ -13014,8 +13246,46 @@ html += `
 <div class="same-stop-drawer" style="display:none;"></div>
 </div>`;
 }
+} else if (co === 'nlb') {
+let stopsArr = [];
+try {
+let d = await fetch(`https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=list&routeId=${service_type}`).then(r => r.json());
+if (d && Array.isArray(d.stops) && d.stops.length > 0) stopsArr = d.stops;
+} catch (e) {}
+if (stopsArr.length === 0) {
+stopsArr = NLB_FALLBACK_STOPS_BY_ROUTE[route] || NLB_FALLBACK_STOPS_BY_ROUTE['3M'];
 }
-html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:700; color:var(--text-main);">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`; resDiv.innerHTML = html;
+for (let s of stopsArr) {
+let sId = String(s.stopId || s.stop || '');
+let nameTc = s.stopName_c || s.name_tc || `嶼巴站 ${sId}`;
+let nameEn = s.stopName_e || s.name_en || `NLB Stop ${sId}`;
+let val = encodeURIComponent(JSON.stringify({ co: 'nlb', route, stop: sId, name: nameTc, name_tc: nameTc, name_en: nameEn, dest: destNameTc, dest_tc: destNameTc, dest_en: destNameEn, service_type: String(service_type) }));
+html += `
+<div class="stop-item-group">
+<label class="bus-stop-item">
+<input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()">
+<span>🚏 ${currentLang==='en'?nameEn:nameTc}</span>
+</label>
+</div>`;
+}
+} else if (co === 'mtrb') {
+let mtrRouteObj = MTR_BUS_OFFICIAL_ROUTES_DATA[route] || (route === 'K53S' ? MTR_BUS_OFFICIAL_ROUTES_DATA['K53*'] : {});
+let stopsArr = mtrRouteObj[bound] || Object.values(mtrRouteObj)[0] || [];
+for (let s of stopsArr) {
+let nameTc = s.tc || s.stop;
+let nameEn = s.en || s.stop;
+let val = encodeURIComponent(JSON.stringify({ co: 'mtrb', route, stop: s.stop, name: nameTc, name_tc: nameTc, name_en: nameEn, dest: destNameTc, dest_tc: destNameTc, dest_en: destNameEn, service_type: bound }));
+html += `
+<div class="stop-item-group">
+<label class="bus-stop-item">
+<input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()">
+<span>🚏 ${currentLang==='en'?nameEn:nameTc} <span style="font-size:0.74rem; color:var(--text-muted);">(${s.stop})</span></span>
+</label>
+</div>`;
+}
+}
+html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:700; color:var(--text-main);">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`;
+resDiv.innerHTML = html;
 } catch(e) { resDiv.innerHTML = `<div style="color:var(--warning-red); text-align:center; font-weight:600;">Failed to load</div><button class="btn-back" onclick="resetBusSearchUI()">Back</button>`; }
 }
 
@@ -13325,6 +13595,43 @@ found++;
 }
 } catch(e) { console.warn("KMB Live search error:", e); }
 
+
+// Also search MTR Bus stops & NLB fallback stops
+try {
+Object.keys(MTR_BUS_OFFICIAL_ROUTES_DATA).forEach(rtNo => {
+let dirMap = MTR_BUS_OFFICIAL_ROUTES_DATA[rtNo] || {};
+Object.keys(dirMap).forEach(dirKey => {
+let sts = dirMap[dirKey] || [];
+if (sts.length === 0) return;
+let destSt = (dirKey === 'Circular' && sts.length > 2) ? sts[Math.floor(sts.length / 2)] : sts[sts.length - 1];
+sts.forEach(stObj => {
+if ((stObj.tc && stObj.tc.toLowerCase().includes(keyword)) || (stObj.en && stObj.en.toLowerCase().includes(keyword)) || rtNo.toLowerCase() === keyword) {
+let uKey = `mtrb_${rtNo}_${stObj.stop}`;
+if (addedKeys.has(uKey)) return;
+addedKeys.add(uKey);
+let displayStop = currentLang === 'en' ? (stObj.en || stObj.tc) : stObj.tc;
+let displayDest = currentLang === 'en' ? (destSt.en || destSt.tc) : destSt.tc;
+let val = encodeURIComponent(JSON.stringify({
+co: 'mtrb', route: rtNo, stop: stObj.stop,
+name: stObj.tc, name_tc: stObj.tc, name_en: stObj.en,
+dest: destSt.tc, dest_tc: destSt.tc, dest_en: destSt.en, service_type: dirKey
+}));
+html += `
+<div class="stop-item-group">
+<label class="bus-stop-item">
+<input type="checkbox" class="stop-cb" value="${val}" onchange="updateSelectedCount()">
+<div style="display:flex; flex-direction:column; align-items:flex-start;">
+<span style="font-weight:700;">🚏 ${displayStop} <span style="color:var(--mtrb-accent); font-size:0.8rem;">(${currentLang==='en'?'MTR Bus':'港鐵巴士'} ${rtNo})</span></span>
+<span style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${i18n[currentLang]['txt-to']}${displayDest}</span>
+</div>
+</label>
+</div>`;
+found++;
+}
+});
+});
+});
+} catch (e) {}
 html += `</div><div class="multi-add-bar"><span id="selected-count" style="font-weight:700;">${currentLang==='en'?'0 Selected':'已選擇 0 項'}</span><button class="modal-btn btn-save" onclick="addSelectedItems()">✅ ${currentLang==='en'?'Add Tracking':'加入追蹤'}</button></div>`;
 resDiv.innerHTML = found > 0 ? html : `<button class="btn-back" onclick="resetBusSearchUI()">🔙 ${currentLang==='en'?'Back':'返回'}</button><p style="text-align:center;color:var(--warning-red);font-weight:600;padding:20px;">Stop not found</p>`;
 }
@@ -13354,10 +13661,82 @@ return;
 document.getElementById('refresh-status').innerHTML = currentLang==='en' ? '<span class="icon-spin">🔄</span> Updating...' : '<span class="icon-spin">🔄</span> 更新中...';
 let raw = []; let now = new Date();
 
-await Promise.allSettled(myBuses.map(b => {
+await Promise.allSettled(myBuses.map(async b => {
 let ts = Date.now();
-let url = b.co === 'kmb' ? `https://data.etabus.gov.hk/v1/transport/kmb/eta/${b.stop}/${b.route}/${b.service_type || '1'}?_=${ts}` : `https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${b.stop}/${b.route}?_=${ts}`;
-return fetch(url, { cache: 'no-store' }).then(r=>r.json()).then(json => {
+if (b.co === 'nlb') {
+let langParam = currentLang === 'en' ? 'en' : 'zh';
+let rId = b.service_type || '5';
+let url = `https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=estimatedArrivals&routeId=${encodeURIComponent(rId)}&stopId=${encodeURIComponent(b.stop)}&language=${langParam}&_=${ts}`;
+let json = await fetch(url, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
+if (json && Array.isArray(json.estimatedArrivals)) {
+json.estimatedArrivals.forEach(item => {
+if (item && item.estimatedArrivalTime) {
+let dt = new Date(String(item.estimatedArrivalTime).replace(' ', 'T') + '+08:00');
+if (!isNaN(dt.getTime()) && dt > now) {
+raw.push({
+no: b.route,
+dest_tc: b.dest_tc || b.dest || '',
+dest_en: b.dest_en || b.dest || '',
+time: dt.toISOString(),
+co: 'nlb',
+stop: b.stop,
+stopName_tc: b.name_tc || b.name || '',
+stopName_en: b.name_en || b.name || '',
+localTarget: dt,
+uid: `nlb_${b.route}_${b.stop}_${dt.getTime()}`,
+dir: 'O',
+service_type: String(rId)
+});
+}
+}
+});
+}
+return;
+}
+
+if (b.co === 'mtrb') {
+let langParam = currentLang === 'en' ? 'en' : 'zh';
+let cleanRt = String(b.route || '').replace('*', '');
+let json = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ language: langParam, routeName: cleanRt })
+}).then(r => r.json()).catch(() => null);
+
+if (json && Array.isArray(json.busStop)) {
+let stEntry = json.busStop.find(s => String(s.busStopId || '').toUpperCase() === String(b.stop || '').toUpperCase());
+if (stEntry && Array.isArray(stEntry.bus)) {
+stEntry.bus.forEach((busItem, idx) => {
+let arrSec = parseInt(busItem.arrivalTimeInSecond, 10);
+let depSec = parseInt(busItem.departureTimeInSecond, 10);
+let sec = (!isNaN(arrSec) && arrSec > 0 && arrSec < 50000) ? arrSec : depSec;
+if (!isNaN(sec) && sec >= -30 && sec < 10800) {
+let dt = new Date(now.getTime() + Math.max(5, sec) * 1000);
+raw.push({
+no: b.route,
+dest_tc: b.dest_tc || b.dest || '',
+dest_en: b.dest_en || b.dest || '',
+time: dt.toISOString(),
+co: 'mtrb',
+stop: b.stop,
+stopName_tc: b.name_tc || b.name || '',
+stopName_en: b.name_en || b.name || '',
+localTarget: dt,
+uid: `mtrb_${b.route}_${b.stop}_${idx}_${Math.round(dt.getTime() / 10000)}`,
+dir: b.service_type || 'Outbound',
+service_type: b.service_type || 'Outbound'
+});
+}
+});
+}
+}
+return;
+}
+
+let url = b.co === 'kmb'
+? `https://data.etabus.gov.hk/v1/transport/kmb/eta/${b.stop}/${b.route}/${b.service_type || '1'}?_=${ts}`
+: `https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${b.stop}/${b.route}?_=${ts}`;
+let json = await fetch(url, { cache: 'no-store' }).then(r=>r.json()).catch(() => null);
 if(json?.data) {
 json.data.forEach(d => {
 if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(b.route).toUpperCase()) {
@@ -13366,7 +13745,6 @@ raw.push({ no: d.route, dest_tc: d.dest_tc || b.dest_tc || b.dest || '', dest_en
 }
 });
 }
-});
 }));
 let unique = {}; raw.forEach(x => { if(!unique[x.uid]) unique[x.uid] = x; });
 transportTimestamps.bus = Object.values(unique).sort((a,b)=> a.localTarget - b.localTarget);
@@ -13440,11 +13818,76 @@ const modal = document.getElementById('bus-detail-modal'); const body = document
 modal.classList.add('active'); body.innerHTML = `<div class="anim-pulse" style="text-align:center; padding: 30px; color:var(--text-muted); font-weight:600; font-size:1.1rem;">${i18n[currentLang]['txt-loading']}</div>`;
 
 try {
-let companyName = co === 'kmb' ? (currentLang==='en'?'KMB':'九巴 (KMB)') : (currentLang==='en'?'CTB':'城巴 (CTB)'); let stopsHtml = '';
+let opMeta = getBusOperatorMeta(co, currentLang === 'en');
+let companyName = opMeta.full;
+let stopsHtml = '';
 let apiBound = (dir === 'I' || dir === 'inbound') ? 'inbound' : 'outbound';
 let currentStopName = '';
 let currentStopLat = '';
 let currentStopLng = '';
+
+if (co === 'mtrb') {
+let mtrRouteObj = MTR_BUS_OFFICIAL_ROUTES_DATA[route] || (route === 'K53S' ? MTR_BUS_OFFICIAL_ROUTES_DATA['K53*'] : {});
+let dirKey = (dir && mtrRouteObj[dir]) ? dir : (serviceType && mtrRouteObj[serviceType] ? serviceType : Object.keys(mtrRouteObj)[0]);
+let stops = mtrRouteObj[dirKey] || [];
+if (stops.length === 0 && Object.values(mtrRouteObj).length > 0) stops = Object.values(mtrRouteObj)[0];
+let orig = stops.length > 0 ? (currentLang === 'en' ? stops[0].en : stops[0].tc) : route;
+let actualDest = stops.length > 0 ? (currentLang === 'en' ? stops[stops.length - 1].en : stops[stops.length - 1].tc) : destTcFallback;
+
+stopsHtml = stops.map((s, idx) => {
+let isCurrent = (s.stop === currentStopId);
+let highlightClass = isCurrent ? 'current-stop-highlight' : '';
+let stopName = currentLang === 'en' ? (s.en || s.tc) : s.tc;
+let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
+if (isCurrent) {
+currentStopName = stopName;
+currentStopLat = s.lat || '';
+currentStopLng = s.lng || '';
+}
+let safeStopName = stopName.replace(/'/g, "\'");
+return `<div id="modal-stop-item-${s.stop}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('mtrb', '${route}', '${s.stop}', '${dirKey}', '${dirKey}', '${safeStopName}', '${s.lat || ''}', '${s.lng || ''}')">
+<span class="stop-num">${idx+1}</span> 
+<span style="flex:1;">${stopName}</span> 
+<span class="stop-label-container">${currentLabel}</span>
+</div>`;
+}).join('');
+renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml, currentStopName, currentStopId, co, dirKey, dirKey, currentStopLat, currentStopLng);
+return;
+}
+
+if (co === 'nlb') {
+let stops = [];
+try {
+let d = await fetch(`https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=list&routeId=${encodeURIComponent(serviceType)}`).then(r => r.json());
+if (d && Array.isArray(d.stops) && d.stops.length > 0) stops = d.stops;
+} catch (e) {}
+if (stops.length === 0) stops = NLB_FALLBACK_STOPS_BY_ROUTE[route] || NLB_FALLBACK_STOPS_BY_ROUTE['3M'];
+let orig = stops.length > 0 ? (currentLang === 'en' ? (stops[0].stopName_e || stops[0].stopName_c) : stops[0].stopName_c) : route;
+let actualDest = stops.length > 0 ? (currentLang === 'en' ? (stops[stops.length - 1].stopName_e || stops[stops.length - 1].stopName_c) : stops[stops.length - 1].stopName_c) : destTcFallback;
+
+stopsHtml = stops.map((s, idx) => {
+let sId = String(s.stopId || s.stop || '');
+let isCurrent = (sId === String(currentStopId));
+let highlightClass = isCurrent ? 'current-stop-highlight' : '';
+let stopName = currentLang === 'en' ? (s.stopName_e || s.stopName_c) : s.stopName_c;
+let sLat = s.latitude || '';
+let sLng = s.longitude || '';
+let currentLabel = isCurrent ? `<span class="current-stop-badge">📍 ${currentLang==='en'?'You are here':'你喺呢度'}</span>` : '';
+if (isCurrent) {
+currentStopName = stopName;
+currentStopLat = sLat;
+currentStopLng = sLng;
+}
+let safeStopName = String(stopName || '').replace(/'/g, "\'");
+return `<div id="modal-stop-item-${sId}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('nlb', '${route}', '${sId}', 'O', '${serviceType}', '${safeStopName}', '${sLat}', '${sLng}')">
+<span class="stop-num">${idx+1}</span> 
+<span style="flex:1;">${stopName}</span> 
+<span class="stop-label-container">${currentLabel}</span>
+</div>`;
+}).join('');
+renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml, currentStopName, currentStopId, co, 'O', serviceType, currentStopLat, currentStopLng);
+return;
+}
 
 if (co === 'kmb') {
 let rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/`).then(r=>r.json());
@@ -13477,7 +13920,7 @@ currentStopLat = sLat;
 currentStopLng = sLng;
 }
 
-let safeStopName = stopName.replace(/'/g, "\\'");
+let safeStopName = stopName.replace(/'/g, "\'");
 
 return `<div id="modal-stop-item-${s.stop}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('${co}', '${route}', '${s.stop}', '${dir}', '${serviceType}', '${safeStopName}', '${sLat}', '${sLng}')">
 <span class="stop-num">${idx+1}</span> 
@@ -13512,7 +13955,7 @@ currentStopLat = sLat;
 currentStopLng = sLng;
 }
 
-let safeStopName = stopName.replace(/'/g, "\\'");
+let safeStopName = stopName.replace(/'/g, "\'");
 
 return `<div id="modal-stop-item-${s.stop}" class="detail-stop-item clickable-stop ${highlightClass}" onclick="switchBusDetailStop('${co}', '${route}', '${s.stop}', '${dir}', '${serviceType}', '${safeStopName}', '${sLat}', '${sLng}')">
 <span class="stop-num">${idx+1}</span> 
@@ -13529,7 +13972,7 @@ renderDetailModalBody(companyName, route, orig, actualDest, stopsHtml, currentSt
 function renderDetailModalBody(coName, route, orig, dest, stopsHtml, currentStopName, currentStopId, co, dir, serviceType, currentStopLat = '', currentStopLng = '') {
 let rightPanel = '';
 if (currentStopId && currentStopName) {
-let themeColor = co === 'kmb' ? '#e11d48' : '#d97706';
+let themeColor = getBusOperatorMeta(co, currentLang === 'en').hex;
 let iconText = currentLang==='en'?'ETA':'實時倒數';
 let mapTitle = currentLang==='en'?'Stop Location':'車站地圖位置';
 let mapUrl = getStopMapEmbedUrl(currentStopLat, currentStopLng, currentStopName);
@@ -13600,14 +14043,48 @@ async function syncBusDetailETA(co, route, stopId, dir, serviceType) {
 if (window.currentDetailStopId !== stopId) return;
 
 let ts = Date.now();
-let url = co === 'kmb' ? `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}?_=${ts}` : `https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${stopId}/${route}?_=${ts}`;
-try {
-let res = await fetch(url, { cache: 'no-store' }).then(r=>r.json());
-
-if (window.currentDetailStopId !== stopId) return;
-
 let now = new Date();
 let etas = [];
+
+try {
+if (co === 'nlb') {
+let langParam = currentLang === 'en' ? 'en' : 'zh';
+let res = await fetch(`https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=estimatedArrivals&routeId=${encodeURIComponent(serviceType || '5')}&stopId=${encodeURIComponent(stopId)}&language=${langParam}&_=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
+if (window.currentDetailStopId !== stopId) return;
+if (res && Array.isArray(res.estimatedArrivals)) {
+res.estimatedArrivals.forEach(item => {
+if (item && item.estimatedArrivalTime) {
+let dt = new Date(String(item.estimatedArrivalTime).replace(' ', 'T') + '+08:00');
+if (!isNaN(dt.getTime()) && dt > now) etas.push(dt);
+}
+});
+}
+} else if (co === 'mtrb') {
+let langParam = currentLang === 'en' ? 'en' : 'zh';
+let cleanRt = String(route || '').replace('*', '');
+let res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ language: langParam, routeName: cleanRt })
+}).then(r => r.json()).catch(() => null);
+if (window.currentDetailStopId !== stopId) return;
+if (res && Array.isArray(res.busStop)) {
+let stEntry = res.busStop.find(s => String(s.busStopId || '').toUpperCase() === String(stopId || '').toUpperCase());
+if (stEntry && Array.isArray(stEntry.bus)) {
+stEntry.bus.forEach(busItem => {
+let arrSec = parseInt(busItem.arrivalTimeInSecond, 10);
+let depSec = parseInt(busItem.departureTimeInSecond, 10);
+let sec = (!isNaN(arrSec) && arrSec > 0 && arrSec < 50000) ? arrSec : depSec;
+if (!isNaN(sec) && sec >= -30 && sec < 10800) {
+etas.push(new Date(now.getTime() + Math.max(5, sec) * 1000));
+}
+});
+}
+}
+} else {
+let url = co === 'kmb' ? `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType}?_=${ts}` : `https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${stopId}/${route}?_=${ts}`;
+let res = await fetch(url, { cache: 'no-store' }).then(r=>r.json());
+if (window.currentDetailStopId !== stopId) return;
 if(res?.data) {
 res.data.forEach(d => {
 if(d.eta && new Date(d.eta) > now && String(d.route).toUpperCase() === String(route).toUpperCase()) {
@@ -13618,11 +14095,10 @@ if(matchDir) etas.push(new Date(d.eta));
 }
 });
 }
+}
 etas.sort((a,b) => a - b);
-
 window.currentBusTargetTimes = etas.slice(0, 3);
 updateBusDetailCountdownDisplay();
-
 } catch(e) {
 console.warn(e);
 }
@@ -13857,6 +14333,457 @@ el.innerHTML = `--`; el.className = 'mtr-eta'; el.style.color = 'var(--text-mute
 
 function closeMtrDetailModal() { unlockBackgroundScroll(); if(lineSyncInterval) clearInterval(lineSyncInterval); document.getElementById('mtr-detail-modal').classList.remove('active'); }
 
+// =========================================================================
+// 🛡️ 五級綜合天氣威脅及出行安全評估系統 (5-Level Comprehensive Weather Threat Index)
+// =========================================================================
+window.weatherThreatState = {
+simulatedLevel: null, // null = Live Auto Calculation, or 1..5 for user preview
+lastResult: null
+};
+
+const WEATHER_THREAT_LEVEL_META = {
+1: {
+level: 1,
+dot: '🟢',
+badge_zh: '第 1 級：安全良好',
+badge_en: 'Level 1: Safe & Ideal',
+short_zh: '1級 綠色・安全',
+short_en: 'L1 Green · Safe',
+bg: '#ecfdf5',
+border: '#6ee7b7',
+textCol: '#065f46',
+barCol: '#10b981',
+pillBg: '#10b981',
+pillText: '#ffffff',
+desc_zh: '各項氣象指標穩定正常，無生效惡劣天氣警告，適合正常出行及各類戶外活動。',
+desc_en: 'Weather conditions are stable with no severe warnings in force. Ideal for outdoor activities and normal travel.'
+},
+2: {
+level: 2,
+dot: '🟡',
+badge_zh: '第 2 級：輕微注意',
+badge_en: 'Level 2: Mild Advisory',
+short_zh: '2級 黃色・注意',
+short_en: 'L2 Yellow · Advisory',
+bg: '#fefce8',
+border: '#fde047',
+textCol: '#854d0e',
+barCol: '#eab308',
+pillBg: '#eab308',
+pillText: '#ffffff',
+desc_zh: '天氣有輕微潛在影響（如一號戒備信號、雷暴、偏高溫濕度或高紫外線），建議帶備雨具及注意補水防曬。',
+desc_en: 'Mild weather advisory (e.g. Standby Signal No. 1, thunderstorm, high UV or warm/humid index). Stay hydrated and bring rain gear.'
+},
+3: {
+level: 3,
+dot: '🟠',
+badge_zh: '第 3 級：中度威脅',
+badge_en: 'Level 3: Moderate Threat',
+short_zh: '3級 橙色・警戒',
+short_en: 'L3 Orange · Moderate',
+bg: '#fff7ed',
+border: '#fdba74',
+textCol: '#9a3412',
+barCol: '#f97316',
+pillBg: '#f97316',
+pillText: '#ffffff',
+desc_zh: '中度天氣威脅（如三號強風信號、黃色暴雨、酷熱／寒冷天氣警告、強陣風或高暑熱壓力），應避免前往高危斜坡、河道或離岸海域。',
+desc_en: 'Moderate weather threat (e.g. Strong Wind Signal No. 3, Amber Rainstorm, Very Hot/Cold Warning or strong gusts). Avoid high-risk slopes and offshore waters.'
+},
+4: {
+level: 4,
+dot: '🔴',
+badge_zh: '第 4 級：高度威脅',
+badge_en: 'Level 4: Severe Threat',
+short_zh: '4級 紅色・高危',
+short_en: 'L4 Red · Severe',
+bg: '#fef2f2',
+border: '#fca5a5',
+textCol: '#991b1b',
+barCol: '#ef4444',
+pillBg: '#ef4444',
+pillText: '#ffffff',
+desc_zh: '高度惡劣天氣威脅（如八號烈風或暴風信號、紅色暴雨警告、極端酷熱 ≥35°C／嚴寒 ≤7°C 或暴風潮風險），應暫停戶外活動並留心公共交通停駛安排。',
+desc_en: 'Severe weather threat (e.g. Gale/Storm Signal No. 8, Red Rainstorm, extreme heat ≥35°C / cold ≤7°C, or storm surge). Suspend outdoor activities.'
+},
+5: {
+level: 5,
+dot: '⚫',
+badge_zh: '第 5 級：極端惡劣',
+badge_en: 'Level 5: Extreme Hazard',
+short_zh: '5級 黑色・極端惡劣',
+short_en: 'L5 Black · Extreme',
+bg: '#0f172a',
+border: '#ef4444',
+textCol: '#f8fafc',
+barCol: '#1e293b',
+pillBg: '#dc2626',
+pillText: '#ffffff',
+desc_zh: '最高級別極端災害天氣（如九號／十號風球、黑色暴雨警告、超強颱風正面吹襲或特大暴雨），請立即留在安全室內場所，切勿外出！',
+desc_en: 'Extreme hazard (Signal No. 9/10, Black Rainstorm, direct Super Typhoon hit or torrential downpour). Stay indoors in a safe shelter immediately!'
+}
+};
+
+function computeHeatIndexCelsius(tempC, rhPct) {
+if (tempC < 26 || rhPct < 40) return tempC;
+const T = tempC * 9 / 5 + 32;
+const R = rhPct;
+const HI = -42.379 + 2.04901523 * T + 10.14333127 * R - 0.22475541 * T * R
+- 0.00683783 * T * T - 0.05481717 * R * R + 0.00122874 * T * T * R
++ 0.00085282 * T * R * R - 0.00000199 * T * T * R * R;
+return Math.round(((HI - 32) * 5 / 9) * 10) / 10;
+}
+
+function calculateLiveWeatherThreatAssessment() {
+// 1. Parse live temperature, humidity, UV, PSR from DOM & hkWeatherPortalState
+const tempTxt = document.getElementById('hk-temp')?.innerText || '';
+const humTxt = document.getElementById('hk-hum')?.innerText || '';
+const uvTxt = document.getElementById('hk-uv')?.innerText || '';
+const psrTxt = document.getElementById('hk-psr')?.innerText || '';
+
+const wSt = window.hkWeatherPortalState || {};
+const tempVal = parseFloat(tempTxt) || (wSt.summary && wSt.summary.avgTemp) || 25.0;
+const humVal = parseFloat(humTxt) || (wSt.summary && wSt.summary.avgHum) || 75;
+const uvVal = parseFloat(uvTxt) || (wSt.currentOverview && wSt.currentOverview.uvIndex) || 3;
+const maxRainMm = (wSt.summary && typeof wSt.summary.maxRain === 'number') ? wSt.summary.maxRain : 0;
+const maxWindKmh = (wSt.summary && typeof wSt.summary.maxWind === 'number') ? wSt.summary.maxWind : 18;
+const maxGustKmh = (wSt.summary && typeof wSt.summary.maxGust === 'number') ? wSt.summary.maxGust : 28;
+const minVisKm = (wSt.summary && typeof wSt.summary.minVis === 'number') ? wSt.summary.minVis : 12.0;
+const maxTideM = (wSt.summary && typeof wSt.summary.maxTide === 'number') ? wSt.summary.maxTide : 2.1;
+
+const heatIndexC = computeHeatIndexCelsius(tempVal, humVal);
+
+// 2. Check active HKO warning codes
+const warnKeys = Object.keys(window.activeWarningsData || {}).map(k => k.replace(/^warn_/, '').toUpperCase());
+if (wSt.currentOverview && Array.isArray(wSt.currentOverview.warnings)) {
+wSt.currentOverview.warnings.forEach(w => {
+if (w && w.code && !warnKeys.includes(w.code.toUpperCase())) warnKeys.push(w.code.toUpperCase());
+});
+}
+
+// 3. Check Tropical Cyclone proximity & intensity
+let tcMinDistKm = null;
+let tcMaxWindKmh = 0;
+let tcNameZh = '';
+let tcNameEn = '';
+const cyclones = (wSt.cyclones && Array.isArray(wSt.cyclones)) ? wSt.cyclones : [];
+cyclones.forEach(c => {
+if (c && typeof c.distFromHkKm === 'number') {
+if (tcMinDistKm === null || c.distFromHkKm < tcMinDistKm) {
+tcMinDistKm = Math.round(c.distFromHkKm);
+tcMaxWindKmh = c.maxWindKmh || 85;
+tcNameZh = c.name_zh || c.name_en || '熱帶氣旋';
+tcNameEn = c.name_en || 'Tropical Cyclone';
+}
+}
+});
+
+let level = 1;
+let score = 12;
+const reasonsZh = [];
+const reasonsEn = [];
+
+// Factor A: Active HKO Warnings
+const hasL5Warn = warnKeys.some(c => ['TC9', 'TC10', 'WRAINB'].includes(c));
+const hasL4Warn = warnKeys.some(c => ['TC8NE', 'TC8SE', 'TC8NW', 'TC8SW', 'WRAINR'].includes(c));
+const hasL3Warn = warnKeys.some(c => ['TC3', 'WRAINY', 'WL', 'WFNTSA', 'WHOT', 'WCOLD', 'WFROST', 'WTMW'].includes(c));
+const hasL2Warn = warnKeys.some(c => ['TC1', 'WTS', 'WMSGNL', 'WFIRER', 'WFIREY'].includes(c)) || warnKeys.length > 0;
+
+if (hasL5Warn) {
+level = Math.max(level, 5);
+score = Math.max(score, 96);
+reasonsZh.push('天文台發出最高級別惡劣天氣警告（九號／十號風球或黑色暴雨）');
+reasonsEn.push('Top-tier HKO warning in force (Signal No. 9/10 or Black Rainstorm)');
+} else if (hasL4Warn) {
+level = Math.max(level, 4);
+score = Math.max(score, 82);
+reasonsZh.push('八號烈風或暴風信號／紅色暴雨警告生效');
+reasonsEn.push('Signal No. 8 or Red Rainstorm Warning in force');
+} else if (hasL3Warn) {
+level = Math.max(level, 3);
+score = Math.max(score, 58);
+reasonsZh.push('三號強風信號／黃雨／酷熱／寒冷／水浸或山泥傾瀉警告生效');
+reasonsEn.push('Signal No. 3 / Amber Rainstorm / Hot / Cold / Landslip warning in force');
+} else if (hasL2Warn) {
+level = Math.max(level, 2);
+score = Math.max(score, 35);
+reasonsZh.push('天文台有生效天氣警告（如一號戒備信號、雷暴、季候風或火災危險警告）');
+reasonsEn.push('Active HKO weather warning in force');
+}
+
+// Factor B: Tropical Cyclone Proximity
+if (tcMinDistKm !== null) {
+if (tcMinDistKm <= 150 && tcMaxWindKmh >= 140) {
+level = Math.max(level, 5);
+score = Math.max(score, 92);
+reasonsZh.push(`${tcNameZh}極接近本港 (${tcMinDistKm}km) 且達強颱風／超強颱風強度`);
+reasonsEn.push(`${tcNameEn} within ${tcMinDistKm}km at severe/super typhoon intensity`);
+} else if (tcMinDistKm <= 300 && tcMaxWindKmh >= 110) {
+level = Math.max(level, 4);
+score = Math.max(score, 76);
+reasonsZh.push(`${tcNameZh}進入香港 300km 範圍 (${tcMinDistKm}km)`);
+reasonsEn.push(`${tcNameEn} within 300km of HK (${tcMinDistKm}km)`);
+} else if (tcMinDistKm <= 550) {
+level = Math.max(level, 3);
+score = Math.max(score, 54);
+reasonsZh.push(`${tcNameZh}位於本港 400–550km 警戒範圍 (${tcMinDistKm}km)`);
+reasonsEn.push(`${tcNameEn} within ${tcMinDistKm}km of HK`);
+} else if (tcMinDistKm <= 1000) {
+level = Math.max(level, 2);
+score = Math.max(score, 32);
+reasonsZh.push(`西北太平洋／南海有熱帶氣旋 (${tcNameZh}，距離香港約 ${tcMinDistKm}km)`);
+reasonsEn.push(`Active cyclone ${tcNameEn} at ~${tcMinDistKm}km from HK`);
+}
+}
+
+// Factor C: Temperature & Humidity (Heat Index / Cold Stress)
+if (tempVal >= 35.5 || heatIndexC >= 42 || tempVal <= 6.5) {
+level = Math.max(level, 4);
+score = Math.max(score, 78);
+reasonsZh.push(`極端氣溫或暑熱壓力（氣溫 ${tempVal.toFixed(1)}°C，體感 ${heatIndexC.toFixed(1)}°C）`);
+reasonsEn.push(`Extreme temperature/heat stress (${tempVal.toFixed(1)}°C, Heat Index ${heatIndexC.toFixed(1)}°C)`);
+} else if (tempVal >= 33.0 || heatIndexC >= 37.5 || tempVal <= 11.5) {
+level = Math.max(level, 3);
+score = Math.max(score, 56);
+reasonsZh.push(`酷熱／寒冷或高溫高濕暑熱壓力（氣溫 ${tempVal.toFixed(1)}°C，體感 ${heatIndexC.toFixed(1)}°C）`);
+reasonsEn.push(`High heat index / cold stress (${tempVal.toFixed(1)}°C, feels like ${heatIndexC.toFixed(1)}°C)`);
+} else if (tempVal >= 30.5 || heatIndexC >= 32.5 || tempVal <= 14.5 || humVal >= 92) {
+level = Math.max(level, 2);
+score = Math.max(score, 30);
+reasonsZh.push(`溫濕度偏高或稍涼（氣溫 ${tempVal.toFixed(1)}°C、濕度 ${Math.round(humVal)}%、體感 ${heatIndexC.toFixed(1)}°C）`);
+reasonsEn.push(`Warm/humid or cool conditions (${tempVal.toFixed(1)}°C, RH ${Math.round(humVal)}%, Heat Index ${heatIndexC.toFixed(1)}°C)`);
+}
+
+// Factor D: UV Index
+if (uvVal >= 11) {
+level = Math.max(level, 3);
+score = Math.max(score, 60);
+reasonsZh.push(`紫外線指數達「極高」水平 (UV ${uvVal})，曝曬風險極高`);
+reasonsEn.push(`Extreme UV Index (${uvVal})`);
+} else if (uvVal >= 8) {
+level = Math.max(level, 3);
+score = Math.max(score, 50);
+reasonsZh.push(`紫外線指數達「甚高」水平 (UV ${uvVal})`);
+reasonsEn.push(`Very High UV Index (${uvVal})`);
+} else if (uvVal >= 6) {
+level = Math.max(level, 2);
+score = Math.max(score, 30);
+reasonsZh.push(`紫外線指數偏高 (UV ${uvVal})`);
+reasonsEn.push(`High UV Index (${uvVal})`);
+}
+
+// Factor E: Rainfall & PSR
+if (maxRainMm >= 70) {
+level = Math.max(level, 5);
+score = Math.max(score, 95);
+reasonsZh.push(`過去一小時錄得特大暴雨 (${maxRainMm.toFixed(1)} mm)`);
+reasonsEn.push(`Torrential rainfall (${maxRainMm.toFixed(1)} mm/hr)`);
+} else if (maxRainMm >= 45) {
+level = Math.max(level, 4);
+score = Math.max(score, 80);
+reasonsZh.push(`過去一小時錄得烈性豪雨 (${maxRainMm.toFixed(1)} mm)`);
+reasonsEn.push(`Heavy rainstorm (${maxRainMm.toFixed(1)} mm/hr)`);
+} else if (maxRainMm >= 20 || /High|高/.test(psrTxt)) {
+level = Math.max(level, 3);
+score = Math.max(score, 52);
+reasonsZh.push(`顯著降雨或大雨 (${maxRainMm.toFixed(1)} mm/h，降雨概率：${psrTxt || '--'})`);
+reasonsEn.push(`Significant rainfall (${maxRainMm.toFixed(1)} mm/hr, PSR: ${psrTxt || '--'})`);
+} else if (maxRainMm >= 3 || /Medium|中/.test(psrTxt)) {
+level = Math.max(level, 2);
+score = Math.max(score, 28);
+reasonsZh.push(`局部地區有雨或中等降雨概率 (${maxRainMm.toFixed(1)} mm/h)`);
+reasonsEn.push(`Local showers or medium rain probability (${maxRainMm.toFixed(1)} mm/hr)`);
+}
+
+// Factor F: Wind Speed & Gusts + Visibility
+if (maxWindKmh >= 88 || maxGustKmh >= 118) {
+level = Math.max(level, 5);
+score = Math.max(score, 94);
+reasonsZh.push(`錄得暴風至颶風風力（最高風速 ${maxWindKmh} km/h，陣風 ${maxGustKmh} km/h）`);
+reasonsEn.push(`Storm/hurricane force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
+} else if (maxWindKmh >= 63 || maxGustKmh >= 88) {
+level = Math.max(level, 4);
+score = Math.max(score, 78);
+reasonsZh.push(`錄得烈風風力（最高風速 ${maxWindKmh} km/h，陣風 ${maxGustKmh} km/h）`);
+reasonsEn.push(`Gale force winds (${maxWindKmh} km/h, gusts ${maxGustKmh} km/h)`);
+} else if (maxWindKmh >= 41 || maxGustKmh >= 62 || minVisKm < 3.0) {
+level = Math.max(level, 3);
+score = Math.max(score, 55);
+reasonsZh.push(`強風或低能見度（最高陣風 ${maxGustKmh} km/h，最低能見度 ${minVisKm.toFixed(1)} km）`);
+reasonsEn.push(`Strong winds or reduced visibility (gusts ${maxGustKmh} km/h, vis ${minVisKm.toFixed(1)} km)`);
+}
+
+if (reasonsZh.length === 0) {
+reasonsZh.push('氣溫、濕度、紫外線、風速及能見度均處於安全理想範圍');
+reasonsEn.push('Temperature, humidity, UV, wind speed and visibility are all within safe optimal ranges');
+}
+
+const simLvl = window.weatherThreatState.simulatedLevel;
+const finalLevel = (simLvl >= 1 && simLvl <= 5) ? simLvl : level;
+const finalScore = (simLvl >= 1 && simLvl <= 5) ? [12, 34, 58, 82, 97][simLvl - 1] : score;
+
+const result = {
+level: finalLevel,
+liveLevel: level,
+isSimulated: (simLvl >= 1 && simLvl <= 5),
+score: finalScore,
+tempVal,
+humVal,
+heatIndexC,
+uvVal,
+maxRainMm,
+maxWindKmh,
+maxGustKmh,
+minVisKm,
+maxTideM,
+warnCount: warnKeys.length,
+tcMinDistKm,
+tcNameZh,
+tcNameEn,
+reasonsZh,
+reasonsEn
+};
+window.weatherThreatState.lastResult = result;
+return result;
+}
+
+function evaluateAndRenderWeatherThreatBox() {
+const box = document.getElementById('weather-threat-box');
+if (!box) return;
+
+const isEn = (currentLang === 'en');
+const res = calculateLiveWeatherThreatAssessment();
+const meta = WEATHER_THREAT_LEVEL_META[res.level] || WEATHER_THREAT_LEVEL_META[1];
+const isL5 = (res.level === 5);
+
+box.style.background = meta.bg;
+box.style.borderColor = meta.border;
+box.style.color = meta.textCol;
+
+const segColors = ['#10b981', '#eab308', '#f97316', '#ef4444', '#0f172a'];
+const segBarHtml = [1, 2, 3, 4, 5].map(lvl => {
+const isAct = (lvl === res.level);
+const col = (lvl === 5 && isL5) ? '#f87171' : segColors[lvl - 1];
+return `<div class="wth-threat-seg ${isAct ? 'active' : ''}" style="background:${col}; ${isAct ? `box-shadow:0 0 8px ${col};` : ''}" title="Level ${lvl}"></div>`;
+}).join('');
+
+const chipStyle = isL5
+? 'background:rgba(255,255,255,0.12); color:#f8fafc; border:1px solid rgba(255,255,255,0.22);'
+: 'background:rgba(255,255,255,0.78); color:#1e293b; border:1px solid rgba(15,23,42,0.1);';
+
+const tcChipText = res.tcMinDistKm !== null
+? (isEn ? `🌀 TC ${res.tcMinDistKm}km` : `🌀 颱風 ${res.tcMinDistKm}km`)
+: (isEn ? '🌀 No TC' : '🌀 無颱風威脅');
+
+const warnChipText = res.warnCount > 0
+? (isEn ? `⚠️ ${res.warnCount} Warn(s)` : `⚠️ ${res.warnCount}個生效警告`)
+: (isEn ? '⚠️ No Warning' : '⚠️ 無生效警告');
+
+const primaryReason = isEn ? res.reasonsEn[0] : res.reasonsZh[0];
+
+box.innerHTML = `
+<div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:0.74rem; font-weight:900; opacity:0.9;">🛡️ ${isEn ? '5-Level Weather Threat' : '五級天氣威脅警示'}</span>
+${res.isSimulated ? `<span style="font-size:0.62rem; font-weight:900; padding:1px 5px; border-radius:4px; background:#fbbf24; color:#0f172a;">${isEn ? 'PREVIEW' : '預覽中'}</span>` : ''}
+</div>
+<span style="padding:2px 8px; border-radius:999px; background:${meta.pillBg}; color:${meta.pillText}; font-size:0.72rem; font-weight:900; letter-spacing:0.2px; box-shadow:0 2px 5px rgba(0,0,0,0.15);">
+${meta.dot} ${isEn ? meta.badge_en : meta.badge_zh}
+</span>
+</div>
+
+<div class="wth-threat-seg-bar">${segBarHtml}</div>
+
+<div style="display:flex; align-items:center; justify-content:space-between; font-size:0.63rem; font-weight:800; opacity:0.82; margin-bottom:5px;">
+<span>1 ${isEn ? 'Green (Safe)' : '綠(安全)'}</span>
+<span>2 ${isEn ? 'Yellow' : '黃(注意)'}</span>
+<span>3 ${isEn ? 'Orange' : '橙(警戒)'}</span>
+<span>4 ${isEn ? 'Red' : '紅(高危)'}</span>
+<span>5 ${isEn ? 'Black (Extreme)' : '黑(最惡劣)'}</span>
+</div>
+
+<div class="wth-threat-factors">
+<span class="wth-threat-chip" style="${chipStyle}">🌡️ ${isEn ? 'Feels' : '體感'} ${res.heatIndexC.toFixed(1)}°C</span>
+<span class="wth-threat-chip" style="${chipStyle}">${warnChipText}</span>
+<span class="wth-threat-chip" style="${chipStyle}">${tcChipText}</span>
+<span class="wth-threat-chip" style="${chipStyle}">☀️ UV ${res.uvVal}</span>
+<span class="wth-threat-chip" style="${chipStyle}">💨 ${res.maxGustKmh}km/h</span>
+</div>
+
+<div style="font-size:0.71rem; font-weight:700; line-height:1.38; margin-top:6px; padding-top:5px; border-top:1px dashed ${isL5 ? 'rgba(255,255,255,0.22)' : 'rgba(15,23,42,0.14)'};">
+💡 ${res.isSimulated ? (isEn ? meta.desc_en : meta.desc_zh) : primaryReason}
+</div>
+`;
+}
+
+function setSimulatedWeatherThreatLevel(lvl) {
+window.weatherThreatState.simulatedLevel = (lvl >= 1 && lvl <= 5) ? lvl : null;
+evaluateAndRenderWeatherThreatBox();
+openWeatherThreatDetailModal();
+}
+
+function openWeatherThreatDetailModal() {
+const isEn = (currentLang === 'en');
+const res = calculateLiveWeatherThreatAssessment();
+const meta = WEATHER_THREAT_LEVEL_META[res.level] || WEATHER_THREAT_LEVEL_META[1];
+
+const simBtnsHtml = [
+{ id: null, zh: '🔄 實時自動計算', en: '🔄 Live Auto' },
+{ id: 1, zh: '🟢 1級 (綠)', en: '🟢 L1 Green' },
+{ id: 2, zh: '🟡 2級 (黃)', en: '🟡 L2 Yellow' },
+{ id: 3, zh: '🟠 3級 (橙)', en: '🟠 L3 Orange' },
+{ id: 4, zh: '🔴 4級 (紅)', en: '🔴 L4 Red' },
+{ id: 5, zh: '⚫ 5級 (黑)', en: '⚫ L5 Black' }
+].map(b => {
+const active = (window.weatherThreatState.simulatedLevel === b.id);
+return `<button type="button" onclick="setSimulatedWeatherThreatLevel(${b.id === null ? 'null' : b.id})" style="cursor:pointer; padding:5px 9px; border-radius:8px; border:1px solid ${active ? '#0284c7' : '#cbd5e1'}; background:${active ? '#0284c7' : '#ffffff'}; color:${active ? '#ffffff' : '#1e293b'}; font-size:0.74rem; font-weight:800;">${isEn ? b.en : b.zh}</button>`;
+}).join('');
+
+const levelScaleHtml = [1, 2, 3, 4, 5].map(lvl => {
+const m = WEATHER_THREAT_LEVEL_META[lvl];
+const isCur = (lvl === res.level);
+return `
+<div style="padding:10px 12px; border-radius:10px; background:${m.bg}; color:${m.textCol}; border:2px solid ${isCur ? m.pillBg : m.border}; margin-bottom:8px;">
+<div style="display:flex; align-items:center; justify-content:space-between; font-weight:900; font-size:0.86rem; margin-bottom:3px;">
+<span>${m.dot} ${isEn ? m.badge_en : m.badge_zh}</span>
+${isCur ? `<span style="padding:1px 7px; border-radius:999px; background:${m.pillBg}; color:${m.pillText}; font-size:0.68rem;">${isEn ? 'CURRENT' : '目前級別'}</span>` : ''}
+</div>
+<div style="font-size:0.76rem; font-weight:600; line-height:1.42;">${isEn ? m.desc_en : m.desc_zh}</div>
+</div>
+`;
+}).join('');
+
+const fullHtml = `
+<div class="detail-header-card" style="background:${meta.bg}; color:${meta.textCol}; border:2px solid ${meta.border}; text-align:center; padding:16px;">
+<div style="font-size:0.76rem; font-weight:900; opacity:0.85; margin-bottom:4px;">${isEn ? 'COMPREHENSIVE WEATHER THREAT ASSESSMENT' : '香港五級綜合天氣威脅及安全評估'}</div>
+<div style="font-size:1.35rem; font-weight:900;">${meta.dot} ${isEn ? meta.badge_en : meta.badge_zh}</div>
+<div style="font-size:0.8rem; font-weight:700; margin-top:6px;">${isEn ? meta.desc_en : meta.desc_zh}</div>
+</div>
+
+<div style="margin:12px 0; padding:10px 12px; background:var(--card-bg); border:1px solid var(--panel-border); border-radius:var(--radius-md);">
+<div style="font-size:0.78rem; font-weight:900; color:var(--text-main); margin-bottom:6px;">🎛️ ${isEn ? 'Preview / Test 5-Level Alert States:' : '切換測試五級警告顯示效果（或回復實時自動計算）：'}</div>
+<div style="display:flex; flex-wrap:wrap; gap:6px;">${simBtnsHtml}</div>
+</div>
+
+<div style="margin:12px 0; padding:12px; background:var(--card-bg); border:1px solid var(--panel-border); border-radius:var(--radius-md); font-size:0.8rem; line-height:1.55;">
+<div style="font-weight:900; color:var(--text-main); margin-bottom:6px;">📊 ${isEn ? '8 Real-Time Meteorological Factors Evaluated:' : '納入計算之 8 項實時氣象與環境指標：'}</div>
+<div>• <b>${isEn ? '1. Temp & Humidity (Heat Index):' : '1. 氣溫、相對濕度及體感暑熱指數：'}</b>${res.tempVal.toFixed(1)}°C / ${Math.round(res.humVal)}%（${isEn ? 'Apparent Heat Index:' : '綜合體感：'}${res.heatIndexC.toFixed(1)}°C）</div>
+<div>• <b>${isEn ? '2. Active HKO Weather Warnings:' : '2. 天文台生效天氣警告及暴雨／暴風信號：'}</b>${res.warnCount} ${isEn ? 'active warning(s)' : '項生效警告'}</div>
+<div>• <b>${isEn ? '3. Tropical Cyclone Proximity & Wind:' : '3. 熱帶氣旋距離及強度：'}</b>${res.tcMinDistKm !== null ? `${isEn ? res.tcNameEn : res.tcNameZh} (${res.tcMinDistKm} km, ${res.tcMaxWindKmh} km/h)` : (isEn ? 'No active cyclone near HK' : '本港鄰近海域無熱帶氣旋威脅')}</div>
+<div>• <b>${isEn ? '4. UV Radiation Exposure:' : '4. 紫外線曝曬指數 (UV Index)：'}</b>UV ${res.uvVal}</div>
+<div>• <b>${isEn ? '5. 1-Hr Rainfall & Rain Probability:' : '5. 分區最高雨量及降雨概率 (PSR)：'}</b>${res.maxRainMm.toFixed(1)} mm/h</div>
+<div>• <b>${isEn ? '6. Wind Speed & Max Gusts:' : '6. 分區風速及最高陣風：'}</b>${res.maxWindKmh} km/h（${isEn ? 'Max Gust' : '最高陣風'} ${res.maxGustKmh} km/h）</div>
+<div>• <b>${isEn ? '7. Marine & Urban Visibility:' : '7. 全港能見度監測：'}</b>${isEn ? 'Min' : '最低'} ${res.minVisKm.toFixed(1)} km</div>
+<div>• <b>${isEn ? '8. Tide Level & Storm Surge Risk:' : '8. 潮汐水位及風暴潮疊加風險：'}</b>${isEn ? 'Max Tide' : '最高潮位'} ${res.maxTideM.toFixed(2)} m</div>
+</div>
+
+<h4 style="margin:12px 0 8px 0; color:var(--text-main); font-size:0.9rem; font-weight:800;">📋 ${isEn ? '5-Level Threat Grading Reference (L1 Green to L5 Black):' : '五級天氣威脅評級標準（第一級綠色至第五級黑色）：'}</h4>
+<div>${levelScaleHtml}</div>
+`;
+
+openWarningDetailModal(isEn ? '🛡️ 5-Level Weather Threat Index' : '🛡️ 五級綜合天氣威脅評估詳情', fullHtml);
+}
+
 async function fetchWeather() {
 try {
 let ts = Date.now(); let wLang = currentLang === 'en' ? 'en' : 'tc';
@@ -14020,6 +14947,7 @@ html += `<div class="forecast-item" onclick="openWeatherDetail(${idx})"><div cla
 });
 document.getElementById('forecast-container').innerHTML = html;
 }
+if (typeof evaluateAndRenderWeatherThreatBox === 'function') evaluateAndRenderWeatherThreatBox();
 } catch(e) {}
 }
 
@@ -32652,8 +33580,8 @@ pages: [
 {
 pageKey: 'home',
 icon: '🚌',
-name_zh: '專營巴士（九巴・城巴）及港鐵即時到站看板',
-name_en: 'Franchised Bus (KMB · Citybus) & MTR Real-Time ETA',
+name_zh: '專營巴士（九巴・城巴・大嶼山巴士・港鐵巴士）及港鐵即時到站看板',
+name_en: 'Bus (KMB · Citybus · NLB · MTR Bus) & MTR Real-Time ETA',
 desc_zh: '即時顯示港鐵各重鐵及輕鐵路綫車務狀況、車程估算，以及自選九巴／城巴路線實時到站時間。',
 desc_en: 'Live MTR service status, journey time estimator, and KMB / Citybus real-time arrival countdowns.',
 actionFn: 'showHome',
@@ -33499,7 +34427,7 @@ showPortalHomePage();
 }
 } catch(e){}
 try { updateTick(); setInterval(updateTick, 1000); } catch(e){}
-try { fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
+try { evaluateAndRenderWeatherThreatBox(); fetchWeather(); setInterval(fetchWeather, 60000); } catch(e){}
 try { if(typeof fetchMtrStatusMarquee === "function") fetchMtrStatusMarquee(); setInterval(fetchMtrStatusMarquee, 30000); } catch(e){}
 try { fetchMTR(); setInterval(fetchMTR, 10000); } catch(e){}
 setInterval(fetchRealBusData, 30000);
