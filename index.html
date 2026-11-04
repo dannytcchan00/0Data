@@ -13089,8 +13089,8 @@ const NLB_FALLBACK_STOPS_BY_ROUTE = {
 };
 
 window.nlbRoutesCache = null;
-async function fetchNlbRoutesList() {
-if (window.nlbRoutesCache && window.nlbRoutesCache.length > 0) return window.nlbRoutesCache;
+async function fetchNlbRoutesList(forceRefresh = false) {
+if (!forceRefresh && window.nlbRoutesCache && window.nlbRoutesCache.length > 0) return window.nlbRoutesCache;
 try {
 let res = await fetch('https://rt.data.gov.hk/v2/transport/nlb/route.php?action=list').then(r => r.json());
 if (res && Array.isArray(res.routes) && res.routes.length > 0) {
@@ -13098,7 +13098,54 @@ window.nlbRoutesCache = res.routes;
 return res.routes;
 }
 } catch (e) {}
-return NLB_FALLBACK_ROUTES;
+return window.nlbRoutesCache || NLB_FALLBACK_ROUTES;
+}
+
+async function probeLiveMtrBusRoute(route) {
+let rKey = String(route || '').trim().toUpperCase();
+if (!rKey) return null;
+if (MTR_BUS_OFFICIAL_ROUTES_DATA[rKey]) return MTR_BUS_OFFICIAL_ROUTES_DATA[rKey];
+if (rKey === 'K53S' && MTR_BUS_OFFICIAL_ROUTES_DATA['K53*']) return MTR_BUS_OFFICIAL_ROUTES_DATA['K53*'];
+try {
+let [resZh, resEn] = await Promise.all([
+fetch('https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ language: 'zh', routeName: rKey })
+}).then(r => r.json()).catch(() => null),
+fetch('https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ language: 'en', routeName: rKey })
+}).then(r => r.json()).catch(() => null)
+]);
+let stopsList = (resZh && Array.isArray(resZh.busStop) && resZh.busStop.length > 0)
+? resZh.busStop
+: ((resEn && Array.isArray(resEn.busStop) && resEn.busStop.length > 0) ? resEn.busStop : []);
+if (stopsList.length === 0) return null;
+let dirGroups = {};
+stopsList.forEach((st, idx) => {
+let sId = String(st.busStopId || '').trim();
+if (!sId) return;
+let dirKey = 'Outbound';
+if (/-D/i.test(sId)) dirKey = 'Inbound';
+else if (/-U/i.test(sId)) dirKey = 'Outbound';
+else dirKey = 'Circular';
+if (!dirGroups[dirKey]) dirGroups[dirKey] = [];
+dirGroups[dirKey].push({
+stop: sId,
+tc: st.busStopName || `港鐵巴士站 ${sId} (第 ${dirGroups[dirKey].length + 1} 站)`,
+en: st.busStopNameEn || `MTR Bus Stop ${sId} (#${dirGroups[dirKey].length + 1})`,
+lat: 22.395,
+lng: 113.975
+});
+});
+if (Object.keys(dirGroups).length > 0) {
+MTR_BUS_OFFICIAL_ROUTES_DATA[rKey] = dirGroups;
+return dirGroups;
+}
+} catch (e) {}
+return null;
 }
 
 function getBusOperatorMeta(co, isEn) {
@@ -13165,6 +13212,10 @@ html += `<button class="bus-dir-btn ctb" onclick="loadRouteStops('ctb', '${route
 } else if (co === 'nlb') {
 let nlbRoutes = await fetchNlbRoutesList();
 let matched = (nlbRoutes || []).filter(r => String(r.routeNo || '').toUpperCase() === route);
+if (matched.length === 0) {
+nlbRoutes = await fetchNlbRoutesList(true);
+matched = (nlbRoutes || []).filter(r => String(r.routeNo || '').toUpperCase() === route);
+}
 if (matched.length > 0) {
 found = true;
 html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction (New Lantao Bus):':'選擇行車方向（新大嶼山巴士）：'}</h4>`;
@@ -13181,6 +13232,9 @@ html += `<button class="bus-dir-btn nlb" onclick="loadRouteStops('nlb', '${route
 }
 } else if (co === 'mtrb') {
 let mtrRouteObj = MTR_BUS_OFFICIAL_ROUTES_DATA[route] || (route === 'K53S' ? MTR_BUS_OFFICIAL_ROUTES_DATA['K53*'] : null);
+if (!mtrRouteObj) {
+mtrRouteObj = await probeLiveMtrBusRoute(route);
+}
 if (mtrRouteObj) {
 found = true;
 html += `<h4 style="color:var(--text-main); border-bottom: 1px solid var(--hairline-border); padding-bottom: 6px; margin:12px 0 10px 0;">${currentLang==='en'?'Select Direction (MTR Bus):':'選擇行車方向（港鐵巴士）：'}</h4>`;
